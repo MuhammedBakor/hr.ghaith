@@ -1,0 +1,18 @@
+{
+  "name": "Ghaith Default",
+  "mode": "auto",
+  "colors": {
+    "primary": "#0ea5e9",
+    "secondary": "#111827",
+    "accent": "#22c55e",
+    "bg": "#ffffff",
+    "fg": "#0b1220",
+    "muted": "#6b7280"
+  },
+  "fonts": {
+    "base": "system-ui, -apple-system, Segoe UI, Roboto, Arial",
+    "heading": "system-ui, -apple-system, Segoe UI, Roboto, Arial"
+  },
+  "radius": "14px",
+  "custom_css": ""
+}

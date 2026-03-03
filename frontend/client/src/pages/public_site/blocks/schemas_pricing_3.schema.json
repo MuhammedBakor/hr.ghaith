@@ -1,0 +1,63 @@
+{
+  "type": "object",
+  "required": [
+    "heading",
+    "tiers"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "heading": {
+      "type": "string",
+      "maxLength": 80
+    },
+    "tiers": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "price",
+          "features"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "price": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "highlight": {
+            "type": "boolean"
+          },
+          "features": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 10,
+            "items": {
+              "type": "string",
+              "maxLength": 80
+            }
+          },
+          "cta": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "label": {
+                "type": "string",
+                "maxLength": 40
+              },
+              "href": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8"/>
+  <style>
+    body{font-family: Arial, sans-serif; margin:24px}
+    h1{margin:0 0 12px 0}
+    table{width:100%; border-collapse:collapse}
+    th,td{border:1px solid #ddd; padding:8px}
+    th{background:#f5f5f5}
+  </style>
+</head>
+<body>
+  <h1>قائمة الدخل (ملخص)</h1>
+  <div>الفترة: {{fiscal_period}} | الفرع: {{branch_name}} | النشاط: {{activity_name}}</div>
+  <br/>
+  <table>
+    <thead><tr><th>البند</th><th>المبلغ</th></tr></thead>
+    <tbody>
+      <tr><td>الإيرادات</td><td>{{revenue}}</td></tr>
+      <tr><td>المصروفات</td><td>{{expense}}</td></tr>
+      <tr><td><b>صافي الربح</b></td><td><b>{{net_profit}}</b></td></tr>
+    </tbody>
+  </table>
+</body>
+</html>

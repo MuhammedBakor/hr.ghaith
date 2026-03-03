@@ -1,0 +1,55 @@
+{
+  "title": "الصفحة الرئيسية",
+  "theme": {
+    "primary": "#1D4ED8",
+    "secondary": "#0B1220",
+    "font_family": "system-ui, -apple-system, Segoe UI, Roboto, Arial"
+  },
+  "blocks": [
+    {
+      "type": "hero",
+      "data": {
+        "title": "منصة خدمات شركتنا",
+        "subtitle": "اطلب خدماتنا مباشرة — النظام يولّد الطلب ويحوّله للمسارات المعنية",
+        "button": "ابدأ الآن",
+        "href": "/public/store/services"
+      }
+    },
+    {
+      "type": "features",
+      "data": {
+        "items": [
+          {
+            "title": "أتمتة الطلبات",
+            "text": "كل طلب يتحول Intent + أرشفة + سجل تدقيق"
+          },
+          {
+            "title": "تحديد الفرع تلقائيًا",
+            "text": "الدومين يحدد website/branch بدون تدخل"
+          },
+          {
+            "title": "تكامل مالي مضبوط",
+            "text": "المالية خادم: Intent/Invoice ضمن الصلاحيات"
+          }
+        ]
+      }
+    },
+    {
+      "type": "store_services_cta",
+      "data": {
+        "title": "الخدمات والاشتراكات",
+        "text": "اعرض الخدمات وارسال طلبك بضغطه زر",
+        "href": "/public/store/services"
+      }
+    },
+    {
+      "type": "cta",
+      "data": {
+        "title": "تواصل معنا",
+        "text": "إذا احتجت تخصيص أعلى، تواصل مع فريقنا",
+        "button": "واتساب",
+        "href": "https://wa.me/966559758585"
+      }
+    }
+  ]
+}

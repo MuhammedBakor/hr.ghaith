@@ -1,0 +1,17 @@
+{
+  "code": "marketing_home_modern",
+  "title": "Homepage Modern",
+  "kind": "home",
+  "description": "Modern hero + services + portfolio + CTA",
+  "supports": {
+    "theme_tokens": true,
+    "rtl": true,
+    "snapshots": true
+  },
+  "blocks_hint": [
+    "hero",
+    "cards",
+    "cta",
+    "media_placeholder"
+  ]
+}

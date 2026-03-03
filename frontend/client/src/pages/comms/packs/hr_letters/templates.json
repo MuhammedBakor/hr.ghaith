@@ -1,0 +1,72 @@
+{
+  "pack_key": "hr_letters",
+  "leader": "hr",
+  "templates": [
+    {
+      "key": "salary_certificate",
+      "name_ar": "خطاب تعريف راتب",
+      "doc_kind": "hr_letter",
+      "placeholders": [
+        "employee_name",
+        "employee_id",
+        "salary_total",
+        "job_title",
+        "start_date"
+      ]
+    },
+    {
+      "key": "work_commencement",
+      "name_ar": "مباشرة عمل",
+      "doc_kind": "hr_letter",
+      "placeholders": [
+        "employee_name",
+        "employee_id",
+        "job_title",
+        "commence_date"
+      ]
+    },
+    {
+      "key": "warning_notice",
+      "name_ar": "إنذار",
+      "doc_kind": "hr_letter",
+      "placeholders": [
+        "employee_name",
+        "employee_id",
+        "reason",
+        "date"
+      ]
+    },
+    {
+      "key": "memo_notice",
+      "name_ar": "لفت نظر",
+      "doc_kind": "hr_letter",
+      "placeholders": [
+        "employee_name",
+        "employee_id",
+        "reason",
+        "date"
+      ]
+    },
+    {
+      "key": "admin_decision",
+      "name_ar": "قرار إداري",
+      "doc_kind": "hr_letter",
+      "placeholders": [
+        "employee_name",
+        "employee_id",
+        "decision_text",
+        "date"
+      ]
+    },
+    {
+      "key": "employment_offer",
+      "name_ar": "عرض وظيفي",
+      "body_ar": "هذا خطاب عرض وظيفي (قالب مبدئي) — يتم تعبئة بيانات الموظف والراتب تلقائيًا من بيانات الطلب."
+    },
+    {
+      "key": "termination_notice",
+      "name_ar": "إشعار إنهاء خدمات",
+      "body_ar": "هذا إشعار إنهاء خدمات (قالب مبدئي) — تاريخ الإنهاء والسبب تأتي من طلب HR."
+    }
+  ]
+}

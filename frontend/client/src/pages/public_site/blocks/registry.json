@@ -1,0 +1,45 @@
+{
+  "version": "1.0.0",
+  "blocks": [
+    {
+      "code": "hero",
+      "title": "Hero",
+      "schema": "schemas/hero.schema.json"
+    },
+    {
+      "code": "services_grid",
+      "title": "Services Grid",
+      "schema": "schemas/services_grid.schema.json"
+    },
+    {
+      "code": "features_zigzag",
+      "title": "Features Zigzag",
+      "schema": "schemas/features_zigzag.schema.json"
+    },
+    {
+      "code": "gallery",
+      "title": "Gallery",
+      "schema": "schemas/gallery.schema.json"
+    },
+    {
+      "code": "pricing_3",
+      "title": "Pricing 3 Tiers",
+      "schema": "schemas/pricing_3.schema.json"
+    },
+    {
+      "code": "cta",
+      "title": "Call To Action",
+      "schema": "schemas/cta.schema.json"
+    },
+    {
+      "code": "faq",
+      "title": "FAQ",
+      "schema": "schemas/faq.schema.json"
+    },
+    {
+      "code": "testimonials",
+      "title": "Testimonials",
+      "schema": "schemas/testimonials.schema.json"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8"/>
+  <style>
+    body{font-family: Arial, sans-serif; margin:24px}
+    table{width:100%; border-collapse:collapse}
+    th,td{border:1px solid #ddd; padding:8px}
+    th{background:#f5f5f5}
+  </style>
+</head>
+<body>
+  <h1>توقع التدفق النقدي</h1>
+  <div>تاريخ الأساس: {{as_of}} | الفرع: {{branch_name}}</div>
+  <br/>
+  <table>
+    <thead><tr><th>الأفق</th><th>القيمة</th><th>الثقة</th></tr></thead>
+    <tbody>
+      {{#rows}}
+      <tr><td>{{horizon_days}} يوم</td><td>{{value}}</td><td>{{confidence}}%</td></tr>
+      {{/rows}}
+    </tbody>
+  </table>
+</body>
+</html>

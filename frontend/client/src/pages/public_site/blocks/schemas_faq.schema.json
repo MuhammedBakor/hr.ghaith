@@ -1,0 +1,37 @@
+{
+  "type": "object",
+  "required": [
+    "heading",
+    "items"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "heading": {
+      "type": "string",
+      "maxLength": 80
+    },
+    "items": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "required": [
+          "q",
+          "a"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "q": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "a": {
+            "type": "string",
+            "maxLength": 400
+          }
+        }
+      }
+    }
+  }
+}

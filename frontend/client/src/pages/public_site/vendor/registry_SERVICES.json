@@ -1,0 +1,49 @@
+{
+  "module": "public_site",
+  "area": "marketing_studio",
+  "services": [
+    {
+      "code": "PUBLIC_STUDIO_SAVE",
+      "version": "1.0.0",
+      "settings_keys": [
+        "marketing.studio.editor",
+        "marketing.studio.builder",
+        "marketing.studio.email_templates"
+      ],
+      "template_required": false,
+      "description": "Save editor/builder output into target entity (page/landing/blog/profile). reason required."
+    },
+    {
+      "code": "PUBLIC_STUDIO_APPLY_PRESET",
+      "version": "1.0.0",
+      "settings_keys": [],
+      "template_required": false,
+      "description": "Apply preset blocks+theme to a target page."
+    },
+    {
+      "code": "PUBLIC_STUDIO_PUBLISH",
+      "version": "1.0.0",
+      "settings_keys": [
+        "public.security.captcha_provider"
+      ],
+      "template_required": false,
+      "description": "Publish target entity by creating snapshot + audit reason."
+    },
+    {
+      "code": "PUBLIC_BRAND_APPLY",
+      "version": "1.0.0",
+      "settings_keys": [],
+      "template_required": false,
+      "description": "Apply branch/org brand kit to a target entity (page/landing/blog/profile/terms). reason required."
+    },
+    {
+      "code": "MARKETING_IMAGE_REQUEST",
+      "version": "1.0.0",
+      "settings_keys": [
+        "marketing.ai.image.enabled"
+      ],
+      "template_required": false,
+      "description": "Create a queued request for marketing image generation (placeholder hook)."
+    }
+  ]
+}

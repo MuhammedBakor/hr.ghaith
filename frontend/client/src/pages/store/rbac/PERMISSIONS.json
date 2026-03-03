@@ -1,0 +1,11 @@
+{
+  "module": "store",
+  "permissions": [
+    "store:catalog:read",
+    "store:catalog:write",
+    "store:orders:read",
+    "store:orders:write",
+    "store:checkout:create",
+    "store:admin:*"
+  ]
+}

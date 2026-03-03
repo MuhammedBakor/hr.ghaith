@@ -1,0 +1,54 @@
+{
+  "generated": "2026-01-10 20:50:26",
+  "principles": [
+    "Prefer OSS permissive licenses (MIT/Apache-2.0).",
+    "No hard-coupling: everything behind adapters + settings_scoped toggles.",
+    "Libraries are frontend-side; backend stores normalized JSON (blocks/content)."
+  ],
+  "libraries": [
+    {
+      "key": "editorjs",
+      "category": "rich_content_blocks",
+      "why": "Block-based content that maps naturally to public_site blocks/content_json.",
+      "license_hint": "Apache-2.0 (verify in upstream repo)",
+      "links": {
+        "homepage": "https://editorjs.io/",
+        "repo": "https://github.com/codex-team/editor.js"
+      },
+      "integration": "modules/public_site/vendor/adapters/editor.editorjs.adapter.js"
+    },
+    {
+      "key": "tiptap",
+      "category": "rich_text",
+      "why": "Headless rich-text editor (ProseMirror-based) for terms/contracts/blog; export to HTML/JSON.",
+      "license_hint": "See Tiptap docs (open core; ensure chosen packages are compatible)",
+      "links": {
+        "docs": "https://tiptap.dev/docs",
+        "repo": "https://github.com/ueberdosis/tiptap"
+      },
+      "integration": "modules/public_site/vendor/adapters/editor.tiptap.adapter.js"
+    },
+    {
+      "key": "grapesjs",
+      "category": "landing_builder",
+      "why": "Visual builder for landing pages/templates; good for marketing teams.",
+      "license_hint": "OSS core; ensure using open-source edition (not Studio SDK).",
+      "links": {
+        "homepage": "https://grapesjs.com/",
+        "react_wrapper": "https://github.com/GrapesJS/react"
+      },
+      "integration": "modules/public_site/vendor/adapters/builder.grapesjs.adapter.js"
+    },
+    {
+      "key": "mjml",
+      "category": "email_templates",
+      "why": "Responsive email templates for campaigns/notifications; compile MJML -> HTML.",
+      "license_hint": "OSS engine (commonly MIT); verify in repo.",
+      "links": {
+        "docs": "https://mjml.io/documentation/",
+        "repo": "https://github.com/mjmlio/mjml"
+      },
+      "integration": "modules/marketing/vendor/adapters/email.mjml.adapter.js"
+    }
+  ]
+}

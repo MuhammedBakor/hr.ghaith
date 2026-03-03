@@ -1,0 +1,35 @@
+{
+  "type": "object",
+  "required": [
+    "title",
+    "button"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "title": {
+      "type": "string",
+      "maxLength": 120
+    },
+    "subtitle": {
+      "type": "string",
+      "maxLength": 220
+    },
+    "button": {
+      "type": "object",
+      "required": [
+        "label",
+        "href"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "href": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

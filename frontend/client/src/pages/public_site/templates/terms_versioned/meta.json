@@ -1,0 +1,17 @@
+{
+  "code": "terms_versioned",
+  "title": "Terms Versioned",
+  "kind": "terms",
+  "description": "Legal terms versioned (snapshot-friendly)",
+  "supports": {
+    "theme_tokens": true,
+    "rtl": true,
+    "snapshots": true
+  },
+  "blocks_hint": [
+    "hero",
+    "cards",
+    "cta",
+    "media_placeholder"
+  ]
+}

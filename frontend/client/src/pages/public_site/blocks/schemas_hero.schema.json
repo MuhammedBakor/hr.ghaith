@@ -1,0 +1,52 @@
+{
+  "type": "object",
+  "required": [
+    "title",
+    "subtitle",
+    "primary_cta"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "title": {
+      "type": "string",
+      "maxLength": 140
+    },
+    "subtitle": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "media_url": {
+      "type": "string"
+    },
+    "primary_cta": {
+      "type": "object",
+      "required": [
+        "label",
+        "href"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "href": {
+          "type": "string"
+        }
+      }
+    },
+    "secondary_cta": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "href": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

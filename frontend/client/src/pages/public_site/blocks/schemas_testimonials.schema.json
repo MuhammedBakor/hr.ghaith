@@ -1,0 +1,41 @@
+{
+  "type": "object",
+  "required": [
+    "heading",
+    "items"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "heading": {
+      "type": "string",
+      "maxLength": 80
+    },
+    "items": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "quote"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 60
+          },
+          "role": {
+            "type": "string",
+            "maxLength": 60
+          },
+          "quote": {
+            "type": "string",
+            "maxLength": 240
+          }
+        }
+      }
+    }
+  }
+}

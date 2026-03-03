@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>{{title}}</title>
+<meta name="description" content="{{description}}"/>
+<style>
+  :root{
+    --primary: {{primary}};
+    --secondary: {{secondary}};
+    --font: {{font_family}};
+  }
+  body{font-family: var(--font); margin:0; background:#fff; color:#111;}
+  .top{background:linear-gradient(135deg,var(--secondary),#111); color:#fff; padding:34px 18px;}
+  .wrap{max-width:1100px; margin:0 auto;}
+  .hdr{display:flex; gap:14px; align-items:center; justify-content:space-between; flex-wrap:wrap;}
+  .brand{display:flex; gap:12px; align-items:center;}
+  .logo{width:64px; height:64px; border-radius:16px; background:#ffffff12; display:flex; align-items:center; justify-content:center; overflow:hidden}
+  .logo img{max-width:100%; max-height:100%}
+  h1{margin:0; font-size:22px}
+  .cta{display:flex; gap:10px; flex-wrap:wrap}
+  .btn{background:var(--primary); color:#fff; padding:10px 14px; border-radius:12px; text-decoration:none; font-weight:700}
+  .btn.alt{background:#fff; color:#111}
+  .section{padding:20px 18px}
+  .grid{max-width:1100px; margin:0 auto; display:grid; grid-template-columns: repeat(3,1fr); gap:12px}
+  @media(max-width:900px){ .grid{grid-template-columns:1fr} }
+  .card{border:1px solid #eee; border-radius:16px; padding:14px}
+  .label{color:#666; font-size:12px}
+  .value{font-weight:800; margin-top:4px}
+  .about{max-width:1100px; margin:0 auto; line-height:1.9}
+  .gallery{max-width:1100px; margin:0 auto; display:grid; grid-template-columns: repeat(4, 1fr); gap:10px}
+  @media(max-width:900px){ .gallery{grid-template-columns: repeat(2,1fr);} }
+  .gallery img{width:100%; height:160px; object-fit:cover; border-radius:14px; border:1px solid #eee}
+  .footer{padding:22px 18px; border-top:1px solid #eee; color:#666; font-size:13px}
+</style>
+</head>
+<body>
+  <div class="top">
+    <div class="wrap">
+      <div class="hdr">
+        <div class="brand">
+          <div class="logo">{{logo_img}}</div>
+          <div>
+            <h1>{{title}}</h1>
+            <div style="opacity:.85">{{subtitle}}</div>
+          </div>
+        </div>
+        <div class="cta">
+          {{whatsapp_btn}}
+          {{call_btn}}
+          {{email_btn}}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="grid">
+      <div class="card"><div class="label">الفرع</div><div class="value">{{branch_name}}</div></div>
+      <div class="card"><div class="label">التخصص</div><div class="value">{{category}}</div></div>
+      <div class="card"><div class="label">المدينة</div><div class="value">{{city}}</div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="about">{{about_html}}</div>
+  </div>
+
+  <div class="section">
+    <div class="gallery">
+      {{images_html}}
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="wrap">© {{year}} — {{title}}</div>
+  </div>
+</body>
+</html>

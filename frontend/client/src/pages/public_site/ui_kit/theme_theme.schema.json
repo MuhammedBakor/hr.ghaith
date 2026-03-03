@@ -1,0 +1,66 @@
+{
+  "type": "object",
+  "required": [
+    "name",
+    "mode",
+    "colors",
+    "fonts",
+    "radius"
+  ],
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "light",
+        "dark",
+        "auto"
+      ]
+    },
+    "colors": {
+      "type": "object",
+      "properties": {
+        "primary": {
+          "type": "string"
+        },
+        "secondary": {
+          "type": "string"
+        },
+        "accent": {
+          "type": "string"
+        },
+        "bg": {
+          "type": "string"
+        },
+        "fg": {
+          "type": "string"
+        },
+        "muted": {
+          "type": "string"
+        }
+      }
+    },
+    "fonts": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "type": "string"
+        },
+        "heading": {
+          "type": "string"
+        }
+      }
+    },
+    "radius": {
+      "type": "string"
+    },
+    "spacing": {
+      "type": "object"
+    },
+    "custom_css": {
+      "type": "string"
+    }
+  }
+}

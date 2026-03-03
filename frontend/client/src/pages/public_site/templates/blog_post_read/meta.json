@@ -1,0 +1,17 @@
+{
+  "code": "blog_post_read",
+  "title": "Blog Post Read",
+  "kind": "blog_post",
+  "description": "Article layout + toc placeholder",
+  "supports": {
+    "theme_tokens": true,
+    "rtl": true,
+    "snapshots": true
+  },
+  "blocks_hint": [
+    "hero",
+    "cards",
+    "cta",
+    "media_placeholder"
+  ]
+}

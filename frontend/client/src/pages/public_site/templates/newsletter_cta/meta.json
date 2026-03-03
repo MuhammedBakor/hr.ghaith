@@ -1,0 +1,17 @@
+{
+  "code": "newsletter_cta",
+  "title": "Newsletter CTA",
+  "kind": "page",
+  "description": "Email capture CTA",
+  "supports": {
+    "theme_tokens": true,
+    "rtl": true,
+    "snapshots": true
+  },
+  "blocks_hint": [
+    "hero",
+    "cards",
+    "cta",
+    "media_placeholder"
+  ]
+}

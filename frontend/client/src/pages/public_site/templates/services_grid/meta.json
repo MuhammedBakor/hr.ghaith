@@ -1,0 +1,17 @@
+{
+  "code": "services_grid",
+  "title": "Services Grid",
+  "kind": "page",
+  "description": "Services cards grid + pricing teaser",
+  "supports": {
+    "theme_tokens": true,
+    "rtl": true,
+    "snapshots": true
+  },
+  "blocks_hint": [
+    "hero",
+    "cards",
+    "cta",
+    "media_placeholder"
+  ]
+}

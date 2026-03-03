@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8"/>
+  <style>
+    body{font-family: Arial, sans-serif; margin:24px}
+    table{width:100%; border-collapse:collapse}
+    th,td{border:1px solid #ddd; padding:8px}
+    th{background:#f5f5f5}
+  </style>
+</head>
+<body>
+  <h1>أعمار الذمم المدينة</h1>
+  <div>تاريخ التقرير: {{as_of}} | الفرع: {{branch_name}}</div>
+  <br/>
+  <table>
+    <thead>
+      <tr><th>العميل</th><th>حالي</th><th>1-30</th><th>31-60</th><th>61-90</th><th>90+</th><th>الإجمالي</th></tr>
+    </thead>
+    <tbody>
+      {{#rows}}
+      <tr>
+        <td>{{customer_name}}</td>
+        <td>{{current}}</td>
+        <td>{{b1_30}}</td>
+        <td>{{b31_60}}</td>
+        <td>{{b61_90}}</td>
+        <td>{{b90_plus}}</td>
+        <td><b>{{total}}</b></td>
+      </tr>
+      {{/rows}}
+    </tbody>
+  </table>
+</body>
+</html>

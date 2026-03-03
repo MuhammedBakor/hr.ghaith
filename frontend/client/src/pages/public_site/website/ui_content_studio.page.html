@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8"/>
+  <title>Content Studio — التسويق/الموقع (No‑Code)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto; margin:16px; background:#f7f7f9;}
+    .grid{display:grid; grid-template-columns:1fr; gap:14px;}
+    @media(min-width:980px){ .grid{grid-template-columns:1fr 1fr;} }
+    .card{background:#fff; border:1px solid #ddd; border-radius:12px; padding:14px;}
+    input, textarea, select, button{font:inherit;}
+    input, textarea, select{width:100%; padding:8px; border-radius:10px; border:1px solid #ccc;}
+    button{padding:8px 12px; border-radius:10px; border:1px solid #111; background:#111; color:#fff; cursor:pointer;}
+    small{color:#666;}
+    pre{background:#0b0b0b; color:#d7ffd7; padding:10px; border-radius:10px; overflow:auto;}
+    .row{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
+  </style>
+</head>
+<body>
+  <h2>Content Studio</h2>
+  <p><small>هنا تتحكم من UI: الصفحة الرئيسية (Blocks) + بروفايل الفرع/الإنجازات + المدونة + حملات + توليد محتوى/صور (Jobs).</small></p>
+
+  <div class="card">
+    <h3>Website ID</h3>
+    <div class="row">
+      <input id="website_id" placeholder="website_id" />
+      <button onclick="useWebsite()">استخدم</button>
+    </div>
+    <pre id="w_out"></pre>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h3>Homepage Builder (JSON Blocks)</h3>
+      <textarea id="home" rows="14" placeholder='{"blocks":[{"type":"hero","enabled":true,"data":{"title":"..."}}]}'></textarea>
+      <input id="home_reason" placeholder="Reason"/>
+      <button onclick="saveHomepage()">حفظ</button>
+      <pre id="home_out"></pre>
+      <small>تنبيه: حفظ الهوم هنا يفترض عندكم PATCH /api/websites/:id في النواة (موجود عندكم سابقًا).</small>
+    </div>
+
+    <div class="card">
+      <h3>Branch Profile (About/Contacts/Gallery)</h3>
+      <textarea id="profile" rows="14" placeholder='{"title":"فرع مكة","tagline":"...","about_md":"...","contact_json":{},"gallery_json":[]}'></textarea>
+      <input id="profile_reason" placeholder="Reason"/>
+      <button onclick="saveProfile()">حفظ</button>
+      <pre id="profile_out"></pre>
+    </div>
+
+    <div class="card">
+      <h3>Blog — إنشاء مسودة</h3>
+      <input id="blog_title" placeholder="عنوان المقال"/>
+      <input id="blog_slug" placeholder="slug اختياري"/>
+      <textarea id="blog_md" rows="10" placeholder="المحتوى (Markdown)"></textarea>
+      <input id="blog_reason" placeholder="Reason"/>
+      <button onclick="createBlog()">إنشاء</button>
+      <pre id="blog_out"></pre>
+    </div>
+
+    <div class="card">
+      <h3>AI Generate (Jobs) — صور/مقالات/رسائل</h3>
+      <div class="row">
+        <select id="job_type">
+          <option value="image">image</option>
+          <option value="blog">blog</option>
+          <option value="message">message</option>
+          <option value="home_section">home_section</option>
+        </select>
+        <button onclick="listJobs()">Jobs</button>
+      </div>
+      <textarea id="prompt" rows="8" placeholder="اكتب المطلوب للتوليد..."></textarea>
+      <textarea id="input_json" rows="6" placeholder='{"tone":"حجازي","audience":"حجاج","offer":"..."}'></textarea>
+      <input id="ai_reason" placeholder="Reason"/>
+      <button onclick="createJob()">إنشاء Job</button>
+      <pre id="ai_out"></pre>
+    </div>
+  </div>
+
+<script>
+let website_id=null;
+
+async function api(path, method='GET', body){
+  const res = await fetch('/api'+path, {
+    method,
+    headers: {'Content-Type':'application/json'},
+    body: body ? JSON.stringify(body) : undefined
+  });
+  const j = await res.json().catch(()=>({ok:false,error:'BAD_JSON'}));
+  if(!res.ok) throw j;
+  return j;
+}
+
+function useWebsite(){
+  website_id=document.getElementById('website_id').value.trim();
+  document.getElementById('w_out').textContent='selected: '+website_id;
+}
+
+async function saveHomepage(){
+  const reason=document.getElementById('home_reason').value;
+  const out=document.getElementById('home_out');
+  out.textContent='...';
+  try{
+    const j=await api(`/websites/${website_id}/homepage`,'PUT',{
+      reason,
+      homepage: JSON.parse(document.getElementById('home').value||'{}')
+    });
+    out.textContent=JSON.stringify(j,null,2);
+  }catch(e){ out.textContent=JSON.stringify(e,null,2); }
+}
+
+async function saveProfile(){
+  const reason=document.getElementById('profile_reason').value;
+  const out=document.getElementById('profile_out');
+  out.textContent='...';
+  try{
+    const profile=JSON.parse(document.getElementById('profile').value||'{}');
+    const j=await api(`/websites/${website_id}/profile`,'PUT',{profile,reason});
+    out.textContent=JSON.stringify(j,null,2);
+  }catch(e){ out.textContent=JSON.stringify(e,null,2); }
+}
+
+async function createBlog(){
+  const reason=document.getElementById('blog_reason').value;
+  const out=document.getElementById('blog_out');
+  out.textContent='...';
+  try{
+    const j=await api(`/websites/${website_id}/blog/posts`,'POST',{
+      reason,
+      title: document.getElementById('blog_title').value,
+      slug: document.getElementById('blog_slug').value||null,
+      content_md: document.getElementById('blog_md').value
+    });
+    out.textContent=JSON.stringify(j,null,2);
+  }catch(e){ out.textContent=JSON.stringify(e,null,2); }
+}
+
+async function createJob(){
+  const reason=document.getElementById('ai_reason').value;
+  const out=document.getElementById('ai_out');
+  out.textContent='...';
+  try{
+    const j=await api(`/websites/${website_id}/ai/generate`,'POST',{
+      reason,
+      job_type: document.getElementById('job_type').value,
+      prompt: document.getElementById('prompt').value,
+      input_json: JSON.parse(document.getElementById('input_json').value||'{}')
+    });
+    out.textContent=JSON.stringify(j,null,2);
+  }catch(e){ out.textContent=JSON.stringify(e,null,2); }
+}
+
+async function listJobs(){
+  const out=document.getElementById('ai_out');
+  out.textContent='...';
+  try{
+    const j=await api(`/websites/${website_id}/ai/jobs`);
+    out.textContent=JSON.stringify(j,null,2);
+  }catch(e){ out.textContent=JSON.stringify(e,null,2); }
+}
+</script>
+</body>
+</html>

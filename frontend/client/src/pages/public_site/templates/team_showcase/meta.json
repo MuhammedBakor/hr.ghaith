@@ -1,0 +1,17 @@
+{
+  "code": "team_showcase",
+  "title": "Team Showcase",
+  "kind": "page",
+  "description": "Team cards",
+  "supports": {
+    "theme_tokens": true,
+    "rtl": true,
+    "snapshots": true
+  },
+  "blocks_hint": [
+    "hero",
+    "cards",
+    "cta",
+    "media_placeholder"
+  ]
+}

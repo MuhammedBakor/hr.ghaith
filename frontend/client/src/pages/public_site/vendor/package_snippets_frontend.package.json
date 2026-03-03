@@ -1,0 +1,11 @@
+{
+  "name": "ghaith-marketing-studio-ui",
+  "private": true,
+  "dependencies": {
+    "@editorjs/editorjs": "^latest",
+    "@tiptap/core": "^latest",
+    "@tiptap/starter-kit": "^latest",
+    "grapesjs": "^latest",
+    "@grapesjs/react": "^latest"
+  }
+}

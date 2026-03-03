@@ -1,0 +1,17 @@
+{
+  "code": "testimonials",
+  "title": "Testimonials",
+  "kind": "page",
+  "description": "Testimonials slider placeholder",
+  "supports": {
+    "theme_tokens": true,
+    "rtl": true,
+    "snapshots": true
+  },
+  "blocks_hint": [
+    "hero",
+    "cards",
+    "cta",
+    "media_placeholder"
+  ]
+}

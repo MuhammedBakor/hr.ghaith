@@ -1,0 +1,12 @@
+{
+  "permissions": [
+    "marketing:ai:create",
+    "marketing:ai:image:request",
+    "marketing:ai:read",
+    "marketing:campaigns:create",
+    "marketing:campaigns:read",
+    "marketing:campaigns:update",
+    "marketing:campaigns:write",
+    "marketing:content_pack:build"
+  ]
+}

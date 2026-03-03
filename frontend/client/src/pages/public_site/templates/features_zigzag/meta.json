@@ -1,0 +1,17 @@
+{
+  "code": "features_zigzag",
+  "title": "Features Zigzag",
+  "kind": "page",
+  "description": "Alternating feature blocks",
+  "supports": {
+    "theme_tokens": true,
+    "rtl": true,
+    "snapshots": true
+  },
+  "blocks_hint": [
+    "hero",
+    "cards",
+    "cta",
+    "media_placeholder"
+  ]
+}

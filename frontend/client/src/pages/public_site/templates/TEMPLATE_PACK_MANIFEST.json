@@ -1,0 +1,127 @@
+{
+  "version": "4.43.0",
+  "generated": "2026-01-10 19:20:49",
+  "count": 20,
+  "templates": [
+    {
+      "code": "marketing_home_modern",
+      "title": "Homepage Modern",
+      "kind": "home",
+      "description": "Modern hero + services + portfolio + CTA"
+    },
+    {
+      "code": "company_profile_clean",
+      "title": "Company Profile Clean",
+      "kind": "profile",
+      "description": "Branch/company profile with achievements blocks"
+    },
+    {
+      "code": "services_grid",
+      "title": "Services Grid",
+      "kind": "page",
+      "description": "Services cards grid + pricing teaser"
+    },
+    {
+      "code": "portfolio_gallery",
+      "title": "Portfolio Gallery",
+      "kind": "projects",
+      "description": "Gallery + filters + stats"
+    },
+    {
+      "code": "landing_offer_hero",
+      "title": "Landing Offer Hero",
+      "kind": "landing",
+      "description": "Offer landing with countdown placeholder"
+    },
+    {
+      "code": "pricing_3_tiers",
+      "title": "Pricing 3 Tiers",
+      "kind": "page",
+      "description": "3 tier pricing with highlights"
+    },
+    {
+      "code": "contact_split",
+      "title": "Contact Split",
+      "kind": "page",
+      "description": "Contact form + map placeholder"
+    },
+    {
+      "code": "blog_index_clean",
+      "title": "Blog Index Clean",
+      "kind": "blog",
+      "description": "Blog list + categories"
+    },
+    {
+      "code": "blog_post_read",
+      "title": "Blog Post Read",
+      "kind": "blog_post",
+      "description": "Article layout + toc placeholder"
+    },
+    {
+      "code": "terms_versioned",
+      "title": "Terms Versioned",
+      "kind": "terms",
+      "description": "Legal terms versioned (snapshot-friendly)"
+    },
+    {
+      "code": "faq_center",
+      "title": "FAQ Center",
+      "kind": "page",
+      "description": "FAQ accordion placeholder"
+    },
+    {
+      "code": "testimonials",
+      "title": "Testimonials",
+      "kind": "page",
+      "description": "Testimonials slider placeholder"
+    },
+    {
+      "code": "team_showcase",
+      "title": "Team Showcase",
+      "kind": "page",
+      "description": "Team cards"
+    },
+    {
+      "code": "stats_kpis",
+      "title": "Stats KPIs",
+      "kind": "page",
+      "description": "Stats and KPIs section"
+    },
+    {
+      "code": "newsletter_cta",
+      "title": "Newsletter CTA",
+      "kind": "page",
+      "description": "Email capture CTA"
+    },
+    {
+      "code": "hero_video",
+      "title": "Hero Video",
+      "kind": "home",
+      "description": "Hero with video placeholder"
+    },
+    {
+      "code": "features_zigzag",
+      "title": "Features Zigzag",
+      "kind": "page",
+      "description": "Alternating feature blocks"
+    },
+    {
+      "code": "steps_timeline",
+      "title": "Steps Timeline",
+      "kind": "page",
+      "description": "Process steps timeline"
+    },
+    {
+      "code": "case_study",
+      "title": "Case Study",
+      "kind": "page",
+      "description": "Case study layout"
+    },
+    {
+      "code": "store_offers_grid",
+      "title": "Store Offers Grid",
+      "kind": "offers",
+      "description": "Offers grid + badges"
+    }
+  ]
+}

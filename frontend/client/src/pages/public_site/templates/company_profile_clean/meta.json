@@ -1,0 +1,17 @@
+{
+  "code": "company_profile_clean",
+  "title": "Company Profile Clean",
+  "kind": "profile",
+  "description": "Branch/company profile with achievements blocks",
+  "supports": {
+    "theme_tokens": true,
+    "rtl": true,
+    "snapshots": true
+  },
+  "blocks_hint": [
+    "hero",
+    "cards",
+    "cta",
+    "media_placeholder"
+  ]
+}

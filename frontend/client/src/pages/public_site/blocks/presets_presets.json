@@ -1,0 +1,301 @@
+{
+  "generated": "2026-01-10 19:35:46",
+  "presets": [
+    {
+      "code": "preset_home_modern",
+      "title": "Homepage Modern (Blocks)",
+      "blocks": [
+        {
+          "code": "hero",
+          "props": {
+            "title": "حلول احترافية لقطاعك",
+            "subtitle": "نبني تجربة عميل قوية + تنفيذ سريع + جودة عالية.",
+            "primary_cta": {
+              "label": "اطلب عرض سعر",
+              "href": "/contact"
+            },
+            "secondary_cta": {
+              "label": "شوف أعمالنا",
+              "href": "/projects"
+            }
+          }
+        },
+        {
+          "code": "services_grid",
+          "props": {
+            "heading": "خدماتنا",
+            "items": [
+              {
+                "title": "خدمة 1",
+                "desc": "وصف مختصر للخدمة",
+                "icon": "✅",
+                "href": "/services"
+              },
+              {
+                "title": "خدمة 2",
+                "desc": "وصف مختصر للخدمة",
+                "icon": "⚡",
+                "href": "/services"
+              },
+              {
+                "title": "خدمة 3",
+                "desc": "وصف مختصر للخدمة",
+                "icon": "🏗️",
+                "href": "/services"
+              }
+            ]
+          }
+        },
+        {
+          "code": "features_zigzag",
+          "props": {
+            "heading": "ليش تختارنا؟",
+            "features": [
+              {
+                "title": "حوكمة ووضوح",
+                "desc": "إجراءات واضحة وتقارير دورية.",
+                "media_url": ""
+              },
+              {
+                "title": "تنفيذ قوي",
+                "desc": "معايير جودة + وقت تسليم مضبوط.",
+                "media_url": ""
+              }
+            ]
+          }
+        },
+        {
+          "code": "cta",
+          "props": {
+            "title": "جاهز نبدأ؟",
+            "subtitle": "تواصل معنا ونرتّب لك حل مناسب.",
+            "button": {
+              "label": "تواصل الآن",
+              "href": "/contact"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "code": "preset_terms",
+      "title": "Terms Versioned (Blocks)",
+      "blocks": [
+        {
+          "code": "hero",
+          "props": {
+            "title": "الشروط والأحكام",
+            "subtitle": "آخر تحديث: 2026-01-10",
+            "primary_cta": {
+              "label": "تحميل نسخة PDF",
+              "href": "#"
+            }
+          }
+        },
+        {
+          "code": "faq",
+          "props": {
+            "heading": "أسئلة شائعة",
+            "items": [
+              {
+                "q": "كيف يتم حفظ النسخ؟",
+                "a": "كل نشر ينشئ Snapshot برقم مستند."
+              },
+              {
+                "q": "هل التحديثات تؤرشف؟",
+                "a": "أي تعديل بعد النشر يولّد نسخة جديدة مع أرشفة السابقة."
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "modern_agency_blue",
+      "title": "Modern Agency (Blue)",
+      "category": "landing",
+      "theme": {
+        "primary": "#1D4ED8",
+        "secondary": "#0F172A",
+        "font_family": "Inter, system-ui"
+      },
+      "blocks": [
+        {
+          "code": "hero",
+          "props": {
+            "title": "وكالة حديثة",
+            "subtitle": "نحو نمو أسرع وتحويل أعلى"
+          },
+          "visibility": {
+            "audiences": [
+              "anonymous",
+              "staff",
+              "admin"
+            ]
+          }
+        },
+        {
+          "code": "features",
+          "props": {
+            "items": [
+              {
+                "title": "سرعة",
+                "desc": "إطلاق حملات بسرعة"
+              },
+              {
+                "title": "قياس",
+                "desc": "تقارير واضحة"
+              },
+              {
+                "title": "تحسين",
+                "desc": "A/B بشكل مستمر"
+              }
+            ]
+          },
+          "visibility": {
+            "audiences": [
+              "anonymous",
+              "staff",
+              "admin"
+            ]
+          }
+        },
+        {
+          "code": "cta",
+          "props": {
+            "title": "ابدأ الآن",
+            "phone": "",
+            "whatsapp": ""
+          },
+          "visibility": {
+            "audiences": [
+              "anonymous",
+              "staff",
+              "admin"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "construction_portfolio",
+      "title": "Construction Portfolio",
+      "category": "portfolio",
+      "theme": {
+        "primary": "#B45309",
+        "secondary": "#111827",
+        "font_family": "Tajawal, system-ui"
+      },
+      "blocks": [
+        {
+          "code": "hero",
+          "props": {
+            "title": "إنجازات المقاولات",
+            "subtitle": "صور مشاريعنا وخبرتنا"
+          },
+          "visibility": {
+            "audiences": [
+              "anonymous",
+              "staff",
+              "admin"
+            ]
+          }
+        },
+        {
+          "code": "gallery",
+          "props": {
+            "title": "معرض الصور",
+            "items": []
+          },
+          "visibility": {
+            "audiences": [
+              "anonymous",
+              "staff",
+              "admin"
+            ]
+          }
+        },
+        {
+          "code": "section",
+          "props": {
+            "title": "مشاريع مميزة",
+            "items": []
+          },
+          "visibility": {
+            "audiences": [
+              "anonymous",
+              "staff",
+              "admin"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "legal_services_clean",
+      "title": "Legal Services (Clean)",
+      "category": "services",
+      "theme": {
+        "primary": "#0F766E",
+        "secondary": "#0B1220",
+        "font_family": "Cairo, system-ui"
+      },
+      "blocks": [
+        {
+          "code": "hero",
+          "props": {
+            "title": "خدمات قانونية",
+            "subtitle": "استشارات • قضايا • عقود"
+          },
+          "visibility": {
+            "audiences": [
+              "anonymous",
+              "staff",
+              "admin"
+            ]
+          }
+        },
+        {
+          "code": "section",
+          "props": {
+            "title": "الخدمات",
+            "items": [
+              {
+                "title": "قضايا",
+                "desc": "إدارة كاملة",
+                "meta": ""
+              },
+              {
+                "title": "عقود",
+                "desc": "صياغة ومراجعة",
+                "meta": ""
+              }
+            ]
+          },
+          "visibility": {
+            "audiences": [
+              "anonymous",
+              "staff",
+              "admin"
+            ]
+          }
+        },
+        {
+          "code": "cta",
+          "props": {
+            "title": "احجز استشارة",
+            "phone": "",
+            "whatsapp": ""
+          },
+          "visibility": {
+            "audiences": [
+              "anonymous",
+              "staff",
+              "admin"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

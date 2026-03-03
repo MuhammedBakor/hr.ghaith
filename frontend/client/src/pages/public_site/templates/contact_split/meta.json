@@ -1,0 +1,17 @@
+{
+  "code": "contact_split",
+  "title": "Contact Split",
+  "kind": "page",
+  "description": "Contact form + map placeholder",
+  "supports": {
+    "theme_tokens": true,
+    "rtl": true,
+    "snapshots": true
+  },
+  "blocks_hint": [
+    "hero",
+    "cards",
+    "cta",
+    "media_placeholder"
+  ]
+}

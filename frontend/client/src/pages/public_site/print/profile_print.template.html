@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>{{title}}</title>
+<style>
+  body{font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin:0; padding:24px; color:#111;}
+  header{display:flex; justify-content:space-between; align-items:center; gap:12px; border-bottom:2px solid #eee; padding-bottom:14px; margin-bottom:16px;}
+  .brand{display:flex; align-items:center; gap:12px}
+  .logo{width:56px; height:56px; border-radius:12px; background:#f3f4f6; display:flex; align-items:center; justify-content:center; overflow:hidden}
+  .logo img{max-width:100%; max-height:100%}
+  .meta{font-size:12px; color:#555; text-align:left; direction:ltr}
+  h1{margin:0; font-size:20px}
+  .section{margin-top:14px}
+  .grid{display:grid; grid-template-columns: repeat(3, 1fr); gap:10px}
+  .card{border:1px solid #eee; border-radius:12px; padding:12px; background:#fff}
+  .label{font-size:12px; color:#555}
+  .value{font-weight:700; margin-top:4px}
+  .gallery{display:grid; grid-template-columns: repeat(4, 1fr); gap:8px; margin-top:10px}
+  .gallery img{width:100%; height:120px; object-fit:cover; border-radius:10px; border:1px solid #eee}
+  footer{margin-top:20px; border-top:1px solid #eee; padding-top:12px; font-size:12px; color:#555; display:flex; justify-content:space-between; gap:10px}
+  .qr{width:92px; height:92px; border:1px solid #eee; border-radius:10px; display:flex; align-items:center; justify-content:center; overflow:hidden}
+  .qr img{max-width:100%; max-height:100%}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="logo">{{#if logo_url}}<img src="{{logo_url}}" alt="logo"/>{{/if}}</div>
+    <div>
+      <h1>{{title}}</h1>
+      <div style="font-size:12px;color:#555">{{subtitle}}</div>
+    </div>
+  </div>
+  <div class="meta">
+    <div>DOC: {{doc_no}}</div>
+    <div>VER: {{version_no}}</div>
+    <div>DATE: {{printed_at}}</div>
+  </div>
+</header>
+
+<div class="section">
+  <div class="grid">
+    <div class="card"><div class="label">الفرع</div><div class="value">{{branch_name}}</div></div>
+    <div class="card"><div class="label">التخصص</div><div class="value">{{category}}</div></div>
+    <div class="card"><div class="label">المدينة</div><div class="value">{{city}}</div></div>
+  </div>
+</div>
+
+<div class="section card">
+  <div class="label">نبذة</div>
+  <div style="margin-top:6px; line-height:1.8">{{about_html}}</div>
+</div>
+
+<div class="section">
+  <div class="label">أبرز الإنجازات / المشاريع</div>
+  <div class="gallery">
+    {{#each images}}
+      <img src="{{this.url}}" alt="img"/>
+    {{/each}}
+  </div>
+</div>
+
+<footer>
+  <div>
+    <div>للتأكد: امسح QR أو ادخل رقم المستند.</div>
+    <div style="margin-top:4px">رابط التحقق: {{verify_url}}</div>
+  </div>
+  <div class="qr">
+    {{#if qr_data_url}}<img src="{{qr_data_url}}" alt="qr"/>{{/if}}
+  </div>
+</footer>
+</body>
+</html>

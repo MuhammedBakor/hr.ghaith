@@ -1,0 +1,17 @@
+{
+  "code": "faq_center",
+  "title": "FAQ Center",
+  "kind": "page",
+  "description": "FAQ accordion placeholder",
+  "supports": {
+    "theme_tokens": true,
+    "rtl": true,
+    "snapshots": true
+  },
+  "blocks_hint": [
+    "hero",
+    "cards",
+    "cta",
+    "media_placeholder"
+  ]
+}

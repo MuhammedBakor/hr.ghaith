@@ -1,0 +1,5 @@
+Contact: security@door.sa
+Expires: 2027-02-27T00:00:00.000Z
+Preferred-Languages: ar, en
+Canonical: https://ghaith.door.sa/.well-known/security.txt
+Policy: https://door.sa/security-policy

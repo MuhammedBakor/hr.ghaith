@@ -1,0 +1,31 @@
+{
+  "pack_key": "hr_requests",
+  "leader": "hr",
+  "types": [
+    {
+      "key": "leave_request",
+      "name_ar": "طلب إجازة",
+      "sla_hours": 48
+    },
+    {
+      "key": "loan_request",
+      "name_ar": "طلب سلفة",
+      "sla_hours": 72
+    },
+    {
+      "key": "resignation_request",
+      "name_ar": "طلب استقالة",
+      "sla_hours": 72
+    },
+    {
+      "key": "termination_request",
+      "name_ar": "طلب إنهاء خدمة",
+      "sla_hours": 72
+    },
+    {
+      "key": "payroll_adjustment_request",
+      "name_ar": "طلب تعديل مسير",
+      "sla_hours": 48
+    }
+  ]
+}

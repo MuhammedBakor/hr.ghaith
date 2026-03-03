@@ -1,0 +1,17 @@
+{
+  "code": "stats_kpis",
+  "title": "Stats KPIs",
+  "kind": "page",
+  "description": "Stats and KPIs section",
+  "supports": {
+    "theme_tokens": true,
+    "rtl": true,
+    "snapshots": true
+  },
+  "blocks_hint": [
+    "hero",
+    "cards",
+    "cta",
+    "media_placeholder"
+  ]
+}

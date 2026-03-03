@@ -1,0 +1,23 @@
+/* Ghaith Public UI Kit — Theme Tokens (override via settings_scoped -> public.ui.theme_json) */
+:root{
+  --gh-primary: #0ea5e9;
+  --gh-secondary:#111827;
+  --gh-accent:#22c55e;
+  --gh-bg:#ffffff;
+  --gh-fg:#0b1220;
+  --gh-muted:#6b7280;
+  --gh-radius:14px;
+  --gh-font-base: system-ui,-apple-system,Segoe UI,Roboto,Arial;
+  --gh-font-heading: system-ui,-apple-system,Segoe UI,Roboto,Arial;
+}
+.gh-theme{ font-family: var(--gh-font-base); color: var(--gh-fg); background: var(--gh-bg); }
+.gh-h{ font-family: var(--gh-font-heading); }
+.gh-btn{
+  display:inline-flex; align-items:center; justify-content:center;
+  padding:.75rem 1rem; border-radius:var(--gh-radius);
+  border:1px solid rgba(0,0,0,.08);
+  background:var(--gh-primary); color:#fff; text-decoration:none; font-weight:700;
+}
+.gh-btn.ghost{ background:transparent; color:var(--gh-primary); border-color:rgba(14,165,233,.35); }
+.gh-card{ border-radius:var(--gh-radius); border:1px solid rgba(0,0,0,.08); background:rgba(255,255,255,.9); padding:1.25rem; }
+.gh-muted{ color:var(--gh-muted); }

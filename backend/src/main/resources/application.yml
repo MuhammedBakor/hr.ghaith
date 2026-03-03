@@ -1,0 +1,28 @@
+spring:
+  application:
+    name: ghaith-erp
+  logging:
+    file:
+      name: logs/ghaith-erp.log
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:5434/ghaith_erp
+    username: ghaith_admin
+    password: ghaith_pass
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+server:
+  port: 8080
+
+app:
+  upload-dir: uploads
+  jwt:
+    secret: ${APP_JWT_SECRET:VmFsaWRCYXNlNjRTZWNyZXRLZXlGb3JKV1RBdXRoZW50aWNhdGlvbjMyQnl0ZXM=}
+    expiration: ${APP_JWT_EXPIRATION:86400000}

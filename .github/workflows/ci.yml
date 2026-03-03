@@ -1,0 +1,155 @@
+# ════════════════════════════════════════════════════════════════
+# ci.yml — CI/CD Pipeline لنظام غيث ERP
+# يعمل عند: push على main/develop، وكل Pull Request
+# ════════════════════════════════════════════════════════════════
+
+name: غيث ERP — CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  NODE_VERSION: '20'
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # ─── 1. الاختبارات ───────────────────────────────────────────
+  test:
+    name: الاختبارات
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: test_password
+          MYSQL_DATABASE: ghaith_erp_test
+          MYSQL_CHARSET: utf8mb4
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      NODE_ENV: test
+      DATABASE_URL: mysql://root:test_password@localhost:3306/ghaith_erp_test
+      JWT_SECRET: test_jwt_secret_32_characters_minimum
+      TOKEN_ENCRYPTION_KEY: ${{ secrets.TOKEN_ENCRYPTION_KEY_TEST || '0000000000000000000000000000000000000000000000000000000000000000' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: إعداد Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: تثبيت المكتبات
+        run: npm ci
+
+      - name: تشغيل الاختبارات
+        run: npm test -- --passWithNoTests
+
+      - name: فحص TypeScript
+        run: npx tsc --noEmit || echo "⚠️ TypeScript errors (non-blocking)"
+
+  # ─── 2. فحص الأمان ───────────────────────────────────────────
+  security:
+    name: فحص الأمان
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: إعداد Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: فحص الثغرات
+        run: npm audit --audit-level=high || echo "⚠️ ثغرات عالية الخطورة موجودة"
+
+      - name: فحص المتغيرات الحساسة
+        run: |
+          if grep -r "TOKEN_ENCRYPTION_KEY.*randomBytes" server/ --include="*.ts"; then
+            echo "❌ خطر: TOKEN_ENCRYPTION_KEY عشوائي موجود في الكود"
+            exit 1
+          fi
+          echo "✅ لا توجد مفاتيح عشوائية"
+
+  # ─── 3. البناء ───────────────────────────────────────────────
+  build:
+    name: بناء Docker Image
+    runs-on: ubuntu-latest
+    needs: [test, security]
+    if: github.ref == 'refs/heads/main'
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: تسجيل الدخول لـ GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: استخراج metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: بناء ورفع الصورة
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ─── 4. النشر (الإنتاج) ──────────────────────────────────────
+  deploy:
+    name: النشر على الإنتاج
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    environment: production
+
+    steps:
+      - name: نشر على السيرفر
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            cd /app/ghaith-erp
+            # نسخ احتياطي قبل التحديث
+            ./scripts/backup.sh full
+            # سحب أحدث صورة
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            # إعادة التشغيل
+            docker compose up -d --no-deps app
+            # التحقق من الصحة
+            sleep 10
+            curl -f http://localhost:3000/health || (docker compose logs app --tail=50 && exit 1)
+            echo "✅ النشر ناجح"

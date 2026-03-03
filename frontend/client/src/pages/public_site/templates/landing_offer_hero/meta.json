@@ -1,0 +1,17 @@
+{
+  "code": "landing_offer_hero",
+  "title": "Landing Offer Hero",
+  "kind": "landing",
+  "description": "Offer landing with countdown placeholder",
+  "supports": {
+    "theme_tokens": true,
+    "rtl": true,
+    "snapshots": true
+  },
+  "blocks_hint": [
+    "hero",
+    "cards",
+    "cta",
+    "media_placeholder"
+  ]
+}

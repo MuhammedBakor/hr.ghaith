@@ -1,0 +1,17 @@
+{
+  "code": "store_offers_grid",
+  "title": "Store Offers Grid",
+  "kind": "offers",
+  "description": "Offers grid + badges",
+  "supports": {
+    "theme_tokens": true,
+    "rtl": true,
+    "snapshots": true
+  },
+  "blocks_hint": [
+    "hero",
+    "cards",
+    "cta",
+    "media_placeholder"
+  ]
+}

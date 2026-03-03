@@ -1,0 +1,1217 @@
+{
+  "meta": {
+    "key": "hr.discipline.sa.2024",
+    "name": "لائحة الانضباط الوظيفي العام (مكتبة) – السعودية",
+    "effective_from": "2024-10-01",
+    "language": "ar",
+    "source": "User provided regulation",
+    "notes": [
+      "يتم تدوير محضر استفسار من الموظف عند وقوع أي من الأمور المرصودة.",
+      "يُذيل المحضر برأي المدير المباشر ثم يرفع للمدير العام أو من ينوبه.",
+      "لا يعتد بأي جزاء أو استفسار على غير النموذج المعتمد."
+    ]
+  },
+  "rules": [
+    {
+      "rule_id": "ATT-001",
+      "category": "مخالفات تتعلق بمواعيد العمل",
+      "trigger": {
+        "type": "attendance.late",
+        "minutes_min": 0,
+        "minutes_max": 15,
+        "affects_others": false
+      },
+      "penalty_matrix": {
+        "1": "إنذار كتابي",
+        "2": "5%",
+        "3": "10%",
+        "4": "20%"
+      },
+      "recommended_services": [
+        "HR_ADMIN_ALERT",
+        "HR_INQUIRY"
+      ],
+      "severity": "low",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "التأخر لغاية 15 دقيقة دون إذن أو عذر مقبول إذا لم يترتب تعطيل عمال آخرين."
+    },
+    {
+      "rule_id": "ATT-002",
+      "category": "مخالفات تتعلق بمواعيد العمل",
+      "trigger": {
+        "type": "attendance.late",
+        "minutes_min": 0,
+        "minutes_max": 15,
+        "affects_others": true
+      },
+      "penalty_matrix": {
+        "1": "إنذار كتابي",
+        "2": "15%",
+        "3": "25%",
+        "4": "50%"
+      },
+      "recommended_services": [
+        "HR_INQUIRY",
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE"
+      ],
+      "severity": "medium",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "التأخر لغاية 15 دقيقة دون إذن أو عذر مقبول إذا ترتب تعطيل عمال آخرين."
+    },
+    {
+      "rule_id": "ATT-003",
+      "category": "مخالفات تتعلق بمواعيد العمل",
+      "trigger": {
+        "type": "attendance.late",
+        "minutes_min": 15,
+        "minutes_max": 30,
+        "affects_others": false
+      },
+      "penalty_matrix": {
+        "1": "10%",
+        "2": "15%",
+        "3": "25%",
+        "4": "50%"
+      },
+      "recommended_services": [
+        "HR_INQUIRY",
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE"
+      ],
+      "severity": "medium",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "التأخر أكثر من 15 دقيقة لغاية 30 دقيقة دون إذن أو عذر مقبول إذا لم يترتب تعطيل."
+    },
+    {
+      "rule_id": "ATT-004",
+      "category": "مخالفات تتعلق بمواعيد العمل",
+      "trigger": {
+        "type": "attendance.late",
+        "minutes_min": 15,
+        "minutes_max": 30,
+        "affects_others": true
+      },
+      "penalty_matrix": {
+        "1": "25%",
+        "2": "50%",
+        "3": "75%",
+        "4": "يوم"
+      },
+      "recommended_services": [
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE",
+        "HR_ADMIN_OVERRIDE"
+      ],
+      "severity": "high",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "التأخر أكثر من 15 دقيقة لغاية 30 دقيقة دون إذن أو عذر مقبول إذا ترتب تعطيل."
+    },
+    {
+      "rule_id": "ATT-005",
+      "category": "مخالفات تتعلق بمواعيد العمل",
+      "trigger": {
+        "type": "attendance.late",
+        "minutes_min": 30,
+        "minutes_max": 60,
+        "affects_others": false
+      },
+      "penalty_matrix": {
+        "1": "25%",
+        "2": "50%",
+        "3": "75%",
+        "4": "يوم"
+      },
+      "recommended_services": [
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE",
+        "HR_ADMIN_OVERRIDE"
+      ],
+      "severity": "high",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "التأخر أكثر من 30 دقيقة لغاية 60 دقيقة دون إذن أو عذر مقبول إذا لم يترتب تعطيل."
+    },
+    {
+      "rule_id": "ATT-006",
+      "category": "مخالفات تتعلق بمواعيد العمل",
+      "trigger": {
+        "type": "attendance.late",
+        "minutes_min": 30,
+        "minutes_max": 60,
+        "affects_others": true
+      },
+      "penalty_matrix": {
+        "1": "30%",
+        "2": "50%",
+        "3": "يوم",
+        "4": "يومان"
+      },
+      "recommended_services": [
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE",
+        "HR_ADMIN_OVERRIDE"
+      ],
+      "severity": "high",
+      "default_effect": {
+        "deduct_late_minutes": true
+      },
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "التأخر أكثر من 30 دقيقة لغاية 60 دقيقة دون إذن أو عذر مقبول إذا ترتب تعطيل. بالإضافة إلى حسم أجر دقائق التأخر."
+    },
+    {
+      "rule_id": "ATT-007",
+      "category": "مخالفات تتعلق بمواعيد العمل",
+      "trigger": {
+        "type": "attendance.late",
+        "minutes_min": 60,
+        "minutes_max": null
+      },
+      "penalty_matrix": {
+        "1": "إنذار كتابي",
+        "2": "يوم",
+        "3": "يومان",
+        "4": "ثلاثة أيام"
+      },
+      "recommended_services": [
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE",
+        "HR_ADMIN_OVERRIDE"
+      ],
+      "severity": "high",
+      "default_effect": {
+        "deduct_late_hours": true
+      },
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "التأخر لمدة تزيد على ساعة دون إذن أو عذر مقبول. بالإضافة إلى حسم أجر ساعات التأخر."
+    },
+    {
+      "rule_id": "ATT-008",
+      "category": "مخالفات تتعلق بمواعيد العمل",
+      "trigger": {
+        "type": "attendance.early_leave",
+        "minutes_max": 15
+      },
+      "penalty_matrix": {
+        "1": "إنذار كتابي",
+        "2": "10%",
+        "3": "25%",
+        "4": "يوم"
+      },
+      "recommended_services": [
+        "HR_INQUIRY",
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE"
+      ],
+      "severity": "medium",
+      "default_effect": {
+        "deduct_early_leave_minutes": true
+      },
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "ترك العمل أو الانصراف قبل الميعاد بما لا يتجاوز 15 دقيقة دون إذن أو عذر. بالإضافة إلى حسم أجر مدة ترك العمل."
+    },
+    {
+      "rule_id": "ATT-009",
+      "category": "مخالفات تتعلق بمواعيد العمل",
+      "trigger": {
+        "type": "attendance.early_leave",
+        "minutes_min": 15
+      },
+      "penalty_matrix": {
+        "1": "10%",
+        "2": "25%",
+        "3": "50%",
+        "4": "يوم"
+      },
+      "recommended_services": [
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE",
+        "HR_ADMIN_OVERRIDE"
+      ],
+      "severity": "high",
+      "default_effect": {
+        "deduct_early_leave_minutes": true
+      },
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "ترك العمل أو الانصراف قبل الميعاد بما يتجاوز 15 دقيقة دون إذن أو عذر. بالإضافة إلى حسم أجر مدة ترك العمل."
+    },
+    {
+      "rule_id": "ATT-010",
+      "category": "مخالفات تتعلق بمواعيد العمل",
+      "trigger": {
+        "type": "attendance.after_hours_presence"
+      },
+      "penalty_matrix": {
+        "1": "إنذار كتابي",
+        "2": "10%",
+        "3": "25%",
+        "4": "يوم"
+      },
+      "recommended_services": [
+        "HR_ADMIN_ALERT",
+        "HR_INQUIRY"
+      ],
+      "severity": "low",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "البقاء في أماكن العمل أو العودة إليها بعد انتهاء مواعيد العمل دون إذن مسبق."
+    },
+    {
+      "rule_id": "ATT-011",
+      "category": "مخالفات تتعلق بمواعيد العمل",
+      "trigger": {
+        "type": "attendance.absence",
+        "days_min": 1,
+        "days_max": 1
+      },
+      "penalty_matrix": {
+        "1": "يومان",
+        "2": "ثلاثة أيام",
+        "3": "أربعة أيام",
+        "4": "الحرمان من الترقيات أو العلاوات لمرة واحدة"
+      },
+      "recommended_services": [
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE",
+        "HR_ADMIN_OVERRIDE"
+      ],
+      "severity": "high",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "الغياب دون إذن أو عذر لمدة يوم خلال السنة العقدية الواحدة."
+    },
+    {
+      "rule_id": "ATT-012",
+      "category": "مخالفات تتعلق بمواعيد العمل",
+      "trigger": {
+        "type": "attendance.absence",
+        "days_min": 2,
+        "days_max": 6
+      },
+      "penalty_matrix": {
+        "1": "يومان",
+        "2": "ثلاثة أيام",
+        "3": "أربعة أيام",
+        "4": "الحرمان من الترقيات أو العلاوات لمرة واحدة"
+      },
+      "recommended_services": [
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE",
+        "HR_ADMIN_OVERRIDE"
+      ],
+      "severity": "high",
+      "default_effect": {
+        "deduct_absence_days": true
+      },
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "الغياب المتصل دون إذن أو عذر من يومين إلى ستة أيام خلال السنة العقدية. بالإضافة إلى حسم أجر مدة الغياب."
+    },
+    {
+      "rule_id": "ATT-013",
+      "category": "مخالفات تتعلق بمواعيد العمل",
+      "trigger": {
+        "type": "attendance.absence",
+        "days_min": 7,
+        "days_max": 10
+      },
+      "penalty_matrix": {
+        "1": "أربعة أيام",
+        "2": "خمسة أيام",
+        "3": "الحرمان من الترقيات أو العلاوات لمرة واحدة",
+        "4": "فصل من الخدمة مع المكافأة إذا لم يتجاوز الغياب (30) يوماً"
+      },
+      "recommended_services": [
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE",
+        "HR_ADMIN_OVERRIDE"
+      ],
+      "severity": "high",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "الغياب المتصل دون إذن أو عذر من سبعة أيام إلى عشرة أيام خلال السنة العقدية."
+    },
+    {
+      "rule_id": "ATT-014",
+      "category": "مخالفات تتعلق بمواعيد العمل",
+      "trigger": {
+        "type": "attendance.absence",
+        "days_min": 11,
+        "days_max": 14
+      },
+      "penalty_matrix": {
+        "1": "خمسة أيام",
+        "2": "الحرمان من الترقيات أو العلاوات لمرة واحدة",
+        "3": "فصل من الخدمة طبقاً للمادة (الثمانون) من نظام العمل",
+        "4": "-"
+      },
+      "recommended_services": [
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE",
+        "HR_ADMIN_OVERRIDE"
+      ],
+      "severity": "critical",
+      "default_effect": {
+        "deduct_absence_days": true
+      },
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "الغياب المتصل دون إذن أو عذر من 11 إلى 14 يومًا خلال السنة العقدية. بالإضافة إلى حسم أجر مدة الغياب."
+    },
+    {
+      "rule_id": "ATT-015",
+      "category": "مخالفات تتعلق بمواعيد العمل",
+      "trigger": {
+        "type": "attendance.absence",
+        "days_min": 15,
+        "days_max": null
+      },
+      "penalty_matrix": {
+        "1": "الفصل دون مكافأة أو تعويض (بعد إنذار كتابي بعد الغياب 20 يوماً) وفق المادة 80",
+        "2": "",
+        "3": "",
+        "4": ""
+      },
+      "recommended_services": [
+        "HR_INCIDENT_REPORT",
+        "HR_ADMIN_OVERRIDE"
+      ],
+      "severity": "critical",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "الانقطاع عن العمل دون سبب مشروع مدة تزيد على 15 يومًا متصلة خلال السنة العقدية الواحدة."
+    },
+    {
+      "rule_id": "ATT-016",
+      "category": "مخالفات تتعلق بمواعيد العمل",
+      "trigger": {
+        "type": "attendance.absence_total",
+        "days_total_min": 30
+      },
+      "penalty_matrix": {
+        "1": "الفصل دون مكافأة أو تعويض (بعد إنذار كتابي بعد الغياب 20 يوماً) وفق المادة 80",
+        "2": "",
+        "3": "",
+        "4": ""
+      },
+      "recommended_services": [
+        "HR_INCIDENT_REPORT",
+        "HR_ADMIN_OVERRIDE"
+      ],
+      "severity": "critical",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "الغياب دون سبب مشروع مدداً تزيد في مجموعها على 30 يومًا خلال السنة العقدية الواحدة."
+    },
+    {
+      "rule_id": "ORG-001",
+      "category": "مخالفات تتعلق بتنظيم العمل",
+      "trigger": {
+        "type": "manual.report",
+        "code": "ORG-001"
+      },
+      "penalty_matrix": {
+        "1": "10%",
+        "2": "25%",
+        "3": "50%",
+        "4": "يوم"
+      },
+      "recommended_services": [
+        "HR_INQUIRY",
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE"
+      ],
+      "severity": "medium",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "التواجد دون مبرر في غير مكان العمل المخصص للعامل أثناء وقت الدوام."
+    },
+    {
+      "rule_id": "ORG-002",
+      "category": "مخالفات تتعلق بتنظيم العمل",
+      "trigger": {
+        "type": "manual.report",
+        "code": "ORG-002"
+      },
+      "penalty_matrix": {
+        "1": "إنذار كتابي",
+        "2": "10%",
+        "3": "15%",
+        "4": "25%"
+      },
+      "recommended_services": [
+        "HR_INQUIRY",
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE"
+      ],
+      "severity": "medium",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "استقبال زائرين في غير أمور عمل المنشأة في أماكن العمل دون إذن من الإدارة."
+    },
+    {
+      "rule_id": "ORG-003",
+      "category": "مخالفات تتعلق بتنظيم العمل",
+      "trigger": {
+        "type": "manual.report",
+        "code": "ORG-003"
+      },
+      "penalty_matrix": {
+        "1": "إنذار كتابي",
+        "2": "10%",
+        "3": "25%",
+        "4": "50%"
+      },
+      "recommended_services": [
+        "HR_INQUIRY",
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE"
+      ],
+      "severity": "medium",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "استعمال آلات ومعدات وأدوات المنشأة لأغراض خاصة دون إذن."
+    },
+    {
+      "rule_id": "ORG-004",
+      "category": "مخالفات تتعلق بتنظيم العمل",
+      "trigger": {
+        "type": "manual.report",
+        "code": "ORG-004"
+      },
+      "penalty_matrix": {
+        "1": "50%",
+        "2": "يوم",
+        "3": "يومان",
+        "4": "ثلاثة أيام"
+      },
+      "recommended_services": [
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE",
+        "HR_ADMIN_OVERRIDE"
+      ],
+      "severity": "high",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "تدخل العامل دون وجه حق في عمل ليس في اختصاصه أو لم يعهد به إليه."
+    },
+    {
+      "rule_id": "ORG-005",
+      "category": "مخالفات تتعلق بتنظيم العمل",
+      "trigger": {
+        "type": "manual.report",
+        "code": "ORG-005"
+      },
+      "penalty_matrix": {
+        "1": "إنذار كتابي",
+        "2": "10%",
+        "3": "15%",
+        "4": "25%"
+      },
+      "recommended_services": [
+        "HR_INQUIRY",
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE"
+      ],
+      "severity": "medium",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "الخروج أو الدخول من غير المكان المخصص لذلك."
+    },
+    {
+      "rule_id": "ORG-006",
+      "category": "مخالفات تتعلق بتنظيم العمل",
+      "trigger": {
+        "type": "manual.report",
+        "code": "ORG-006"
+      },
+      "penalty_matrix": {
+        "1": "50%",
+        "2": "يوم",
+        "3": "يومان",
+        "4": "ثلاثة أيام"
+      },
+      "recommended_services": [
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE",
+        "HR_ADMIN_OVERRIDE"
+      ],
+      "severity": "high",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "الإهمال في تنظيف الآلات وصيانتها أو عدم العناية بها أو عدم التبليغ عما بها من خلل."
+    },
+    {
+      "rule_id": "ORG-007",
+      "category": "مخالفات تتعلق بتنظيم العمل",
+      "trigger": {
+        "type": "manual.report",
+        "code": "ORG-007"
+      },
+      "penalty_matrix": {
+        "1": "إنذار كتابي",
+        "2": "25%",
+        "3": "50%",
+        "4": "يوم"
+      },
+      "recommended_services": [
+        "HR_INQUIRY",
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE"
+      ],
+      "severity": "medium",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "عدم وضع أدوات الإصلاح والصيانة واللوازم الأخرى في الأماكن المخصصة لها بعد الانتهاء من العمل."
+    },
+    {
+      "rule_id": "ORG-008",
+      "category": "مخالفات تتعلق بتنظيم العمل",
+      "trigger": {
+        "type": "manual.report",
+        "code": "ORG-008"
+      },
+      "penalty_matrix": {
+        "1": "يومان",
+        "2": "ثلاثة أيام",
+        "3": "خمسة أيام",
+        "4": "فصل مع المكافأة"
+      },
+      "recommended_services": [
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE",
+        "HR_ADMIN_OVERRIDE"
+      ],
+      "severity": "high",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "تمزيق أو إتلاف إعلانات أو بلاغات إدارة المنشأة."
+    },
+    {
+      "rule_id": "ORG-009",
+      "category": "مخالفات تتعلق بتنظيم العمل",
+      "trigger": {
+        "type": "manual.report",
+        "code": "ORG-009"
+      },
+      "penalty_matrix": {
+        "1": "يومان",
+        "2": "ثلاثة أيام",
+        "3": "خمسة أيام",
+        "4": "فصل مع المكافأة"
+      },
+      "recommended_services": [
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE",
+        "HR_ADMIN_OVERRIDE"
+      ],
+      "severity": "high",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "الإهمال في العهد التي بحوزته مثل سيارات/آلات/أجهزة/معدات."
+    },
+    {
+      "rule_id": "ORG-010",
+      "category": "مخالفات تتعلق بتنظيم العمل",
+      "trigger": {
+        "type": "manual.report",
+        "code": "ORG-010"
+      },
+      "penalty_matrix": {
+        "1": "إنذار كتابي",
+        "2": "10%",
+        "3": "15%",
+        "4": "25%"
+      },
+      "recommended_services": [
+        "HR_INQUIRY",
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE"
+      ],
+      "severity": "medium",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "الأكل في مكان العمل أو غير المكان المعد له أو في غير أوقات الراحة."
+    },
+    {
+      "rule_id": "ORG-011",
+      "category": "مخالفات تتعلق بتنظيم العمل",
+      "trigger": {
+        "type": "manual.report",
+        "code": "ORG-011"
+      },
+      "penalty_matrix": {
+        "1": "إنذار كتابي",
+        "2": "10%",
+        "3": "25%",
+        "4": "50%"
+      },
+      "recommended_services": [
+        "HR_INQUIRY",
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE"
+      ],
+      "severity": "medium",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "النوم أثناء العمل."
+    },
+    {
+      "rule_id": "ORG-012",
+      "category": "مخالفات تتعلق بتنظيم العمل",
+      "trigger": {
+        "type": "manual.report",
+        "code": "ORG-012"
+      },
+      "penalty_matrix": {
+        "1": "50%",
+        "2": "يوم",
+        "3": "يومان",
+        "4": "ثلاثة أيام"
+      },
+      "recommended_services": [
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE",
+        "HR_ADMIN_OVERRIDE"
+      ],
+      "severity": "high",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "النوم في الحالات التي تستدعي يقظة مستمرة."
+    },
+    {
+      "rule_id": "ORG-013",
+      "category": "مخالفات تتعلق بتنظيم العمل",
+      "trigger": {
+        "type": "manual.report",
+        "code": "ORG-013"
+      },
+      "penalty_matrix": {
+        "1": "10%",
+        "2": "25%",
+        "3": "50%",
+        "4": "يوم"
+      },
+      "recommended_services": [
+        "HR_INQUIRY",
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE"
+      ],
+      "severity": "medium",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "التسكع أو وجود العامل في غير مكان عمله أثناء ساعات العمل."
+    },
+    {
+      "rule_id": "ORG-014",
+      "category": "مخالفات تتعلق بتنظيم العمل",
+      "trigger": {
+        "type": "manual.report",
+        "code": "ORG-014"
+      },
+      "penalty_matrix": {
+        "1": "يوم",
+        "2": "يومان",
+        "3": "",
+        "4": "فصل مع المكافأة"
+      },
+      "recommended_services": [
+        "HR_INQUIRY",
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE"
+      ],
+      "severity": "critical",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "التلاعب في إثبات الحضور والانصراف."
+    },
+    {
+      "rule_id": "ORG-015",
+      "category": "مخالفات تتعلق بتنظيم العمل",
+      "trigger": {
+        "type": "manual.report",
+        "code": "ORG-015"
+      },
+      "penalty_matrix": {
+        "1": "25%",
+        "2": "50%",
+        "3": "يوم",
+        "4": "يومان"
+      },
+      "recommended_services": [
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE",
+        "HR_ADMIN_OVERRIDE"
+      ],
+      "severity": "high",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "عدم إطاعة الأوامر العادية الخاصة بالعمل أو عدم تنفيذ التعليمات الخاصة بالعمل والمعلقة في مكان ظاهر."
+    },
+    {
+      "rule_id": "ORG-016",
+      "category": "مخالفات تتعلق بتنظيم العمل",
+      "trigger": {
+        "type": "manual.report",
+        "code": "ORG-016"
+      },
+      "penalty_matrix": {
+        "1": "يومان",
+        "2": "ثلاثة أيام",
+        "3": "خمسة أيام",
+        "4": "فصل مع المكافأة"
+      },
+      "recommended_services": [
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE",
+        "HR_ADMIN_OVERRIDE"
+      ],
+      "severity": "high",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "التحريض على مخالفة الأوامر والتعليمات الخطية الخاصة بالعمل."
+    },
+    {
+      "rule_id": "ORG-017",
+      "category": "مخالفات تتعلق بتنظيم العمل",
+      "trigger": {
+        "type": "manual.report",
+        "code": "ORG-017"
+      },
+      "penalty_matrix": {
+        "1": "يومان",
+        "2": "ثلاثة أيام",
+        "3": "خمسة أيام",
+        "4": "فصل مع المكافأة"
+      },
+      "recommended_services": [
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE",
+        "HR_ADMIN_OVERRIDE"
+      ],
+      "severity": "high",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "التدخين في الأماكن المحظورة والمعلن عنها للمحافظة على سلامة العمال والمنشأة."
+    },
+    {
+      "rule_id": "ORG-018",
+      "category": "مخالفات تتعلق بتنظيم العمل",
+      "trigger": {
+        "type": "manual.report",
+        "code": "ORG-018"
+      },
+      "penalty_matrix": {
+        "1": "يومان",
+        "2": "ثلاثة أيام",
+        "3": "خمسة أيام",
+        "4": "فصل مع المكافأة"
+      },
+      "recommended_services": [
+        "HR_INQUIRY",
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE"
+      ],
+      "severity": "critical",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "الإهمال أو التهاون في العمل الذي قد ينشأ عنه ضرر في صحة العمال أو سلامتهم أو في المواد أو الأدوات أو الأجهزة."
+    },
+    {
+      "rule_id": "BEH-001",
+      "category": "مخالفات تتعلق بسلوك العامل",
+      "trigger": {
+        "type": "manual.report",
+        "code": "BEH-001"
+      },
+      "penalty_matrix": {
+        "1": "يوم",
+        "2": "يومان",
+        "3": "ثلاثة أيام",
+        "4": "خمسة أيام"
+      },
+      "recommended_services": [
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE",
+        "HR_ADMIN_OVERRIDE"
+      ],
+      "severity": "high",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "التشاجر مع الزملاء أو مع الغير أو إحداث مشاغبات في مكان العمل."
+    },
+    {
+      "rule_id": "BEH-002",
+      "category": "مخالفات تتعلق بسلوك العامل",
+      "trigger": {
+        "type": "manual.report",
+        "code": "BEH-002"
+      },
+      "penalty_matrix": {
+        "1": "يوم",
+        "2": "يومان",
+        "3": "ثلاثة أيام",
+        "4": "خمسة أيام"
+      },
+      "recommended_services": [
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE",
+        "HR_ADMIN_OVERRIDE"
+      ],
+      "severity": "high",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "التمارض أو ادعاء العامل كذباً أنه أصيب أثناء العمل أو بسببه."
+    },
+    {
+      "rule_id": "BEH-003",
+      "category": "مخالفات تتعلق بسلوك العامل",
+      "trigger": {
+        "type": "manual.report",
+        "code": "BEH-003"
+      },
+      "penalty_matrix": {
+        "1": "يوم",
+        "2": "يومان",
+        "3": "ثلاثة أيام",
+        "4": "خمسة أيام"
+      },
+      "recommended_services": [
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE",
+        "HR_ADMIN_OVERRIDE"
+      ],
+      "severity": "high",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "الامتناع عن إجراء الكشف الطبي عند طلب طبيب المنشأة أو رفض اتباع التعليمات الطبية."
+    },
+    {
+      "rule_id": "BEH-004",
+      "category": "مخالفات تتعلق بسلوك العامل",
+      "trigger": {
+        "type": "manual.report",
+        "code": "BEH-004"
+      },
+      "penalty_matrix": {
+        "1": "50%",
+        "2": "يوم",
+        "3": "يومان",
+        "4": "خمسة أيام"
+      },
+      "recommended_services": [
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE",
+        "HR_ADMIN_OVERRIDE"
+      ],
+      "severity": "high",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "مخالفة التعليمات الصحية المعلقة بأماكن العمل."
+    },
+    {
+      "rule_id": "BEH-005",
+      "category": "مخالفات تتعلق بسلوك العامل",
+      "trigger": {
+        "type": "manual.report",
+        "code": "BEH-005"
+      },
+      "penalty_matrix": {
+        "1": "إنذار كتابي",
+        "2": "10%",
+        "3": "25%",
+        "4": "50%"
+      },
+      "recommended_services": [
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE",
+        "HR_ADMIN_OVERRIDE"
+      ],
+      "severity": "medium",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "الكتابة على جدران المنشأة أو لصق إعلانات عليها."
+    },
+    {
+      "rule_id": "BEH-006",
+      "category": "مخالفات تتعلق بسلوك العامل",
+      "trigger": {
+        "type": "manual.report",
+        "code": "BEH-006"
+      },
+      "penalty_matrix": {
+        "1": "25%",
+        "2": "50%",
+        "3": "يوم",
+        "4": "يومان"
+      },
+      "recommended_services": [
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE",
+        "HR_ADMIN_OVERRIDE"
+      ],
+      "severity": "high",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "رفض التفتيش الإداري عند الانصراف."
+    },
+    {
+      "rule_id": "BEH-007",
+      "category": "مخالفات تتعلق بسلوك العامل",
+      "trigger": {
+        "type": "manual.report",
+        "code": "BEH-007"
+      },
+      "penalty_matrix": {
+        "1": "يومان",
+        "2": "ثلاثة أيام",
+        "3": "خمسة أيام",
+        "4": "فصل مع المكافأة"
+      },
+      "recommended_services": [
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE",
+        "HR_ADMIN_OVERRIDE"
+      ],
+      "severity": "critical",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "عدم تسليم النقود المحصلة لحساب المنشأة في المواعيد المحددة دون تبرير مقبول."
+    },
+    {
+      "rule_id": "BEH-008",
+      "category": "مخالفات تتعلق بسلوك العامل",
+      "trigger": {
+        "type": "manual.report",
+        "code": "BEH-008"
+      },
+      "penalty_matrix": {
+        "1": "إنذار كتابي",
+        "2": "يوم",
+        "3": "يومان",
+        "4": "خمسة أيام"
+      },
+      "recommended_services": [
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE",
+        "HR_ADMIN_OVERRIDE"
+      ],
+      "severity": "high",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "الامتناع عن ارتداء الملابس والأجهزة المقررة للوقاية والسلامة."
+    },
+    {
+      "rule_id": "BEH-009",
+      "category": "مخالفات تتعلق بسلوك العامل",
+      "trigger": {
+        "type": "manual.report",
+        "code": "BEH-009"
+      },
+      "penalty_matrix": {
+        "1": "يومان",
+        "2": "ثلاثة أيام",
+        "3": "خمسة أيام",
+        "4": "فصل مع المكافأة"
+      },
+      "recommended_services": [
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE",
+        "HR_ADMIN_OVERRIDE"
+      ],
+      "severity": "critical",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "تعمد الخلوة مع الجنس الآخر في أماكن العمل."
+    },
+    {
+      "rule_id": "BEH-010",
+      "category": "مخالفات تتعلق بسلوك العامل",
+      "trigger": {
+        "type": "manual.report",
+        "code": "BEH-010"
+      },
+      "penalty_matrix": {
+        "1": "يومان",
+        "2": "ثلاثة أيام",
+        "3": "خمسة أيام",
+        "4": "فصل مع المكافأة"
+      },
+      "recommended_services": [
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE",
+        "HR_ADMIN_OVERRIDE"
+      ],
+      "severity": "critical",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "الإيحاء للآخرين بما يخدش الحياء قولاً أو فعلاً."
+    },
+    {
+      "rule_id": "BEH-011",
+      "category": "مخالفات تتعلق بسلوك العامل",
+      "trigger": {
+        "type": "manual.report",
+        "code": "BEH-011"
+      },
+      "penalty_matrix": {
+        "1": "يومان",
+        "2": "ثلاثة أيام",
+        "3": "خمسة أيام",
+        "4": "فصل مع المكافأة"
+      },
+      "recommended_services": [
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE",
+        "HR_ADMIN_OVERRIDE"
+      ],
+      "severity": "critical",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "الاعتداء على زملاء العمل بالقول أو الإشارة أو عبر وسائل الاتصال الإلكترونية بالشتم أو التحقير."
+    },
+    {
+      "rule_id": "BEH-012",
+      "category": "مخالفات تتعلق بسلوك العامل",
+      "trigger": {
+        "type": "manual.report",
+        "code": "BEH-012"
+      },
+      "penalty_matrix": {
+        "1": "فصل بدون مكافأة أو إشعار أو تعويض (المادة 80)",
+        "2": "",
+        "3": "",
+        "4": ""
+      },
+      "recommended_services": [
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE",
+        "HR_ADMIN_OVERRIDE"
+      ],
+      "severity": "critical",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "الاعتداء بالإيذاء الجسدي على زملاء العمل أو على غيرهم بطريقة إباحية."
+    },
+    {
+      "rule_id": "BEH-013",
+      "category": "مخالفات تتعلق بسلوك العامل",
+      "trigger": {
+        "type": "manual.report",
+        "code": "BEH-013"
+      },
+      "penalty_matrix": {
+        "1": "فصل بدون مكافأة أو إشعار أو تعويض (المادة 80)",
+        "2": "",
+        "3": "",
+        "4": ""
+      },
+      "recommended_services": [
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE",
+        "HR_ADMIN_OVERRIDE"
+      ],
+      "severity": "critical",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "الاعتداء الجسدي أو القولي أو بأي وسيلة إلكترونية على صاحب العمل أو المدير المسؤول أو أحد الرؤساء أثناء العمل أو بسببه."
+    },
+    {
+      "rule_id": "BEH-014",
+      "category": "مخالفات تتعلق بسلوك العامل",
+      "trigger": {
+        "type": "manual.report",
+        "code": "BEH-014"
+      },
+      "penalty_matrix": {
+        "1": "ثلاثة أيام",
+        "2": "خمسة أيام",
+        "3": "فصل مع المكافأة",
+        "4": "-"
+      },
+      "recommended_services": [
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE",
+        "HR_ADMIN_OVERRIDE"
+      ],
+      "severity": "high",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "تقديم بلاغ أو شكوى كيدية."
+    },
+    {
+      "rule_id": "BEH-015",
+      "category": "مخالفات تتعلق بسلوك العامل",
+      "trigger": {
+        "type": "manual.report",
+        "code": "BEH-015"
+      },
+      "penalty_matrix": {
+        "1": "يومان",
+        "2": "ثلاثة أيام",
+        "3": "خمسة أيام",
+        "4": "فصل مع المكافأة"
+      },
+      "recommended_services": [
+        "HR_INCIDENT_REPORT",
+        "HR_PENALTY_NOTICE",
+        "HR_ADMIN_OVERRIDE"
+      ],
+      "severity": "high",
+      "default_effect": null,
+      "override_allowed": true,
+      "evidence_required": null,
+      "notes": "عدم الامتثال لطلب لجنة التحقيق بالحضور أو الإدلاء بالأقوال أو الشهادة."
+    }
+  ]
+}

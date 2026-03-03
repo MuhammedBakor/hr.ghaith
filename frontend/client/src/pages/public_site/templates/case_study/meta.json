@@ -1,0 +1,17 @@
+{
+  "code": "case_study",
+  "title": "Case Study",
+  "kind": "page",
+  "description": "Case study layout",
+  "supports": {
+    "theme_tokens": true,
+    "rtl": true,
+    "snapshots": true
+  },
+  "blocks_hint": [
+    "hero",
+    "cards",
+    "cta",
+    "media_placeholder"
+  ]
+}

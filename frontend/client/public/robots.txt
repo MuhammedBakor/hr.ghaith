@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /trpc/
+Disallow: /admin/
+Disallow: /setup/
+Disallow: /.well-known/

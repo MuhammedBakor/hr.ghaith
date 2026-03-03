@@ -1,0 +1,17 @@
+{
+  "code": "blog_index_clean",
+  "title": "Blog Index Clean",
+  "kind": "blog",
+  "description": "Blog list + categories",
+  "supports": {
+    "theme_tokens": true,
+    "rtl": true,
+    "snapshots": true
+  },
+  "blocks_hint": [
+    "hero",
+    "cards",
+    "cta",
+    "media_placeholder"
+  ]
+}

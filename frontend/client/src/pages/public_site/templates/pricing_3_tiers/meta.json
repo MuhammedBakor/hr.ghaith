@@ -1,0 +1,17 @@
+{
+  "code": "pricing_3_tiers",
+  "title": "Pricing 3 Tiers",
+  "kind": "page",
+  "description": "3 tier pricing with highlights",
+  "supports": {
+    "theme_tokens": true,
+    "rtl": true,
+    "snapshots": true
+  },
+  "blocks_hint": [
+    "hero",
+    "cards",
+    "cta",
+    "media_placeholder"
+  ]
+}

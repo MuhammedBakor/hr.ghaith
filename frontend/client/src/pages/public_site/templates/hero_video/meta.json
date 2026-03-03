@@ -1,0 +1,17 @@
+{
+  "code": "hero_video",
+  "title": "Hero Video",
+  "kind": "home",
+  "description": "Hero with video placeholder",
+  "supports": {
+    "theme_tokens": true,
+    "rtl": true,
+    "snapshots": true
+  },
+  "blocks_hint": [
+    "hero",
+    "cards",
+    "cta",
+    "media_placeholder"
+  ]
+}

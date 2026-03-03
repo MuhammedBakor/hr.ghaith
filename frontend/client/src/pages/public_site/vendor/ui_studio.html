@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Marketing Studio — غيث</title>
+  <style>
+    body{font-family:system-ui; background:#0b1220; color:#e5e7eb; margin:0;}
+    header{padding:16px 18px; border-bottom:1px solid rgba(255,255,255,.08); display:flex; gap:12px; align-items:center;}
+    .badge{background:#111827; padding:6px 10px; border-radius:999px; font-size:12px;}
+    main{padding:18px; display:grid; grid-template-columns: 320px 1fr; gap:14px;}
+    .card{background:#111827; border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:14px;}
+    label{display:block; font-size:12px; opacity:.85; margin-bottom:6px;}
+    input, select, textarea{width:100%; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.12); background:#0b1220; color:#e5e7eb;}
+    textarea{min-height:160px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;}
+    button{padding:10px 12px; border-radius:12px; border:0; background:#1d4ed8; color:#fff; cursor:pointer;}
+    button.secondary{background:#334155}
+    .row{display:flex; gap:10px;}
+    .row > *{flex:1;}
+    .hint{font-size:12px; opacity:.7; line-height:1.6}
+    pre{white-space:pre-wrap; word-break:break-word; background:#0b1220; border:1px solid rgba(255,255,255,.08); padding:10px; border-radius:12px;}
+  </style>
+</head>
+<body>
+<header>
+  <div style="font-weight:700">Marketing Studio</div>
+  <div class="badge">v4.52.0</div>
+  <div class="badge">Service-based envelope</div>
+</header>
+
+<main>
+  <section class="card">
+    <div class="row">
+      <div>
+        <label>النوع</label>
+        <select id="type">
+          <option value="landing_compiled">Landing Builder (compiled)</option>
+          <option value="page_blocks">Page Blocks</option>
+          <option value="page_richtext">Page RichText</option>
+          <option value="email_template">Email Template</option>
+        </select>
+      </div>
+      <div>
+        <label>Target ID</label>
+        <input id="targetId" placeholder="مثال: landing_id=12 أو page_id=34"/>
+      </div>
+    </div>
+
+    <label style="margin-top:10px">Reason (إلزامي)</label>
+    <input id="reason" placeholder="سبب الحفظ/التعديل"/>
+
+    <label style="margin-top:10px">Payload JSON</label>
+    <textarea id="payload">{"compiled_html":"<h1>مرحبا</h1>","compiled_css":".x{color:red}","components_json":{}}</textarea>
+
+    <div class="row" style="margin-top:10px">
+      <button onclick="saveStudio()">حفظ (Studio Save)</button>
+      <button class="secondary" onclick="applyPreset()">تطبيق Preset</button>
+    </div>
+
+    <button style="margin-top:10px; width:100%" onclick="publishNow()">نشر (Create Snapshot)</button>
+<button style="margin-top:10px; width:100%" class="secondary" onclick="profilePublish()">Publish Profile</button>
+<button style="margin-top:10px; width:100%" class="secondary" onclick="profilePrint()">Print Profile (doc_no)</button>
+
+    <p class="hint" style="margin-top:12px">
+      هذه صفحة Admin Tool داخلية لاختبار المسار بسرعة.  
+      تربط لاحقًا بـ React UI في api.door.sa، لكن الآن تُغطي الأساس: Save / Preset / Publish.
+    </p>
+  </section>
+
+  <section class="card">
+    <div style="font-weight:700; margin-bottom:10px">Output</div>
+<div class="row" style="margin-bottom:10px">
+  <button class="secondary" onclick="loadPresets()">تحميل Presets</button>
+  <button class="secondary" onclick="loadMedia()">قائمة Media</button>
+  <button class="secondary" onclick="loadBrandKit()">Brand Kit</button>
+</div>
+    <pre id="out">جاهز.</pre>
+    <div style="height:10px"></div>
+    <div class="hint">Endpoints المستخدمة:
+      <div>POST /api/public_site/studio/save</div>
+      <div>POST /api/public_site/studio/apply-preset</div>
+      <div>POST /api/public_site/studio/publish</div>
+    </div>
+  </section>
+</main>
+
+<script>
+async function api(path, body){
+  const r = await fetch('/api'+path, {
+    method:'POST',
+    headers:{'content-type':'application/json'},
+    body: JSON.stringify(body)
+  });
+  const t = await r.text();
+  try{ return JSON.parse(t); }catch(e){ return { ok:false, raw:t, status:r.status }; }
+}
+
+function parseTarget(){
+  const s = document.getElementById('targetId').value.trim();
+  // accepts "landing_id=12" or "page_id=34"
+  const out={};
+  s.split('&').forEach(p=>{
+    const [k,v]=p.split('=');
+    if(k && v) out[k.trim()] = Number(v.trim());
+  });
+  return out;
+}
+
+async function saveStudio(){
+  const type=document.getElementById('type').value;
+  const reason=document.getElementById('reason').value.trim();
+  const target=parseTarget();
+  let payload={};
+  try{ payload = JSON.parse(document.getElementById('payload').value); }catch(e){}
+  const res = await api('/public_site/studio/save', { type, target, payload, reason });
+  document.getElementById('out').textContent = JSON.stringify(res,null,2);
+}
+
+async function applyPreset(){
+  const reason=document.getElementById('reason').value.trim();
+  const target=parseTarget();
+  const preset_id = prompt('Preset ID؟ مثال: modern_agency_blue');
+  if(!preset_id) return;
+  const res = await api('/public_site/studio/apply-preset', { preset_id, target, reason });
+  document.getElementById('out').textContent = JSON.stringify(res,null,2);
+}
+
+
+async function get(path){
+  const r = await fetch('/api'+path, { headers:{'accept':'application/json'} });
+  const t = await r.text();
+  try{ return JSON.parse(t); }catch(e){ return { ok:false, raw:t, status:r.status }; }
+}
+async function loadPresets(){
+  const res = await get('/public_site/presets');
+  window.__presets = (res && res.presets) || [];
+  document.getElementById('out').textContent = JSON.stringify(res,null,2);
+}
+
+async function loadBrandKit(){
+  const branch = prompt('branch_id؟ (اتركه فاضي للـ org default)');
+  const q = branch ? ('?branch_id='+encodeURIComponent(branch)) : '';
+  const res = await get('/public_site/brand/default'+q);
+  document.getElementById('out').textContent = JSON.stringify(res,null,2);
+}
+
+async function loadMedia(){
+  const res = await get('/public_site/media/list');
+  document.getElementById('out').textContent = JSON.stringify(res,null,2);
+}
+
+
+async function profilePublish(){
+  const profile_id = Number(prompt('profile_id؟'));
+  const branch_id = prompt('branch_id؟ (اختياري)');
+  const reason = document.getElementById('reason').value.trim() || 'publish profile';
+  const body = { profile_id, reason, branch_id: branch_id? Number(branch_id): null };
+  const res = await api('/public_site/profile/publish', body);
+  document.getElementById('out').textContent = JSON.stringify(res,null,2);
+}
+function profilePrint(){
+  const doc = prompt('doc_no؟');
+  if(!doc) return;
+  window.open('/api/public_site/profile/print/'+encodeURIComponent(doc), '_blank');
+}
+
+async function publishNow(){
+  const reason=document.getElementById('reason').value.trim();
+  const target=parseTarget();
+  const entity_type = prompt('Entity type؟ page / landing / blog_post / profile / terms');
+  const entity_id = Number(prompt('Entity id؟'));
+  if(!entity_type || !entity_id) return;
+  const res = await api('/public_site/studio/publish', { entity_type, entity_id, reason });
+  document.getElementById('out').textContent = JSON.stringify(res,null,2);
+}
+</script>
+</body>
+</html>

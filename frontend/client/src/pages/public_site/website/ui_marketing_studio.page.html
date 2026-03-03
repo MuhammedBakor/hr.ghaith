@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8"/>
+  <title>Marketing Studio — Landing/Brand/Offers</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto; margin:16px; background:#f6f7fb;}
+    .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+    .card{background:#fff; border:1px solid #ddd; border-radius:12px; padding:14px; margin:12px 0;}
+    input, textarea, select, button{font:inherit;}
+    input, textarea, select{width:100%; padding:8px; border-radius:10px; border:1px solid #ccc;}
+    button{padding:8px 12px; border-radius:10px; border:1px solid #111; background:#111; color:#fff; cursor:pointer;}
+    pre{background:#0b0b0b; color:#d7ffd7; padding:10px; border-radius:10px; overflow:auto;}
+    small{color:#666;}
+    table{width:100%; border-collapse:collapse;}
+    td,th{border-bottom:1px solid #eee; padding:8px; text-align:right;}
+  </style>
+</head>
+<body>
+  <h2>Marketing Studio</h2>
+  <p><small>إدارة Landing Pages + Brand + Offers. كل حفظ/نشر = reason required + audit.</small></p>
+
+  <div class="card">
+    <div class="row">
+      <button onclick="loadWebsites()">Websites</button>
+      <select id="w"></select>
+      <button onclick="selectWebsite()">اختيار</button>
+    </div>
+    <pre id="w_out"></pre>
+  </div>
+
+  <div class="card">
+    <h3>Brand Settings</h3>
+    <textarea id="brand_json" rows="6" placeholder='brand JSON مثال: {"colors":{"primary":"#111"},"logo_asset_id":"..."}'></textarea>
+    <textarea id="tone_json" rows="5" placeholder='tone JSON مثال: {"voice":"حجازي محترم","audience":"مكة"}'></textarea>
+    <input id="brand_reason" placeholder="Reason"/>
+    <div class="row">
+      <button onclick="loadBrand()">تحميل</button>
+      <button onclick="saveBrand()">حفظ</button>
+    </div>
+    <pre id="brand_out"></pre>
+  </div>
+
+  <div class="card">
+    <h3>Landing Pages</h3>
+    <div class="row">
+      <button onclick="loadLandings()">تحديث</button>
+      <button onclick="toggle('landing_new')">+ Landing</button>
+    </div>
+    <div id="landing_new" style="display:none;">
+      <input id="l_title" placeholder="عنوان"/>
+      <input id="l_slug" placeholder="slug اختياري"/>
+      <input id="l_campaign" placeholder="campaign_id (اختياري)"/>
+      <textarea id="l_blocks" rows="7" placeholder='blocks_json مثال: [{"type":"hero","data":{"title":"..."}}]'></textarea>
+      <textarea id="l_seo" rows="4" placeholder='seo_json مثال: {"title":"...","desc":"..."}'></textarea>
+      <input id="l_reason" placeholder="Reason"/>
+      <button onclick="createLanding()">إنشاء</button>
+    </div>
+    <div id="l_list"></div>
+    <pre id="l_out"></pre>
+  </div>
+
+  <div class="card">
+    <h3>Offers (Store Blocks)</h3>
+    <div class="row">
+      <button onclick="loadOffers()">تحديث</button>
+      <button onclick="toggle('offer_new')">+ Offer</button>
+    </div>
+    <div id="offer_new" style="display:none;">
+      <input id="o_title" placeholder="عنوان العرض"/>
+      <textarea id="o_desc" rows="3" placeholder="وصف"></textarea>
+      <input id="o_price" placeholder="السعر (اختياري)"/>
+      <input id="o_currency" placeholder="العملة (SAR)"/>
+      <input id="o_media" placeholder="media_asset_id (اختياري)"/>
+      <input id="o_stock" placeholder="stock_ref (اختياري)"/>
+      <input id="o_reason" placeholder="Reason"/>
+      <button onclick="createOffer()">إنشاء</button>
+    </div>
+    <div id="o_list"></div>
+    <pre id="o_out"></pre>
+  </div>
+
+<script>
+let website_id=null;
+
+async function api(path, method='GET', body){
+  const res = await fetch('/api'+path, {
+    method,
+    headers: {'Content-Type':'application/json'},
+    body: body ? JSON.stringify(body) : undefined
+  });
+  const j = await res.json().catch(()=>({ok:false,error:'BAD_JSON'}));
+  if(!res.ok) throw j;
+  return j;
+}
+
+function toggle(id){
+  const el=document.getElementById(id);
+  el.style.display = (el.style.display==='none') ? '' : 'none';
+}
+
+async function loadWebsites(){
+  const sel=document.getElementById('w');
+  sel.innerHTML='';
+  const j=await api('/websites');
+  j.rows.forEach(r=>{
+    const o=document.createElement('option');
+    o.value=r.id; o.textContent=`${r.name} (${r.branch_id||'-'})`;
+    sel.appendChild(o);
+  });
+  document.getElementById('w_out').textContent=JSON.stringify(j,null,2);
+}
+
+async function selectWebsite(){
+  website_id=document.getElementById('w').value;
+  document.getElementById('w_out').textContent='selected: '+website_id;
+  loadBrand(); loadLandings(); loadOffers();
+}
+
+async function loadBrand(){
+  const out=document.getElementById('brand_out'); out.textContent='...';
+  try{
+    const j=await api(`/websites/${website_id}/brand`);
+    document.getElementById('brand_json').value = JSON.stringify(j.brand||{},null,2);
+    document.getElementById('tone_json').value = JSON.stringify(j.tone||{},null,2);
+    out.textContent=JSON.stringify(j,null,2);
+  }catch(e){ out.textContent=JSON.stringify(e,null,2); }
+}
+
+async function saveBrand(){
+  const out=document.getElementById('brand_out'); out.textContent='...';
+  try{
+    const j=await api(`/websites/${website_id}/brand`,'PUT',{
+      reason: document.getElementById('brand_reason').value,
+      brand: JSON.parse(document.getElementById('brand_json').value||'{}'),
+      tone: JSON.parse(document.getElementById('tone_json').value||'{}')
+    });
+    out.textContent=JSON.stringify(j,null,2);
+  }catch(e){ out.textContent=JSON.stringify(e,null,2); }
+}
+
+async function createLanding(){
+  const out=document.getElementById('l_out'); out.textContent='...';
+  try{
+    const j=await api(`/websites/${website_id}/landings`,'POST',{
+      reason: document.getElementById('l_reason').value,
+      title: document.getElementById('l_title').value,
+      slug: document.getElementById('l_slug').value||null,
+      campaign_id: document.getElementById('l_campaign').value||null,
+      blocks_json: JSON.parse(document.getElementById('l_blocks').value||'[]'),
+      seo_json: JSON.parse(document.getElementById('l_seo').value||'{}')
+    });
+    out.textContent=JSON.stringify(j,null,2);
+    loadLandings();
+  }catch(e){ out.textContent=JSON.stringify(e,null,2); }
+}
+
+async function loadLandings(){
+  const box=document.getElementById('l_list');
+  const out=document.getElementById('l_out'); out.textContent='...';
+  try{
+    const j=await api(`/websites/${website_id}/landings`);
+    box.innerHTML='<table><tr><th>العنوان</th><th>الحالة</th><th>slug</th><th>إجراء</th></tr></table>';
+    const t=box.querySelector('table');
+    j.rows.forEach(r=>{
+      const tr=document.createElement('tr');
+      // SECURITY FIX v34: XSS protection — textContent بدل innerHTML للبيانات
+      const esc=(s)=>{const d=document.createElement('div');d.textContent=s;return d.innerHTML;};
+      tr.innerHTML=`<td>${esc(r.title)}</td><td>${esc(r.status)}</td><td>${esc(r.slug)}</td>
+      <td>
+        <input id="lr_${esc(r.id)}" placeholder="Reason publish"/>
+        <button onclick="publishLanding('${esc(r.id)}', document.getElementById('lr_${esc(r.id)}').value)">Publish</button>
+      </td>`;
+      t.appendChild(tr);
+    });
+    out.textContent=JSON.stringify(j,null,2);
+  }catch(e){ out.textContent=JSON.stringify(e,null,2); }
+}
+
+async function publishLanding(id, reason){
+  const out=document.getElementById('l_out'); out.textContent='...';
+  try{
+    const j=await api(`/landings/${id}/publish`,'POST',{reason});
+    out.textContent=JSON.stringify(j,null,2);
+    loadLandings();
+  }catch(e){ out.textContent=JSON.stringify(e,null,2); }
+}
+
+async function loadOffers(){
+  const box=document.getElementById('o_list');
+  const out=document.getElementById('o_out'); out.textContent='...';
+  try{
+    const j=await api(`/websites/${website_id}/offers`);
+    box.innerHTML='<table><tr><th>العنوان</th><th>السعر</th><th>الحالة</th></tr></table>';
+    const t=box.querySelector('table');
+    j.rows.forEach(r=>{
+      const tr=document.createElement('tr');
+      // SECURITY FIX v35: XSS protection
+      const esc2=(s)=>{const d=document.createElement('div');d.textContent=String(s??'');return d.innerHTML;};
+      tr.innerHTML=`<td>${esc2(r.title)}</td><td>${esc2(r.price_amount||'')} ${esc2(r.currency||'')}</td><td>${esc2(r.status)}</td>`;
+      t.appendChild(tr);
+    });
+    out.textContent=JSON.stringify(j,null,2);
+  }catch(e){ out.textContent=JSON.stringify(e,null,2); }
+}
+
+async function createOffer(){
+  const out=document.getElementById('o_out'); out.textContent='...';
+  try{
+    const j=await api(`/websites/${website_id}/offers`,'POST',{
+      reason: document.getElementById('o_reason').value,
+      title: document.getElementById('o_title').value,
+      description: document.getElementById('o_desc').value,
+      price_amount: document.getElementById('o_price').value||null,
+      currency: document.getElementById('o_currency').value||'SAR',
+      media_asset_id: document.getElementById('o_media').value||null,
+      stock_ref: document.getElementById('o_stock').value||null
+    });
+    out.textContent=JSON.stringify(j,null,2);
+    loadOffers();
+  }catch(e){ out.textContent=JSON.stringify(e,null,2); }
+}
+
+loadWebsites();
+</script>
+</body>
+</html>

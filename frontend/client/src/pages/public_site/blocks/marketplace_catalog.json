@@ -1,0 +1,21 @@
+{
+  "generated": "2026-01-10 19:38:47",
+  "items": [
+    {
+      "id": "mk_hero_pro",
+      "type": "block_pack",
+      "title": "Hero Pack (OSS)",
+      "version": "1.0.0",
+      "source": "internal",
+      "status": "available"
+    },
+    {
+      "id": "mk_portfolio_pack",
+      "type": "preset_pack",
+      "title": "Portfolio Presets",
+      "version": "1.0.0",
+      "source": "internal",
+      "status": "available"
+    }
+  ]
+}

@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Block Editor — Public Site</title>
+  <link rel="stylesheet" href="/public/ui-kit/theme.css"/>
+  <style>
+    .wrap{max-width:1100px;margin:16px auto;display:grid;gap:12px}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    textarea{width:100%;min-height:240px;border-radius:12px;border:1px solid rgba(0,0,0,.12);padding:10px;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace}
+    select,input{border-radius:12px;border:1px solid rgba(0,0,0,.12);padding:10px}
+    .pill{padding:6px 10px;border-radius:999px;border:1px solid rgba(0,0,0,.12);cursor:pointer}
+  </style>
+</head>
+<body class="gh-theme">
+  <div class="wrap">
+    <div class="gh-card">
+      <div class="gh-h" style="font-size:22px;font-weight:900">محرر البلوكات (متوافق مع مسار غيث)</div>
+      <div class="gh-muted" style="margin-top:6px">يشغّل على Pages عبر content_json.blocks — مع reason + audit.</div>
+    </div>
+
+    <div class="gh-card">
+      <div class="row">
+        <label>Page ID</label>
+        <input id="pageId" placeholder="ضع ID الصفحة"/>
+        <button class="gh-btn" onclick="loadPage()">تحميل</button>
+        <button class="gh-btn ghost" onclick="publishPage()">Publish + Snapshot</button>
+        <button class="gh-btn ghost" onclick="loadSnapshots()">Snapshots</button>
+        <button class="gh-btn ghost" onclick="savePage()">حفظ + Audit</button>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <label class="gh-h" style="font-weight:800">Presets</label>
+        <select id="presetSel"></select>
+        <button class="gh-btn ghost" onclick="applyPreset()">تطبيق Preset</button>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <label class="gh-h" style="font-weight:800">AI Generate</label>
+        <input id="company" placeholder="اسم الشركة/الفرع"/>
+        <input id="industry" placeholder="النشاط"/>
+        <button class="gh-btn ghost" onclick="aiGenerate()">توليد</button>
+        <button class="gh-btn" onclick="aiGenerateApply()">توليد + تطبيق</button>
+      </div>
+      <div style="margin-top:12px">
+        <div class="gh-h" style="font-weight:900">Blocks JSON (يمكن إضافة visibility مثل {audiences:['anonymous','staff']})</div>
+        <textarea id="blocksJson"></textarea>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <label>Reason</label>
+        <input id="reason" placeholder="سبب التعديل (إلزامي)" style="flex:1"/>
+      </div>
+    </div>
+
+    <div class="gh-card">
+      <div class="gh-h" style="font-weight:900">Quick Add</div>
+      <div class="row" id="palette"></div>
+      <div class="gh-muted" style="margin-top:8px">يضيف بلوك افتراضي سريع، ثم عدّل JSON.</div>
+    </div>
+  </div>
+
+<script>
+async function j(url, opts){ const r=await fetch(url, opts||{}); return await r.json(); }
+
+let REG=null, PRESETS=null;
+
+async function init(){
+  REG = await j('/api/public_site/blocks/registry');
+  PRESETS = await j('/api/public_site/blocks/presets');
+
+  const pal=document.getElementById('palette');
+  (REG.registry.blocks||[]).forEach(b=>{
+    const el=document.createElement('span');
+    el.className='pill';
+    el.textContent=b.code;
+    el.onclick=()=>addBlock(b.code);
+    pal.appendChild(el);
+  });
+
+  const sel=document.getElementById('presetSel');
+  (PRESETS.presets||[]).forEach(p=>{
+    const o=document.createElement('option');
+    o.value=p.code; o.textContent=p.title;
+    sel.appendChild(o);
+  });
+}
+init();
+
+function addBlock(code){
+  const txt=document.getElementById('blocksJson').value || '[]';
+  let arr=[];
+  try{ arr=JSON.parse(txt);}catch(e){ arr=[]; }
+  arr.push({code, props:{}});
+  document.getElementById('blocksJson').value = JSON.stringify(arr, null, 2);
+}
+
+async function loadPage(){
+  const id=document.getElementById('pageId').value.trim();
+  const out=await j('/api/public_site/pages/'+id+'/blocks');
+  if(!out.ok){ alert('NOT FOUND'); return; }
+  document.getElementById('blocksJson').value = JSON.stringify(out.blocks||[], null, 2);
+}
+
+async function savePage(){
+  const id=document.getElementById('pageId').value.trim();
+  const reason=document.getElementById('reason').value.trim();
+  if(!reason){ alert('REASON_REQUIRED'); return; }
+  const blocks=JSON.parse(document.getElementById('blocksJson').value||'[]');
+  const out=await j('/api/public_site/pages/'+id+'/blocks', {method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({reason, blocks})});
+  alert(out.ok ? 'Saved' : JSON.stringify(out));
+}
+
+async function applyPreset(){
+  const code=document.getElementById('presetSel').value;
+  const p=(PRESETS.presets||[]).find(x=>x.code===code);
+  if(!p) return;
+  document.getElementById('blocksJson').value = JSON.stringify(p.blocks||[], null, 2);
+}
+
+async function aiGenerate(){
+  const company=document.getElementById('company').value.trim();
+  const industry=document.getElementById('industry').value.trim();
+  const out=await j('/api/public_site/ai/generate-blocks', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({company_name:company, industry})});
+  if(out.ok) document.getElementById('blocksJson').value = JSON.stringify(out.blocks||[], null, 2);
+}
+
+
+async function publishPage(){
+  const id=document.getElementById('pageId').value.trim();
+  const reason=document.getElementById('reason').value.trim();
+  if(!reason){ alert('REASON_REQUIRED'); return; }
+  const out=await j('/api/public_site/pages/'+id+'/publish', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({reason})});
+  alert(out.ok ? ('Published doc_no='+out.doc_no) : JSON.stringify(out));
+}
+
+async function loadSnapshots(){
+  const id=document.getElementById('pageId').value.trim();
+  const out=await j('/api/public_site/pages/'+id+'/snapshots');
+  if(!out.ok){ alert(JSON.stringify(out)); return; }
+  alert('Snapshots\n' + (out.items||[]).map(x=>`${x.doc_no} v${x.version_no} @ ${x.created_at}`).join('\n'));
+}
+
+async function aiGenerateApply(){
+  const id=document.getElementById('pageId').value.trim();
+  const reason=document.getElementById('reason').value.trim();
+  if(!reason){ alert('REASON_REQUIRED'); return; }
+  const company=document.getElementById('company').value.trim();
+  const industry=document.getElementById('industry').value.trim();
+  const out=await j('/api/public_site/ai/generate-and-apply/'+id, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({reason, company_name:company, industry})});
+  alert(out.ok ? 'AI Applied' : JSON.stringify(out));
+}
+</script>
+</body>
+</html>
