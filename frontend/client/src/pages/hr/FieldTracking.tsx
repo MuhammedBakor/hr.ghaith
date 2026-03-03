@@ -88,7 +88,7 @@ export default function FieldTracking() {
             }
           },
           (err) => console.error(err),
-          { enableHighAccuracy: true, distanceFilter: 50 }
+          { enableHighAccuracy: true } as PositionOptions
         );
       }
     } catch (error: any) {
@@ -290,7 +290,7 @@ export default function FieldTracking() {
               </div>
             ) : (
               <div className="space-y-4">
-                {trackingPoints.map((point, index) => (
+                {[...trackingPoints].reverse().map((point, index) => (
                   <div key={index} className="flex gap-4 items-start p-3 rounded-lg border bg-muted/30">
                     <div className={`mt-1 p-2 rounded-full ${point.pointType === 'stop' ? 'bg-orange-100' : 'bg-primary/10'}`}>
                       {point.pointType === 'stop' ? <StopCircle className="h-4 w-4 text-orange-600" /> : <MapPin className="h-4 w-4 text-primary" />}
@@ -315,7 +315,7 @@ export default function FieldTracking() {
                       </Badge>
                     )}
                   </div>
-                ).reverse()}
+                ))}
               </div>
             )}
           </CardContent>

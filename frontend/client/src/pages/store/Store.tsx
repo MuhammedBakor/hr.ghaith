@@ -14,21 +14,44 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { ShoppingCart, Package, DollarSign, TrendingUp, Plus, Search, Filter, Eye, Edit, Trash2, Loader2 } from "lucide-react";
+import {
+  Plus,
+  Search,
+  ShoppingCart,
+  ShoppingBag,
+  Star,
+  Filter,
+  Package,
+  ArrowRight,
+  TrendingUp,
+  CreditCard,
+  Truck,
+  DollarSign, Eye, Edit, Trash2, Loader2
+} from "lucide-react";
 import { useState, useMemo } from "react";
-import { useReactTable, getCoreRowModel, getSortedRowModel, getFilteredRowModel, flexRender } from "@tanstack/react-table";
+import { useReactTable, getCoreRowModel, getSortedRowModel, getFilteredRowModel, flexRender, ColumnDef, SortingState } from "@tanstack/react-table";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { useStoreProducts, useCreateStoreProduct, useDeleteStoreProduct, useStoreOrders } from "@/services/storeService";
+
 
 export default function Store() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { user: currentUser, error: authError } = useAuth();
   const userRole = currentUser?.role || 'user';
 
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -47,40 +70,12 @@ export default function Store() {
     minStockLevel: '',
   });
 
-  const utils = trpc.useUtils();
-  const { data: products = [], isLoading } = trpc.store.products.list.useQuery();
-  const { data: orders = [] } = trpc.store.orders.list.useQuery();
+  const { data: products = [], isLoading, refetch } = useStoreProducts();
+  const { data: orders = [] } = useStoreOrders();
 
-  const createMutation = trpc.store.products.create.useMutation({
-    onSuccess: () => {
-      toast.success('تم إضافة المنتج بنجاح');
-      utils.store.products.list.invalidate();
-      setIsCreateOpen(false);
-      setNewProduct({
-        name: '',
-        sku: '',
-        description: '',
-        category: '',
-        price: '',
-        costPrice: '',
-        stockQuantity: '',
-        minStockLevel: '',
-      onError: (e: any) => toast.error(e?.message || 'حدث خطأ')});
-    },
-    onError: (error) => {
-      toast.error('حدث خطأ: ' + error.message);
-    },
-  });
+  const createMutation = useCreateStoreProduct();
 
-  const deleteMutation = trpc.store.products.delete.useMutation({
-    onSuccess: () => {
-      toast.success('تم حذف المنتج بنجاح');
-      utils.store.products.list.invalidate();
-    },
-    onError: (error) => {
-      toast.error('حدث خطأ: ' + error.message);
-    },
-  });
+  const deleteMutation = useDeleteStoreProduct();
 
   const handleCreate = () => {
     if (!newProduct.name || !newProduct.sku || !newProduct.price) {
@@ -92,22 +87,56 @@ export default function Store() {
       sku: newProduct.sku,
       description: newProduct.description || undefined,
       category: newProduct.category || undefined,
-      price: newProduct.price,
-      cost: newProduct.costPrice || undefined,
-      quantity: newProduct.stockQuantity ? parseInt(newProduct.stockQuantity) : 0,
-      minQuantity: newProduct.minStockLevel ? parseInt(newProduct.minStockLevel) : 0,
+      price: parseFloat(newProduct.price),
+      stockQuantity: newProduct.stockQuantity ? parseInt(newProduct.stockQuantity) : 0,
+    }, {
+      onSuccess: () => {
+        toast.success('تم إضافة المنتج بنجاح');
+        setIsCreateOpen(false);
+        setNewProduct({
+          name: '',
+          sku: '',
+          description: '',
+          category: '',
+          price: '',
+          costPrice: '',
+          stockQuantity: '',
+          minStockLevel: '',
+        });
+        refetch();
+      },
+      onError: (error: any) => {
+        toast.error('حدث خطأ: ' + (error.message || 'فشل الحفظ'));
+      }
     });
   };
 
   const handleDelete = (id: number) => {
     if (confirm('هل أنت متأكد من الحذف؟')) {
-      deleteMutation.mutate({ id: id });
+      deleteMutation.mutate(id, {
+        onSuccess: () => {
+          toast.success('تم حذف المنتج بنجاح');
+          refetch();
+        },
+        onError: (error: any) => {
+          toast.error('حدث خطأ: ' + (error.message || 'فشل الحذف'));
+        }
+      });
     }
   };
 
-  const confirmDelete = () => {
+  const confirmDeleteAction = () => {
     if (itemToDelete) {
-      deleteMutation.mutate({ id: typeof itemToDelete === 'object' ? itemToDelete.id : itemToDelete });
+      const id = typeof itemToDelete === 'object' ? itemToDelete.id : itemToDelete;
+      deleteMutation.mutate(id, {
+        onSuccess: () => {
+          toast.success('تم حذف المنتج بنجاح');
+          refetch();
+        },
+        onError: (error: any) => {
+          toast.error('حدث خطأ: ' + (error.message || 'فشل الحذف'));
+        }
+      });
     }
     setDeleteDialogOpen(false);
     setItemToDelete(null);
@@ -118,8 +147,8 @@ export default function Store() {
       { accessorKey: "sku", header: "رمز المنتج" },
       { accessorKey: "name", header: "اسم المنتج" },
       { accessorKey: "category", header: "التصنيف", cell: ({ row }) => row.original.category || '-' },
-      { 
-        accessorKey: "price", 
+      {
+        accessorKey: "price",
         header: "السعر",
         cell: ({ row }) => `${parseFloat(row.original.price || '0').toLocaleString()} ر.س`
       },
@@ -153,9 +182,9 @@ export default function Store() {
           <div className="flex items-center gap-1">
             <Button variant="ghost" onClick={() => toast.info("عرض التفاصيل")}><Eye className="h-4 w-4" /></Button>
             <Button variant="ghost" onClick={() => toast.info("تعديل")}><Edit className="h-4 w-4" /></Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               className="text-red-600"
               onClick={() => handleDelete(row.original.id)}
             >
@@ -195,11 +224,11 @@ export default function Store() {
   ];
 
   if (isLoading) {
-    if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ</div>;
+    if (authError) return <div className="p-8 text-center text-red-500">حدث خطأ في المصادقة</div>;
 
-    
+
     return (
-    <div className="flex items-center justify-center h-64" dir="rtl">
+      <div className="flex items-center justify-center h-64" dir="rtl">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -220,7 +249,7 @@ export default function Store() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat, index) => (
-          <Card key={stat.id ?? `Card-${index}`}>
+          <Card key={`Stat-${index}`}>
             <CardContent className="p-6 flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
@@ -414,7 +443,7 @@ export default function Store() {
           </div>
         </div>
       </div>)}
-    
+
       {/* AlertDialog لتأكيد الحذف */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
@@ -426,7 +455,7 @@ export default function Store() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>إلغاء</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
+            <AlertDialogAction onClick={confirmDeleteAction} className="bg-red-600 hover:bg-red-700">
               حذف
             </AlertDialogAction>
           </AlertDialogFooter>

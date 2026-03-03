@@ -15,6 +15,10 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 public class Department extends BaseEntity {
     private String name;
+    private String nameAr;
+    private String code;
     private String description;
     private String status; // active, inactive
+    private Long parentId;
+    private Long managerId;
 }

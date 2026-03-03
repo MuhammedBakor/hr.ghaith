@@ -213,7 +213,7 @@ export default function NotificationsCenter() {
             <SelectValue placeholder="جميع الفئات" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">جميع الفئات</SelectItem>
+            <SelectItem value="all">جميع الفئات</SelectItem>
             {categories.filter(c => categoryCounts[c.key]).map(c => (
               <SelectItem key={c.key} value={c.key}>
                 {c.label} ({categoryCounts[c.key]})

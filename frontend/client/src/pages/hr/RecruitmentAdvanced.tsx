@@ -1,5 +1,4 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
-import { trpc } from '@/lib/trpc';
 import { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { Button } from '@/components/ui/button';
@@ -45,6 +44,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Briefcase, Users, Plus, Eye, Edit, UserPlus, FileText, Calendar, CheckCircle2, XCircle, Mail, Phone, Inbox, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { PrintButton } from "@/components/PrintButton";
+import {
+  useRecruitmentJobs,
+  useCreateRecruitmentJob,
+  useUpdateRecruitmentJob,
+  useDeleteRecruitmentJob,
+  useRecruitmentApplications,
+  useUpdateApplicationStatus,
+  useRecruitmentInterviews,
+  useCreateInterview
+} from "@/services/recruitmentService";
 
 export default function RecruitmentAdvanced() {
   const [showInlineForm, setShowInlineForm] = useState(false);
@@ -87,92 +96,32 @@ export default function RecruitmentAdvanced() {
     meetingLink: ''
   });
 
-  const utils = trpc.useUtils();
 
   // جلب البيانات من API
-  const { data: jobs = [], isLoading: jobsLoading, isError, error} = trpc.recruitment.jobs.list.useQuery();
-  const { data: applications = [], isLoading: applicationsLoading } = trpc.recruitment.applications.list.useQuery();
-  const { data: interviews = [] } = trpc.recruitment.interviews.list.useQuery();
+  const { data: jobs = [], isLoading: jobsLoading, isError } = useRecruitmentJobs();
+  const { data: applications = [], isLoading: applicationsLoading } = useRecruitmentApplications();
+  const { data: interviews = [] } = useRecruitmentInterviews();
 
   // Mutations
-  const createJobMutation = trpc.recruitment.jobs.create.useMutation({
-    onSuccess: () => {
-      toast.success('تم إنشاء الوظيفة بنجاح');
-      utils.recruitment.jobs.list.invalidate();
-      setShowNewJob(false);
-      resetNewJob();
-    },
-    onError: (error) => {
-      toast.error('فشل في إنشاء الوظيفة: ' + error.message);
-    }
-  });
+  const createJobMutation = useCreateRecruitmentJob();
+  const updateJobMutation = useUpdateRecruitmentJob();
+  const deleteJobMutation = useDeleteRecruitmentJob();
+  const updateApplicationStatusMutation = useUpdateApplicationStatus();
+  const createInterviewMutation = useCreateInterview();
 
-  const updateJobMutation = trpc.recruitment.jobs.update.useMutation({
-    onSuccess: () => {
-      toast.success('تم تحديث الوظيفة بنجاح');
-      utils.recruitment.jobs.list.invalidate();
-      setShowEditJob(false);
-      setSelectedJob(null);
-    },
-    onError: (error) => {
-      toast.error('فشل في تحديث الوظيفة: ' + error.message);
-    }
-  });
-
-  const deleteJobMutation = trpc.recruitment.jobs.delete.useMutation({
-    onSuccess: () => {
-      toast.success('تم حذف الوظيفة بنجاح');
-      utils.recruitment.jobs.list.invalidate();
-    },
-    onError: (error) => {
-      toast.error('فشل في حذف الوظيفة: ' + error.message);
-    }
-  });
-
-  const confirmDelete = () => {
-    if (itemToDelete) {
-      deleteJobMutation.mutate({ id: itemToDelete });
-    }
-    setDeleteDialogOpen(false);
-    setItemToDelete(null);
+  // Note: Local "publish" and "close" logic will be handled via Generic Update Job for now
+  // as the backend implementation for specialized /publish and /close endpoints was simplified to generic update.
+  const handlePublishJob = (id: number) => {
+    updateJobMutation.mutate({ id, status: 'open' }, {
+      onSuccess: () => toast.success('تم نشر الوظيفة بنجاح')
+    });
   };
 
-  const publishJobMutation = trpc.recruitment.jobs.publish.useMutation({
-    onSuccess: () => {
-      toast.success('تم نشر الوظيفة بنجاح');
-      utils.recruitment.jobs.list.invalidate();
-    }
-  });
-
-  const closeJobMutation = trpc.recruitment.jobs.close.useMutation({
-    onSuccess: () => {
-      toast.success('تم إغلاق الوظيفة بنجاح');
-      utils.recruitment.jobs.list.invalidate();
-    }
-  });
-
-  const updateApplicationStatusMutation = trpc.recruitment.applications.updateStatus.useMutation({
-    onSuccess: () => {
-      toast.success('تم تحديث حالة الطلب بنجاح');
-      utils.recruitment.applications.list.invalidate();
-    },
-    onError: (error) => {
-      toast.error('فشل في تحديث الحالة: ' + error.message);
-    }
-  });
-
-  const createInterviewMutation = trpc.recruitment.interviews.create.useMutation({
-    onSuccess: () => {
-      toast.success('تم جدولة المقابلة بنجاح');
-      utils.recruitment.interviews.list.invalidate();
-      utils.recruitment.applications.list.invalidate();
-      setShowScheduleInterview(false);
-      setSelectedApplicant(null);
-    },
-    onError: (error) => {
-      toast.error('فشل في جدولة المقابلة: ' + error.message);
-    }
-  });
+  const handleCloseJob = (id: number) => {
+    updateJobMutation.mutate({ id, status: 'closed' }, {
+      onSuccess: () => toast.success('تم إغلاق الوظيفة بنجاح')
+    });
+  };
 
   const resetNewJob = () => {
     setNewJob({
@@ -283,19 +232,19 @@ export default function RecruitmentAdvanced() {
 
   if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>;
 
-  
+
   return (
     <div className="space-y-6" dir="rtl">
-        <div className="mb-4 flex items-center gap-2">
-          <input
-            type="text"
-            placeholder="بحث..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full md:w-64 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
-          {searchTerm && <button onClick={() => setSearchTerm('')} className="text-gray-400 hover:text-gray-600">✕</button>}
-        </div>
+      <div className="mb-4 flex items-center gap-2">
+        <input
+          type="text"
+          placeholder="بحث..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full md:w-64 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        />
+        {searchTerm && <button onClick={() => setSearchTerm('')} className="text-gray-400 hover:text-gray-600">✕</button>}
+      </div>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -412,43 +361,43 @@ export default function RecruitmentAdvanced() {
                         <TableCell>{getEmploymentTypeLabel(job.employmentType)}</TableCell>
                         <TableCell>{job.openings}</TableCell>
                         <TableCell>
-                          {job.applicationDeadline 
+                          {job.applicationDeadline
                             ? formatDate(job.applicationDeadline)
                             : '-'}
                         </TableCell>
                         <TableCell>{getStatusBadge(job.status)}</TableCell>
                         <TableCell>
                           <div className="flex gap-1">
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               onClick={() => handleEditJob(job)}
                               title="تعديل"
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
                             {job.status === 'draft' && (
-                              <Button 
-                                variant="ghost" 
+                              <Button
+                                variant="ghost"
                                 size="icon"
-                                onClick={() => publishJobMutation.mutate({ id: job.id })}
+                                onClick={() => handlePublishJob(job.id)}
                                 title="نشر"
                               >
                                 <CheckCircle2 className="h-4 w-4 text-green-600" />
                               </Button>
                             )}
                             {job.status === 'open' && (
-                              <Button 
-                                variant="ghost" 
+                              <Button
+                                variant="ghost"
                                 size="icon"
-                                onClick={() => closeJobMutation.mutate({ id: job.id })}
+                                onClick={() => handleCloseJob(job.id)}
                                 title="إغلاق"
                               >
                                 <XCircle className="h-4 w-4 text-red-600" />
                               </Button>
                             )}
-                            <Button 
-                              variant="ghost" 
+                            <Button
+                              variant="ghost"
                               size="icon"
                               onClick={() => {
                                 setItemToDelete(job.id);
@@ -513,8 +462,8 @@ export default function RecruitmentAdvanced() {
                         <TableCell>{getStatusBadge(applicant.status)}</TableCell>
                         <TableCell>
                           <div className="flex gap-1">
-                            <Button 
-                              variant="ghost" 
+                            <Button
+                              variant="ghost"
                               size="icon"
                               onClick={() => {
                                 setSelectedApplicant(applicant);
@@ -524,8 +473,8 @@ export default function RecruitmentAdvanced() {
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
-                            <Button 
-                              variant="ghost" 
+                            <Button
+                              variant="ghost"
                               size="icon"
                               onClick={() => {
                                 setSelectedApplicant(applicant);
@@ -962,7 +911,7 @@ export default function RecruitmentAdvanced() {
           </div>
         </div>
       </div>)}
-    
+
       {/* AlertDialog لتأكيد الحذف */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>

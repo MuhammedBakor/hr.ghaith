@@ -482,7 +482,7 @@ export default function Attendance() {
                     {currentEmployee ? `${currentEmployee.firstName} ${currentEmployee.lastName}` : 'جاري التحميل...'}
                   </h3>
                   <p className="text-sm text-gray-600">
-                    {currentEmployee?.position || 'موظف'} - {selectedBranch?.name || 'الفرع الرئيسي'}
+                    {(typeof currentEmployee?.position === 'object' ? currentEmployee?.position?.title : currentEmployee?.position) || 'موظف'} - {selectedBranch?.name || 'الفرع الرئيسي'}
                   </p>
                 </div>
               </div>

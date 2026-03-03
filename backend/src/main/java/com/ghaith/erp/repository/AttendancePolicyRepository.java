@@ -8,5 +8,5 @@ import java.util.Optional;
 
 @Repository
 public interface AttendancePolicyRepository extends JpaRepository<AttendancePolicy, Long> {
-    Optional<AttendancePolicy> findByDefaultTrue();
+    Optional<AttendancePolicy> findByIsDefaultTrue();
 }

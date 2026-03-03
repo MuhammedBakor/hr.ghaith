@@ -1,5 +1,6 @@
 import React from "react";
 import { useState } from 'react';
+import { useQueryClient } from "@tanstack/react-query";
 import { useAppContext } from '@/contexts/AppContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,10 +17,13 @@ import {
   Briefcase,
   ArrowRight
 } from 'lucide-react';
-import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
 import { Dialog } from "@/components/ui/dialog";
-
+import {
+  useDepartments,
+  useCreateDepartment,
+  useEmployees
+} from "@/services/hrService";
 
 interface Department {
   id: number;
@@ -54,26 +58,33 @@ export default function Organization() {
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [newDeptName, setNewDeptName] = useState('');
 
-  const utils = trpc.useUtils();
+  const queryClient = useQueryClient();
 
   // جلب الأقسام
-  const { data: departmentsData, isLoading, isError, error } = trpc.hrAdvanced.departments.list.useQuery();
+  const { data: departmentsData, isLoading, isError } = useDepartments();
 
   // جلب الموظفين للإحصائيات
-  const { data: employeesData } = trpc.hr.employees.list.useQuery();
+  const { data: employeesData } = useEmployees();
 
   // إنشاء قسم جديد
-  const createDeptMutation = trpc.hrAdvanced.departments.create.useMutation({
-    onSuccess: () => {
-      toast.success('تم إضافة القسم بنجاح');
-      utils.hrAdvanced.departments.list.invalidate();
-      setViewMode("list");
-      setNewDeptName('');
-    },
-    onError: (error: { message: string }) => {
-      toast.error('فشل في إضافة القسم: ' + error.message);
-    },
-  });
+  const createDeptMutation = useCreateDepartment();
+
+  const handleCreateDept = () => {
+    createDeptMutation.mutate(
+      { name: newDeptName, nameAr: newDeptName, code: `DEPT-${Date.now()}`, branchId: 1 },
+      {
+        onSuccess: () => {
+          toast.success('تم إضافة القسم بنجاح');
+          queryClient.invalidateQueries({ queryKey: ['departments'] });
+          setViewMode("list");
+          setNewDeptName('');
+        },
+        onError: (error: any) => {
+          toast.error('فشل في إضافة القسم: ' + error.message);
+        },
+      }
+    );
+  };
 
   // تحويل البيانات المسطحة إلى شجرة
   const buildTree = (depts: Department[]): Department[] => {
@@ -223,8 +234,8 @@ export default function Organization() {
             </div>
             <div className="flex gap-3 pt-4">
               <Button variant="outline" onClick={() => setViewMode("list")}>إلغاء</Button>
-              <Button disabled={createDeptMutation.isPending}
-                onClick={() => createDeptMutation.mutate({ name: newDeptName, nameAr: newDeptName, code: `DEPT-${Date.now()}`, branchId: 1 })}
+              <Button
+                onClick={handleCreateDept}
                 disabled={!newDeptName || createDeptMutation.isPending}
               >
                 {createDeptMutation.isPending ? 'جاري الإضافة...' : 'إضافة القسم'}

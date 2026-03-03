@@ -569,20 +569,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
 
     return (
-      <Link key={item.path} href={item.path}>
-        <a className={cn(
+      <Link
+        key={item.path}
+        href={item.path}
+        className={cn(
           "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
           isChild ? "py-2" : "",
           isActive
             ? 'bg-primary/10 text-primary'
             : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-        )}>
-          <item.icon className={cn(
-            isChild ? "h-4 w-4" : "h-5 w-5",
-            isActive ? 'text-primary' : 'text-gray-400'
-          )} />
-          {item.label}
-        </a>
+        )}
+      >
+        <item.icon className={cn(
+          isChild ? "h-4 w-4" : "h-5 w-5",
+          isActive ? 'text-primary' : 'text-gray-400'
+        )} />
+        {item.label}
       </Link>
     );
   };

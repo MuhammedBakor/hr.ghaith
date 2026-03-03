@@ -26,7 +26,7 @@ public class ShiftService {
     @Transactional
     public Shift createShift(Shift shift) {
         if (Boolean.TRUE.equals(shift.getIsDefault())) {
-            shiftRepository.findByDefaultTrue().ifPresent(s -> {
+            shiftRepository.findByIsDefaultTrue().ifPresent(s -> {
                 s.setIsDefault(false);
                 shiftRepository.save(s);
             });
@@ -39,7 +39,7 @@ public class ShiftService {
         Shift shift = getShiftById(id);
 
         if (Boolean.TRUE.equals(shiftDetails.getIsDefault()) && !Boolean.TRUE.equals(shift.getIsDefault())) {
-            shiftRepository.findByDefaultTrue().ifPresent(s -> {
+            shiftRepository.findByIsDefaultTrue().ifPresent(s -> {
                 s.setIsDefault(false);
                 shiftRepository.save(s);
             });

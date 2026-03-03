@@ -6,7 +6,12 @@
  */
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'wouter';
-import { trpc } from '@/lib/trpc';
+import {
+  useDashboardSummary,
+  usePendingActions,
+  useKpiSummary,
+  useQuickSearch
+} from '@/services/dashboardService';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { Users, FileText, Car, Shield, AlertTriangle, CheckCircle2, TrendingUp, Search, Settings, Building2, DollarSign, Scale, MessageSquare, FolderKanban, RefreshCw, ChevronRight, Calendar, UserCheck, BarChart3, Loader2, X, AlertCircle, Inbox, ClipboardList, CheckSquare, TrendingDown, Gauge, Radio } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -70,16 +75,16 @@ interface StatCardProps {
 }
 
 const COLOR_MAP: Record<ColorKey, { bg: string; icon: string; border: string; gradient: string }> = {
-  blue:   { bg: 'bg-blue-50',   icon: 'text-blue-600',   border: 'border-blue-100',   gradient: 'from-blue-500 to-blue-600' },
-  green:  { bg: 'bg-green-50',  icon: 'text-green-600',  border: 'border-green-100',  gradient: 'from-green-500 to-emerald-600' },
-  red:    { bg: 'bg-red-50',    icon: 'text-red-600',    border: 'border-red-100',    gradient: 'from-red-500 to-rose-600' },
+  blue: { bg: 'bg-blue-50', icon: 'text-blue-600', border: 'border-blue-100', gradient: 'from-blue-500 to-blue-600' },
+  green: { bg: 'bg-green-50', icon: 'text-green-600', border: 'border-green-100', gradient: 'from-green-500 to-emerald-600' },
+  red: { bg: 'bg-red-50', icon: 'text-red-600', border: 'border-red-100', gradient: 'from-red-500 to-rose-600' },
   yellow: { bg: 'bg-yellow-50', icon: 'text-yellow-600', border: 'border-yellow-100', gradient: 'from-yellow-400 to-orange-500' },
   purple: { bg: 'bg-purple-50', icon: 'text-purple-600', border: 'border-purple-100', gradient: 'from-purple-500 to-violet-600' },
   indigo: { bg: 'bg-indigo-50', icon: 'text-indigo-600', border: 'border-indigo-100', gradient: 'from-indigo-500 to-blue-600' },
-  teal:   { bg: 'bg-teal-50',   icon: 'text-teal-600',   border: 'border-teal-100',   gradient: 'from-teal-500 to-cyan-600' },
+  teal: { bg: 'bg-teal-50', icon: 'text-teal-600', border: 'border-teal-100', gradient: 'from-teal-500 to-cyan-600' },
   orange: { bg: 'bg-orange-50', icon: 'text-orange-600', border: 'border-orange-100', gradient: 'from-orange-500 to-amber-600' },
-  pink:   { bg: 'bg-pink-50',   icon: 'text-pink-600',   border: 'border-pink-100',   gradient: 'from-pink-500 to-rose-600' },
-  gray:   { bg: 'bg-gray-50',   icon: 'text-gray-600',   border: 'border-gray-100',   gradient: 'from-gray-500 to-gray-600' },
+  pink: { bg: 'bg-pink-50', icon: 'text-pink-600', border: 'border-pink-100', gradient: 'from-pink-500 to-rose-600' },
+  gray: { bg: 'bg-gray-50', icon: 'text-gray-600', border: 'border-gray-100', gradient: 'from-gray-500 to-gray-600' },
 };
 
 function StatCard({ title, value, sub, icon: Icon, color = 'blue', link, alert, trend, trendLabel, badge }: StatCardProps) {
@@ -155,10 +160,10 @@ function ModuleHealthBadge({ status, name }: { status: 'healthy' | 'warning' | '
   return (
     <div className={cn(
       'flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium',
-      status === 'healthy'  ? 'bg-green-50 border-green-100 text-green-700' :
-      status === 'warning'  ? 'bg-amber-50 border-amber-100 text-amber-700' :
-      status === 'critical' ? 'bg-red-50 border-red-100 text-red-700' :
-                              'bg-gray-50 border-gray-100 text-gray-600',
+      status === 'healthy' ? 'bg-green-50 border-green-100 text-green-700' :
+        status === 'warning' ? 'bg-amber-50 border-amber-100 text-amber-700' :
+          status === 'critical' ? 'bg-red-50 border-red-100 text-red-700' :
+            'bg-gray-50 border-gray-100 text-gray-600',
     )}>
       <StatusDot status={status} />
       {name}
@@ -229,13 +234,13 @@ function SearchResult({ result, onClose }: {
 // PENDING ACTION ROW
 // ═══════════════════════════════════════════════════════════
 function PendingActionRow({ item }: {
-  item: { type: string; id: number; title: string; priority: string; link: string; createdAt: Date };
+  item: { type: string; id: number; title: string; priority: string; link: string; createdAt: string | Date };
 }) {
   const priorityConfig: Record<string, { color: string; label: string }> = {
     critical: { color: 'text-red-600 bg-red-50 border-red-100', label: 'حرج' },
-    high:     { color: 'text-orange-600 bg-orange-50 border-orange-100', label: 'عالي' },
-    medium:   { color: 'text-yellow-600 bg-yellow-50 border-yellow-100', label: 'متوسط' },
-    low:      { color: 'text-gray-600 bg-gray-50 border-gray-100', label: 'منخفض' },
+    high: { color: 'text-orange-600 bg-orange-50 border-orange-100', label: 'عالي' },
+    medium: { color: 'text-yellow-600 bg-yellow-50 border-yellow-100', label: 'متوسط' },
+    low: { color: 'text-gray-600 bg-gray-50 border-gray-100', label: 'منخفض' },
   };
   const pc = priorityConfig[item.priority] ?? priorityConfig.medium;
 
@@ -314,22 +319,13 @@ export default function Home() {
   }, []);
 
   // ─── API Calls ────────────────────────────────────────────
-  const { data: dashboard, isLoading, refetch } = trpc.integration.dashboardSummary.useQuery(undefined, {
-    refetchInterval: 60_000, staleTime: 30_000,
-  });
+  const { data: dashboard, isLoading, refetch } = useDashboardSummary();
 
-  const { data: pendingActions } = trpc.integration.pendingActions.useQuery({}, {
-    refetchInterval: 30_000,
-  });
+  const { data: pendingActions } = usePendingActions();
 
-  const { data: searchResults, isLoading: searchLoading } = trpc.integration.quickSearch.useQuery(
-    { query: debouncedQuery },
-    { enabled: debouncedQuery.length >= 2 },
-  );
+  const { data: searchResults, isLoading: searchLoading } = useQuickSearch(debouncedQuery);
 
-  const { data: kpis } = trpc.integration.kpiSummary.useQuery(undefined, {
-    refetchInterval: 120_000,
-  });
+  const { data: kpis } = useKpiSummary();
 
   const handleRefresh = () => {
     refetch();
@@ -343,18 +339,18 @@ export default function Home() {
 
   // ─── Quick Actions Config ─────────────────────────────────
   const quickActions: Array<{ icon: React.ComponentType<{ className?: string }>; label: string; link: string; color: ColorKey; count?: number }> = [
-    { icon: Users,       label: 'الموظفون',      link: '/hr/employees',         color: 'blue',   count: stats?.hr.active },
-    { icon: FileText,    label: 'الإجازات',       link: '/hr/leaves',            color: 'green',  count: stats?.hr.pendingLeaves },
-    { icon: DollarSign,  label: 'الفواتير',       link: '/finance/invoices',     color: 'teal',   count: stats?.finance.overdue },
-    { icon: Car,         label: 'الأسطول',        link: '/fleet/vehicles',       color: 'orange', count: stats?.fleet.inMaintenance },
-    { icon: MessageSquare, label: 'الدعم الفني',  link: '/support/tickets',      color: 'yellow', count: stats?.support.critical },
-    { icon: Scale,       label: 'القانونية',      link: '/legal',                color: 'purple', count: stats?.legal.expiringContracts },
-    { icon: FolderKanban, label: 'المشاريع',      link: '/projects',             color: 'indigo', count: stats?.projects.overdue },
-    { icon: Building2,   label: 'العقارات',       link: '/property',             color: 'pink' },
-    { icon: Shield,      label: 'الحوكمة',        link: '/governance',           color: 'red',    count: stats?.governance.pendingApprovals },
-    { icon: ClipboardList, label: 'الطلبات',      link: '/requests',             color: 'gray',   count: pendingActions?.total },
-    { icon: Inbox,       label: 'البريد الوارد',  link: '/inbox',                color: 'blue' },
-    { icon: BarChart3,   label: 'التقارير',       link: '/bi',                   color: 'green' },
+    { icon: Users, label: 'الموظفون', link: '/hr/employees', color: 'blue', count: stats?.hr.active },
+    { icon: FileText, label: 'الإجازات', link: '/hr/leaves', color: 'green', count: stats?.hr.pendingLeaves },
+    { icon: DollarSign, label: 'الفواتير', link: '/finance/invoices', color: 'teal', count: stats?.finance.overdue },
+    { icon: Car, label: 'الأسطول', link: '/fleet/vehicles', color: 'orange', count: stats?.fleet.inMaintenance },
+    { icon: MessageSquare, label: 'الدعم الفني', link: '/support/tickets', color: 'yellow', count: stats?.support.critical },
+    { icon: Scale, label: 'القانونية', link: '/legal', color: 'purple', count: stats?.legal.expiringContracts },
+    { icon: FolderKanban, label: 'المشاريع', link: '/projects', color: 'indigo', count: stats?.projects.overdue },
+    { icon: Building2, label: 'العقارات', link: '/property', color: 'pink' },
+    { icon: Shield, label: 'الحوكمة', link: '/governance', color: 'red', count: stats?.governance.pendingApprovals },
+    { icon: ClipboardList, label: 'الطلبات', link: '/requests', color: 'gray', count: pendingActions?.total },
+    { icon: Inbox, label: 'البريد الوارد', link: '/inbox', color: 'blue' },
+    { icon: BarChart3, label: 'التقارير', link: '/bi', color: 'green' },
   ];
 
   const greetingTime = () => {
@@ -383,7 +379,7 @@ export default function Home() {
           {/* Welcome */}
           <div className="flex-1 min-w-0">
             <h1 className="text-lg font-bold text-gray-900">
-              {greetingTime()}، {user?.name?.split(' ')[0] ?? 'مرحباً'} 👋
+              {greetingTime()}، {user?.username?.split(' ')[0] ?? 'مرحباً'} 👋
             </h1>
             <p className="text-xs text-gray-500 hidden sm:block">
               {new Date().toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
@@ -548,7 +544,7 @@ export default function Home() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 sm:grid-cols-6 gap-3">
               {quickActions.map((action, i) => (
-                <QuickAction key={action.id ?? `QuickAction-${i}`} {...action} />
+                <QuickAction key={`QuickAction-${i}`} {...action} />
               ))}
             </div>
           </div>
@@ -600,7 +596,7 @@ export default function Home() {
                       <p className="text-sm font-medium text-gray-800">{mod.nameAr}</p>
                       <div className="flex flex-wrap gap-1 mt-1">
                         {mod?.issues?.map((issue, j) => (
-                          <span key={issue.id ?? `span-${j}`} className="text-xs text-gray-600">{issue}</span>
+                          <span key={`span-${j}`} className="text-xs text-gray-600">{issue}</span>
                         ))}
                       </div>
                     </div>

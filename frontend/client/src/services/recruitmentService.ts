@@ -1,8 +1,21 @@
 import api from "../lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-export type ApplicationStatus = "pending" | "reviewing" | "interviewed" | "accepted" | "rejected";
-export type InterviewStatus = "scheduled" | "completed" | "cancelled" | "reschedulled";
+export interface RecruitmentJob {
+    id: number;
+    title: string;
+    titleAr?: string;
+    location?: string;
+    employmentType: 'full_time' | 'part_time' | 'contract' | 'internship';
+    experienceLevel: 'entry' | 'mid' | 'senior' | 'executive';
+    description?: string;
+    requirements?: string;
+    benefits?: string;
+    openings: number;
+    applicationDeadline?: string;
+    status: 'draft' | 'open' | 'closed' | 'filled' | 'on_hold';
+    createdAt: string;
+}
 
 export interface JobApplication {
     id: number;
@@ -11,139 +24,140 @@ export interface JobApplication {
     email: string;
     phone?: string;
     resumeUrl?: string;
-    status: ApplicationStatus;
-    createdAt?: string;
-    updatedAt?: string;
+    status: 'pending' | 'screening' | 'interview' | 'assessment' | 'offer' | 'hired' | 'rejected';
+    appliedAt: string;
 }
 
 export interface Interview {
     id: number;
-    application?: JobApplication;
-    applicationId?: number;
-    interviewDate: string;
+    applicationId: number;
+    interviewDate?: string;
+    scheduledAt?: string;
     interviewer?: string;
+    interviewType?: 'phone' | 'video' | 'in_person' | 'technical' | 'hr' | 'final';
+    duration?: number;
     location?: string;
-    status: InterviewStatus;
+    meetingLink?: string;
+    status: 'scheduled' | 'completed' | 'cancelled' | 'reschedulled';
     notes?: string;
 }
 
 export const recruitmentService = {
+    // Jobs
+    getJobs: async () => {
+        const response = await api.get<RecruitmentJob[]>("/api/v1/recruitment/jobs");
+        return response.data;
+    },
+    getJob: async (id: number) => {
+        const response = await api.get<RecruitmentJob>(`/api/v1/recruitment/jobs/${id}`);
+        return response.data;
+    },
+    createJob: async (data: Partial<RecruitmentJob>) => {
+        const response = await api.post<RecruitmentJob>("/api/v1/recruitment/jobs", data);
+        return response.data;
+    },
+    updateJob: async ({ id, ...data }: { id: number } & Partial<RecruitmentJob>) => {
+        const response = await api.put<RecruitmentJob>(`/api/v1/recruitment/jobs/${id}`, data);
+        return response.data;
+    },
+    deleteJob: async (id: number) => {
+        await api.delete(`/api/v1/recruitment/jobs/${id}`);
+    },
+
     // Applications
-    getApplications: async (): Promise<JobApplication[]> => {
-        const response = await api.get("/recruitment/applications");
+    getApplications: async () => {
+        const response = await api.get<JobApplication[]>("/api/v1/recruitment/applications");
         return response.data;
     },
-    getApplication: async (id: number): Promise<JobApplication> => {
-        const response = await api.get(`/recruitment/applications/${id}`);
+    updateApplicationStatus: async ({ id, status }: { id: number, status: string }) => {
+        // Standardizing status to uppercase for the backend enum if needed, 
+        // but the controller handles it. Let's send it clearly.
+        const response = await api.put<JobApplication>(`/api/v1/recruitment/applications/${id}/status`, status, {
+            headers: { 'Content-Type': 'text/plain' }
+        });
         return response.data;
-    },
-    createApplication: async (application: Partial<JobApplication>): Promise<JobApplication> => {
-        const response = await api.post("/recruitment/applications", application);
-        return response.data;
-    },
-    updateApplication: async ({ id, ...data }: { id: number } & Partial<JobApplication>): Promise<JobApplication> => {
-        const response = await api.put(`/recruitment/applications/${id}`, data);
-        return response.data;
-    },
-    deleteApplication: async (id: number): Promise<void> => {
-        await api.delete(`/recruitment/applications/${id}`);
     },
 
     // Interviews
-    getInterviews: async (): Promise<Interview[]> => {
-        const response = await api.get("/recruitment/interviews");
+    getInterviews: async () => {
+        const response = await api.get<Interview[]>("/api/v1/recruitment/interviews");
         return response.data;
     },
-    getInterviewsByApplication: async (applicationId: number): Promise<Interview[]> => {
-        const response = await api.get(`/recruitment/interviews/application/${applicationId}`);
+    createInterview: async (data: Partial<Interview>) => {
+        const response = await api.post<Interview>("/api/v1/recruitment/interviews", data);
         return response.data;
-    },
-    scheduleInterview: async (interview: Partial<Interview>): Promise<Interview> => {
-        const response = await api.post("/recruitment/interviews", interview);
-        return response.data;
-    },
-    updateInterview: async ({ id, ...data }: { id: number } & Partial<Interview>): Promise<Interview> => {
-        const response = await api.put(`/recruitment/interviews/${id}`, data);
-        return response.data;
-    },
-    deleteInterview: async (id: number): Promise<void> => {
-        await api.delete(`/recruitment/interviews/${id}`);
-    },
+    }
 };
 
 // Hooks
-export const useApplications = () => {
+export const useRecruitmentJobs = () => {
     return useQuery({
-        queryKey: ["recruitment-applications"],
+        queryKey: ["recruitment", "jobs"],
+        queryFn: recruitmentService.getJobs,
+    });
+};
+
+export const useCreateRecruitmentJob = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: recruitmentService.createJob,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["recruitment", "jobs"] });
+        },
+    });
+};
+
+export const useUpdateRecruitmentJob = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: recruitmentService.updateJob,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["recruitment", "jobs"] });
+        },
+    });
+};
+
+export const useDeleteRecruitmentJob = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: recruitmentService.deleteJob,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["recruitment", "jobs"] });
+        },
+    });
+};
+
+export const useRecruitmentApplications = () => {
+    return useQuery({
+        queryKey: ["recruitment", "applications"],
         queryFn: recruitmentService.getApplications,
     });
 };
 
-export const useCreateApplication = () => {
+export const useUpdateApplicationStatus = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: recruitmentService.createApplication,
+        mutationFn: recruitmentService.updateApplicationStatus,
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["recruitment-applications"] });
+            queryClient.invalidateQueries({ queryKey: ["recruitment", "applications"] });
         },
     });
 };
 
-export const useUpdateApplication = () => {
-    const queryClient = useQueryClient();
-    return useMutation({
-        mutationFn: recruitmentService.updateApplication,
-        onSuccess: (_, variables) => {
-            queryClient.invalidateQueries({ queryKey: ["recruitment-applications"] });
-            queryClient.invalidateQueries({ queryKey: ["recruitment-application", variables.id] });
-        },
-    });
-};
-
-export const useDeleteApplication = () => {
-    const queryClient = useQueryClient();
-    return useMutation({
-        mutationFn: recruitmentService.deleteApplication,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["recruitment-applications"] });
-        },
-    });
-};
-
-export const useInterviews = () => {
+export const useRecruitmentInterviews = () => {
     return useQuery({
-        queryKey: ["recruitment-interviews"],
+        queryKey: ["recruitment", "interviews"],
         queryFn: recruitmentService.getInterviews,
     });
 };
 
-export const useScheduleInterview = () => {
+export const useCreateInterview = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: recruitmentService.scheduleInterview,
+        mutationFn: recruitmentService.createInterview,
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["recruitment-interviews"] });
-        },
-    });
-};
-
-export const useUpdateInterview = () => {
-    const queryClient = useQueryClient();
-    return useMutation({
-        mutationFn: recruitmentService.updateInterview,
-        onSuccess: (_, variables) => {
-            queryClient.invalidateQueries({ queryKey: ["recruitment-interviews"] });
-            queryClient.invalidateQueries({ queryKey: ["recruitment-interview", variables.id] });
-        },
-    });
-};
-
-export const useDeleteInterview = () => {
-    const queryClient = useQueryClient();
-    return useMutation({
-        mutationFn: recruitmentService.deleteInterview,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["recruitment-interviews"] });
+            queryClient.invalidateQueries({ queryKey: ["recruitment", "interviews"] });
+            queryClient.invalidateQueries({ queryKey: ["recruitment", "applications"] });
         },
     });
 };

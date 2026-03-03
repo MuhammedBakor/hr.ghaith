@@ -42,7 +42,7 @@ export default function AddEmployeeSimple() {
   // Mutation لإضافة موظف مبسط
   const createSimpleEmployeeMutation = useCreateSimpleEmployee();
   const { data: branchesData, isLoading } = useBranches();
-  const branches = branchesData || [];
+  const branches = (branchesData || []).filter((b: any) => b.id);
 
   const handleSubmit = async () => {
     // التحقق من الحقول المطلوبة

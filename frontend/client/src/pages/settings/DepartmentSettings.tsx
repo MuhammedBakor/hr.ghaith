@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { trpc } from '@/lib/trpc';
+import { useDepartments, useCreateDepartment, useUpdateDepartment, useBranches } from '@/services/hrService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,32 +41,15 @@ export default function DepartmentSettings() {
     name: '', nameAr: '', code: '', branchId: '',
   });
 
-  const { data: departmentsData, isLoading, refetch, isError, error} = trpc.hrAdvanced.departments.list.useQuery();
-  const { data: branchesData } = trpc.hrAdvanced.branches.list.useQuery();
-  
+  const { data: departmentsData, isLoading, refetch, isError } = useDepartments();
+  const { data: branchesData } = useBranches();
+
   const departments = (departmentsData || []) as Department[];
   const branches = (branchesData || []) as any[];
 
-  const createMutation = trpc.hrAdvanced.departments.create.useMutation({
-    onSuccess: () => {
-      toast.success('تم إنشاء القسم بنجاح');
-      setIsDialogOpen(false);
-      resetForm();
-      refetch();
-    },
-    onError: (error: any) => toast.error(error.message || 'فشل في إنشاء القسم'),
-  });
+  const createMutation = useCreateDepartment();
 
-  const updateMutation = trpc.hrAdvanced.departments.update.useMutation({
-    onSuccess: () => {
-      toast.success('تم تحديث القسم بنجاح');
-      setIsDialogOpen(false);
-      setEditingId(null);
-      resetForm();
-      refetch();
-    },
-    onError: (error: any) => toast.error(error.message || 'فشل في تحديث القسم'),
-  });
+  const updateMutation = useUpdateDepartment();
 
   const resetForm = () => setForm({ name: '', nameAr: '', code: '', branchId: '' });
 
@@ -81,10 +64,18 @@ export default function DepartmentSettings() {
       code: form.code,
       branchId: parseInt(form.branchId),
     };
+    const onSuccess = () => {
+      toast.success(editingId ? 'تم تحديث القسم بنجاح' : 'تم إنشاء القسم بنجاح');
+      setIsDialogOpen(false);
+      setEditingId(null);
+      resetForm();
+      refetch();
+    };
+    const onError = (err: any) => toast.error(err.message || 'فشل في حفظ القسم');
     if (editingId) {
-      updateMutation.mutate({ id: editingId, ...data });
+      updateMutation.mutate({ id: editingId, ...data }, { onSuccess, onError });
     } else {
-      createMutation.mutate(data);
+      createMutation.mutate(data, { onSuccess, onError });
     }
   };
 
@@ -107,7 +98,7 @@ export default function DepartmentSettings() {
 
   if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>;
 
-  
+
   return (
     <>
       <div className="mb-4">
@@ -120,127 +111,130 @@ export default function DepartmentSettings() {
         />
       </div>
       <div className="space-y-6" dir="rtl">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg md:text-2xl font-bold tracking-tight">إدارة الأقسام</h2>
-          <p className="text-gray-500">إنشاء وتعديل أقسام المنظمة</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg md:text-2xl font-bold tracking-tight">إدارة الأقسام</h2>
+            <p className="text-gray-500">إنشاء وتعديل أقسام المنظمة</p>
+          </div>
+          <Button onClick={() => { resetForm(); setEditingId(null); setIsDialogOpen(true); }}>
+            <Plus className="h-4 w-4 ms-2" />
+            قسم جديد
+          </Button>
         </div>
-        <Button onClick={() => { resetForm(); setEditingId(null); setIsDialogOpen(true); }}>
-          <Plus className="h-4 w-4 ms-2" />
-          قسم جديد
-        </Button>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              الأقسام ({departments.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="flex justify-center p-8">
+                <Loader2 className="h-8 w-8 animate-spin" />
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>الكود</TableHead>
+                      <TableHead>الاسم (عربي)</TableHead>
+                      <TableHead>الاسم (إنجليزي)</TableHead>
+                      <TableHead>الفرع</TableHead>
+                      <TableHead>الحالة</TableHead>
+                      <TableHead>الإجراءات</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {departments.map((dept) => (
+                      <TableRow key={dept.id}>
+                        <TableCell className="font-mono">{dept.code}</TableCell>
+                        <TableCell className="font-medium">{dept.nameAr}</TableCell>
+                        <TableCell>{dept.name}</TableCell>
+                        <TableCell>{getBranchName(dept.branchId)}</TableCell>
+                        <TableCell>
+                          <Badge variant={dept.isActive ? 'default' : 'secondary'}>
+                            {dept.isActive ? 'نشط' : 'معطل'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col sm:flex-row gap-2">
+                            <Button size="sm" variant="outline" onClick={() => handleEdit(dept)}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button size="sm" variant="destructive" onClick={() => {
+                              if (confirm(`هل أنت متأكد من تعطيل قسم "${dept.nameAr}"؟`)) {
+                                updateMutation.mutate({ id: dept.id, isActive: false }, {
+                                  onSuccess: () => { toast.success('تم تعطيل القسم'); refetch(); },
+                                  onError: (err: any) => toast.error(err.message),
+                                });
+                              }
+                            }}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {departments.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center text-gray-500 py-8">
+                          لا توجد أقسام - أضف قسماً جديداً
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {isDialogOpen && (<div className="mt-4 p-6 bg-white border rounded-xl shadow-sm">
+          <div>
+            <div className="mb-4 border-b pb-3">
+              <h3 className="text-lg font-bold">{editingId ? 'تعديل القسم' : 'قسم جديد'}</h3>
+            </div>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>كود القسم *</Label>
+                <Input placeholder="مثال: IT" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>الاسم بالعربية *</Label>
+                <Input placeholder="مثال: تقنية المعلومات" value={form.nameAr} onChange={(e) => setForm({ ...form, nameAr: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>الاسم بالإنجليزية *</Label>
+                <Input placeholder="مثال: Information Technology" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>الفرع</Label>
+                <Select value={form.branchId} onValueChange={(v) => setForm({ ...form, branchId: v })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر الفرع" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {branches.map((branch: any) => (
+                      <SelectItem key={branch.id} value={branch.id.toString()}>
+                        {branch.nameAr || branch.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2 justify-end">
+                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>إلغاء</Button>
+                <Button onClick={handleSubmit} disabled={createMutation.isPending || updateMutation.isPending}>
+                  {(createMutation.isPending || updateMutation.isPending) ? 'جاري الحفظ...' : editingId ? 'تحديث' : 'إنشاء'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>)}
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            الأقسام ({departments.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex justify-center p-8">
-              <Loader2 className="h-8 w-8 animate-spin" />
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-<Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>الكود</TableHead>
-                  <TableHead>الاسم (عربي)</TableHead>
-                  <TableHead>الاسم (إنجليزي)</TableHead>
-                  <TableHead>الفرع</TableHead>
-                  <TableHead>الحالة</TableHead>
-                  <TableHead>الإجراءات</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {departments.map((dept) => (
-                  <TableRow key={dept.id}>
-                    <TableCell className="font-mono">{dept.code}</TableCell>
-                    <TableCell className="font-medium">{dept.nameAr}</TableCell>
-                    <TableCell>{dept.name}</TableCell>
-                    <TableCell>{getBranchName(dept.branchId)}</TableCell>
-                    <TableCell>
-                      <Badge variant={dept.isActive ? 'default' : 'secondary'}>
-                        {dept.isActive ? 'نشط' : 'معطل'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col sm:flex-row gap-2">
-                        <Button size="sm" variant="outline" onClick={() => handleEdit(dept)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button size="sm" variant="destructive" onClick={() => {
-                          if (confirm(`هل أنت متأكد من تعطيل قسم "${dept.nameAr}"؟`)) {
-                            updateMutation.mutate({ id: dept.id, isActive: false });
-                          }
-                        }}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {departments.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center text-gray-500 py-8">
-                      لا توجد أقسام - أضف قسماً جديداً
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-</div>
-          )}
-        </CardContent>
-      </Card>
-
-      {isDialogOpen && (<div className="mt-4 p-6 bg-white border rounded-xl shadow-sm">
-        <div>
-          <div className="mb-4 border-b pb-3">
-            <h3 className="text-lg font-bold">{editingId ? 'تعديل القسم' : 'قسم جديد'}</h3>
-          </div>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>كود القسم *</Label>
-              <Input placeholder="مثال: IT" value={form.code} onChange={(e) => setForm({...form, code: e.target.value})} />
-            </div>
-            <div className="space-y-2">
-              <Label>الاسم بالعربية *</Label>
-              <Input placeholder="مثال: تقنية المعلومات" value={form.nameAr} onChange={(e) => setForm({...form, nameAr: e.target.value})} />
-            </div>
-            <div className="space-y-2">
-              <Label>الاسم بالإنجليزية *</Label>
-              <Input placeholder="مثال: Information Technology" value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} />
-            </div>
-            <div className="space-y-2">
-              <Label>الفرع</Label>
-              <Select value={form.branchId} onValueChange={(v) => setForm({...form, branchId: v})}>
-                <SelectTrigger>
-                  <SelectValue placeholder="اختر الفرع" />
-                </SelectTrigger>
-                <SelectContent>
-                  {branches.map((branch: any) => (
-                    <SelectItem key={branch.id} value={branch.id.toString()}>
-                      {branch.nameAr || branch.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-2 justify-end">
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>إلغاء</Button>
-              <Button onClick={handleSubmit} disabled={createMutation.isPending || updateMutation.isPending}>
-                {(createMutation.isPending || updateMutation.isPending) ? 'جاري الحفظ...' : editingId ? 'تحديث' : 'إنشاء'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>)}
-    </div>
     </>
   );
 }

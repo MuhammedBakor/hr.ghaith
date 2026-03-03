@@ -75,13 +75,13 @@ function StatCard({ title, value, sub, icon: Icon, color = 'blue', alert = false
 function ContractsSection() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  const [status, setStatus] = useState<string>('');
+  const [status, setStatus] = useState<string>('all');
   const [openCreate, setOpenCreate] = useState(false);
   const [editData, setEditData] = useState<any>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
   const { data, isLoading, refetch } = trpc.legal.contracts.list.useQuery({
-    page, pageSize: 15, status: status || undefined, search: search || undefined,
+    page, pageSize: 15, status: (status === 'all' || !status) ? undefined : (status as any), search: search || undefined,
   });
 
   const createM = trpc.legal.contracts.create.useMutation({
@@ -126,8 +126,8 @@ function ContractsSection() {
             <SelectValue placeholder="جميع الحالات" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">جميع الحالات</SelectItem>
-            {['draft','review','active','expired','terminated'].map(s => (
+            <SelectItem value="all">جميع الحالات</SelectItem>
+            {['draft', 'review', 'active', 'expired', 'terminated'].map(s => (
               <SelectItem key={s} value={s}>{statusLabels[s]}</SelectItem>
             ))}
           </SelectContent>
@@ -139,29 +139,29 @@ function ContractsSection() {
           <DialogContent className="max-w-lg">
             <DialogHeader><DialogTitle>إنشاء عقد جديد</DialogTitle></DialogHeader>
             <div className="space-y-3 max-h-96 overflow-y-auto pe-1">
-              <div><Label>عنوان العقد *</Label><Input value={form.title} onChange={e => setForm(f => ({...f, title: e.target.value}))} placeholder="عنوان العقد"  required/></div>
+              <div><Label>عنوان العقد *</Label><Input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="عنوان العقد" required /></div>
               <div className="grid grid-cols-2 gap-3">
-                <div><Label>الطرف الأول *</Label><Input value={form.partyA} onChange={e => setForm(f => ({...f, partyA: e.target.value}))} placeholder="الطرف الأول" /></div>
-                <div><Label>الطرف الثاني *</Label><Input value={form.partyB} onChange={e => setForm(f => ({...f, partyB: e.target.value}))} placeholder="الطرف الثاني" /></div>
+                <div><Label>الطرف الأول *</Label><Input value={form.partyA} onChange={e => setForm(f => ({ ...f, partyA: e.target.value }))} placeholder="الطرف الأول" /></div>
+                <div><Label>الطرف الثاني *</Label><Input value={form.partyB} onChange={e => setForm(f => ({ ...f, partyB: e.target.value }))} placeholder="الطرف الثاني" /></div>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div><Label>نوع العقد</Label><Input value={form.contractType} onChange={e => setForm(f => ({...f, contractType: e.target.value}))} placeholder="توريد / خدمات..." /></div>
-                <div><Label>القيمة (ر.س)</Label><Input type="number" value={form.value} onChange={e => setForm(f => ({...f, value: e.target.value}))} placeholder="0.00" /></div>
+                <div><Label>نوع العقد</Label><Input value={form.contractType} onChange={e => setForm(f => ({ ...f, contractType: e.target.value }))} placeholder="توريد / خدمات..." /></div>
+                <div><Label>القيمة (ر.س)</Label><Input type="number" value={form.value} onChange={e => setForm(f => ({ ...f, value: e.target.value }))} placeholder="0.00" /></div>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div><Label>تاريخ البدء</Label><Input type="date" value={form.startDate} onChange={e => setForm(f => ({...f, startDate: e.target.value}))} /></div>
-                <div><Label>تاريخ الانتهاء</Label><Input type="date" value={form.endDate} onChange={e => setForm(f => ({...f, endDate: e.target.value}))} /></div>
+                <div><Label>تاريخ البدء</Label><Input type="date" value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))} /></div>
+                <div><Label>تاريخ الانتهاء</Label><Input type="date" value={form.endDate} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))} /></div>
               </div>
               <div>
                 <Label>الحالة</Label>
-                <Select value={form.status} onValueChange={v => setForm(f => ({...f, status: v}))}>
+                <Select value={form.status} onValueChange={v => setForm(f => ({ ...f, status: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {['draft','review','active'].map(s => <SelectItem key={s} value={s}>{statusLabels[s]}</SelectItem>)}
+                    {['draft', 'review', 'active'].map(s => <SelectItem key={s} value={s}>{statusLabels[s]}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
-              <div><Label>الوصف</Label><Textarea value={form.description} onChange={e => setForm(f => ({...f, description: e.target.value}))} rows={2} /></div>
+              <div><Label>الوصف</Label><Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={2} /></div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setOpenCreate(false)}>إلغاء</Button>
@@ -181,7 +181,7 @@ function ContractsSection() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b">
               <tr>
-                {['عنوان العقد','الطرف الأول','الطرف الثاني','القيمة','تاريخ الانتهاء','الحالة','إجراءات'].map(h => (
+                {['عنوان العقد', 'الطرف الأول', 'الطرف الثاني', 'القيمة', 'تاريخ الانتهاء', 'الحالة', 'إجراءات'].map(h => (
                   <th key={h} className="px-4 py-3 text-end text-xs font-medium text-gray-500">{h}</th>
                 ))}
               </tr>
@@ -249,21 +249,21 @@ function ContractsSection() {
           <DialogHeader><DialogTitle>تعديل العقد</DialogTitle></DialogHeader>
           {editData && (
             <div className="space-y-3 max-h-96 overflow-y-auto pe-1">
-              <div><Label>عنوان العقد</Label><Input value={editData.title} onChange={e => setEditData((d: any) => ({...d, title: e.target.value}))} /></div>
+              <div><Label>عنوان العقد</Label><Input value={editData.title} onChange={e => setEditData((d: any) => ({ ...d, title: e.target.value }))} /></div>
               <div className="grid grid-cols-2 gap-3">
-                <div><Label>الطرف الأول</Label><Input value={editData.partyA ?? ''} onChange={e => setEditData((d: any) => ({...d, partyA: e.target.value}))} /></div>
-                <div><Label>الطرف الثاني</Label><Input value={editData.partyB ?? ''} onChange={e => setEditData((d: any) => ({...d, partyB: e.target.value}))} /></div>
+                <div><Label>الطرف الأول</Label><Input value={editData.partyA ?? ''} onChange={e => setEditData((d: any) => ({ ...d, partyA: e.target.value }))} /></div>
+                <div><Label>الطرف الثاني</Label><Input value={editData.partyB ?? ''} onChange={e => setEditData((d: any) => ({ ...d, partyB: e.target.value }))} /></div>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div><Label>تاريخ الانتهاء</Label><Input type="date" value={editData.endDate?.split('T')[0] ?? ''} onChange={e => setEditData((d: any) => ({...d, endDate: e.target.value}))} /></div>
-                <div><Label>القيمة</Label><Input type="number" value={editData.value ?? ''} onChange={e => setEditData((d: any) => ({...d, value: e.target.value}))} /></div>
+                <div><Label>تاريخ الانتهاء</Label><Input type="date" value={editData.endDate?.split('T')[0] ?? ''} onChange={e => setEditData((d: any) => ({ ...d, endDate: e.target.value }))} /></div>
+                <div><Label>القيمة</Label><Input type="number" value={editData.value ?? ''} onChange={e => setEditData((d: any) => ({ ...d, value: e.target.value }))} /></div>
               </div>
               <div>
                 <Label>الحالة</Label>
-                <Select value={editData.status} onValueChange={v => setEditData((d: any) => ({...d, status: v}))}>
+                <Select value={editData.status} onValueChange={v => setEditData((d: any) => ({ ...d, status: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {['draft','review','active','expired','terminated'].map(s => <SelectItem key={s} value={s}>{statusLabels[s]}</SelectItem>)}
+                    {['draft', 'review', 'active', 'expired', 'terminated'].map(s => <SelectItem key={s} value={s}>{statusLabels[s]}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -304,13 +304,13 @@ function ContractsSection() {
 function CasesSection() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  const [status, setStatus] = useState('');
+  const [status, setStatus] = useState('all');
   const [openCreate, setOpenCreate] = useState(false);
   const [editData, setEditData] = useState<any>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
   const { data, isLoading, refetch } = trpc.legal.cases.list.useQuery({
-    page, pageSize: 15, status: status as any || undefined, search: search || undefined,
+    page, pageSize: 15, status: (status === 'all' || !status) ? undefined : (status as any), search: search || undefined,
   });
 
   const createM = trpc.legal.cases.create.useMutation({
@@ -339,8 +339,8 @@ function CasesSection() {
         <Select value={status} onValueChange={setStatus}>
           <SelectTrigger className="w-36"><SelectValue placeholder="جميع الحالات" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="">جميع الحالات</SelectItem>
-            {['open','in_progress','closed','won','lost'].map(s => <SelectItem key={s} value={s}>{statusLabels[s]}</SelectItem>)}
+            <SelectItem value="all">جميع الحالات</SelectItem>
+            {['open', 'in_progress', 'closed', 'won', 'lost'].map(s => <SelectItem key={s} value={s}>{statusLabels[s]}</SelectItem>)}
           </SelectContent>
         </Select>
         <Dialog open={openCreate} onOpenChange={setOpenCreate}>
@@ -350,23 +350,23 @@ function CasesSection() {
           <DialogContent className="max-w-lg">
             <DialogHeader><DialogTitle>إنشاء قضية جديدة</DialogTitle></DialogHeader>
             <div className="space-y-3 max-h-96 overflow-y-auto pe-1">
-              <div><Label>عنوان القضية *</Label><Input value={form.title} onChange={e => setForm(f => ({...f, title: e.target.value}))} /></div>
+              <div><Label>عنوان القضية *</Label><Input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} /></div>
               <div className="grid grid-cols-2 gap-3">
-                <div><Label>رقم القضية *</Label><Input value={form.caseNumber} onChange={e => setForm(f => ({...f, caseNumber: e.target.value}))} /></div>
-                <div><Label>نوع القضية</Label><Input value={form.caseType} onChange={e => setForm(f => ({...f, caseType: e.target.value}))} placeholder="تجاري / عمالي..." /></div>
+                <div><Label>رقم القضية *</Label><Input value={form.caseNumber} onChange={e => setForm(f => ({ ...f, caseNumber: e.target.value }))} /></div>
+                <div><Label>نوع القضية</Label><Input value={form.caseType} onChange={e => setForm(f => ({ ...f, caseType: e.target.value }))} placeholder="تجاري / عمالي..." /></div>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div><Label>المحكمة</Label><Input value={form.court} onChange={e => setForm(f => ({...f, court: e.target.value}))} /></div>
-                <div><Label>قيمة المطالبة</Label><Input type="number" value={form.claimAmount} onChange={e => setForm(f => ({...f, claimAmount: e.target.value}))} /></div>
+                <div><Label>المحكمة</Label><Input value={form.court} onChange={e => setForm(f => ({ ...f, court: e.target.value }))} /></div>
+                <div><Label>قيمة المطالبة</Label><Input type="number" value={form.claimAmount} onChange={e => setForm(f => ({ ...f, claimAmount: e.target.value }))} /></div>
               </div>
-              <div><Label>تاريخ الجلسة</Label><Input type="date" value={form.hearingDate} onChange={e => setForm(f => ({...f, hearingDate: e.target.value}))} /></div>
-              <div><Label>الوصف</Label><Textarea value={form.description} onChange={e => setForm(f => ({...f, description: e.target.value}))} rows={2} /></div>
+              <div><Label>تاريخ الجلسة</Label><Input type="date" value={form.hearingDate} onChange={e => setForm(f => ({ ...f, hearingDate: e.target.value }))} /></div>
+              <div><Label>الوصف</Label><Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={2} /></div>
               <div>
                 <Label>الحالة</Label>
-                <Select value={form.status} onValueChange={v => setForm(f => ({...f, status: v}))}>
+                <Select value={form.status} onValueChange={v => setForm(f => ({ ...f, status: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {['open','in_progress'].map(s => <SelectItem key={s} value={s}>{statusLabels[s]}</SelectItem>)}
+                    {['open', 'in_progress'].map(s => <SelectItem key={s} value={s}>{statusLabels[s]}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -391,7 +391,7 @@ function CasesSection() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b">
               <tr>
-                {['رقم القضية','عنوان القضية','النوع','المحكمة','تاريخ الجلسة','الحالة','إجراءات'].map(h => (
+                {['رقم القضية', 'عنوان القضية', 'النوع', 'المحكمة', 'تاريخ الجلسة', 'الحالة', 'إجراءات'].map(h => (
                   <th key={h} className="px-4 py-3 text-end text-xs font-medium text-gray-500">{h}</th>
                 ))}
               </tr>
@@ -431,9 +431,9 @@ function CasesSection() {
         <div className="flex items-center justify-between">
           <p className="text-sm text-gray-500">إجمالي {data?.pagination?.total} قضية</p>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(p => p-1)}>السابق</Button>
+            <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>السابق</Button>
             <span className="text-sm px-3 py-1">{page} / {data?.pagination?.totalPages}</span>
-            <Button variant="outline" size="sm" disabled={page >= (data?.pagination?.totalPages ?? 1)} onClick={() => setPage(p => p+1)}>التالي</Button>
+            <Button variant="outline" size="sm" disabled={page >= (data?.pagination?.totalPages ?? 1)} onClick={() => setPage(p => p + 1)}>التالي</Button>
           </div>
         </div>
       )}
@@ -444,17 +444,17 @@ function CasesSection() {
           <DialogHeader><DialogTitle>تعديل القضية</DialogTitle></DialogHeader>
           {editData && (
             <div className="space-y-3 max-h-80 overflow-y-auto pe-1">
-              <div><Label>عنوان القضية</Label><Input value={editData.title} onChange={e => setEditData((d: any) => ({...d, title: e.target.value}))} /></div>
-              <div><Label>تاريخ الجلسة</Label><Input type="date" value={editData.hearingDate?.split('T')[0] ?? ''} onChange={e => setEditData((d: any) => ({...d, hearingDate: e.target.value}))} /></div>
+              <div><Label>عنوان القضية</Label><Input value={editData.title} onChange={e => setEditData((d: any) => ({ ...d, title: e.target.value }))} /></div>
+              <div><Label>تاريخ الجلسة</Label><Input type="date" value={editData.hearingDate?.split('T')[0] ?? ''} onChange={e => setEditData((d: any) => ({ ...d, hearingDate: e.target.value }))} /></div>
               <div><Label>الحالة</Label>
-                <Select value={editData.status} onValueChange={v => setEditData((d: any) => ({...d, status: v}))}>
+                <Select value={editData.status} onValueChange={v => setEditData((d: any) => ({ ...d, status: v }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {['open','in_progress','closed','won','lost'].map(s => <SelectItem key={s} value={s}>{statusLabels[s]}</SelectItem>)}
+                    {['open', 'in_progress', 'closed', 'won', 'lost'].map(s => <SelectItem key={s} value={s}>{statusLabels[s]}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
-              <div><Label>الوصف</Label><Textarea value={editData.description ?? ''} onChange={e => setEditData((d: any) => ({...d, description: e.target.value}))} rows={2} /></div>
+              <div><Label>الوصف</Label><Textarea value={editData.description ?? ''} onChange={e => setEditData((d: any) => ({ ...d, description: e.target.value }))} rows={2} /></div>
             </div>
           )}
           <DialogFooter>
@@ -511,7 +511,7 @@ export default function Legal() {
               {expiring!.length} عقد ينتهي خلال 30 يوماً
             </p>
             <p className="text-xs text-orange-600 mt-0.5">
-              {expiring!.slice(0,3).map(c => c.title).join('، ')}
+              {expiring!.slice(0, 3).map(c => c.title).join('، ')}
               {expiring!.length > 3 && `... و${expiring!.length - 3} آخرين`}
             </p>
           </div>

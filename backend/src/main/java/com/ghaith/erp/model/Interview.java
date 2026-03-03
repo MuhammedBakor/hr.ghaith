@@ -21,12 +21,23 @@ public class Interview extends BaseEntity {
     @JoinColumn(name = "application_id", nullable = false)
     private JobApplication application;
 
-    @Column(nullable = false)
+    @Column(name = "interview_date")
     private LocalDateTime interviewDate;
+
+    @Column(name = "scheduled_at")
+    private LocalDateTime scheduledAt; // Preferred field name from frontend
 
     private String interviewer;
 
+    @Column(name = "interview_type")
+    private String interviewType; // phone, video, in_person, technical, hr, final
+
+    private Integer duration; // in minutes
+
     private String location; // Physical or link
+
+    @Column(name = "meeting_link")
+    private String meetingLink;
 
     @Builder.Default
     @Enumerated(EnumType.STRING)

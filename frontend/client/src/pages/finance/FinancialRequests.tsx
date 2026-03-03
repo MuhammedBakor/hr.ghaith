@@ -333,7 +333,7 @@ export default function FinancialRequests() {
                     <SelectValue placeholder="اختر ميزانية" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">بدون ميزانية</SelectItem>
+                    <SelectItem value="none">بدون ميزانية</SelectItem>
                     {budgets?.filter((item: any) => !searchTerm || JSON.stringify(item).toLowerCase().includes(searchTerm.toLowerCase()))?.map((budget: any) => (
                       <SelectItem key={budget.id} value={budget.id.toString()}>
                         {budget.name} ({formatCurrency(budget.plannedAmount)} {budget.currency})

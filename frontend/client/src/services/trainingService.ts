@@ -1,151 +1,138 @@
 import api from "../lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-export type TrainingType = "mandatory" | "optional" | "certification" | "skill_development";
-export type DurationUnit = "hours" | "days" | "weeks";
-export type ProgramStatus = "draft" | "active" | "completed" | "cancelled";
-export type EnrollmentStatus = "enrolled" | "in_progress" | "completed" | "withdrawn";
-
 export interface TrainingProgram {
     id: number;
     name: string;
-    description: string;
-    trainingType: TrainingType;
-    provider: string;
-    duration: number;
-    durationUnit: DurationUnit;
-    cost: number;
-    maxParticipants: number;
-    status: ProgramStatus;
-    createdAt?: string;
-    updatedAt?: string;
+    description?: string;
+    category?: string;
+    instructor?: string;
+    trainingType?: 'mandatory' | 'optional' | 'certification' | 'skill_development';
+    provider?: string;
+    duration?: number;
+    durationUnit?: 'hours' | 'days' | 'weeks';
+    cost?: number;
+    maxParticipants?: number;
+    startDate?: string;
+    endDate?: string;
+    status: 'draft' | 'active' | 'completed' | 'cancelled';
+    createdAt: string;
 }
 
 export interface TrainingEnrollment {
     id: number;
-    program?: TrainingProgram;
-    employee?: any; // Will refine when Employee interface is available
+    employeeId: number;
+    employeeName?: string;
+    programId: number;
+    programName?: string;
     enrollmentDate: string;
     completionDate?: string;
-    status: EnrollmentStatus;
+    status: 'enrolled' | 'in_progress' | 'completed' | 'withdrawn';
     score?: number;
-    certificate?: string;
-    feedback?: string;
+    progress?: number;
 }
 
 export const trainingService = {
     // Programs
-    getPrograms: async (): Promise<TrainingProgram[]> => {
-        const response = await api.get("/training/programs");
+    getPrograms: async () => {
+        const response = await api.get<TrainingProgram[]>("/api/v1/training/programs");
         return response.data;
     },
-    getProgram: async (id: number): Promise<TrainingProgram> => {
-        const response = await api.get(`/training/programs/${id}`);
+    getProgram: async (id: number) => {
+        const response = await api.get<TrainingProgram>(`/api/v1/training/programs/${id}`);
         return response.data;
     },
-    createProgram: async (program: Partial<TrainingProgram>): Promise<TrainingProgram> => {
-        const response = await api.post("/training/programs", program);
+    createProgram: async (data: Partial<TrainingProgram>) => {
+        const response = await api.post<TrainingProgram>("/api/v1/training/programs", data);
         return response.data;
     },
-    updateProgram: async ({ id, ...data }: { id: number } & Partial<TrainingProgram>): Promise<TrainingProgram> => {
-        const response = await api.put(`/training/programs/${id}`, data);
+    updateProgram: async ({ id, ...data }: { id: number } & Partial<TrainingProgram>) => {
+        const response = await api.put<TrainingProgram>(`/api/v1/training/programs/${id}`, data);
         return response.data;
     },
-    deleteProgram: async (id: number): Promise<void> => {
-        await api.delete(`/training/programs/${id}`);
+    deleteProgram: async (id: number) => {
+        await api.delete(`/api/v1/training/programs/${id}`);
     },
 
     // Enrollments
-    getEnrollments: async (): Promise<TrainingEnrollment[]> => {
-        const response = await api.get("/training/enrollments");
+    getEnrollments: async () => {
+        const response = await api.get<TrainingEnrollment[]>("/api/v1/training/enrollments");
         return response.data;
     },
-    getEnrollment: async (id: number): Promise<TrainingEnrollment> => {
-        const response = await api.get(`/training/enrollments/${id}`);
+    createEnrollment: async (data: { employeeId: number, programId: number }) => {
+        const response = await api.post<TrainingEnrollment>("/api/v1/training/enrollments", data);
         return response.data;
     },
-    getEnrollmentsByEmployee: async (employeeId: number): Promise<TrainingEnrollment[]> => {
-        const response = await api.get(`/training/enrollments/employee/${employeeId}`);
+    updateEnrollment: async ({ id, ...data }: { id: number } & Partial<TrainingEnrollment>) => {
+        const response = await api.put<TrainingEnrollment>(`/api/v1/training/enrollments/${id}`, data);
         return response.data;
     },
-    getEnrollmentsByProgram: async (programId: number): Promise<TrainingEnrollment[]> => {
-        const response = await api.get(`/training/enrollments/program/${programId}`);
-        return response.data;
-    },
-    enrollEmployee: async (enrollment: Partial<TrainingEnrollment>): Promise<TrainingEnrollment> => {
-        const response = await api.post("/training/enrollments", enrollment);
-        return response.data;
-    },
-    updateEnrollment: async ({ id, ...data }: { id: number } & Partial<TrainingEnrollment>): Promise<TrainingEnrollment> => {
-        const response = await api.put(`/training/enrollments/${id}`, data);
-        return response.data;
-    },
-    deleteEnrollment: async (id: number): Promise<void> => {
-        await api.delete(`/training/enrollments/${id}`);
-    },
+    deleteEnrollment: async (id: number) => {
+        await api.delete(`/api/v1/training/enrollments/${id}`);
+    }
 };
 
-// Hooks for Programs
-export const usePrograms = () => {
+// Hooks
+export const useTrainingPrograms = () => {
     return useQuery({
-        queryKey: ["training-programs"],
+        queryKey: ["training", "programs"],
         queryFn: trainingService.getPrograms,
     });
 };
 
-export const useProgram = (id: number) => {
-    return useQuery({
-        queryKey: ["training-program", id],
-        queryFn: () => trainingService.getProgram(id),
-        enabled: !!id,
-    });
-};
-
-export const useCreateProgram = () => {
+export const useCreateTrainingProgram = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: trainingService.createProgram,
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["training-programs"] });
+            queryClient.invalidateQueries({ queryKey: ["training", "programs"] });
         },
     });
 };
 
-export const useUpdateProgram = () => {
+export const useUpdateTrainingProgram = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: trainingService.updateProgram,
-        onSuccess: (_, variables) => {
-            queryClient.invalidateQueries({ queryKey: ["training-programs"] });
-            queryClient.invalidateQueries({ queryKey: ["training-program", variables.id] });
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["training", "programs"] });
         },
     });
 };
 
-export const useDeleteProgram = () => {
+export const useDeleteTrainingProgram = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: trainingService.deleteProgram,
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["training-programs"] });
+            queryClient.invalidateQueries({ queryKey: ["training", "programs"] });
         },
     });
 };
 
-// Hooks for Enrollments
-export const useEnrollments = () => {
+export const useTrainingEnrollments = () => {
     return useQuery({
-        queryKey: ["training-enrollments"],
+        queryKey: ["training", "enrollments"],
         queryFn: trainingService.getEnrollments,
     });
 };
 
-export const useEnrollEmployee = () => {
+export const useCreateTrainingEnrollment = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: trainingService.enrollEmployee,
+        mutationFn: trainingService.createEnrollment,
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["training-enrollments"] });
+            queryClient.invalidateQueries({ queryKey: ["training", "enrollments"] });
+        },
+    });
+};
+
+export const useUpdateTrainingEnrollment = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: trainingService.updateEnrollment,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["training", "enrollments"] });
         },
     });
 };

@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -32,6 +31,15 @@ import { Plus, Search, Ticket, Clock, CheckCircle2, AlertCircle, MessageSquare, 
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 import { toast } from "sonner";
+import { useAuth } from "@/_core/hooks/useAuth";
+import {
+  useTickets,
+  useCreateTicket,
+  useUpdateTicket,
+  useAddTicketComment,
+  useTicket,
+  useTicketComments
+} from "@/services/supportService";
 
 const priorityColors: Record<string, string> = {
   low: "bg-gray-100 text-gray-800",
@@ -71,7 +79,7 @@ const statusIcons: Record<string, React.ReactNode> = {
 export default function Tickets() {
   const confirmDelete = (fn: () => void) => { if (window.confirm("هل أنت متأكد من الحذف؟")) fn(); };
 
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { user: currentUser, error: authError } = useAuth();
   const userRole = currentUser?.role || 'user';
 
   const [showInlineForm, setShowInlineForm] = useState(false);
@@ -81,12 +89,12 @@ export default function Tickets() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
-  
+
   const [newTicket, setNewTicket] = useState<{
     ticketNumber: string;
     subject: string;
     description: string;
-    priority: "low" | "medium" | "high" | "critical";
+    priority: "low" | "medium" | "high" | "urgent";
     category: "general" | "technical" | "billing" | "complaint" | "suggestion";
   }>({
     ticketNumber: `TKT-${Date.now()}`,
@@ -95,51 +103,18 @@ export default function Tickets() {
     priority: "medium",
     category: "general",
   });
-  
+
   const [newComment, setNewComment] = useState("");
 
-  const { data: tickets, isLoading, refetch } = trpc.requests.tickets?.list?.useQuery();
-  const { data: ticketDetails } = trpc.requests.tickets?.getById?.useQuery(
-    { id: selectedTicket! },
-    { enabled: !!selectedTicket }
-  );
-  const { data: comments } = trpc.requests.tickets.comments?.list?.useQuery(
-    { ticketId: selectedTicket! },
-    { enabled: !!selectedTicket }
-  );
+  const { data: tickets, isLoading, refetch } = useTickets();
+  const { data: ticketDetails } = useTicket(selectedTicket!);
+  const { data: comments } = useTicketComments(selectedTicket!);
 
-  const createTicketMutation = trpc.requests.tickets?.create?.useMutation({
-    onSuccess: () => {
-      toast.success("تم إنشاء التذكرة بنجاح");
-      setIsCreateOpen(false);
-      setNewTicket({ ticketNumber: `TKT-${Date.now()}`, subject: "", description: "", priority: "medium", category: "general" });
-      refetch();
-    },
-    onError: (error) => {
-      toast.error(error.message);
-    },
-  });
+  const createTicketMutation = useCreateTicket();
 
-  const updateTicketMutation = trpc.requests.tickets?.update?.useMutation({
-    onSuccess: () => {
-      toast.success("تم تحديث التذكرة بنجاح");
-      refetch();
-    },
-    onError: (error) => {
-      toast.error(error.message);
-    },
-  });
+  const updateTicketMutation = useUpdateTicket();
 
-  const addCommentMutation = trpc.requests.tickets.comments?.create?.useMutation({
-    onSuccess: () => {
-      toast.success("تم إضافة التعليق بنجاح");
-      setNewComment("");
-      refetch();
-    },
-    onError: (error) => {
-      toast.error(error.message);
-    },
-  });
+  const addCommentMutation = useAddTicketComment();
 
   const handleCreateTicket = () => {
     if (!newTicket.subject.trim()) {
@@ -224,7 +199,7 @@ export default function Tickets() {
                   <Label>الأولوية</Label>
                   <Select
                     value={newTicket.priority}
-                    onValueChange={(value) => setNewTicket({ ...newTicket, priority: value as "low" | "medium" | "high" | "critical" })}
+                    onValueChange={(value) => setNewTicket({ ...newTicket, priority: value as "low" | "medium" | "high" | "urgent" })}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -256,8 +231,8 @@ export default function Tickets() {
                   </Select>
                 </div>
               </div>
-              <Button 
-                onClick={handleCreateTicket} 
+              <Button
+                onClick={handleCreateTicket}
                 className="w-full"
                 disabled={createTicketMutation.isPending}
               >
@@ -386,7 +361,7 @@ export default function Tickets() {
               </TableHeader>
               <TableBody>
                 {filteredTickets.map((ticket: any) => (
-                  <TableRow 
+                  <TableRow
                     key={ticket.id}
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => setSelectedTicket(ticket.id)}
@@ -455,7 +430,7 @@ export default function Tickets() {
                 <h3 className="font-semibold text-lg">{ticketDetails.subject}</h3>
                 <p className="text-muted-foreground mt-2">{ticketDetails.description}</p>
               </div>
-              
+
               <div className="flex gap-4 px-2 md:px-0">
                 <Badge className={priorityColors[ticketDetails.priority] || priorityColors.medium}>
                   {priorityLabels[ticketDetails.priority] || ticketDetails.priority}
@@ -487,7 +462,7 @@ export default function Tickets() {
                     <p className="text-muted-foreground text-center py-4">لا توجد تعليقات</p>
                   )}
                 </div>
-                
+
                 <div className="mt-4 flex gap-2">
                   <Textarea
                     value={newComment}
@@ -496,7 +471,7 @@ export default function Tickets() {
                     rows={2}
                     className="flex-1"
                   />
-                  <Button 
+                  <Button
                     onClick={handleAddComment}
                     disabled={addCommentMutation.isPending || !newComment.trim()}
                   >

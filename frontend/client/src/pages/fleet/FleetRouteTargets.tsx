@@ -23,7 +23,7 @@ import { Loader2, Inbox, Target, Plus, Edit, Trash2, TrendingUp, Car, Fuel, Cloc
 import { toast } from 'sonner';
 
 export default function FleetRouteTargets() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error } = trpc.auth.me.useQuery();
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -34,14 +34,14 @@ export default function FleetRouteTargets() {
   const [selectedTarget, setSelectedTarget] = useState<any>(null);
   const [filterVehicle, setFilterVehicle] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('');
-  
+
   const { data: vehiclesData, isLoading: vehiclesLoading } = trpc.fleet.vehicles.list.useQuery();
   const { data: targetsData, isLoading: targetsLoading, refetch } = trpc.fleet.routeTargets.list.useQuery({
     vehicleId: filterVehicle ? parseInt(filterVehicle) : undefined,
     status: filterStatus || undefined,
   });
   const { data: statsData } = trpc.fleet.routeTargets.stats.useQuery();
-  
+
   const createMutation = trpc.fleet.routeTargets.create.useMutation({
     onSuccess: () => {
       toast.success('تم إنشاء الهدف بنجاح');
@@ -52,7 +52,7 @@ export default function FleetRouteTargets() {
       toast.error('فشل في إنشاء الهدف: ' + error.message);
     },
   });
-  
+
   const updateMutation = trpc.fleet.routeTargets.update.useMutation({
     onSuccess: () => {
       toast.success('تم تحديث الهدف بنجاح');
@@ -64,7 +64,7 @@ export default function FleetRouteTargets() {
       toast.error('فشل في تحديث الهدف: ' + error.message);
     },
   });
-  
+
   const deleteMutation = trpc.fleet.routeTargets.delete.useMutation({
     onSuccess: () => {
       toast.success('تم حذف الهدف بنجاح');
@@ -74,29 +74,29 @@ export default function FleetRouteTargets() {
       toast.error('فشل في حذف الهدف: ' + error.message);
     },
   });
-  
+
   const vehicles = (vehiclesData || []) as any[];
   const targets = (targetsData || []) as any[];
   const stats = statsData || { total: 0, active: 0, completed: 0, avgProgress: 0 };
-  
+
   const isLoading = vehiclesLoading || targetsLoading;
-  
+
   if (isLoading) {
     if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ</div>;
 
-    
+
     return (
       <div className="flex items-center justify-center h-64" dir="rtl">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
-  
+
   const getVehicleName = (vehicleId: number) => {
     const vehicle = vehicles.find(v => v.id === vehicleId);
     return vehicle ? `${vehicle.make} ${vehicle.model} - ${vehicle.plateNumber}` : `مركبة #${vehicleId}`;
   };
-  
+
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
       active: { label: 'نشط', variant: 'default' },
@@ -107,7 +107,7 @@ export default function FleetRouteTargets() {
     const config = statusMap[status] || { label: status, variant: 'outline' as const };
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
-  
+
   const getTargetTypeLabel = (type: string) => {
     const typeMap: Record<string, string> = {
       daily: 'يومي',
@@ -119,11 +119,11 @@ export default function FleetRouteTargets() {
     };
     return typeMap[type] || type;
   };
-  
+
   const handleCreate = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    
+
     createMutation.mutate({
       vehicleId: parseInt(formData.get('vehicleId') as string),
       driverId: formData.get('driverId') ? parseInt(formData.get('driverId') as string) : undefined,
@@ -139,18 +139,18 @@ export default function FleetRouteTargets() {
       endDate: new Date(formData.get('endDate') as string),
     });
   };
-  
+
   const handleEdit = (target: any) => {
     setSelectedTarget(target);
     setIsEditOpen(true);
   };
-  
+
   const handleUpdate = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!selectedTarget) return;
-    
+
     const formData = new FormData(e.currentTarget);
-    
+
     updateMutation.mutate({
       id: selectedTarget.id,
       name: formData.get('name') as string,
@@ -163,7 +163,7 @@ export default function FleetRouteTargets() {
       status: formData.get('status') as any,
     });
   };
-  
+
   const handleDelete = (id: number) => {
     if (confirm('هل أنت متأكد من الحذف؟')) {
       deleteMutation.mutate({ id: id });
@@ -250,7 +250,7 @@ export default function FleetRouteTargets() {
                   <SelectValue placeholder="جميع المركبات" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">جميع المركبات</SelectItem>
+                  <SelectItem value="all">جميع المركبات</SelectItem>
                   {vehicles.map((v: any) => (
                     <SelectItem key={v.id} value={v.id.toString()}>
                       {v.make} {v.model} - {v.plateNumber}
@@ -266,7 +266,7 @@ export default function FleetRouteTargets() {
                   <SelectValue placeholder="جميع الحالات" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">جميع الحالات</SelectItem>
+                  <SelectItem value="all">جميع الحالات</SelectItem>
                   <SelectItem value="active">نشط</SelectItem>
                   <SelectItem value="completed">مكتمل</SelectItem>
                   <SelectItem value="cancelled">ملغي</SelectItem>
@@ -310,7 +310,7 @@ export default function FleetRouteTargets() {
                       {target.description && (
                         <p className="text-sm text-gray-600 mb-3">{target.description}</p>
                       )}
-                      
+
                       {/* مؤشرات الأداء */}
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
                         {target.targetDistance && (
@@ -348,13 +348,13 @@ export default function FleetRouteTargets() {
                           </div>
                         )}
                       </div>
-                      
+
                       {/* شريط التقدم */}
                       <div className="flex items-center gap-2">
                         <Progress value={target.progress || 0} className="flex-1" />
                         <span className="text-sm font-medium">{target.progress || 0}%</span>
                       </div>
-                      
+
                       <div className="text-xs text-gray-400 mt-2">
                         الفترة: {formatDate(target.startDate)} - {formatDate(target.endDate)}
                       </div>
@@ -427,11 +427,11 @@ export default function FleetRouteTargets() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="startDate">تاريخ البداية *</Label>
-                  <Input id="startDate" name="startDate" type="date" required  placeholder="أدخل القيمة" />
+                  <Input id="startDate" name="startDate" type="date" required placeholder="أدخل القيمة" />
                 </div>
                 <div>
                   <Label htmlFor="endDate">تاريخ النهاية *</Label>
-                  <Input id="endDate" name="endDate" type="date" required  placeholder="أدخل القيمة" />
+                  <Input id="endDate" name="endDate" type="date" required placeholder="أدخل القيمة" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -479,36 +479,36 @@ export default function FleetRouteTargets() {
               <div className="grid gap-4 py-4">
                 <div>
                   <Label htmlFor="edit-name">اسم الهدف</Label>
-                  <Input id="edit-name" name="name" defaultValue={selectedTarget.name}  placeholder="الاسم" />
+                  <Input id="edit-name" name="name" defaultValue={selectedTarget.name} placeholder="الاسم" />
                 </div>
                 <div>
                   <Label htmlFor="edit-description">الوصف</Label>
-                  <Input id="edit-description" name="description" defaultValue={selectedTarget.description}  placeholder="أدخل القيمة" />
+                  <Input id="edit-description" name="description" defaultValue={selectedTarget.description} placeholder="أدخل القيمة" />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="edit-targetDistance">المسافة المستهدفة (كم)</Label>
-                    <Input id="edit-targetDistance" name="targetDistance" type="number" step="0.01" defaultValue={selectedTarget.targetDistance}  placeholder="أدخل القيمة" />
+                    <Input id="edit-targetDistance" name="targetDistance" type="number" step="0.01" defaultValue={selectedTarget.targetDistance} placeholder="أدخل القيمة" />
                   </div>
                   <div>
                     <Label htmlFor="edit-actualDistance">المسافة الفعلية (كم)</Label>
-                    <Input id="edit-actualDistance" name="actualDistance" type="number" step="0.01" defaultValue={selectedTarget.actualDistance}  placeholder="أدخل القيمة" />
+                    <Input id="edit-actualDistance" name="actualDistance" type="number" step="0.01" defaultValue={selectedTarget.actualDistance} placeholder="أدخل القيمة" />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="edit-targetTrips">الرحلات المستهدفة</Label>
-                    <Input id="edit-targetTrips" name="targetTrips" type="number" defaultValue={selectedTarget.targetTrips}  placeholder="أدخل القيمة" />
+                    <Input id="edit-targetTrips" name="targetTrips" type="number" defaultValue={selectedTarget.targetTrips} placeholder="أدخل القيمة" />
                   </div>
                   <div>
                     <Label htmlFor="edit-actualTrips">الرحلات الفعلية</Label>
-                    <Input id="edit-actualTrips" name="actualTrips" type="number" defaultValue={selectedTarget.actualTrips}  placeholder="أدخل القيمة" />
+                    <Input id="edit-actualTrips" name="actualTrips" type="number" defaultValue={selectedTarget.actualTrips} placeholder="أدخل القيمة" />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="edit-progress">نسبة الإنجاز (%)</Label>
-                    <Input id="edit-progress" name="progress" type="number" min="0" max="100" defaultValue={selectedTarget.progress}  placeholder="أدخل القيمة" />
+                    <Input id="edit-progress" name="progress" type="number" min="0" max="100" defaultValue={selectedTarget.progress} placeholder="أدخل القيمة" />
                   </div>
                   <div>
                     <Label htmlFor="edit-status">الحالة</Label>

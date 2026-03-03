@@ -24,15 +24,12 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Star, Plus, Eye, Edit, CheckCircle2, Clock, Award, BarChart3 } from 'lucide-react';
-import { trpc } from '@/lib/trpc';
+import { useEmployees, usePerformanceReviews, useGoals, useCreateGoal, useKPIs } from '@/services/hrService';
 import { toast } from 'sonner';
 import { PrintButton } from "@/components/PrintButton";
 
 export default function PerformanceAdvanced() {
   const confirmDelete = (fn: () => void) => { if (window.confirm("هل أنت متأكد من الحذف؟")) fn(); };
-
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
-  const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('reviews');
@@ -47,42 +44,42 @@ export default function PerformanceAdvanced() {
     dueDate: ''
   });
 
-  // البيانات من API
-  const { data: reviewsData, isLoading } = trpc.hrExtended.performance.list.useQuery();
-  const { data: employeesData } = trpc.hr.employees.list.useQuery();
-  const { data: goalsData, refetch: refetchGoals } = trpc.hrExtended.goals.list.useQuery();
-  const { data: kpisData } = trpc.hrExtended.kpis.list.useQuery();
-  
-  const createGoalMutation = trpc.hrExtended.goals.create.useMutation({
-    onSuccess: () => {
-      toast.success('تم إضافة الهدف بنجاح');
-      setShowGoalDialog(false);
-      setNewGoal({ employeeId: 0, title: '', description: '', weight: 30, dueDate: '',
-      onError: (e: any) => toast.error(e?.message || 'حدث خطأ')});
-      refetchGoals();
-    },
-    onError: (error) => {
-      toast.error(`فشل في إضافة الهدف: ${error.message}`);
-    },
-  });
-  
+  // البيانات من API (REST)
+  const { data: reviewsData, isLoading } = usePerformanceReviews();
+  const { data: employeesData } = useEmployees();
+  const { data: goalsData, refetch: refetchGoals } = useGoals();
+  const { data: kpisData } = useKPIs();
+
+  const createGoalMutation = useCreateGoal();
+
   const handleCreateGoal = () => {
     if (!newGoal.employeeId || !newGoal.title) {
       toast.error('يرجى إدخال الموظف وعنوان الهدف');
       return;
     }
-    createGoalMutation.mutate({
-      employeeId: newGoal.employeeId,
-      title: newGoal.title,
-      description: newGoal.description,
-      weight: newGoal.weight,
-      dueDate: newGoal.dueDate ? new Date(newGoal.dueDate) : undefined,
-    });
+    createGoalMutation.mutate(
+      {
+        employeeId: newGoal.employeeId,
+        title: newGoal.title,
+        description: newGoal.description,
+        weight: newGoal.weight,
+        dueDate: newGoal.dueDate || undefined,
+      },
+      {
+        onSuccess: () => {
+          toast.success('تم إضافة الهدف بنجاح');
+          setShowGoalDialog(false);
+          setNewGoal({ employeeId: 0, title: '', description: '', weight: 30, dueDate: '' });
+          refetchGoals();
+        },
+        onError: (err: any) => toast.error(`فشل في إضافة الهدف: ${err.message}`),
+      }
+    );
   };
-  
+
   const apiReviews = reviewsData || [];
   const employees = employeesData || [];
-  
+
   const getEmployeeName = (id: number) => {
     const emp = employees.find((e: any) => e.id === id);
     return emp ? `${(emp as any).firstName} ${(emp as any).lastName}` : `موظف #${id}`;
@@ -152,15 +149,12 @@ export default function PerformanceAdvanced() {
   };
 
   const renderStars = (score: number) => {
-    if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ</div>;
-
-    
     return (
-    <div className="flex gap-1" dir="rtl">
+      <div className="flex gap-1" dir="rtl">
         {[1, 2, 3, 4, 5].map((star) => (
-          <Star key={i} 
-            key={star} 
-            className={`h-4 w-4 ${star <= score ? 'fill-amber-400 text-amber-400' : 'text-gray-300'}`} 
+          <Star
+            key={star}
+            className={`h-4 w-4 ${star <= score ? 'fill-amber-400 text-amber-400' : 'text-gray-300'}`}
           />
         ))}
         <span className={`ms-2 font-medium ${getScoreColor(score)}`}>{score.toFixed(1)}</span>
@@ -446,11 +440,10 @@ export default function PerformanceAdvanced() {
                   {reviews.filter(r => r.overallScore).slice(0, 3).map((review, index) => (
                     <div key={review.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                          index === 0 ? 'bg-amber-100 text-amber-600' :
-                          index === 1 ? 'bg-gray-200 text-gray-600' :
-                          'bg-orange-100 text-orange-600'
-                        }`}>
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${index === 0 ? 'bg-amber-100 text-amber-600' :
+                            index === 1 ? 'bg-gray-200 text-gray-600' :
+                              'bg-orange-100 text-orange-600'
+                          }`}>
                           {index + 1}
                         </div>
                         <div>
@@ -550,7 +543,7 @@ export default function PerformanceAdvanced() {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>الموظف</Label>
-              <Select value={newGoal.employeeId ? String(newGoal.employeeId) : ''} onValueChange={(v) => setNewGoal({...newGoal, employeeId: Number(v)})}>
+              <Select value={newGoal.employeeId ? String(newGoal.employeeId) : ''} onValueChange={(v) => setNewGoal({ ...newGoal, employeeId: Number(v) })}>
                 <SelectTrigger>
                   <SelectValue placeholder="اختر الموظف" />
                 </SelectTrigger>
@@ -563,37 +556,37 @@ export default function PerformanceAdvanced() {
             </div>
             <div className="space-y-2">
               <Label>عنوان الهدف</Label>
-              <Input 
-                placeholder="مثال: إكمال مشروع التطوير" 
+              <Input
+                placeholder="مثال: إكمال مشروع التطوير"
                 value={newGoal.title}
-                onChange={(e) => setNewGoal({...newGoal, title: e.target.value})}
+                onChange={(e) => setNewGoal({ ...newGoal, title: e.target.value })}
               />
             </div>
             <div className="space-y-2">
               <Label>الوصف</Label>
-              <Textarea 
-                placeholder="وصف تفصيلي للهدف..." 
+              <Textarea
+                placeholder="وصف تفصيلي للهدف..."
                 rows={2}
                 value={newGoal.description}
-                onChange={(e) => setNewGoal({...newGoal, description: e.target.value})}
+                onChange={(e) => setNewGoal({ ...newGoal, description: e.target.value })}
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>الوزن (%)</Label>
-                <Input 
-                  type="number" 
-                  placeholder="30" 
+                <Input
+                  type="number"
+                  placeholder="30"
                   value={newGoal.weight}
-                  onChange={(e) => setNewGoal({...newGoal, weight: Number(e.target.value)})}
+                  onChange={(e) => setNewGoal({ ...newGoal, weight: Number(e.target.value) })}
                 />
               </div>
               <div className="space-y-2">
                 <Label>تاريخ الاستحقاق</Label>
-                <Input 
-                  type="date" 
+                <Input
+                  type="date"
                   value={newGoal.dueDate}
-                  onChange={(e) => setNewGoal({...newGoal, dueDate: e.target.value})}
+                  onChange={(e) => setNewGoal({ ...newGoal, dueDate: e.target.value })}
                 />
               </div>
             </div>

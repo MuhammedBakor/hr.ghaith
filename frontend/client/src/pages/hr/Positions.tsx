@@ -125,9 +125,9 @@ export default function PositionsPage() {
                 {list?.filter((item: any) => !searchTerm || JSON.stringify(item).toLowerCase().includes(searchTerm.toLowerCase()))?.map((item: any, idx: number) => (
                   <tr key={item.id || idx} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm">{item.id || idx + 1}</td>
-                    <td className="px-4 py-3 text-sm">{String(item.name || "—")}</td>
-                    <td className="px-4 py-3 text-sm">{String(item.nameAr || "—")}</td>
-                    <td className="px-4 py-3 text-sm">{String(item.departmentId || "—")}</td>
+                    <td className="px-4 py-3 text-sm">{String(item.title || "—")}</td>
+                    <td className="px-4 py-3 text-sm">{String(item.description || "—")}</td>
+                    <td className="px-4 py-3 text-sm">{String(item.department?.name || item.department || "—")}</td>
                     <td className="px-4 py-3 text-sm space-x-2 space-x-reverse">
                       <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-800">تعديل</button>
                       {deleteConfirm === item.id ? (

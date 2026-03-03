@@ -25,7 +25,7 @@ public class AttendancePolicyService {
     @Transactional
     public AttendancePolicy createPolicy(AttendancePolicy policy) {
         if (Boolean.TRUE.equals(policy.getIsDefault())) {
-            policyRepository.findByDefaultTrue().ifPresent(p -> {
+            policyRepository.findByIsDefaultTrue().ifPresent(p -> {
                 p.setIsDefault(false);
                 policyRepository.save(p);
             });
@@ -38,7 +38,7 @@ public class AttendancePolicyService {
         AttendancePolicy policy = getPolicyById(id);
 
         if (Boolean.TRUE.equals(policyDetails.getIsDefault()) && !Boolean.TRUE.equals(policy.getIsDefault())) {
-            policyRepository.findByDefaultTrue().ifPresent(p -> {
+            policyRepository.findByIsDefaultTrue().ifPresent(p -> {
                 p.setIsDefault(false);
                 policyRepository.save(p);
             });

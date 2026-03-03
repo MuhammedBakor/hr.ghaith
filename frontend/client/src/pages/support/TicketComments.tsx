@@ -1,12 +1,11 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
 import { useState } from "react";
-import { useRoute } from "wouter";
+import { useRoute, useParams } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { trpc } from "@/lib/trpc";
 import {
   ArrowRight,
   Send,
@@ -18,39 +17,26 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import { toast } from "sonner";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { useTicket, useTicketComments, useAddTicketComment } from "@/services/supportService";
 
 export default function TicketComments() {
   const { id } = useParams<{ id: string }>();
+  const ticketId = id ? parseInt(id) : 0;
+
   const confirmDelete = (fn: () => void) => { if (window.confirm("هل أنت متأكد من الحذف؟")) fn(); };
 
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { user: currentUser, error: authError } = useAuth();
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [, params] = useRoute("/support/tickets/:id/comments");
-  const ticketId = params?.id ? parseInt(params.id) : 0;
   const [newComment, setNewComment] = useState("");
 
-  const { data: ticket, isLoading: ticketLoading } = trpc.requests.tickets.getById.useQuery(
-    { id: ticketId },
-    { enabled: ticketId > 0 }
-  );
+  const { data: ticket, isLoading: ticketLoading } = useTicket(ticketId);
 
-  const { data: comments, isLoading: commentsLoading, refetch } = trpc.requests.tickets.comments?.list?.useQuery(
-    { ticketId },
-    { enabled: ticketId > 0 }
-  );
+  const { data: comments, isLoading: commentsLoading, refetch } = useTicketComments(ticketId);
 
-  const addCommentMutation = trpc.requests.tickets.comments?.create?.useMutation({
-    onSuccess: () => {
-      toast.success("تم إضافة التعليق بنجاح");
-      setNewComment("");
-      refetch();
-    },
-    onError: (error: any) => {
-      toast.error(error.message || "فشل في إضافة التعليق");
-    },
-  });
+  const addCommentMutation = useAddTicketComment();
 
   const handleAddComment = () => {
     if (!newComment.trim()) {
@@ -75,9 +61,9 @@ export default function TicketComments() {
 
   const isLoading = ticketLoading || commentsLoading;
 
-  if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>;
+  if (authError) return <div className="p-8 text-center text-red-500">حدث خطأ في المصادقة</div>;
 
-  
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -181,8 +167,8 @@ export default function TicketComments() {
               rows={4}
             />
             <div className="flex justify-end">
-              <Button 
-                onClick={handleAddComment} 
+              <Button
+                onClick={handleAddComment}
                 disabled={addCommentMutation.isPending || !newComment.trim()}
               >
                 {addCommentMutation.isPending ? (

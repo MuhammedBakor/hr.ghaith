@@ -38,7 +38,7 @@ interface EmployeeAttendanceReport {
 }
 
 export default function AttendanceReports() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error } = trpc.auth.me.useQuery();
   const userRole = currentUser?.role || 'user';
   const requiredRole = 'hr_manager';
   const hasAccess = userRole === 'admin' || userRole === requiredRole || requiredRole === 'user';
@@ -50,7 +50,7 @@ export default function AttendanceReports() {
   const { selectedBranchId, branches } = useAppContext();
   const selectedBranch = branches?.find(b => b.id === selectedBranchId);
   const printRef = useRef<HTMLDivElement>(null);
-  
+
   // الفلاتر
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -67,7 +67,8 @@ export default function AttendanceReports() {
     if (!employeesData) return [];
     const depts = new Set<string>();
     employeesData.forEach((emp: any) => {
-      if (emp.department) depts.add(emp.department);
+      const deptName = typeof emp.department === 'object' ? emp.department?.name : emp.department;
+      if (deptName) depts.add(deptName);
     });
     return Array.from(depts).map((d, i) => ({ id: i + 1, name: d }));
   }, [employeesData]);
@@ -75,7 +76,7 @@ export default function AttendanceReports() {
   // جلب سجلات الحضور للشهر المحدد
   const startDate = new Date(selectedYear, selectedMonth - 1, 1);
   const endDate = new Date(selectedYear, selectedMonth, 0);
-  
+
   const { data: attendanceData, isLoading } = trpc.hr.attendance.list.useQuery({
     branchId: selectedBranchId || undefined,
   });
@@ -88,14 +89,16 @@ export default function AttendanceReports() {
     const workDaysInMonth = endDate.getDate(); // عدد أيام الشهر
 
     for (const employee of employeesData) {
+      const deptName = typeof employee.department === 'object' ? employee.department?.name : employee.department;
+
       // فلترة حسب الموظف المحدد
       if (selectedEmployee !== 'all' && employee.id !== parseInt(selectedEmployee)) continue;
-      
+
       // فلترة حسب القسم
-      if (selectedDepartment !== 'all' && employee.department !== selectedDepartment) continue;
+      if (selectedDepartment !== 'all' && deptName !== selectedDepartment) continue;
 
       const employeeAttendance = attendanceData.filter((a: any) => a.employeeId === employee.id);
-      
+
       let presentDays = 0;
       let lateDays = 0;
       let earlyLeaveDays = 0;
@@ -143,7 +146,7 @@ export default function AttendanceReports() {
         employeeId: employee.id,
         employeeName: `${employee.firstName || ''} ${employee.lastName || ''}`.trim() || employee.email || '',
         employeeCode: employee.employeeNumber || '',
-        department: employee.department || '',
+        department: deptName || '',
         stats: {
           totalDays: workDaysInMonth,
           presentDays,
@@ -195,7 +198,7 @@ export default function AttendanceReports() {
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'تقرير الحضور');
-    
+
     const monthName = formatDate(selectedYear, selectedMonth - 1);
     XLSX.writeFile(wb, `تقرير_الحضور_${monthName}.xlsx`);
     toast.success('تم تصدير التقرير بنجاح');
@@ -397,7 +400,7 @@ export default function AttendanceReports() {
 
   const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
 
-  
+
   if (isError) return (
     <div className="p-8 text-center">
       <p className="text-red-500 text-lg">حدث خطأ في تحميل البيانات</p>
@@ -407,16 +410,16 @@ export default function AttendanceReports() {
 
   return (
     <div className="space-y-6" ref={printRef}>
-        <div className="mb-4 flex items-center gap-2">
-          <input
-            type="text"
-            placeholder="بحث..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full md:w-64 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
-          {searchTerm && <button onClick={() => setSearchTerm('')} className="text-gray-400 hover:text-gray-600">✕</button>}
-        </div>
+      <div className="mb-4 flex items-center gap-2">
+        <input
+          type="text"
+          placeholder="بحث..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full md:w-64 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        />
+        {searchTerm && <button onClick={() => setSearchTerm('')} className="text-gray-400 hover:text-gray-600">✕</button>}
+      </div>
       {/* العنوان والأزرار */}
       <div className="flex items-center justify-between">
         <div>
@@ -619,12 +622,12 @@ export default function AttendanceReports() {
                       <td className="p-3 text-center">{report.stats.totalLateMinutes}</td>
                       <td className="p-3 text-center">{report.stats.totalWorkHours.toFixed(1)}</td>
                       <td className="p-3 text-center">
-                        <Badge 
-                          variant="outline" 
+                        <Badge
+                          variant="outline"
                           className={
                             report.stats.attendanceRate >= 90 ? "bg-green-50 text-green-700" :
-                            report.stats.attendanceRate >= 75 ? "bg-yellow-50 text-yellow-700" :
-                            "bg-red-50 text-red-700"
+                              report.stats.attendanceRate >= 75 ? "bg-yellow-50 text-yellow-700" :
+                                "bg-red-50 text-red-700"
                           }
                         >
                           {report.stats.attendanceRate.toFixed(1)}%

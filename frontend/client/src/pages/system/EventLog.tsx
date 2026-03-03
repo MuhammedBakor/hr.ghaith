@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,9 +18,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Search, 
-  Activity, 
+import {
+  Search,
+  Activity,
   AlertCircle,
   CheckCircle2,
   Info,
@@ -30,6 +29,8 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
+import { useAuditLogs } from "@/services/systemService";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 const severityColors: Record<string, string> = {
   info: "bg-blue-100 text-blue-800",
@@ -53,19 +54,17 @@ const severityLabels: Record<string, string> = {
 };
 
 export default function EventLog() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { user: currentUser, error: authError } = useAuth();
   const userRole = currentUser?.role || 'user';
 
   const [searchQuery, setSearchQuery] = useState("");
   const [severityFilter, setSeverityFilter] = useState<string>("all");
   const [moduleFilter, setModuleFilter] = useState<string>("all");
 
-  const { data: events, isLoading, refetch } = trpc.auditLogsExtended.list.useQuery({
-    limit: 100,
-  });
+  const { data: events, isLoading, refetch } = useAuditLogs();
 
   const filteredEvents = events?.filter((event: any) => {
-    const matchesSearch = 
+    const matchesSearch =
       event.eventType?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       event.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       event.module?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -83,9 +82,9 @@ export default function EventLog() {
     error: events?.filter((e: any) => e.severity === "error").length || 0,
   };
 
-  if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>;
+  if (authError) return <div className="p-8 text-center text-red-500">حدث خطأ في المصادقة</div>;
 
-  
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -223,7 +222,7 @@ export default function EventLog() {
                   return (
                     <TableRow key={event.id}>
                       <TableCell className="text-sm">
-                        {event.createdAt 
+                        {event.createdAt
                           ? format(new Date(event.createdAt), "dd MMM HH:mm:ss", { locale: ar })
                           : "-"}
                       </TableCell>

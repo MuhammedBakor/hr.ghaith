@@ -127,8 +127,8 @@ export default function EmployeeList() {
     firstName: emp.firstName || '',
     lastName: emp.lastName || '',
     email: emp.email || '',
-    position: emp.position?.title || emp.position || '',
-    department: emp.department?.name || emp.department || '',
+    position: (typeof emp.position === 'object' ? emp.position?.title : emp.position) || '',
+    department: (typeof emp.department === 'object' ? emp.department?.name : emp.department) || '',
     status: emp.status || 'active',
     joinDate: emp.hireDate ? new Date(emp.hireDate).toISOString() : new Date().toISOString(),
     branchId: emp.branchId,
@@ -499,7 +499,7 @@ export default function EmployeeList() {
                 <CardTitle>المناصب الوظيفية</CardTitle>
                 <CardDescription>قائمة المناصب الوظيفية</CardDescription>
               </div>
-              <Link href="/hr/organization">
+              <Link href="/settings/hr/positions">
                 <Button variant="outline" size="sm">
                   <Plus className="h-4 w-4 ms-2" />
                   إضافة منصب

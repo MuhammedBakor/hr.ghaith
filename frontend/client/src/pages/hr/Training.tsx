@@ -17,14 +17,15 @@ import {
   ArrowRight,
   Loader2
 } from 'lucide-react';
-import { trpc } from '@/lib/trpc';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { Dialog } from "@/components/ui/dialog";
-
+import {
+  useTrainingPrograms,
+  useCreateTrainingProgram
+} from "@/services/trainingService";
 
 // دالة توليد رقم البرنامج التدريبي التلقائي
 const generateProgramCode = () => {
@@ -39,8 +40,8 @@ interface TrainingProgram {
   description?: string | null;
   category?: string | null;
   instructor?: string | null;
-  startDate?: Date | null;
-  endDate?: Date | null;
+  startDate?: string | null;
+  endDate?: string | null;
   maxParticipants?: number | null;
   status?: string | null;
 }
@@ -48,6 +49,7 @@ interface TrainingProgram {
 const getStatusBadge = (status: string) => {
   switch (status) {
     case 'upcoming':
+    case 'draft':
       return <Badge className="bg-blue-100 text-blue-800">قادم</Badge>;
     case 'active':
     case 'ongoing':
@@ -62,17 +64,10 @@ const getStatusBadge = (status: string) => {
 type ViewMode = 'list' | 'add';
 
 export default function Training() {
-  const confirmDelete = (fn: () => void) => { if (window.confirm("هل أنت متأكد من الحذف؟")) fn(); };
-
-  const [showInlineForm, setShowInlineForm] = useState(false);
-  const [inlineData, setInlineData] = useState<any>({});
-
+  const [searchTerm, setSearchTerm] = useState('');
   const { selectedRole: userRole } = useAppContext();
-  const canEdit = userRole === "admin" || userRole === "manager";
+  const canEdit = userRole === "admin" || String(userRole).includes("manager");
   const canDelete = userRole === "admin";
-
-  const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 20;
 
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [programCode] = useState(generateProgramCode());
@@ -84,27 +79,9 @@ export default function Training() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  const [dialogOpen, setDialogOpen] = React.useState(false);
-  const [editItem, setEditItem] = React.useState<any>(null);
-
-  const utils = trpc.useUtils();
-
-  // جلب البرامج التدريبية
-  const { data: programsData, isLoading, isError, error } = trpc.hrExtended.training.programs.list.useQuery();
-  const programs: TrainingProgram[] = programsData || [];
-
-  // إنشاء برنامج تدريبي جديد
-  const createProgramMutation = trpc.hrExtended.training.programs.create.useMutation({
-    onSuccess: () => {
-      toast.success('تم إنشاء البرنامج التدريبي بنجاح');
-      utils.hrExtended.training.programs.list.invalidate();
-      setViewMode('list');
-      resetForm();
-    },
-    onError: (error) => {
-      toast.error('فشل في إنشاء البرنامج: ' + error.message);
-    }
-  });
+  // Hooks
+  const { data: programs = [], isLoading, isError } = useTrainingPrograms();
+  const createProgramMutation = useCreateTrainingProgram();
 
   const resetForm = () => {
     setName('');
@@ -128,15 +105,25 @@ export default function Training() {
       category: category || undefined,
       instructor: instructor || undefined,
       maxParticipants: parseInt(maxParticipants),
-      startDate: startDate ? new Date(startDate) : new Date(),
+      startDate: startDate ? new Date(startDate).toISOString() : undefined,
+      endDate: endDate ? new Date(endDate).toISOString() : undefined,
+    }, {
+      onSuccess: () => {
+        toast.success('تم إنشاء البرنامج التدريبي بنجاح');
+        setViewMode('list');
+        resetForm();
+      },
+      onError: (error: any) => {
+        toast.error('فشل في إنشاء البرنامج: ' + (error.response?.data?.message || error.message));
+      }
     });
   };
 
   // حساب الإحصائيات
   const stats = {
     totalPrograms: programs.length,
-    ongoing: programs.filter(p => p.status === 'active' || p.status === 'ongoing').length,
-    upcoming: programs.filter(p => p.status === 'upcoming').length,
+    ongoing: programs.filter(p => p.status === 'active').length,
+    upcoming: programs.filter(p => p.status === 'draft').length,
     completed: programs.filter(p => p.status === 'completed').length,
   };
 
@@ -406,24 +393,6 @@ export default function Training() {
         </CardContent>
       </Card>
 
-      {/* Dialog for Create/Edit */}
-      {dialogOpen && (<div className="mt-4 p-6 bg-white border rounded-xl shadow-sm">
-        <div>
-          <div className="mb-4 border-b pb-3">
-            <h3 className="text-lg font-bold">{editItem ? "تعديل" : "إضافة جديد"}</h3>
-          </div>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">الاسم / الوصف</label>
-              <input className="w-full border rounded-md px-3 py-2" placeholder="أدخل البيانات..." />
-            </div>
-          </div>
-          <div className="flex gap-2 mt-4 pt-3 border-t justify-end">
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>إلغاء</Button>
-            <Button onClick={() => { setDialogOpen(false); }}>حفظ</Button>
-          </div>
-        </div>
-      </div>)}
     </div>
   );
 }

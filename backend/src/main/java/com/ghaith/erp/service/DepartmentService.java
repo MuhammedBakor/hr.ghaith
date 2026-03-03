@@ -31,8 +31,12 @@ public class DepartmentService {
         Department department = departmentRepository.findById(id).orElse(null);
         if (department != null) {
             department.setName(departmentDetails.getName());
+            department.setNameAr(departmentDetails.getNameAr());
+            department.setCode(departmentDetails.getCode());
             department.setDescription(departmentDetails.getDescription());
             department.setStatus(departmentDetails.getStatus());
+            department.setParentId(departmentDetails.getParentId());
+            department.setManagerId(departmentDetails.getManagerId());
             return departmentRepository.save(department);
         }
         return null;

@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,9 +18,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Search, 
-  GitBranch, 
+import {
+  Search,
+  GitBranch,
   CheckCircle2,
   XCircle,
   Clock,
@@ -30,6 +29,8 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
+import { useWorkflowAudit } from "@/services/systemService";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 const actionColors: Record<string, string> = {
   approved: "bg-green-100 text-green-800",
@@ -48,19 +49,17 @@ const actionLabels: Record<string, string> = {
 };
 
 export default function WorkflowAudit() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { user: currentUser, error: authError } = useAuth();
   const userRole = currentUser?.role || 'user';
 
   const [searchQuery, setSearchQuery] = useState("");
   const [actionFilter, setActionFilter] = useState<string>("all");
   const [workflowFilter, setWorkflowFilter] = useState<string>("all");
 
-  const { data: auditLogs, isLoading, refetch } = trpc.auditLogsExtended.list.useQuery({
-    limit: 100,
-  });
+  const { data: auditLogs, isLoading, refetch } = useWorkflowAudit();
 
   const filteredLogs = auditLogs?.filter((log: any) => {
-    const matchesSearch = 
+    const matchesSearch =
       log.workflowName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       log.stepName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       log.comments?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -78,9 +77,9 @@ export default function WorkflowAudit() {
     pending: auditLogs?.filter((l: any) => l.action === "pending").length || 0,
   };
 
-  if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>;
+  if (authError) return <div className="p-8 text-center text-red-500">حدث خطأ في المصادقة</div>;
 
-  
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -217,7 +216,7 @@ export default function WorkflowAudit() {
                 {filteredLogs.map((log: any) => (
                   <TableRow key={log.id}>
                     <TableCell className="text-sm">
-                      {log.createdAt 
+                      {log.createdAt
                         ? format(new Date(log.createdAt), "dd MMM yyyy HH:mm", { locale: ar })
                         : "-"}
                     </TableCell>

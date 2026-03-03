@@ -13,6 +13,7 @@ import {
   useDepartments,
   useBranches,
   useRoles,
+  usePositions,
   useCreateEmployee,
   useInviteEmployee
 } from '@/services/hrService';
@@ -44,15 +45,17 @@ export default function AddEmployee() {
   const { data: branchesData, isLoading: isLoadingBranches } = useBranches();
   const branches = branchesData || [];
   const { data: rolesData, isLoading: isLoadingRoles } = useRoles();
-  const roles = (rolesData || []).map((r: string) => ({ id: r, name: r, nameAr: r }));
+  const roles = (rolesData || []).filter((r: string) => r && r.trim() !== "").map((r: string) => ({ id: r, name: r, nameAr: r }));
+  const { data: positionsData, isLoading: isLoadingPositions } = usePositions();
+  const positions = positionsData || [];
   const { data: employeesData } = useEmployees();
   const managers = (employeesData || []).filter((e: any) => e.status === 'active');
 
-  const isLoading = isLoadingDepts || isLoadingBranches || isLoadingRoles;
+  const isLoading = isLoadingDepts || isLoadingBranches || isLoadingRoles || isLoadingPositions;
 
   const [formData, setFormData] = useState({
     firstName: '', lastName: '', email: '', phone: '',
-    departmentId: '', branchId: '', position: '', roleCode: 'employee',
+    departmentId: '', branchId: '', positionId: '', roleCode: 'employee',
     managerId: '', joinDate: new Date().toISOString().split('T')[0], workType: 'full_time',
     nationalId: '', nationality: '', dateOfBirth: '', gender: '', maritalStatus: '', address: '',
     emergencyName: '', emergencyRelation: '', emergencyPhone: '',
@@ -67,18 +70,19 @@ export default function AddEmployee() {
 
   const handleSubmit = async () => {
     if (!formData.firstName || !formData.lastName || !formData.email) { toast.error('يرجى ملء الاسم والبريد الإلكتروني'); setActiveTab('personal'); return; }
-    if (!formData.departmentId || !formData.position) { toast.error('يرجى تحديد القسم والمسمى الوظيفي'); setActiveTab('work'); return; }
+    if (!formData.departmentId) { toast.error('يرجى تحديد القسم'); setActiveTab('work'); return; }
     setIsSubmitting(true);
     try {
-      const dept = departments.find((d: any) => String(d.id) === formData.departmentId);
       createEmployeeMutation.mutate({
-        firstName: formData.firstName, lastName: formData.lastName, email: formData.email, phone: formData.phone,
-        department: { id: parseInt(formData.departmentId) },
-        position: { id: 1 }, // Need to map position correctly
-        branch: { id: formData.branchId ? Number(formData.branchId) : undefined },
-        hireDate: formData.joinDate ? new Date(formData.joinDate) : undefined,
-        salary: formData.basicSalary, status: 'active',
-        // managerId: formData.managerId ? Number(formData.managerId) : undefined,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: formData.phone,
+        department: formData.departmentId ? { id: parseInt(formData.departmentId) } : undefined,
+        position: formData.positionId ? { id: parseInt(formData.positionId) } : undefined,
+        branch: formData.branchId ? { id: Number(formData.branchId) } : undefined,
+        salary: formData.basicSalary ? parseFloat(formData.basicSalary) : undefined,
+        status: 'active',
       }, {
         onSuccess: (data: any) => {
           toast.success('تم إضافة الموظف بنجاح');
@@ -219,8 +223,14 @@ export default function AddEmployee() {
               </div>
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label>المسمى الوظيفي <span className="text-red-500">*</span></Label>
-                  <Input placeholder="مثال: محاسب، مطور، مدير مشروع..." value={formData.position} onChange={(e) => updateField('position', e.target.value)} />
+                  <Label>المسمى الوظيفي</Label>
+                  <Select value={formData.positionId} onValueChange={(v) => updateField('positionId', v)}>
+                    <SelectTrigger><SelectValue placeholder="اختر المسمى الوظيفي" /></SelectTrigger>
+                    <SelectContent>
+                      {positions.length === 0 ? <div className="p-2 text-sm text-gray-500 text-center">لا توجد مسميات — أضف من الإعدادات</div> :
+                        positions.map((p: any) => <SelectItem key={p.id} value={String(p.id)}>{p.title}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2"><Shield className="h-4 w-4" />الدور في النظام</Label>
@@ -247,8 +257,12 @@ export default function AddEmployee() {
                   <Select value={formData.managerId} onValueChange={(v) => updateField('managerId', v)}>
                     <SelectTrigger><SelectValue placeholder="اختر المدير المباشر (اختياري)" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">بدون مدير مباشر</SelectItem>
-                      {managers.map((m: any) => <SelectItem key={m.id} value={String(m.id)}>{m.firstName} {m.lastName} — {m.position || m.department}</SelectItem>)}
+                      <SelectItem value="none">بدون مدير مباشر</SelectItem>
+                      {managers.map((m: any) => (
+                        <SelectItem key={m.id} value={String(m.id)}>
+                          {m.firstName} {m.lastName} — {(typeof m.position === 'object' ? m.position?.title : m.position) || (typeof m.department === 'object' ? m.department?.name : m.department) || "موظف"}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

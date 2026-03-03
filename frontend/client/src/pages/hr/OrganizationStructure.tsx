@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { trpc } from '@/lib/trpc';
+import { useDepartments, useCreateDepartment, useUpdateDepartment, useDeleteDepartment, usePositions, useCreatePosition, useUpdatePosition, useDeletePosition, useEmployees } from '@/services/hrService';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -40,8 +40,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Building2, 
+import {
+  Building2,
   Users,
   Plus,
   Edit,
@@ -108,114 +108,50 @@ export default function OrganizationStructure() {
   const [showNewDepartment, setShowNewDepartment] = useState(false);
   const [showNewPosition, setShowNewPosition] = useState(false);
   const [expandedDepts, setExpandedDepts] = useState<number[]>([1, 2]);
-  
+
   // نماذج الإنشاء
   const [deptForm, setDeptForm] = useState<DepartmentFormData>(initialDeptForm);
   const [positionForm, setPositionForm] = useState<PositionFormData>(initialPositionForm);
-  
+
   // نماذج التعديل
   const [editingDept, setEditingDept] = useState<any>(null);
   const [editingPosition, setEditingPosition] = useState<any>(null);
   const [isEditDeptOpen, setIsEditDeptOpen] = useState(false);
   const [isEditPositionOpen, setIsEditPositionOpen] = useState(false);
-  
+
   // نوافذ الحذف
   const [deletingDept, setDeletingDept] = useState<any>(null);
   const [deletingPosition, setDeletingPosition] = useState<any>(null);
   const [isDeleteDeptOpen, setIsDeleteDeptOpen] = useState(false);
   const [isDeletePositionOpen, setIsDeletePositionOpen] = useState(false);
 
-  // جلب البيانات من API
-  const { data: employeesData, isError, error} = trpc.hr.employees.list.useQuery();
-  const { data: departmentsData, isLoading: loadingDepts, refetch: refetchDepts } = trpc.hrExtended.departments.list.useQuery();
-  const { data: positionsData, isLoading: loadingPositions, refetch: refetchPositions } = trpc.hrExtended.positions.list.useQuery();
-  
+  // جلب البيانات من API (REST)
+  const { data: employeesData, isError, error } = useEmployees();
+  const { data: departmentsData, isLoading: loadingDepts, refetch: refetchDepts } = useDepartments();
+  const { data: positionsData, isLoading: loadingPositions, refetch: refetchPositions } = usePositions();
+
   // Mutations للأقسام
-  const createDeptMutation = trpc.hrExtended.departments.create.useMutation({
-    onSuccess: () => {
-      toast.success('تم إنشاء القسم بنجاح');
-      setShowNewDepartment(false);
-      setDeptForm(initialDeptForm);
-      refetchDepts();
-    },
-    onError: (error) => {
-      toast.error(`فشل في إنشاء القسم: ${error.message}`);
-    },
-  });
-  
-  const updateDeptMutation = trpc.hrExtended.departments.update.useMutation({
-    onSuccess: () => {
-      toast.success('تم تعديل القسم بنجاح');
-      setIsEditDeptOpen(false);
-      setEditingDept(null);
-      refetchDepts();
-    },
-    onError: (error) => {
-      toast.error(`فشل في تعديل القسم: ${error.message}`);
-    },
-  });
-  
-  const deleteDeptMutation = trpc.hrExtended.departments.delete.useMutation({
-    onSuccess: () => {
-      toast.success('تم حذف القسم بنجاح');
-      setIsDeleteDeptOpen(false);
-      setDeletingDept(null);
-      refetchDepts();
-    },
-    onError: (error) => {
-      toast.error(`فشل في حذف القسم: ${error.message}`);
-    },
-  });
-  
+  const createDeptMutation = useCreateDepartment();
+  const updateDeptMutation = useUpdateDepartment();
+  const deleteDeptMutation = useDeleteDepartment();
+
   // Mutations للمسميات الوظيفية
-  const createPositionMutation = trpc.hrExtended.positions.create.useMutation({
-    onSuccess: () => {
-      toast.success('تم إنشاء المسمى الوظيفي بنجاح');
-      setShowNewPosition(false);
-      setPositionForm(initialPositionForm);
-      refetchPositions();
-    },
-    onError: (error) => {
-      toast.error(`فشل في إنشاء المسمى الوظيفي: ${error.message}`);
-    },
-  });
-  
-  const updatePositionMutation = trpc.hrExtended.positions.update.useMutation({
-    onSuccess: () => {
-      toast.success('تم تعديل المسمى الوظيفي بنجاح');
-      setIsEditPositionOpen(false);
-      setEditingPosition(null);
-      refetchPositions();
-    },
-    onError: (error) => {
-      toast.error(`فشل في تعديل المسمى الوظيفي: ${error.message}`);
-    },
-  });
-  
-  const deletePositionMutation = trpc.hrExtended.positions.delete.useMutation({
-    onSuccess: () => {
-      toast.success('تم حذف المسمى الوظيفي بنجاح');
-      setIsDeletePositionOpen(false);
-      setDeletingPosition(null);
-      refetchPositions();
-    },
-    onError: (error) => {
-      toast.error(`فشل في حذف المسمى الوظيفي: ${error.message}`);
-    },
-  });
+  const createPositionMutation = useCreatePosition();
+  const updatePositionMutation = useUpdatePosition();
+  const deletePositionMutation = useDeletePosition();
 
   // تحويل البيانات إلى شجرة هرمية
   const departmentsTree = useMemo(() => {
     if (!departmentsData || departmentsData.length === 0) {
       return [];
     }
-    
+
     // بناء خريطة للأقسام
     const deptMap = new Map();
     departmentsData.forEach((dept: any) => {
       deptMap.set(dept.id, { ...dept, children: [] });
     });
-    
+
     // بناء الشجرة
     const roots: any[] = [];
     departmentsData.forEach((dept: any) => {
@@ -226,7 +162,7 @@ export default function OrganizationStructure() {
         roots.push(deptNode);
       }
     });
-    
+
     return roots;
   }, [departmentsData]);
 
@@ -240,8 +176,8 @@ export default function OrganizationStructure() {
   const totalPositions = positions.length;
 
   const toggleDepartment = (deptId: number) => {
-    setExpandedDepts(prev => 
-      prev.includes(deptId) 
+    setExpandedDepts(prev =>
+      prev.includes(deptId)
         ? prev.filter(id => id !== deptId)
         : [...prev, deptId]
     );
@@ -253,12 +189,24 @@ export default function OrganizationStructure() {
       toast.error('يرجى إدخال اسم القسم');
       return;
     }
-    createDeptMutation.mutate({
-      name: deptForm.name,
-      code: deptForm.code || deptForm.name.substring(0, 4).toUpperCase(),
-      parentId: deptForm.parentId || undefined,
-      managerId: deptForm.managerId || undefined,
-    });
+    createDeptMutation.mutate(
+      {
+        name: deptForm.name,
+        nameAr: deptForm.name,
+        code: deptForm.code || deptForm.name.substring(0, 4).toUpperCase(),
+        parentId: deptForm.parentId || undefined,
+        managerId: deptForm.managerId || undefined,
+      },
+      {
+        onSuccess: () => {
+          toast.success('تم إنشاء القسم بنجاح');
+          setShowNewDepartment(false);
+          setDeptForm(initialDeptForm);
+          refetchDepts();
+        },
+        onError: (err: any) => toast.error(`فشل في إنشاء القسم: ${err.message}`),
+      }
+    );
   };
 
   const handleCreatePosition = () => {
@@ -266,13 +214,24 @@ export default function OrganizationStructure() {
       toast.error('يرجى إدخال المسمى الوظيفي');
       return;
     }
-    createPositionMutation.mutate({
-      departmentId: positionForm.departmentId || undefined,
-      title: positionForm.title,
-      minSalary: positionForm.minSalary || undefined,
-      maxSalary: positionForm.maxSalary || undefined,
-      description: positionForm.description || undefined,
-    });
+    createPositionMutation.mutate(
+      {
+        departmentId: positionForm.departmentId || undefined,
+        title: positionForm.title,
+        minSalary: positionForm.minSalary || undefined,
+        maxSalary: positionForm.maxSalary || undefined,
+        description: positionForm.description || undefined,
+      },
+      {
+        onSuccess: () => {
+          toast.success('تم إنشاء المسمى الوظيفي بنجاح');
+          setShowNewPosition(false);
+          setPositionForm(initialPositionForm);
+          refetchPositions();
+        },
+        onError: (err: any) => toast.error(`فشل في إنشاء المسمى الوظيفي: ${err.message}`),
+      }
+    );
   };
 
   // دوال التعديل
@@ -283,10 +242,18 @@ export default function OrganizationStructure() {
 
   const handleUpdateDept = () => {
     if (!editingDept) return;
-    updateDeptMutation.mutate({
-      id: editingDept.id,
-      name: editingDept.name,
-    });
+    updateDeptMutation.mutate(
+      { id: editingDept.id, name: editingDept.name },
+      {
+        onSuccess: () => {
+          toast.success('تم تعديل القسم بنجاح');
+          setIsEditDeptOpen(false);
+          setEditingDept(null);
+          refetchDepts();
+        },
+        onError: (err: any) => toast.error(`فشل في تعديل القسم: ${err.message}`),
+      }
+    );
   };
 
   const handleEditPosition = (position: any) => {
@@ -296,10 +263,18 @@ export default function OrganizationStructure() {
 
   const handleUpdatePosition = () => {
     if (!editingPosition) return;
-    updatePositionMutation.mutate({
-      id: editingPosition.id,
-      title: editingPosition.title,
-    });
+    updatePositionMutation.mutate(
+      { id: editingPosition.id, title: editingPosition.title },
+      {
+        onSuccess: () => {
+          toast.success('تم تعديل المسمى الوظيفي بنجاح');
+          setIsEditPositionOpen(false);
+          setEditingPosition(null);
+          refetchPositions();
+        },
+        onError: (err: any) => toast.error(`فشل في تعديل المسمى الوظيفي: ${err.message}`),
+      }
+    );
   };
 
   // دوال الحذف
@@ -310,7 +285,15 @@ export default function OrganizationStructure() {
 
   const confirmDeleteDept = () => {
     if (!deletingDept) return;
-    deleteDeptMutation.mutate({ id: deletingDept.id });
+    deleteDeptMutation.mutate(deletingDept.id, {
+      onSuccess: () => {
+        toast.success('تم حذف القسم بنجاح');
+        setIsDeleteDeptOpen(false);
+        setDeletingDept(null);
+        refetchDepts();
+      },
+      onError: (err: any) => toast.error(`فشل في حذف القسم: ${err.message}`),
+    });
   };
 
   const handleDeletePosition = (position: any) => {
@@ -320,7 +303,15 @@ export default function OrganizationStructure() {
 
   const confirmDeletePosition = () => {
     if (!deletingPosition) return;
-    deletePositionMutation.mutate({ id: deletingPosition.id });
+    deletePositionMutation.mutate(deletingPosition.id, {
+      onSuccess: () => {
+        toast.success('تم حذف المسمى الوظيفي بنجاح');
+        setIsDeletePositionOpen(false);
+        setDeletingPosition(null);
+        refetchPositions();
+      },
+      onError: (err: any) => toast.error(`فشل في حذف المسمى الوظيفي: ${err.message}`),
+    });
   };
 
   // دوال الطباعة والتصدير
@@ -334,10 +325,10 @@ export default function OrganizationStructure() {
       toast.error('لا توجد بيانات للتصدير');
       return;
     }
-    
+
     let headers: string[];
     let csvData: any[][];
-    
+
     if (activeTab === 'departments') {
       headers = ['الرقم', 'الاسم', 'الرمز', 'القسم الأب'];
       csvData = flatDepartments.map((d: any) => [d.id, d.name || d.nameAr, d.code, d.parentId || '-']);
@@ -345,7 +336,7 @@ export default function OrganizationStructure() {
       headers = ['الرقم', 'المسمى', 'القسم', 'المستوى'];
       csvData = positions.map((p: any) => [p.id, p.title || p.titleAr, p.departmentId, p.level]);
     }
-    
+
     const csvContent = [headers.join(','), ...csvData.map(row => row.join(','))].join('\n');
     const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -356,33 +347,9 @@ export default function OrganizationStructure() {
     toast.success('تم تصدير البيانات بنجاح');
   };
 
-  // Mutation لاستيراد الأقسام
-  const importDeptsMutation = trpc.hrExtended.departments.bulkImport.useMutation({
-    onSuccess: (result) => {
-      toast.success(`تم استيراد ${result.imported} قسم بنجاح`);
-      if (result.failed > 0) {
-        toast.warning(`فشل استيراد ${result.failed} قسم`);
-      }
-      refetchDepts();
-    },
-    onError: (error) => {
-      toast.error(`فشل في الاستيراد: ${error.message}`);
-    },
-  });
-
-  // Mutation لاستيراد المسميات الوظيفية
-  const importPositionsMutation = trpc.hrExtended.positions.bulkImport.useMutation({
-    onSuccess: (result) => {
-      toast.success(`تم استيراد ${result.imported} مسمى وظيفي بنجاح`);
-      if (result.failed > 0) {
-        toast.warning(`فشل استيراد ${result.failed} مسمى`);
-      }
-      refetchPositions();
-    },
-    onError: (error) => {
-      toast.error(`فشل في الاستيراد: ${error.message}`);
-    },
-  });
+  // Bulk import placeholder (not yet supported by Spring Boot backend)
+  const importDeptsMutation = { mutate: (data: any) => toast.info('استيراد الأقسام غير متاح حالياً'), isPending: false };
+  const importPositionsMutation = { mutate: (data: any) => toast.info('استيراد المسميات غير متاح حالياً'), isPending: false };
 
   const handleImport = () => {
     const input = document.createElement('input');
@@ -392,18 +359,18 @@ export default function OrganizationStructure() {
       const file = e.target.files[0];
       if (file) {
         toast.info(`تم اختيار الملف: ${file.name}. جاري المعالجة...`);
-        
+
         try {
           const text = await file.text();
           const lines = text.split('\n').filter((line: string) => line.trim());
-          
+
           if (lines.length < 2) {
             toast.error('الملف فارغ أو لا يحتوي على بيانات');
             return;
           }
 
           const headers = lines[0].split(',').map((h: string) => h.trim().toLowerCase());
-          
+
           // تحديد نوع الاستيراد بناءً على العناوين
           if (headers.includes('الاسم') || headers.includes('name') || headers.includes('القسم')) {
             // استيراد أقسام
@@ -452,7 +419,7 @@ export default function OrganizationStructure() {
 
     if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>;
 
-    
+
     return (
       <div key={dept.id}>
         <div className="mb-4 flex items-center gap-2">
@@ -465,7 +432,7 @@ export default function OrganizationStructure() {
           />
           {searchTerm && <button onClick={() => setSearchTerm('')} className="text-gray-400 hover:text-gray-600">✕</button>}
         </div>
-        <div 
+        <div
           className={`flex items-center justify-between p-3 border rounded-lg mb-2 hover:bg-gray-50 cursor-pointer`}
           style={{ marginRight: `${level * 24}px` }}
           onClick={() => hasChildren && toggleDepartment(dept.id)}
@@ -616,7 +583,7 @@ export default function OrganizationStructure() {
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle>شجرة الهيكل التنظيمي</CardTitle>
-              <PrintButton title="شجرة الهيكل التنظيمي" />
+                <PrintButton title="شجرة الهيكل التنظيمي" />
                 <CardDescription>عرض هرمي للأقسام والإدارات</CardDescription>
               </div>
               <Button variant="outline" size="sm" onClick={() => { refetchDepts(); refetchPositions(); }}>
@@ -768,23 +735,23 @@ export default function OrganizationStructure() {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>اسم القسم *</Label>
-              <Input 
-                placeholder="مثال: قسم المبيعات" 
+              <Input
+                placeholder="مثال: قسم المبيعات"
                 value={deptForm.name}
                 onChange={(e) => setDeptForm({ ...deptForm, name: e.target.value })}
               />
             </div>
             <div className="space-y-2">
               <Label>رمز القسم</Label>
-              <Input 
-                placeholder="مثال: SALES" 
+              <Input
+                placeholder="مثال: SALES"
                 value={deptForm.code}
                 onChange={(e) => setDeptForm({ ...deptForm, code: e.target.value })}
               />
             </div>
             <div className="space-y-2">
               <Label>القسم الأب</Label>
-              <Select 
+              <Select
                 value={deptForm.parentId?.toString() || 'none'}
                 onValueChange={(value) => setDeptForm({ ...deptForm, parentId: value === 'none' ? null : parseInt(value) })}
               >
@@ -821,14 +788,14 @@ export default function OrganizationStructure() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>اسم القسم</Label>
-                <Input 
+                <Input
                   value={editingDept.name || editingDept.nameAr || ''}
                   onChange={(e) => setEditingDept({ ...editingDept, name: e.target.value, nameAr: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
                 <Label>رمز القسم</Label>
-                <Input 
+                <Input
                   value={editingDept.code || ''}
                   onChange={(e) => setEditingDept({ ...editingDept, code: e.target.value })}
                 />
@@ -873,15 +840,15 @@ export default function OrganizationStructure() {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>المسمى الوظيفي *</Label>
-              <Input 
-                placeholder="مثال: مدير المشاريع" 
+              <Input
+                placeholder="مثال: مدير المشاريع"
                 value={positionForm.title}
                 onChange={(e) => setPositionForm({ ...positionForm, title: e.target.value })}
               />
             </div>
             <div className="space-y-2">
               <Label>القسم</Label>
-              <Select 
+              <Select
                 value={positionForm.departmentId?.toString() || ''}
                 onValueChange={(value) => setPositionForm({ ...positionForm, departmentId: parseInt(value) })}
               >
@@ -897,7 +864,7 @@ export default function OrganizationStructure() {
             </div>
             <div className="space-y-2">
               <Label>الدرجة الوظيفية</Label>
-              <Select 
+              <Select
                 value={positionForm.grade}
                 onValueChange={(value) => setPositionForm({ ...positionForm, grade: value })}
               >
@@ -917,18 +884,18 @@ export default function OrganizationStructure() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>الحد الأدنى للراتب</Label>
-                <Input 
+                <Input
                   type="number"
-                  placeholder="أدخل..." 
+                  placeholder="أدخل..."
                   value={positionForm.minSalary}
                   onChange={(e) => setPositionForm({ ...positionForm, minSalary: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
                 <Label>الحد الأقصى للراتب</Label>
-                <Input 
+                <Input
                   type="number"
-                  placeholder="أدخل..." 
+                  placeholder="أدخل..."
                   value={positionForm.maxSalary}
                   onChange={(e) => setPositionForm({ ...positionForm, maxSalary: e.target.value })}
                 />
@@ -956,7 +923,7 @@ export default function OrganizationStructure() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>المسمى الوظيفي</Label>
-                <Input 
+                <Input
                   value={editingPosition.title || editingPosition.titleAr || ''}
                   onChange={(e) => setEditingPosition({ ...editingPosition, title: e.target.value, titleAr: e.target.value })}
                 />

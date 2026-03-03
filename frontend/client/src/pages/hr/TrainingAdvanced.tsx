@@ -1,5 +1,4 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
-import { trpc } from '@/lib/trpc';
 import { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { Button } from '@/components/ui/button';
@@ -29,20 +28,24 @@ import { Progress } from '@/components/ui/progress';
 import { GraduationCap, BookOpen, Award, Plus, Eye, Edit, Users, CheckCircle2, Video, Loader2, Inbox } from 'lucide-react';
 import { toast } from 'sonner';
 import { PrintButton } from "@/components/PrintButton";
+import {
+  useTrainingPrograms,
+  useCreateTrainingProgram,
+  useUpdateTrainingProgram,
+  useDeleteTrainingProgram,
+  useTrainingEnrollments,
+  useCreateTrainingEnrollment,
+  useUpdateTrainingEnrollment
+} from "@/services/trainingService";
+import { useEmployees } from "@/services/hrService";
 
 export default function TrainingAdvanced() {
   const confirmDelete = (fn: () => void) => { if (window.confirm("هل أنت متأكد من الحذف؟")) fn(); };
 
-  const [showInlineForm, setShowInlineForm] = useState(false);
-  const [inlineData, setInlineData] = useState<any>({});
-
   const [searchTerm, setSearchTerm] = useState('');
   const { selectedRole: userRole } = useAppContext();
-  const canEdit = userRole === "admin" || userRole === "manager";
+  const canEdit = userRole === "admin" || String(userRole).includes("manager");
   const canDelete = userRole === "admin";
-
-  const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 20;
 
   const [activeTab, setActiveTab] = useState('courses');
   const [showNewCourse, setShowNewCourse] = useState(false);
@@ -63,50 +66,20 @@ export default function TrainingAdvanced() {
   const [showEditProgram, setShowEditProgram] = useState(false);
   const [enrollmentData, setEnrollmentData] = useState({ employeeId: '', programId: '' });
 
-  const utils = trpc.useUtils();
+  // Hooks
+  const { data: programs = [], isLoading: programsLoading, isError } = useTrainingPrograms();
+  const { data: enrollments = [], isLoading: enrollmentsLoading } = useTrainingEnrollments();
+  const { data: employees = [] } = useEmployees();
 
-  // استخدام APIs الحقيقية
-  const { data: programsData, isLoading: programsLoading, isError, error} = trpc.hrExtended.training.programs.list.useQuery();
-  const { data: enrollmentsData, isLoading: enrollmentsLoading } = trpc.hrExtended.training.enrollments.list.useQuery({});
-  const { data: employeesData } = trpc.hr.employees.list.useQuery();
-  
-  const createProgramMutation = trpc.hrExtended.training.programs.create.useMutation({
-    onSuccess: () => {
-      toast.success('تم إنشاء الدورة بنجاح');
-      setShowNewCourse(false);
-      utils.hrExtended.training.programs.list.invalidate();
-      setNewCourse({ name: '', description: '', category: '', instructor: '', duration: '', maxParticipants: '', startDate: '', endDate: '', type: 'classroom',
-      onError: (e: any) => toast.error(e?.message || 'حدث خطأ')});
-    },
-    onError: (error: any) => {
-      toast.error(error.message || 'حدث خطأ أثناء إنشاء الدورة');
-    }
-  });
-
-
-  const createEnrollmentMutation = trpc.hrExtended.training.enrollments.create.useMutation({
-    onSuccess: () => {
-      toast.success('تم تسجيل الموظف بنجاح');
-      setShowEnrollDialog(false);
-      setEnrollmentData({ employeeId: '', programId: '',
-      onError: (e: any) => toast.error(e?.message || 'حدث خطأ')});
-      utils.hrExtended.training.enrollments.list.invalidate();
-    },
-    onError: (error: any) => {
-      toast.error(error.message || 'حدث خطأ أثناء التسجيل');
-    }
-  });
-
-  const programs = programsData || [];
-  const enrollments = enrollmentsData || [];
-  const employees = employeesData || [];
+  const createProgramMutation = useCreateTrainingProgram();
+  const createEnrollmentMutation = useCreateTrainingEnrollment();
 
   // حساب الإحصائيات من البيانات الفعلية
   const trainingStats = {
     totalCourses: programs.length,
-    activeCourses: programs.filter((p: any) => p.status === 'active' || p.status === 'in_progress').length,
+    activeCourses: programs.filter((p: any) => p.status === 'active').length,
     totalEnrollments: enrollments.length,
-    completionRate: enrollments.length > 0 
+    completionRate: enrollments.length > 0
       ? Math.round((enrollments.filter((e: any) => e.status === 'completed').length / enrollments.length) * 100)
       : 0
   };
@@ -121,10 +94,29 @@ export default function TrainingAdvanced() {
       description: newCourse.description,
       category: newCourse.category,
       instructor: newCourse.instructor,
-      duration: newCourse.duration,
+      duration: newCourse.duration ? parseInt(newCourse.duration) : undefined,
       maxParticipants: newCourse.maxParticipants ? parseInt(newCourse.maxParticipants) : undefined,
-      startDate: newCourse.startDate ? new Date(newCourse.startDate) : undefined,
-      endDate: newCourse.endDate ? new Date(newCourse.endDate) : undefined,
+      startDate: newCourse.startDate ? new Date(newCourse.startDate).toISOString() : undefined,
+      endDate: newCourse.endDate ? new Date(newCourse.endDate).toISOString() : undefined,
+    }, {
+      onSuccess: () => {
+        toast.success('تم إنشاء الدورة بنجاح');
+        setShowNewCourse(false);
+        setNewCourse({
+          name: '',
+          description: '',
+          category: '',
+          instructor: '',
+          duration: '',
+          maxParticipants: '',
+          startDate: '',
+          endDate: '',
+          type: 'classroom'
+        });
+      },
+      onError: (error: any) => {
+        toast.error(error.response?.data?.message || error.message || 'حدث خطأ أثناء إنشاء الدورة');
+      }
     });
   };
 
@@ -152,9 +144,9 @@ export default function TrainingAdvanced() {
   if (programsLoading) {
     if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>;
 
-    
+
     return (
-    <div className="flex items-center justify-center h-64" dir="rtl">
+      <div className="flex items-center justify-center h-64" dir="rtl">
         <div className="mb-4 flex items-center gap-2">
           <input
             type="text"
@@ -402,15 +394,15 @@ export default function TrainingAdvanced() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>اسم الدورة *</Label>
-                <Input 
+                <Input
                   value={newCourse.name}
-                  onChange={(e) => setNewCourse({...newCourse, name: e.target.value})}
+                  onChange={(e) => setNewCourse({ ...newCourse, name: e.target.value })}
                   placeholder="مثال: مهارات القيادة"
                 />
               </div>
               <div className="space-y-2">
                 <Label>التصنيف</Label>
-                <Select value={newCourse.category} onValueChange={(v) => setNewCourse({...newCourse, category: v})}>
+                <Select value={newCourse.category} onValueChange={(v) => setNewCourse({ ...newCourse, category: v })}>
                   <SelectTrigger>
                     <SelectValue placeholder="اختر التصنيف" />
                   </SelectTrigger>
@@ -425,26 +417,26 @@ export default function TrainingAdvanced() {
             </div>
             <div className="space-y-2">
               <Label>الوصف</Label>
-              <Textarea 
+              <Textarea
                 value={newCourse.description}
-                onChange={(e) => setNewCourse({...newCourse, description: e.target.value})}
+                onChange={(e) => setNewCourse({ ...newCourse, description: e.target.value })}
                 placeholder="وصف الدورة التدريبية..."
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>المدرب</Label>
-                <Input 
+                <Input
                   value={newCourse.instructor}
-                  onChange={(e) => setNewCourse({...newCourse, instructor: e.target.value})}
+                  onChange={(e) => setNewCourse({ ...newCourse, instructor: e.target.value })}
                   placeholder="اسم المدرب"
                 />
               </div>
               <div className="space-y-2">
                 <Label>المدة</Label>
-                <Input 
+                <Input
                   value={newCourse.duration}
-                  onChange={(e) => setNewCourse({...newCourse, duration: e.target.value})}
+                  onChange={(e) => setNewCourse({ ...newCourse, duration: e.target.value })}
                   placeholder="مثال: 16 ساعة"
                 />
               </div>
@@ -452,27 +444,27 @@ export default function TrainingAdvanced() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>تاريخ البدء *</Label>
-                <Input 
+                <Input
                   type="date"
                   value={newCourse.startDate}
-                  onChange={(e) => setNewCourse({...newCourse, startDate: e.target.value})}
+                  onChange={(e) => setNewCourse({ ...newCourse, startDate: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
                 <Label>تاريخ الانتهاء</Label>
-                <Input 
+                <Input
                   type="date"
                   value={newCourse.endDate}
-                  onChange={(e) => setNewCourse({...newCourse, endDate: e.target.value})}
+                  onChange={(e) => setNewCourse({ ...newCourse, endDate: e.target.value })}
                 />
               </div>
             </div>
             <div className="space-y-2">
               <Label>الحد الأقصى للمشاركين</Label>
-              <Input 
+              <Input
                 type="number"
                 value={newCourse.maxParticipants}
-                onChange={(e) => setNewCourse({...newCourse, maxParticipants: e.target.value})}
+                onChange={(e) => setNewCourse({ ...newCourse, maxParticipants: e.target.value })}
                 placeholder="مثال: 20"
               />
             </div>
@@ -524,7 +516,7 @@ export default function TrainingAdvanced() {
           </div>
           <div className="flex gap-2 mt-4 pt-3 border-t justify-end">
             <Button variant="outline" onClick={() => setShowEnrollDialog(false)}>إلغاء</Button>
-            <Button 
+            <Button
               onClick={() => {
                 if (!enrollmentData.employeeId || !enrollmentData.programId) {
                   toast.error('يرجى اختيار الموظف والدورة');
@@ -533,6 +525,15 @@ export default function TrainingAdvanced() {
                 createEnrollmentMutation.mutate({
                   employeeId: parseInt(enrollmentData.employeeId),
                   programId: parseInt(enrollmentData.programId)
+                }, {
+                  onSuccess: () => {
+                    toast.success('تم تسجيل الموظف بنجاح');
+                    setShowEnrollDialog(false);
+                    setEnrollmentData({ employeeId: '', programId: '' });
+                  },
+                  onError: (error: any) => {
+                    toast.error(error.response?.data?.message || error.message || 'حدث خطأ أثناء التسجيل');
+                  }
                 });
               }}
               disabled={createEnrollmentMutation.isPending}

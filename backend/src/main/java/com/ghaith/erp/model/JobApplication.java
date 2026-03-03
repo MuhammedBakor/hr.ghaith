@@ -35,6 +35,6 @@ public class JobApplication extends BaseEntity {
     private ApplicationStatus status = ApplicationStatus.pending;
 
     public enum ApplicationStatus {
-        pending, reviewing, interviewed, accepted, rejected
+        pending, screening, interview, assessment, offer, hired, rejected
     }
 }

@@ -126,7 +126,7 @@ export const useEmployee = (id: number) => useQuery({
 export const useCreateSimpleEmployee = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: (data: any) => api.post('/employees/simple', data).then(res => res.data),
+        mutationFn: (data: any) => api.post('/hr/employees/simple', data).then(res => res.data),
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ['employees'] }),
     });
 };
@@ -134,7 +134,7 @@ export const useCreateSimpleEmployee = () => {
 export const useInviteEmployee = () => {
     return useMutation({
         mutationFn: ({ employeeId, method }: { employeeId: number, method: string }) =>
-            api.post(`/employees/${employeeId}/invite`, { method }).then(res => res.data),
+            api.post(`/hr/employees/${employeeId}/invite`, { method }).then(res => res.data),
     });
 };
 
@@ -159,7 +159,7 @@ export const useDepartments = () => useQuery({
 export const useCreateDepartment = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: (data: any) => api.post('/hr/departments', data),
+        mutationFn: (data: any) => api.post('/hr/departments', data).then(res => res.data),
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ['departments'] }),
     });
 };
@@ -167,7 +167,7 @@ export const useCreateDepartment = () => {
 export const useUpdateDepartment = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: ({ id, ...data }: any) => api.put(`/hr/departments/${id}`, data),
+        mutationFn: ({ id, ...data }: any) => api.put(`/hr/departments/${id}`, data).then(res => res.data),
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ['departments'] }),
     });
 };
@@ -189,7 +189,7 @@ export const usePositions = () => useQuery({
 export const useCreatePosition = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: (data: any) => api.post('/hr/positions', data),
+        mutationFn: (data: any) => api.post('/hr/positions', data).then(res => res.data),
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ['positions'] }),
     });
 };
@@ -197,7 +197,7 @@ export const useCreatePosition = () => {
 export const useUpdatePosition = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: ({ id, ...data }: any) => api.put(`/hr/positions/${id}`, data),
+        mutationFn: ({ id, ...data }: any) => api.put(`/hr/positions/${id}`, data).then(res => res.data),
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ['positions'] }),
     });
 };
@@ -435,3 +435,26 @@ export const useRecordTrackingPoint = () => {
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ['field-tracking'] }),
     });
 };
+// Performance Management
+export const usePerformanceReviews = () => useQuery({
+    queryKey: ['performance-reviews'],
+    queryFn: () => api.get('/hr/performance').then(res => res.data),
+});
+
+export const useGoals = () => useQuery({
+    queryKey: ['performance-goals'],
+    queryFn: () => api.get('/hr/goals').then(res => res.data),
+});
+
+export const useCreateGoal = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (data: any) => api.post('/hr/goals', data).then(res => res.data),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['performance-goals'] }),
+    });
+};
+
+export const useKPIs = () => useQuery({
+    queryKey: ['performance-kpis'],
+    queryFn: () => api.get('/hr/kpis').then(res => res.data),
+});
