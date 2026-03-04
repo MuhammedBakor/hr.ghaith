@@ -11,8 +11,9 @@ import java.time.LocalDateTime;
 @EqualsAndHashCode(callSuper = true)
 public class AttendanceRecord extends BaseEntity {
 
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "employee_id", nullable = false)
+    @JoinColumn(name = "employee_id", referencedColumnName = "id", nullable = false)
     private Employee employee;
 
     @Column(nullable = false)

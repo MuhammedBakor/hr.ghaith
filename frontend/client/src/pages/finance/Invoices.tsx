@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { financeService } from "@/services/financeService";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -73,7 +74,7 @@ export default function Invoices() {
   const [showInlineForm, setShowInlineForm] = useState(false);
 
   const { selectedRole: userRole } = useAppContext();
-  const canEdit = userRole === "admin" || userRole === "manager";
+  const canEdit = userRole === "admin" || userRole?.includes("manager");
   const canDelete = userRole === "admin";
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -109,60 +110,68 @@ export default function Invoices() {
   const { selectedBranchId, branches } = useAppContext();
   const selectedBranch = branches?.find(b => b.id === selectedBranchId);
 
+  const queryClient = useQueryClient();
+
   // Queries
-  const { data: invoices = [], isLoading, refetch, isError, error} = trpc.invoices.list.useQuery({
-    branchId: selectedBranchId || undefined,
+  const { data: invoices = [], isLoading, refetch, isError, error } = useQuery({
+    queryKey: ["invoices", selectedBranchId],
+    queryFn: () => financeService.getInvoices(selectedBranchId ?? undefined),
   });
-  const { data: invoiceDetail } = trpc.invoices.getById.useQuery(
-    { id: selectedInvoice?.id },
-    { enabled: !!selectedInvoice?.id && view === 'details' }
-  );
+
+  const { data: invoiceDetail } = useQuery({
+    queryKey: ["invoice", selectedInvoice?.id],
+    queryFn: () => financeService.getInvoiceById(selectedInvoice.id),
+    enabled: !!selectedInvoice?.id && view === 'details',
+  });
 
   // Mutations
-  const createInvoice = trpc.invoices.create.useMutation({
+  const createInvoiceMutation = useMutation({
+    mutationFn: (data: any) => financeService.createInvoice(data, selectedBranchId ?? undefined),
     onSuccess: () => {
       toast.success("تم إنشاء الفاتورة بنجاح");
       setView('list');
       resetInvoiceForm();
-      refetch();
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
     },
-    onError: (error) => {
-      toast.error(error.message);
+    onError: (error: any) => {
+      toast.error(error.message || "حدث خطأ أثناء الإنشاء");
     },
   });
 
-  const updateStatus = trpc.invoices.updateStatus.useMutation({
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ id, status, reason }: any) => financeService.updateInvoiceStatus(id, status, reason),
     onSuccess: () => {
       toast.success("تم تحديث حالة الفاتورة");
       setView('list');
-      setStatusChange({ status: "", reason: "",
-      onError: (e: any) => toast.error(e?.message || 'حدث خطأ')});
-      refetch();
+      setStatusChange({ status: "", reason: "" });
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
     },
-    onError: (error) => {
-      toast.error(error.message);
+    onError: (error: any) => {
+      toast.error(error.message || "حدث خطأ أثناء التحديث");
     },
   });
 
-  const deleteInvoice = trpc.invoices.delete.useMutation({
+  const deleteInvoiceMutation = useMutation({
+    mutationFn: (id: number) => financeService.deleteInvoice(id),
     onSuccess: () => {
       toast.success("تم حذف الفاتورة");
-      refetch();
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
     },
-    onError: (error) => {
-      toast.error(error.message);
+    onError: (error: any) => {
+      toast.error(error.message || "حدث خطأ أثناء الحذف");
     },
   });
 
-  const createPayment = trpc.invoices.payments.create.useMutation({
+  const createPaymentMutation = useMutation({
+    mutationFn: ({ invoiceId, ...data }: any) => financeService.recordPayment(invoiceId, data),
     onSuccess: () => {
       toast.success("تم تسجيل الدفعة بنجاح");
       setView('list');
       resetPaymentForm();
-      refetch();
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
     },
-    onError: (error) => {
-      toast.error(error.message);
+    onError: (error: any) => {
+      toast.error(error.message || "حدث خطأ أثناء تسجيل الدفعة");
     },
   });
 
@@ -189,7 +198,7 @@ export default function Invoices() {
 
   // Filter invoices
   const filteredInvoices = invoices.filter((invoice: any) => {
-    const matchesSearch = 
+    const matchesSearch =
       invoice.invoiceNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       invoice.clientName?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || invoice.status === statusFilter;
@@ -212,7 +221,7 @@ export default function Invoices() {
       toast.error("يرجى ملء الحقول المطلوبة");
       return;
     }
-    createInvoice.mutate({
+    createInvoiceMutation.mutate({
       invoiceNumber: newInvoice.invoiceNumber,
       clientName: newInvoice.clientName,
       amount: newInvoice.amount,
@@ -227,7 +236,7 @@ export default function Invoices() {
       toast.error("يرجى اختيار الحالة وكتابة السبب");
       return;
     }
-    updateStatus.mutate({
+    updateStatusMutation.mutate({
       id: selectedInvoice.id,
       status: statusChange.status as any,
       reason: statusChange.reason,
@@ -236,13 +245,13 @@ export default function Invoices() {
 
   const handleDelete = (invoice: any) => {
     if (confirm('هل أنت متأكد من الحذف؟')) {
-      deleteInvoice.mutate({ id: invoice });
+      deleteInvoiceMutation.mutate(invoice);
     }
   };
 
   const confirmDelete = () => {
     if (invoiceToDelete) {
-      deleteInvoice.mutate({ id: invoiceToDelete.id, reason: "حذف بواسطة المستخدم" });
+      deleteInvoiceMutation.mutate(invoiceToDelete.id);
     }
     setDeleteDialogOpen(false);
     setInvoiceToDelete(null);
@@ -253,7 +262,7 @@ export default function Invoices() {
       toast.error("يرجى ملء الحقول المطلوبة");
       return;
     }
-    createPayment.mutate({
+    createPaymentMutation.mutate({
       paymentNumber: newPayment.paymentNumber,
       invoiceId: selectedInvoice.id,
       amount: newPayment.amount,
@@ -277,15 +286,15 @@ export default function Invoices() {
 
   // عرض نموذج إنشاء فاتورة جديدة
   if (view === 'add') {
-    
-  if (isError) return (
-    <div className="p-8 text-center">
-      <p className="text-red-500 text-lg">حدث خطأ في تحميل البيانات</p>
-      <p className="text-gray-500 mt-2">{error?.message}</p>
-    </div>
-  );
 
-  return (
+    if (isError) return (
+      <div className="p-8 text-center">
+        <p className="text-red-500 text-lg">حدث خطأ في تحميل البيانات</p>
+        <p className="text-gray-500 mt-2">{error?.message}</p>
+      </div>
+    );
+
+    return (
       <div className="space-y-6" dir="rtl">
         <div className="flex items-center gap-4">
           <Button variant="ghost" onClick={() => { setView('list'); resetInvoiceForm(); }}>
@@ -304,7 +313,7 @@ export default function Invoices() {
               <FileText className="h-5 w-5" />
               بيانات الفاتورة
             </CardTitle>
-              <PrintButton title="التقرير" />
+            <PrintButton title="التقرير" />
           </CardHeader>
           <CardContent>
             <div className="grid gap-6 md:grid-cols-2">
@@ -314,7 +323,7 @@ export default function Invoices() {
                   value={newInvoice.invoiceNumber}
                   disabled
                   className="bg-muted font-mono"
-                 placeholder="أدخل القيمة" />
+                  placeholder="أدخل القيمة" />
               </div>
               <div className="space-y-2">
                 <Label>اسم العميل</Label>
@@ -371,8 +380,8 @@ export default function Invoices() {
               <Button variant="outline" onClick={() => { setView('list'); resetInvoiceForm(); }}>
                 إلغاء
               </Button>
-              <Button onClick={handleCreateInvoice} disabled={createInvoice.isPending}>
-                {createInvoice.isPending ? (
+              <Button onClick={handleCreateInvoice} disabled={createInvoiceMutation.isPending}>
+                {createInvoiceMutation.isPending ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin ms-2" />
                     جاري الإنشاء...
@@ -437,16 +446,16 @@ export default function Invoices() {
                     </div>
                     <div className="space-y-2">
                       <Label className="text-muted-foreground">تاريخ الاستحقاق</Label>
-                      <p>{formatDate(invoiceDetail.dueDate)}</p>
+                      <p>{formatDate(invoiceDetail.dueDate || null)}</p>
                     </div>
                     <div className="space-y-2">
                       <Label className="text-muted-foreground">تاريخ الإنشاء</Label>
-                      <p>{formatDate(invoiceDetail.createdAt)}</p>
+                      <p>{formatDate(invoiceDetail.createdAt || null)}</p>
                     </div>
                   </div>
                 </TabsContent>
                 <TabsContent value="items" className="mt-6">
-                  {invoiceDetail.items?.length > 0 ? (
+                  {(invoiceDetail.items?.length ?? 0) > 0 ? (
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -474,7 +483,7 @@ export default function Invoices() {
                   )}
                 </TabsContent>
                 <TabsContent value="history" className="mt-6">
-                  {invoiceDetail.statusHistory?.length > 0 ? (
+                  {(invoiceDetail.statusHistory?.length ?? 0) > 0 ? (
                     <div className="space-y-4">
                       {invoiceDetail?.statusHistory?.map((history: any) => (
                         <div key={history.id} className="flex items-start gap-4 p-4 border rounded-lg">
@@ -576,8 +585,8 @@ export default function Invoices() {
               <Button variant="outline" onClick={() => { setView('list'); setSelectedInvoice(null); setStatusChange({ status: "", reason: "" }); }}>
                 إلغاء
               </Button>
-              <Button onClick={handleStatusChange} disabled={updateStatus.isPending}>
-                {updateStatus.isPending ? (
+              <Button onClick={handleStatusChange} disabled={updateStatusMutation.isPending}>
+                {updateStatusMutation.isPending ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin ms-2" />
                     جاري التحديث...
@@ -623,7 +632,7 @@ export default function Invoices() {
                   value={newPayment.paymentNumber}
                   disabled
                   className="bg-muted font-mono"
-                 placeholder="أدخل القيمة" />
+                  placeholder="أدخل القيمة" />
               </div>
               <div className="space-y-2">
                 <Label>المبلغ (ر.س.) *</Label>
@@ -674,8 +683,8 @@ export default function Invoices() {
               <Button variant="outline" onClick={() => { setView('list'); setSelectedInvoice(null); resetPaymentForm(); }}>
                 إلغاء
               </Button>
-              <Button onClick={handleRecordPayment} disabled={createPayment.isPending}>
-                {createPayment.isPending ? (
+              <Button onClick={handleRecordPayment} disabled={createPaymentMutation.isPending}>
+                {createPaymentMutation.isPending ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin ms-2" />
                     جاري التسجيل...
@@ -902,7 +911,7 @@ export default function Invoices() {
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               className="text-red-600"
-                              onClick={() => { if(window.confirm('هل أنت متأكد من الحذف؟')) handleDelete(invoice) }}
+                              onClick={() => { if (window.confirm('هل أنت متأكد من الحذف؟')) handleDelete(invoice) }}
                             >
                               <Trash2 className="ms-2 h-4 w-4" />
                               حذف

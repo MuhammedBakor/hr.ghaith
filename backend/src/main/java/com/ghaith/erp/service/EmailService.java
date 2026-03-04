@@ -1,0 +1,78 @@
+package com.ghaith.erp.service;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.stereotype.Service;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class EmailService {
+
+    private final JavaMailSender mailSender;
+
+    @org.springframework.beans.factory.annotation.Value("${spring.mail.username:}")
+    private String fromEmail;
+
+    public void sendCredentials(String to, String firstName, String temporaryPassword) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromEmail);
+            message.setTo(to);
+            message.setSubject("مرحباً بك في نظام غيث - بيانات الدخول الخاصة بك");
+
+            String content = String.format(
+                    "مرحباً %s،\n\n" +
+                            "تم إنشاء حساب لك في نظام غيث (Ghaith ERP).\n" +
+                            "إليك بيانات الدخول الخاصة بك:\n\n" +
+                            "البريد الإلكتروني: %s\n" +
+                            "كلمة المرور المؤقتة: %s\n\n" +
+                            "يرجى تسجيل الدخول وتغيير كلمة المرور الخاصة بك في أقرب وقت.\n" +
+                            "رابط النظام: http://localhost:5173/login\n\n" +
+                            "مع تحيات إدارة النظام.",
+                    firstName, to, temporaryPassword);
+
+            message.setText(content);
+            System.out.println("Attempting to send email via mailSender... From: " + fromEmail + " To: " + to);
+            mailSender.send(message);
+            System.out.println("mailSender.send() returned successfully.");
+            log.info("Credentials email sent successfully to {}", to);
+        } catch (Exception e) {
+            System.out.println("EXCEPTION in EmailService.sendCredentials: " + e.getMessage());
+            e.printStackTrace();
+            log.error("Failed to send credentials email to {}: {}", to, e.getMessage());
+            // We don't throw an exception here because we don't want to roll back
+            // the employee creation if only the email fails.
+            // In a production app, you might want to retry or log this for manual action.
+        }
+    }
+
+    public void sendVerificationCode(String to, String firstName, String code) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromEmail);
+            message.setTo(to);
+            message.setSubject("كود تفعيل حسابك في منصة غيث");
+
+            String content = String.format(
+                    "مرحباً %s،\n\n" +
+                            "شكراً لانضمامك إلى منصة غيث. لإكمال تفعيل حسابك، يرجى استخدام كود التفعيل التالي:\n\n" +
+                            "كود التفعيل: %s\n\n" +
+                            "يرجى إدخال هذا الكود في صفحة 'تفعيل حساب جديد' في النظام.\n\n" +
+                            "مع تحيات،\nفريق منصة غيث",
+                    firstName, code);
+
+            message.setText(content);
+            System.out.println("Attempting to send verification email... From: " + fromEmail + " To: " + to);
+            mailSender.send(message);
+            System.out.println("Verification email sent successfully.");
+            log.info("Verification code sent successfully to {}", to);
+        } catch (Exception e) {
+            System.out.println("EXCEPTION in EmailService.sendVerificationCode: " + e.getMessage());
+            e.printStackTrace();
+            log.error("Failed to send verification code to {}: {}", to, e.getMessage());
+        }
+    }
+}

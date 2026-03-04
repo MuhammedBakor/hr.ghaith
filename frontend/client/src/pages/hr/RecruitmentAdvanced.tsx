@@ -61,7 +61,7 @@ export default function RecruitmentAdvanced() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const { selectedRole: userRole } = useAppContext();
-  const canEdit = userRole === "admin" || userRole === "manager";
+  const canEdit = userRole === "admin" || (userRole && String(userRole).includes("manager"));
   const canDelete = userRole === "admin";
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -145,6 +145,18 @@ export default function RecruitmentAdvanced() {
     offersExtended: applications.filter((a: any) => a.status === 'offer').length
   };
 
+  const confirmDelete = () => {
+    if (itemToDelete) {
+      deleteJobMutation.mutate(itemToDelete, {
+        onSuccess: () => {
+          toast.success('تم حذف الوظيفة بنجاح');
+          setDeleteDialogOpen(false);
+          setItemToDelete(null);
+        }
+      });
+    }
+  };
+
   const handleCreateJob = () => {
     if (!newJob.title) {
       toast.error('يرجى إدخال عنوان الوظيفة');
@@ -152,7 +164,7 @@ export default function RecruitmentAdvanced() {
     }
     createJobMutation.mutate({
       ...newJob,
-      applicationDeadline: newJob.applicationDeadline ? new Date(newJob.applicationDeadline) : undefined
+      applicationDeadline: newJob.applicationDeadline ? new Date(newJob.applicationDeadline).toISOString() : undefined
     });
   };
 
@@ -182,7 +194,7 @@ export default function RecruitmentAdvanced() {
     createInterviewMutation.mutate({
       applicationId: selectedApplicant.id,
       interviewType: interviewData.interviewType,
-      scheduledAt: new Date(interviewData.scheduledAt),
+      scheduledAt: new Date(interviewData.scheduledAt).toISOString(),
       duration: interviewData.duration,
       location: interviewData.location,
       meetingLink: interviewData.meetingLink
@@ -230,7 +242,7 @@ export default function RecruitmentAdvanced() {
     }
   };
 
-  if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>;
+  // Remove early return
 
 
   return (
@@ -334,6 +346,8 @@ export default function RecruitmentAdvanced() {
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
+              ) : isError ? (
+                <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>
               ) : jobs.length === 0 ? (
                 <div className="text-center py-12 text-gray-500">
                   <Inbox className="h-16 w-16 mx-auto mb-4 text-gray-300" />

@@ -24,7 +24,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Star, Plus, Eye, Edit, CheckCircle2, Clock, Award, BarChart3 } from 'lucide-react';
-import { useEmployees, usePerformanceReviews, useGoals, useCreateGoal, useKPIs } from '@/services/hrService';
+import { useEmployees, usePerformanceReviews, useGoals, useCreateGoal, useKPIs, useCreatePerformanceReview } from '@/services/hrService';
 import { toast } from 'sonner';
 import { PrintButton } from "@/components/PrintButton";
 
@@ -43,6 +43,15 @@ export default function PerformanceAdvanced() {
     weight: 30,
     dueDate: ''
   });
+  const [newReview, setNewReview] = useState({
+    employeeId: 0,
+    period: '2026-Q1',
+    rating: 3,
+    feedback: '',
+    strengths: '',
+    improvements: '',
+    status: 'draft'
+  });
 
   // البيانات من API (REST)
   const { data: reviewsData, isLoading } = usePerformanceReviews();
@@ -51,6 +60,7 @@ export default function PerformanceAdvanced() {
   const { data: kpisData } = useKPIs();
 
   const createGoalMutation = useCreateGoal();
+  const createReviewMutation = useCreatePerformanceReview();
 
   const handleCreateGoal = () => {
     if (!newGoal.employeeId || !newGoal.title) {
@@ -64,6 +74,7 @@ export default function PerformanceAdvanced() {
         description: newGoal.description,
         weight: newGoal.weight,
         dueDate: newGoal.dueDate || undefined,
+        status: 'in_progress'
       },
       {
         onSuccess: () => {
@@ -73,6 +84,35 @@ export default function PerformanceAdvanced() {
           refetchGoals();
         },
         onError: (err: any) => toast.error(`فشل في إضافة الهدف: ${err.message}`),
+      }
+    );
+  };
+
+  const handleCreateReview = () => {
+    if (!newReview.employeeId) {
+      toast.error('يرجى اختيار الموظف');
+      return;
+    }
+    createReviewMutation.mutate(
+      {
+        ...newReview,
+        reviewerId: 1, // Placeholder for current user employee ID
+      },
+      {
+        onSuccess: () => {
+          toast.success('تم حفظ التقييم بنجاح');
+          setShowNewReview(false);
+          setNewReview({
+            employeeId: 0,
+            period: '2026-Q1',
+            rating: 3,
+            feedback: '',
+            strengths: '',
+            improvements: '',
+            status: 'draft'
+          });
+        },
+        onError: (err: any) => toast.error(`فشل في حفظ التقييم: ${err.message}`),
       }
     );
   };
@@ -99,7 +139,7 @@ export default function PerformanceAdvanced() {
     department: '-',
     reviewer: r.reviewerId ? getEmployeeName(r.reviewerId) : '-',
     period: r.period,
-    overallScore: r.overallRating,
+    overallScore: r.rating,
     status: r.status || 'pending',
     completedAt: r.updatedAt ? new Date(r.updatedAt).toISOString().split('T')[0] : null
   }));
@@ -441,8 +481,8 @@ export default function PerformanceAdvanced() {
                     <div key={review.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div className="flex items-center gap-3">
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center ${index === 0 ? 'bg-amber-100 text-amber-600' :
-                            index === 1 ? 'bg-gray-200 text-gray-600' :
-                              'bg-orange-100 text-orange-600'
+                          index === 1 ? 'bg-gray-200 text-gray-600' :
+                            'bg-orange-100 text-orange-600'
                           }`}>
                           {index + 1}
                         </div>
@@ -472,20 +512,20 @@ export default function PerformanceAdvanced() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>الموظف</Label>
-                <Select>
+                <Select value={String(newReview.employeeId)} onValueChange={(v) => setNewReview({ ...newReview, employeeId: Number(v) })}>
                   <SelectTrigger>
                     <SelectValue placeholder="اختر الموظف" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="1">أحمد محمد</SelectItem>
-                    <SelectItem value="2">سارة أحمد</SelectItem>
-                    <SelectItem value="3">محمد علي</SelectItem>
+                    {employees.map((emp: any) => (
+                      <SelectItem key={emp.id} value={String(emp.id)}>{emp.firstName} {emp.lastName}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label>فترة التقييم</Label>
-                <Select>
+                <Select value={newReview.period} onValueChange={(v) => setNewReview({ ...newReview, period: v })}>
                   <SelectTrigger>
                     <SelectValue placeholder="اختر الفترة" />
                   </SelectTrigger>
@@ -521,13 +561,18 @@ export default function PerformanceAdvanced() {
             </div>
             <div className="space-y-2">
               <Label>ملاحظات عامة</Label>
-              <Textarea placeholder="أدخل ملاحظاتك حول أداء الموظف..." rows={3} />
+              <Textarea
+                placeholder="أدخل ملاحظاتك حول أداء الموظف..."
+                rows={3}
+                value={newReview.feedback}
+                onChange={(e) => setNewReview({ ...newReview, feedback: e.target.value })}
+              />
             </div>
           </div>
           <div className="flex gap-2 mt-4 pt-3 border-t justify-end">
             <Button variant="outline" onClick={() => setShowNewReview(false)}>إلغاء</Button>
-            <Button onClick={() => { toast.success('تم حفظ التقييم'); setShowNewReview(false); }}>
-              حفظ التقييم
+            <Button onClick={handleCreateReview} disabled={createReviewMutation.isPending}>
+              {createReviewMutation.isPending ? 'جاري الحفظ...' : 'حفظ التقييم'}
             </Button>
           </div>
         </div>

@@ -2,6 +2,7 @@ package com.ghaith.erp.controller;
 
 import com.ghaith.erp.dto.*;
 import com.ghaith.erp.service.AuthenticationService;
+import com.ghaith.erp.service.SessionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthenticationController {
 
     private final AuthenticationService service;
+    private final SessionService sessionService;
 
     @PostMapping("/register")
     public ResponseEntity<AuthenticationResponse> register(
@@ -45,5 +47,16 @@ public class AuthenticationController {
     @GetMapping("/me")
     public ResponseEntity<UserResponse> getMe() {
         return ResponseEntity.ok(service.getMe());
+    }
+
+    @GetMapping("/sessions")
+    public ResponseEntity<?> getAllSessions() {
+        return ResponseEntity.ok(sessionService.getAllSessions());
+    }
+
+    @PostMapping("/sessions/terminate")
+    public ResponseEntity<Void> terminateSession(@RequestBody java.util.Map<String, String> payload) {
+        sessionService.terminateSession(payload.get("sessionId"));
+        return ResponseEntity.ok().build();
     }
 }

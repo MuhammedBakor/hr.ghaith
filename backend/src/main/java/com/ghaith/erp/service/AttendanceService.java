@@ -6,12 +6,16 @@ import com.ghaith.erp.repository.AttendanceRepository;
 import com.ghaith.erp.repository.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class AttendanceService {
 
     private final AttendanceRepository attendanceRepository;
@@ -25,13 +29,20 @@ public class AttendanceService {
         return attendanceRepository.findByEmployeeId(employeeId);
     }
 
+    public List<AttendanceRecord> getAttendanceByDate(java.time.LocalDate date) {
+        LocalDateTime startOfDay = date.atStartOfDay();
+        LocalDateTime endOfDay = date.atTime(23, 59, 59, 999999999);
+        return attendanceRepository.findByDateBetween(startOfDay, endOfDay);
+    }
+
     public List<AttendanceRecord> getAttendanceByDateRange(LocalDateTime start, LocalDateTime end) {
         return attendanceRepository.findByDateBetween(start, end);
     }
 
     public AttendanceRecord checkIn(Map<String, Object> payload) {
-        Long employeeId = Long.valueOf(payload.get("employeeId").toString());
-        Employee employee = employeeRepository.findById(employeeId).orElseThrow();
+        Long employeeId = ((Number) payload.get("employeeId")).longValue();
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new RuntimeException("الموظف غير موجود"));
 
         AttendanceRecord record = new AttendanceRecord();
         record.setEmployee(employee);
@@ -39,10 +50,10 @@ public class AttendanceService {
         record.setCheckIn(LocalDateTime.now());
         record.setStatus("present");
 
-        if (payload.containsKey("latitude"))
-            record.setCheckInLatitude((Double) payload.get("latitude"));
-        if (payload.containsKey("longitude"))
-            record.setCheckInLongitude((Double) payload.get("longitude"));
+        if (payload.containsKey("latitude") && payload.get("latitude") != null)
+            record.setCheckInLatitude(((Number) payload.get("latitude")).doubleValue());
+        if (payload.containsKey("longitude") && payload.get("longitude") != null)
+            record.setCheckInLongitude(((Number) payload.get("longitude")).doubleValue());
 
         return attendanceRepository.save(record);
     }
@@ -51,10 +62,10 @@ public class AttendanceService {
         AttendanceRecord record = attendanceRepository.findById(id).orElseThrow();
         record.setCheckOut(LocalDateTime.now());
 
-        if (payload.containsKey("latitude"))
-            record.setCheckOutLatitude((Double) payload.get("latitude"));
-        if (payload.containsKey("longitude"))
-            record.setCheckOutLongitude((Double) payload.get("longitude"));
+        if (payload.containsKey("latitude") && payload.get("latitude") != null)
+            record.setCheckOutLatitude(((Number) payload.get("latitude")).doubleValue());
+        if (payload.containsKey("longitude") && payload.get("longitude") != null)
+            record.setCheckOutLongitude(((Number) payload.get("longitude")).doubleValue());
 
         // Calculate work hours
         if (record.getCheckIn() != null) {
@@ -66,21 +77,47 @@ public class AttendanceService {
     }
 
     public AttendanceRecord createManual(Map<String, Object> payload) {
-        Long employeeId = Long.valueOf(payload.get("employeeId").toString());
-        Employee employee = employeeRepository.findById(employeeId).orElseThrow();
+        Long employeeId = ((Number) payload.get("employeeId")).longValue();
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new RuntimeException("الموظف غير موجود"));
 
         AttendanceRecord record = new AttendanceRecord();
         record.setEmployee(employee);
-        record.setDate(LocalDateTime.parse(payload.get("date").toString()));
+
+        String dateStr = payload.get("date").toString();
+        record.setDate(parseDateTime(dateStr));
+
         if (payload.get("checkIn") != null)
-            record.setCheckIn(LocalDateTime.parse(payload.get("checkIn").toString()));
+            record.setCheckIn(parseDateTime(payload.get("checkIn").toString()));
         if (payload.get("checkOut") != null)
-            record.setCheckOut(LocalDateTime.parse(payload.get("checkOut").toString()));
+            record.setCheckOut(parseDateTime(payload.get("checkOut").toString()));
+
         record.setNotes((String) payload.get("notes"));
         record.setStatus("pending_approval");
         record.setApprovalStatus("pending");
 
         return attendanceRepository.save(record);
+    }
+
+    private LocalDateTime parseDateTime(String dateTimeStr) {
+        if (dateTimeStr == null || dateTimeStr.isEmpty())
+            return null;
+        try {
+            // Try ISO format with offset/Z (e.g., 2023-10-27T08:00:00.000Z)
+            return OffsetDateTime.parse(dateTimeStr).toLocalDateTime();
+        } catch (DateTimeParseException e1) {
+            try {
+                // Try standard ISO LocalDateTime (e.g., 2023-10-27T08:00:00)
+                return LocalDateTime.parse(dateTimeStr);
+            } catch (DateTimeParseException e2) {
+                try {
+                    // Try LocalDate only (e.g., 2023-10-27)
+                    return java.time.LocalDate.parse(dateTimeStr).atStartOfDay();
+                } catch (DateTimeParseException e3) {
+                    throw new RuntimeException("Invalid date format: " + dateTimeStr);
+                }
+            }
+        }
     }
 
     public AttendanceRecord checkInWithQR(Map<String, Object> payload, Long userId) {

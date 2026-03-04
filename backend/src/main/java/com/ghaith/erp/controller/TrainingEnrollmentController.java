@@ -38,8 +38,8 @@ public class TrainingEnrollmentController {
     }
 
     @PostMapping
-    public ResponseEntity<TrainingEnrollment> enrollEmployee(@RequestBody TrainingEnrollment enrollment) {
-        return ResponseEntity.ok(service.enrollEmployee(enrollment));
+    public ResponseEntity<TrainingEnrollment> enrollEmployee(@RequestBody java.util.Map<String, Object> payload) {
+        return ResponseEntity.ok(service.enrollEmployee(payload));
     }
 
     @PutMapping("/{id}")

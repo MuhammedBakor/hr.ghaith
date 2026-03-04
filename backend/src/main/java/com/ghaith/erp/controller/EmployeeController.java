@@ -33,16 +33,28 @@ public class EmployeeController {
     }
 
     @PostMapping("/simple")
-    public ResponseEntity<java.util.Map<String, String>> createSimpleEmployee(
-            @RequestBody java.util.Map<String, Object> payload) {
-        String firstName = (String) payload.get("firstName");
-        String lastName = (String) payload.get("lastName");
-        String email = (String) payload.get("email");
-        String phone = (String) payload.get("phone");
-        Number branchIdNum = (Number) payload.get("branchId");
-        Long branchId = branchIdNum != null ? branchIdNum.longValue() : null;
+    public ResponseEntity<?> createSimpleEmployee(@RequestBody java.util.Map<String, Object> payload) {
+        try {
+            String firstName = payload.get("firstName") != null ? payload.get("firstName").toString() : null;
+            String lastName = payload.get("lastName") != null ? payload.get("lastName").toString() : null;
+            String email = payload.get("email") != null ? payload.get("email").toString() : null;
+            String phone = payload.get("phone") != null ? payload.get("phone").toString() : null;
+            String role = payload.get("role") != null ? payload.get("role").toString() : null;
 
-        return ResponseEntity.ok(employeeService.createSimpleEmployee(firstName, lastName, email, phone, branchId));
+            Long branchId = null;
+            Object branchIdObj = payload.get("branchId");
+            if (branchIdObj instanceof Number) {
+                branchId = ((Number) branchIdObj).longValue();
+            } else if (branchIdObj instanceof String && !((String) branchIdObj).isEmpty()) {
+                branchId = Long.parseLong((String) branchIdObj);
+            }
+
+            return ResponseEntity
+                    .ok(employeeService.createSimpleEmployee(firstName, lastName, email, phone, branchId, role));
+        } catch (Exception e) {
+            e.printStackTrace(); // This will show in the console
+            return ResponseEntity.internalServerError().body("Error: " + e.getMessage());
+        }
     }
 
     @PostMapping("/{id}/invite")

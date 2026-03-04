@@ -19,7 +19,11 @@ public class AttendanceController {
     private final AttendanceService attendanceService;
 
     @GetMapping
-    public ResponseEntity<List<AttendanceRecord>> getAllAttendance() {
+    public ResponseEntity<List<AttendanceRecord>> getAllAttendance(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) java.time.LocalDate date) {
+        if (date != null) {
+            return ResponseEntity.ok(attendanceService.getAttendanceByDate(date));
+        }
         return ResponseEntity.ok(attendanceService.getAllAttendance());
     }
 

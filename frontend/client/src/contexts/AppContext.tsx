@@ -76,6 +76,8 @@ export type ModuleType =
   | 'store'
   | 'workflow'
   | 'public_site'
+  | 'inbox'
+  | 'platform'
   | 'settings';
 
 // صلاحيات الوحدات لكل صفة

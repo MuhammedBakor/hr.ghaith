@@ -45,7 +45,11 @@ export default function AddEmployee() {
   const { data: branchesData, isLoading: isLoadingBranches } = useBranches();
   const branches = branchesData || [];
   const { data: rolesData, isLoading: isLoadingRoles } = useRoles();
-  const roles = (rolesData || []).filter((r: string) => r && r.trim() !== "").map((r: string) => ({ id: r, name: r, nameAr: r }));
+  const roles = (rolesData || []).filter((r: string) => r && r.trim() !== "").map((r: string) => ({
+    id: r,
+    name: r,
+    nameAr: r === 'USER' ? 'موظف' : r === 'AGENT' ? 'مندوب' : r === 'MANAGER' ? 'مدير' : r === 'OPERATIONS' ? 'تشغيل' : r === 'ADMIN' ? 'مسؤول' : r === 'OWNER' ? 'مالك' : r
+  }));
   const { data: positionsData, isLoading: isLoadingPositions } = usePositions();
   const positions = positionsData || [];
   const { data: employeesData } = useEmployees();
@@ -55,7 +59,7 @@ export default function AddEmployee() {
 
   const [formData, setFormData] = useState({
     firstName: '', lastName: '', email: '', phone: '',
-    departmentId: '', branchId: '', positionId: '', roleCode: 'employee',
+    departmentId: '', branchId: '', positionId: '', roleCode: 'USER',
     managerId: '', joinDate: new Date().toISOString().split('T')[0], workType: 'full_time',
     nationalId: '', nationality: '', dateOfBirth: '', gender: '', maritalStatus: '', address: '',
     emergencyName: '', emergencyRelation: '', emergencyPhone: '',
@@ -82,6 +86,7 @@ export default function AddEmployee() {
         position: formData.positionId ? { id: parseInt(formData.positionId) } : undefined,
         branch: formData.branchId ? { id: Number(formData.branchId) } : undefined,
         salary: formData.basicSalary ? parseFloat(formData.basicSalary) : undefined,
+        role: formData.roleCode,
         status: 'active',
       }, {
         onSuccess: (data: any) => {
@@ -238,13 +243,14 @@ export default function AddEmployee() {
                     <SelectTrigger><SelectValue placeholder="اختر الدور" /></SelectTrigger>
                     <SelectContent>
                       {roles.length > 0 ? roles.map((r: any) => (
-                        <SelectItem key={r.code || r.id} value={r.code || String(r.id)}>
-                          <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: r.color || '#6b7280' }} />{r.nameAr || r.name}</span>
+                        <SelectItem key={r.id} value={r.id}>
+                          <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: '#6b7280' }} />{r.nameAr || r.name}</span>
                         </SelectItem>
                       )) : <>
-                        <SelectItem value="employee">موظف</SelectItem>
-                        <SelectItem value="supervisor">مشرف</SelectItem>
-                        <SelectItem value="department_manager">مدير قسم</SelectItem>
+                        <SelectItem value="USER">موظف</SelectItem>
+                        <SelectItem value="AGENT">مندوب</SelectItem>
+                        <SelectItem value="MANAGER">مدير</SelectItem>
+                        <SelectItem value="OPERATIONS">تشغيل</SelectItem>
                       </>}
                     </SelectContent>
                   </Select>

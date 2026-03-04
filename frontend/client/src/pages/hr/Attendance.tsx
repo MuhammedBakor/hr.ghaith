@@ -102,6 +102,14 @@ export default function Attendance() {
   // جلب الموظفين مع فلترة الفرع
   const { data: employeesData } = useEmployees();
 
+  // قائمة الموظفين المتاحين للتسجيل اليدوي
+  const manualEntryEmployees = useMemo(() => {
+    if (selectedRole === 'admin' || selectedRole === 'hr_manager' || selectedRole === 'general_manager') {
+      return employeesData || [];
+    }
+    return subordinates || [];
+  }, [selectedRole, employeesData, subordinates]);
+
   // جلب سجلات الحضور الفعلية من API
   const { data: attendanceData, isLoading: isLoadingAttendance } = useAttendance(selectedDate);
 
@@ -246,10 +254,13 @@ export default function Attendance() {
       return;
     }
 
-    // التحقق من أن الموظف تابع للمدير
-    const isSubordinate = (subordinates as any[])?.some((s: any) => s.id === parseInt(manualEntry.employeeId));
-    if (!isSubordinate && selectedRole !== 'hr_manager' && selectedRole !== 'admin') {
-      toast.error('لا يمكنك تسجيل حضور لموظف غير تابع لك');
+    // التحقق من أن الموظف متاح للمدير
+    const manualEntryAllowedId = manualEntry.employeeId;
+    const isAllowed = (manualEntryEmployees as any[])?.some((s: any) => s.id === parseInt(manualEntryAllowedId));
+
+
+    if (!isAllowed) {
+      toast.error('لا يمكنك تسجيل حضور لهذا الموظف');
       return;
     }
 
@@ -395,7 +406,7 @@ export default function Attendance() {
                   <SelectValue placeholder="اختر الموظف" />
                 </SelectTrigger>
                 <SelectContent>
-                  {(subordinates || []).map((emp: any) => (
+                  {(manualEntryEmployees || []).map((emp: any) => (
                     <SelectItem key={emp.id} value={String(emp.id)}>
                       {emp.firstName} {emp.lastName}
                     </SelectItem>

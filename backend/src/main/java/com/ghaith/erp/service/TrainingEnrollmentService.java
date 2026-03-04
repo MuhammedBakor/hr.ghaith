@@ -1,7 +1,9 @@
 package com.ghaith.erp.service;
 
 import com.ghaith.erp.model.TrainingEnrollment;
+import com.ghaith.erp.repository.EmployeeRepository;
 import com.ghaith.erp.repository.TrainingEnrollmentRepository;
+import com.ghaith.erp.repository.TrainingProgramRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -30,7 +32,25 @@ public class TrainingEnrollmentService {
         return repository.findById(id);
     }
 
-    public TrainingEnrollment enrollEmployee(TrainingEnrollment enrollment) {
+    private final EmployeeRepository employeeRepository;
+    private final TrainingProgramRepository programRepository;
+
+    public TrainingEnrollment enrollEmployee(java.util.Map<String, Object> payload) {
+        Long employeeId = ((Number) payload.get("employeeId")).longValue();
+        Long programId = ((Number) payload.get("programId")).longValue();
+
+        com.ghaith.erp.model.Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new RuntimeException("الموظف غير موجود"));
+        com.ghaith.erp.model.TrainingProgram program = programRepository.findById(programId)
+                .orElseThrow(() -> new RuntimeException("الدورة التدريبية غير موجودة"));
+
+        TrainingEnrollment enrollment = TrainingEnrollment.builder()
+                .employee(employee)
+                .program(program)
+                .status(TrainingEnrollment.EnrollmentStatus.enrolled)
+                .enrollmentDate(java.time.LocalDateTime.now())
+                .build();
+
         return repository.save(enrollment);
     }
 

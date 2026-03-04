@@ -456,13 +456,17 @@ export default function Login() {
 
                   <div className="border-t pt-4">
                     <p className="text-sm text-gray-600 mb-4 text-center">
-                      لإكمال التفعيل، يرجى إعادة تعيين كلمة المرور
+                      لإكمال التفعيل، يرجى تعيين كلمة المرور الخاصة بك
                     </p>
                     <Button
-                      onClick={() => setCurrentView('reset-request')}
+                      onClick={() => {
+                        setResetSubscriptionCode(activateCode.trim());
+                        setResetCode(activateCode.trim());
+                        setCurrentView('reset-verify');
+                      }}
                       className="w-full bg-blue-600 hover:bg-blue-700"
                     >
-                      متابعة لإعادة تعيين كلمة المرور
+                      متابعة لتعيين كلمة المرور
                       <ArrowLeft className="me-2 h-4 w-4" />
                     </Button>
                   </div>

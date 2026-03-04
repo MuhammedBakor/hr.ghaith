@@ -15,10 +15,6 @@ import java.time.LocalDateTime;
 @Table(name = "training_programs")
 public class TrainingProgram extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
     @Column(nullable = false)
     private String name;
 

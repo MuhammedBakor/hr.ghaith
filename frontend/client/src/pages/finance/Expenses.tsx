@@ -1,6 +1,5 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
-import React from "react";
-import { useState } from 'react';
+import React, { useState } from "react";
 import { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/ui/data-table';
 import { Button } from '@/components/ui/button';
@@ -10,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { 
+import {
   Receipt,
   Plus,
   Download,
@@ -22,21 +21,11 @@ import {
   XCircle,
   ArrowRight
 } from 'lucide-react';
-import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
 import { useAppContext } from '@/contexts/AppContext';
 import { Dialog } from "@/components/ui/dialog";
-
-
-interface Expense {
-  id: number;
-  description?: string | null;
-  category?: string | null;
-  amount: string;
-  expenseDate?: Date | null;
-  employeeId?: number | null;
-  status: string;
-}
+import { financeService, Expense } from '@/services/financeService';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 const formatCurrency = (amount: string | number | null | undefined) => {
   const num = typeof amount === 'string' ? parseFloat(amount) : (amount || 0);
@@ -81,7 +70,7 @@ export default function Expenses() {
   const [inlineData, setInlineData] = useState<any>({});
 
   const { selectedRole: userRole } = useAppContext();
-  const canEdit = userRole === "admin" || userRole === "manager";
+  const canEdit = userRole === "admin" || userRole === "general_manager" || userRole === "finance_manager";
   const canDelete = userRole === "admin";
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -91,69 +80,90 @@ export default function Expenses() {
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('other');
   const [amount, setAmount] = useState('');
-  
-  const utils = trpc.useUtils();
 
-  // جلب الفرع المختار
-  const { selectedBranchId, branches } = useAppContext();
-  const selectedBranch = branches?.find(b => b.id === selectedBranchId);
-  
+  const [dialogOpen, setDialogOpen] = React.useState(false);
+  const [editItem, setEditItem] = React.useState<any>(null);
+
+  const queryClient = useQueryClient();
+
   // جلب المصروفات
-  const { data: expensesData, isLoading, isError, error} = trpc.financeExtended.expenses.list.useQuery({
-    branchId: selectedBranchId || undefined,
+  const { data: expenses = [], isLoading, isError, error } = useQuery({
+    queryKey: ["expenses"],
+    queryFn: () => financeService.getExpenses(),
   });
-  const expenses: Expense[] = expensesData || [];
-  
+
   // إنشاء مصروف جديد
-  const createExpenseMutation = trpc.financeExtended.expenses.create.useMutation({
+  const createExpenseMutation = useMutation({
+    mutationFn: (data: Expense) => financeService.createExpense(data),
     onSuccess: () => {
       toast.success('تم إضافة المصروف بنجاح');
-      utils.financeExtended.expenses.list.invalidate();
+      queryClient.invalidateQueries({ queryKey: ["expenses"] });
       setView('list');
       resetForm();
     },
-    onError: (error: { message: string }) => {
+    onError: (error: any) => {
       toast.error('فشل في إضافة المصروف: ' + error.message);
     },
   });
-  
-  // اعتماد/رفض المصروف
-  const updateExpenseMutation = trpc.financeExtended.expenses.update.useMutation({
+
+  const updateExpenseMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Expense }) => financeService.updateExpense(id, data),
     onSuccess: () => {
-      toast.success('تم تحديث حالة المصروف');
-      utils.financeExtended.expenses.list.invalidate();
+      toast.success('تم تحديث المصروف بنجاح');
+      queryClient.invalidateQueries({ queryKey: ["expenses"] });
     },
-    onError: (error: { message: string }) => {
+    onError: (error: any) => {
       toast.error('فشل في تحديث المصروف: ' + error.message);
     },
   });
-  
+
   const resetForm = () => {
     setDescription('');
     setCategory('other');
     setAmount('');
   };
-  
+
   const handleSubmit = () => {
     if (!amount) {
       toast.error('يرجى إدخال المبلغ');
       return;
     }
-    
+
     createExpenseMutation.mutate({
       description: description || 'مصروف جديد',
       category: category,
-      amount: amount,
-      expenseDate: new Date(),
+      amount: parseFloat(amount),
+      status: 'pending',
+      expenseDate: new Date().toISOString(),
     });
   };
-  
+
+  const handleApprove = (id: number) => {
+    const expense = expenses.find(e => e.id === id);
+    if (expense) {
+      updateExpenseMutation.mutate({
+        id,
+        data: { ...expense, status: 'approved' }
+      });
+    }
+  };
+
+  const handleReject = (id: number) => {
+    const expense = expenses.find(e => e.id === id);
+    if (expense) {
+      updateExpenseMutation.mutate({
+        id,
+        data: { ...expense, status: 'rejected' }
+      });
+    }
+  };
+
   // حساب الإحصائيات
   const totals = {
-    total: expenses.reduce((sum, e) => sum + parseFloat(e.amount || '0'), 0),
-    pending: expenses.filter(e => e.status === 'pending').reduce((sum, e) => sum + parseFloat(e.amount || '0'), 0),
-    approved: expenses.filter(e => e.status === 'approved').reduce((sum, e) => sum + parseFloat(e.amount || '0'), 0),
-    thisMonth: expenses.reduce((sum, e) => sum + parseFloat(e.amount || '0'), 0),
+    total: expenses.reduce((sum, e) => sum + parseFloat(e.amount?.toString() || '0'), 0),
+    pending: expenses.filter(e => e.status === 'pending').reduce((sum, e) => sum + parseFloat(e.amount?.toString() || '0'), 0),
+    approved: expenses.filter(e => e.status === 'approved').reduce((sum, e) => sum + parseFloat(e.amount?.toString() || '0'), 0),
+    thisMonth: expenses.reduce((sum, e) => sum + parseFloat(e.amount?.toString() || '0'), 0),
   };
 
   const columns: ColumnDef<Expense>[] = [
@@ -175,7 +185,7 @@ export default function Expenses() {
     {
       accessorKey: 'expenseDate',
       header: 'التاريخ',
-      cell: ({ row }) => row.original.expenseDate ? formatDate(row.original.expenseDate) : '-',
+      cell: ({ row }) => row.original.expenseDate ? (typeof row.original.expenseDate === 'string' ? row.original.expenseDate.split('T')[0] : row.original.expenseDate.toLocaleDateString('ar-SA')) : '-',
     },
     {
       accessorKey: 'status',
@@ -188,21 +198,21 @@ export default function Expenses() {
       enableSorting: false,
       cell: ({ row }) => (
         <div className="flex gap-1">
-          {row.original.status === 'pending' && (
+          {row.original.status === 'pending' && row.original.id && (
             <>
-              <Button 
-                size="sm" 
-                variant="outline" 
+              <Button
+                size="sm"
+                variant="outline"
                 className="text-green-600"
-                onClick={() => updateExpenseMutation.mutate({ id: row.original.id, status: 'approved' })}
+                onClick={() => handleApprove(row.original.id!)}
               >
                 <CheckCircle className="h-4 w-4" />
               </Button>
-              <Button 
-                size="sm" 
-                variant="outline" 
+              <Button
+                size="sm"
+                variant="outline"
                 className="text-red-600"
-                onClick={() => updateExpenseMutation.mutate({ id: row.original.id, status: 'rejected' })}
+                onClick={() => handleReject(row.original.id!)}
               >
                 <XCircle className="h-4 w-4" />
               </Button>
@@ -218,14 +228,9 @@ export default function Expenses() {
 
   // عرض نموذج إضافة مصروف جديد
   if (view === 'add') {
-    
-  const [dialogOpen, setDialogOpen] = React.useState(false);
-  const [editItem, setEditItem] = React.useState<any>(null);
+    if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات: {(error as any)?.message}</div>;
 
-  if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>;
-
-  
-  return (
+    return (
       <div className="space-y-6" dir="rtl">
         <div className="flex items-center gap-4">
           <Button variant="ghost" onClick={() => { setView('list'); resetForm(); }}>
@@ -249,8 +254,8 @@ export default function Expenses() {
             <div className="grid gap-6 md:grid-cols-2">
               <div className="space-y-2">
                 <Label>الوصف</Label>
-                <Textarea 
-                  value={description} 
+                <Textarea
+                  value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="وصف المصروف..."
                   className="min-h-[100px]"
@@ -275,9 +280,9 @@ export default function Expenses() {
                 </div>
                 <div className="space-y-2">
                   <Label>المبلغ *</Label>
-                  <Input 
+                  <Input
                     type="number"
-                    value={amount} 
+                    value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     placeholder="مثال: 1500"
                   />
@@ -288,8 +293,8 @@ export default function Expenses() {
               <Button variant="outline" onClick={() => { setView('list'); resetForm(); }}>
                 إلغاء
               </Button>
-              <Button 
-                onClick={handleSubmit} 
+              <Button
+                onClick={handleSubmit}
                 disabled={createExpenseMutation.isPending}
               >
                 {createExpenseMutation.isPending ? 'جاري الإضافة...' : 'إضافة المصروف'}
@@ -391,25 +396,29 @@ export default function Expenses() {
           )}
         </CardContent>
       </Card>
-    
+
       {/* Dialog for Create/Edit */}
-      {dialogOpen && (<div className="mt-4 p-6 bg-white border rounded-xl shadow-sm">
-        <div>
-          <div className="mb-4 border-b pb-3">
-            <h3 className="text-lg font-bold">{editItem ? "تعديل" : "إضافة جديد"}</h3>
-          </div>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">الاسم / الوصف</label>
-              <input className="w-full border rounded-md px-3 py-2" placeholder="أدخل البيانات..." />
+      {dialogOpen && (
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <div className="mt-4 p-6 bg-white border rounded-xl shadow-sm">
+            <div>
+              <div className="mb-4 border-b pb-3">
+                <h3 className="text-lg font-bold">{editItem ? "تعديل" : "إضافة جديد"}</h3>
+              </div>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">الاسم / الوصف</label>
+                  <input className="w-full border rounded-md px-3 py-2" placeholder="أدخل البيانات..." />
+                </div>
+              </div>
+              <div className="flex gap-2 mt-4 pt-3 border-t justify-end">
+                <Button variant="outline" onClick={() => setDialogOpen(false)}>إلغاء</Button>
+                <Button onClick={() => { setDialogOpen(false); }}>حفظ</Button>
+              </div>
             </div>
           </div>
-          <div className="flex gap-2 mt-4 pt-3 border-t justify-end">
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>إلغاء</Button>
-            <Button onClick={() => { setDialogOpen(false); }}>حفظ</Button>
-          </div>
-        </div>
-      </div>)}
+        </Dialog>
+      )}
     </div>
   );
 }

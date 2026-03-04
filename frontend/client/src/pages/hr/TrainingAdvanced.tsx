@@ -141,26 +141,7 @@ export default function TrainingAdvanced() {
     return type === 'online' ? <Video className="h-4 w-4" /> : <Users className="h-4 w-4" />;
   };
 
-  if (programsLoading) {
-    if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>;
-
-
-    return (
-      <div className="flex items-center justify-center h-64" dir="rtl">
-        <div className="mb-4 flex items-center gap-2">
-          <input
-            type="text"
-            placeholder="بحث..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full md:w-64 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
-          {searchTerm && <button onClick={() => setSearchTerm('')} className="text-gray-400 hover:text-gray-600">✕</button>}
-        </div>
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+  // Remove early return
 
   return (
     <div className="space-y-6" dir="rtl">
@@ -255,7 +236,13 @@ export default function TrainingAdvanced() {
               <CardDescription>قائمة جميع الدورات المتاحة</CardDescription>
             </CardHeader>
             <CardContent className="p-0">
-              {programs.length === 0 ? (
+              {programsLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : isError ? (
+                <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>
+              ) : programs.length === 0 ? (
                 <div className="text-center py-12 text-gray-500">
                   <Inbox className="h-16 w-16 mx-auto mb-4 text-gray-300" />
                   <p className="text-lg font-medium mb-2">لا توجد دورات تدريبية</p>
@@ -495,7 +482,7 @@ export default function TrainingAdvanced() {
                 </SelectTrigger>
                 <SelectContent>
                   {employees.map((emp: any) => (
-                    <SelectItem key={emp.id} value={String(emp.id)}>{emp.fullName}</SelectItem>
+                    <SelectItem key={emp.id} value={String(emp.id)}>{emp.firstName} {emp.lastName}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

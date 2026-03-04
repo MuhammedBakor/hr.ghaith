@@ -5,10 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowRight, Send, UserPlus, Mail, Phone, Building2, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, Send, UserPlus, Mail, Phone, Building2, CheckCircle2, Shield } from 'lucide-react';
 import {
   useBranches,
-  useCreateSimpleEmployee
+  useCreateSimpleEmployee,
+  useRoles
 } from '@/services/hrService';
 import { toast } from 'sonner';
 import { useAppContext } from '@/contexts/AppContext';
@@ -21,7 +22,7 @@ export default function AddEmployeeSimple() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [createdEmployee, setCreatedEmployee] = useState<{
     employeeNumber: string;
-    activationCode: string;
+    verificationCode: string;
     requestNumber: string;
   } | null>(null);
 
@@ -33,6 +34,7 @@ export default function AddEmployeeSimple() {
     email: '',
     phone: '',
     branchId: selectedBranchId?.toString() || '',
+    role: 'USER',
   });
 
   const updateField = (field: string, value: string) => {
@@ -42,7 +44,13 @@ export default function AddEmployeeSimple() {
   // Mutation لإضافة موظف مبسط
   const createSimpleEmployeeMutation = useCreateSimpleEmployee();
   const { data: branchesData, isLoading } = useBranches();
+  const { data: rolesData } = useRoles();
   const branches = (branchesData || []).filter((b: any) => b.id);
+  const roles = (rolesData || []).filter((r: string) => r && r.trim() !== "").map((r: string) => ({
+    id: r,
+    name: r,
+    nameAr: r === 'USER' ? 'موظف' : r === 'AGENT' ? 'مندوب' : r === 'MANAGER' ? 'مدير' : r === 'OPERATIONS' ? 'تشغيل' : r === 'ADMIN' ? 'مسؤول' : r === 'OWNER' ? 'مالك' : r
+  }));
 
   const handleSubmit = async () => {
     // التحقق من الحقول المطلوبة
@@ -67,11 +75,12 @@ export default function AddEmployeeSimple() {
         email: formData.email,
         phone: formData.phone,
         branchId: formData.branchId ? parseInt(formData.branchId) : undefined,
+        role: formData.role,
       }, {
         onSuccess: (data: any) => {
           setCreatedEmployee({
             employeeNumber: data.employeeNumber,
-            activationCode: data.activationCode,
+            verificationCode: data.verificationCode,
             requestNumber: data.requestNumber,
           });
           setShowSuccess(true);
@@ -111,7 +120,7 @@ export default function AddEmployeeSimple() {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">كود التفعيل:</span>
-                <span className="font-mono font-bold text-primary">{createdEmployee.activationCode}</span>
+                <span className="font-mono font-bold text-primary">{createdEmployee.verificationCode}</span>
               </div>
             </div>
 
@@ -135,6 +144,7 @@ export default function AddEmployeeSimple() {
                   email: '',
                   phone: '',
                   branchId: selectedBranchId?.toString() || '',
+                  role: 'USER',
                 });
               }}>
                 <UserPlus className="h-4 w-4 ms-2" />
@@ -248,6 +258,34 @@ export default function AddEmployeeSimple() {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* الدور */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Shield className="h-4 w-4 text-gray-400" />
+              الدور في النظام
+            </Label>
+            <Select value={formData.role} onValueChange={(v) => updateField('role', v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="اختر الدور" />
+              </SelectTrigger>
+              <SelectContent>
+                {roles.length > 0 ? roles.map((r: any) => (
+                  <SelectItem key={r.id} value={r.id}>
+                    {r.nameAr || r.name}
+                  </SelectItem>
+                )) : (
+                  <>
+                    <SelectItem value="USER">موظف</SelectItem>
+                    <SelectItem value="AGENT">مندوب</SelectItem>
+                    <SelectItem value="MANAGER">مدير</SelectItem>
+                    <SelectItem value="OPERATIONS">تشغيل</SelectItem>
+                  </>
+                )}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-gray-500">يحدد الدور صلاحيات الموظف في النظام</p>
           </div>
 
           {/* معلومات */}

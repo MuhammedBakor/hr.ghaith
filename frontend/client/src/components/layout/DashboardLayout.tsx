@@ -113,6 +113,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const { logout, user, loading, isAuthenticated } = useAuth();
+  const {
+    selectedBranchId,
+    setSelectedBranchId,
+    currentBranch,
+    branches,
+    branchesLoading,
+    selectedRole,
+    setSelectedRole,
+    permissions,
+    canAccessModule,
+    canAccessHrSubPage,
+  } = useAppContext();
 
   // حماية الصفحات - توجيه المستخدم غير المصادق لصفحة الدخول
   useEffect(() => {
@@ -137,20 +149,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (!isAuthenticated) {
     return null;
   }
-
-  // نواة السياق - الفرع والصفة من AppContext
-  const {
-    selectedBranchId,
-    setSelectedBranchId,
-    currentBranch,
-    branches,
-    branchesLoading,
-    selectedRole,
-    setSelectedRole,
-    permissions,
-    canAccessModule,
-    canAccessHrSubPage,
-  } = useAppContext();
 
   // جميع عناصر القائمة مع تحديد الوحدة لكل عنصر
   const allNavItems: NavItem[] = [
@@ -627,11 +625,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="p-4 border-t border-gray-100">
             <div className="flex items-center gap-3">
               <Avatar>
-                <AvatarImage src={`https://ui-avatars.com/api/?name=${user?.name || roleLabels[selectedRole]}&background=random`} />
-                <AvatarFallback>{(user?.name || roleLabels[selectedRole]).substring(0, 2).toUpperCase()}</AvatarFallback>
+                <AvatarImage src={`https://ui-avatars.com/api/?name=${user?.username || roleLabels[selectedRole]}&background=random`} />
+                <AvatarFallback>{(user?.username || roleLabels[selectedRole]).substring(0, 2).toUpperCase()}</AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">{user?.name || roleLabels[selectedRole]}</p>
+                <p className="text-sm font-medium text-gray-900 truncate">{user?.username || roleLabels[selectedRole]}</p>
                 <p className="text-xs truncate" style={{ color: roleColors[selectedRole] }}>{roleLabels[selectedRole]}</p>
               </div>
               <Button variant="ghost" size="icon" onClick={handleLogout} title="تسجيل الخروج">

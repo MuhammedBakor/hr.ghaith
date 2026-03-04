@@ -24,24 +24,35 @@ public class PayrollService {
         return payrollRepository.findByEmployeeId(employeeId);
     }
 
+    @org.springframework.transaction.annotation.Transactional
     public PayrollRecord createPayroll(Map<String, Object> payload) {
-        Long employeeId = Long.valueOf(payload.get("employeeId").toString());
-        Employee employee = employeeRepository.findById(employeeId).orElseThrow();
+        Long employeeId = ((Number) payload.get("employeeId")).longValue();
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new RuntimeException("الموظف غير موجود"));
 
         PayrollRecord record = new PayrollRecord();
         record.setEmployee(employee);
-        record.setBasicSalary(Double.valueOf(payload.get("basicSalary").toString()));
-        record.setHousingAllowance(Double.valueOf(payload.get("housingAllowance").toString()));
-        record.setTransportAllowance(Double.valueOf(payload.get("transportAllowance").toString()));
-        record.setOtherAllowances(Double.valueOf(payload.get("otherAllowances").toString()));
-        record.setDeductions(Double.valueOf(payload.get("deductions").toString()));
+
+        record.setBasicSalary(
+                payload.get("basicSalary") != null ? ((Number) payload.get("basicSalary")).doubleValue() : 0.0);
+        record.setHousingAllowance(
+                payload.get("housingAllowance") != null ? ((Number) payload.get("housingAllowance")).doubleValue()
+                        : 0.0);
+        record.setTransportAllowance(
+                payload.get("transportAllowance") != null ? ((Number) payload.get("transportAllowance")).doubleValue()
+                        : 0.0);
+        record.setOtherAllowances(
+                payload.get("otherAllowances") != null ? ((Number) payload.get("otherAllowances")).doubleValue() : 0.0);
+        record.setDeductions(
+                payload.get("deductions") != null ? ((Number) payload.get("deductions")).doubleValue() : 0.0);
 
         double net = record.getBasicSalary() + record.getHousingAllowance() + record.getTransportAllowance()
                 + record.getOtherAllowances() - record.getDeductions();
         record.setNetSalary(net);
 
-        record.setMonth(payload.get("month").toString());
-        record.setYear(Integer.valueOf(payload.get("year").toString()));
+        record.setMonth(payload.get("month") != null ? payload.get("month").toString() : "");
+        record.setYear(payload.get("year") != null ? ((Number) payload.get("year")).intValue()
+                : java.time.Year.now().getValue());
         record.setStatus((String) payload.get("status"));
 
         return payrollRepository.save(record);

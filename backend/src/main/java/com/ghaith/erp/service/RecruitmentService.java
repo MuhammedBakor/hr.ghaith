@@ -79,9 +79,10 @@ public class RecruitmentService {
                 .orElseThrow(() -> new RuntimeException("الطلب غير موجود"));
         // Standardize status conversion
         try {
-            application.setStatus(JobApplication.ApplicationStatus.valueOf(status.toLowerCase()));
+            String cleanStatus = status.replace("\"", "").trim();
+            application.setStatus(JobApplication.ApplicationStatus.valueOf(cleanStatus.toLowerCase()));
         } catch (IllegalArgumentException e) {
-            // Fallback or more robust mapping if needed
+            // Log error or handle fallback
             application.setStatus(JobApplication.ApplicationStatus.pending);
         }
         return applicationRepository.save(application);

@@ -35,40 +35,40 @@ export interface TrainingEnrollment {
 export const trainingService = {
     // Programs
     getPrograms: async () => {
-        const response = await api.get<TrainingProgram[]>("/api/v1/training/programs");
+        const response = await api.get<TrainingProgram[]>("/training/programs");
         return response.data;
     },
     getProgram: async (id: number) => {
-        const response = await api.get<TrainingProgram>(`/api/v1/training/programs/${id}`);
+        const response = await api.get<TrainingProgram>(`/training/programs/${id}`);
         return response.data;
     },
     createProgram: async (data: Partial<TrainingProgram>) => {
-        const response = await api.post<TrainingProgram>("/api/v1/training/programs", data);
+        const response = await api.post<TrainingProgram>("/training/programs", data);
         return response.data;
     },
     updateProgram: async ({ id, ...data }: { id: number } & Partial<TrainingProgram>) => {
-        const response = await api.put<TrainingProgram>(`/api/v1/training/programs/${id}`, data);
+        const response = await api.put<TrainingProgram>(`/training/programs/${id}`, data);
         return response.data;
     },
     deleteProgram: async (id: number) => {
-        await api.delete(`/api/v1/training/programs/${id}`);
+        await api.delete(`/training/programs/${id}`);
     },
 
     // Enrollments
     getEnrollments: async () => {
-        const response = await api.get<TrainingEnrollment[]>("/api/v1/training/enrollments");
+        const response = await api.get<TrainingEnrollment[]>("/training/enrollments");
         return response.data;
     },
     createEnrollment: async (data: { employeeId: number, programId: number }) => {
-        const response = await api.post<TrainingEnrollment>("/api/v1/training/enrollments", data);
+        const response = await api.post<TrainingEnrollment>("/training/enrollments", data);
         return response.data;
     },
     updateEnrollment: async ({ id, ...data }: { id: number } & Partial<TrainingEnrollment>) => {
-        const response = await api.put<TrainingEnrollment>(`/api/v1/training/enrollments/${id}`, data);
+        const response = await api.put<TrainingEnrollment>(`/training/enrollments/${id}`, data);
         return response.data;
     },
     deleteEnrollment: async (id: number) => {
-        await api.delete(`/api/v1/training/enrollments/${id}`);
+        await api.delete(`/training/enrollments/${id}`);
     }
 };
 

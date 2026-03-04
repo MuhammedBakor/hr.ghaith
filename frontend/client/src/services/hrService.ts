@@ -458,3 +458,11 @@ export const useKPIs = () => useQuery({
     queryKey: ['performance-kpis'],
     queryFn: () => api.get('/hr/kpis').then(res => res.data),
 });
+
+export const useCreatePerformanceReview = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (data: any) => api.post('/hr/performance', data).then(res => res.data),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['performance-reviews'] }),
+    });
+};

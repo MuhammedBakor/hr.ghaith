@@ -1,5 +1,6 @@
 package com.ghaith.erp.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -15,21 +16,19 @@ import java.time.LocalDateTime;
 @Table(name = "training_enrollments")
 public class TrainingEnrollment extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
+    @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "program_id", nullable = false)
     private TrainingProgram program;
 
+    @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "employee_id", nullable = false)
+    @JoinColumn(name = "employee_id", referencedColumnName = "id", nullable = false)
     private Employee employee;
 
     @Builder.Default
     @Column(nullable = false)
-    private LocalDateTime enrollmentDate = LocalDateTime.now();
+    private java.time.LocalDateTime enrollmentDate = java.time.LocalDateTime.now();
 
     private LocalDateTime completionDate;
 

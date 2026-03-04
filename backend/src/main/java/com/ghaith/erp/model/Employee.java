@@ -1,5 +1,6 @@
 package com.ghaith.erp.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -14,6 +15,10 @@ import java.math.BigDecimal;
 @Table(name = "employees")
 public class Employee extends BaseEntity {
 
+    @Transient // Not persisted in employees table, but used to pass role for User creation
+    private String role;
+
+    @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
@@ -41,6 +46,7 @@ public class Employee extends BaseEntity {
     @JoinColumn(name = "branch_id")
     private HrBranch branch;
 
+    @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "manager_id")
     private Employee manager;

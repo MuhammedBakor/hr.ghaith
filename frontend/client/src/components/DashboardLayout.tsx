@@ -237,8 +237,8 @@ function QuickSearch({ onClose }: { onClose: () => void }) {
           {query.length < 2
             ? <p className="text-xs text-gray-400 text-center py-6">اكتب للبحث في جميع الوحدات</p>
             : !results?.length && !isLoading
-            ? <p className="text-xs text-gray-400 text-center py-6">لا نتائج لـ "{query}"</p>
-            : results?.map((r: any, i: number) => {
+              ? <p className="text-xs text-gray-400 text-center py-6">لا نتائج لـ "{query}"</p>
+              : results?.map((r: any, i: number) => {
                 const Icon = moduleIcons[r.module] ?? Globe;
                 const color = moduleColors[r.module] ?? "bg-gray-100 text-gray-600";
                 return (
@@ -298,7 +298,7 @@ function LayoutInner({ children, setSidebarWidth }: { children: React.ReactNode;
     refetchInterval: 30_000,
   });
 
-  const displayUser = user || { name: "زائر", email: "", role: "guest" };
+  const displayUser = user || { username: "زائر", email: "", role: "guest" };
 
   // Keyboard shortcut
   useEffect(() => {
@@ -315,6 +315,9 @@ function LayoutInner({ children, setSidebarWidth }: { children: React.ReactNode;
       if (!isResizing) return;
       const left = sidebarRef.current?.getBoundingClientRect().left ?? 0;
       const w = e.clientX - left;
+      const DEFAULT_WIDTH = 256;
+      const MIN_WIDTH = 200;
+      const MAX_WIDTH = 400;
       if (w >= MIN_WIDTH && w <= MAX_WIDTH) setSidebarWidth(w);
     };
     const onUp = () => setIsResizing(false);
@@ -431,9 +434,8 @@ function LayoutInner({ children, setSidebarWidth }: { children: React.ReactNode;
                   {!isCollapsed && (
                     <button
                       onClick={() => toggleGroup(group.label)}
-                      className={`flex items-center justify-between w-full px-4 py-1.5 text-xs font-semibold transition-colors ${
-                        hasActive ? "text-blue-700" : "text-gray-400 hover:text-gray-600"
-                      }`}
+                      className={`flex items-center justify-between w-full px-4 py-1.5 text-xs font-semibold transition-colors ${hasActive ? "text-blue-700" : "text-gray-400 hover:text-gray-600"
+                        }`}
                     >
                       <span>{group.label}</span>
                       <ChevronDown className={`w-3 h-3 transition-transform ${isOpen ? "rotate-180" : ""}`} />
@@ -494,12 +496,12 @@ function LayoutInner({ children, setSidebarWidth }: { children: React.ReactNode;
                 <button className="flex items-center gap-2.5 w-full px-2 py-2 hover:bg-gray-100 rounded-lg transition-colors text-end">
                   <Avatar className="h-8 w-8 border border-gray-200 shrink-0">
                     <AvatarFallback className="text-xs font-semibold bg-blue-100 text-blue-700">
-                      {displayUser.name?.charAt(0)?.toUpperCase() || "؟"}
+                      {(displayUser as any).username?.charAt(0)?.toUpperCase() || "؟"}
                     </AvatarFallback>
                   </Avatar>
                   {!isCollapsed && (
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-800 truncate leading-none">{displayUser.name || "زائر"}</p>
+                      <p className="text-sm font-medium text-gray-800 truncate leading-none">{(displayUser as any).username || "زائر"}</p>
                       <p className="text-xs truncate mt-0.5 leading-none" style={{ color: roleColors[selectedRole] }}>
                         {roleLabels[selectedRole]}
                       </p>
@@ -508,9 +510,9 @@ function LayoutInner({ children, setSidebarWidth }: { children: React.ReactNode;
                 </button>
               </DropdownMenuTrigger>
 
-              <DropdownMenuContent align="end" side="top" className="w-60 mb-1" dir="rtl">
+              <DropdownMenuContent align="end" side="top" className="w-60 mb-1">
                 <div className="px-3 py-2 border-b">
-                  <p className="text-sm font-semibold">{displayUser.name}</p>
+                  <p className="text-sm font-semibold">{(displayUser as any).username}</p>
                   <p className="text-xs text-gray-500">{displayUser.email}</p>
                 </div>
 

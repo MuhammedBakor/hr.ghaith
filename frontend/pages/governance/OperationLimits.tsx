@@ -9,16 +9,41 @@ interface Limit { id: number; roleId?: number; module: string; action: string; m
 export default function OperationLimits() {
   const [limits, setLimits] = useState<Limit[]>([]);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ module: 'finance', action: 'create', maxPerDay: '', maxPerMonth: '', maxAmount: '', maxDailyAmount: '', allowedFromHour: '', allowedToHour: '', allowedDays: [0,1,2,3,4] as number[] });
+  const [form, setForm] = useState({ module: 'finance', action: 'create', maxPerDay: '', maxPerMonth: '', maxAmount: '', maxDailyAmount: '', allowedFromHour: '', allowedToHour: '', allowedDays: [0, 1, 2, 3, 4] as number[] });
 
   useEffect(() => { load(); }, []);
-  const load = async () => { try { const r = await fetch('/api/trpc/admin.operationLimits.list'); const d = await r.json(); if (d?.result?.data) setLimits(d.result.data); } catch {} };
+  const load = async () => {
+    try {
+      const r = await fetch('/api/v1/admin/operation-limits');
+      const d = await r.json();
+      if (Array.isArray(d)) {
+        setLimits(d.map((l: any) => ({
+          ...l,
+          allowedDays: l.allowedDays ? l.allowedDays.split(',').map(Number) : []
+        })));
+      }
+    } catch { }
+  };
 
   const save = async () => {
     try {
-      await fetch('/api/trpc/admin.operationLimits.create', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ json: { ...form, maxPerDay: form.maxPerDay ? Number(form.maxPerDay) : null, maxPerMonth: form.maxPerMonth ? Number(form.maxPerMonth) : null, maxAmount: form.maxAmount ? Number(form.maxAmount) : null, maxDailyAmount: form.maxDailyAmount ? Number(form.maxDailyAmount) : null, allowedFromHour: form.allowedFromHour ? Number(form.allowedFromHour) : null, allowedToHour: form.allowedToHour ? Number(form.allowedToHour) : null, isActive: true } }) });
-      await load(); setShowForm(false);
+      await fetch('/api/v1/admin/operation-limits', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...form,
+          maxPerDay: form.maxPerDay ? Number(form.maxPerDay) : null,
+          maxPerMonth: form.maxPerMonth ? Number(form.maxPerMonth) : null,
+          maxAmount: form.maxAmount ? Number(form.maxAmount) : null,
+          maxDailyAmount: form.maxDailyAmount ? Number(form.maxDailyAmount) : null,
+          allowedFromHour: form.allowedFromHour ? Number(form.allowedFromHour) : null,
+          allowedToHour: form.allowedToHour ? Number(form.allowedToHour) : null,
+          allowedDays: form.allowedDays.join(','),
+          isActive: true
+        })
+      });
+      await load();
+      setShowForm(false);
     } catch (e) { console.error(e); }
   };
 
@@ -48,17 +73,17 @@ export default function OperationLimits() {
         <div className="border-2 border-blue-200 rounded-xl p-6 bg-blue-50">
           <h3 className="font-bold mb-4">حد جديد</h3>
           <div className="grid grid-cols-3 gap-4">
-            <div><label className="text-sm font-medium">الوحدة</label><select className="w-full border rounded px-3 py-2 mt-1" value={form.module} onChange={e => setForm(p => ({...p, module: e.target.value}))}>{MODULES.map(m => <option key={m}>{m}</option>)}</select></div>
-            <div><label className="text-sm font-medium">الإجراء</label><select className="w-full border rounded px-3 py-2 mt-1" value={form.action} onChange={e => setForm(p => ({...p, action: e.target.value}))}>{ACTIONS.map(a => <option key={a}>{a}</option>)}</select></div>
-            <div><label className="text-sm font-medium">حد يومي</label><input type="number" className="w-full border rounded px-3 py-2 mt-1" value={form.maxPerDay} onChange={e => setForm(p => ({...p, maxPerDay: e.target.value}))} placeholder="10" /></div>
-            <div><label className="text-sm font-medium">حد شهري</label><input type="number" className="w-full border rounded px-3 py-2 mt-1" value={form.maxPerMonth} onChange={e => setForm(p => ({...p, maxPerMonth: e.target.value}))} placeholder="200" /></div>
-            <div><label className="text-sm font-medium">حد مبلغ/عملية</label><input type="number" className="w-full border rounded px-3 py-2 mt-1" value={form.maxAmount} onChange={e => setForm(p => ({...p, maxAmount: e.target.value}))} placeholder="50000" /></div>
-            <div><label className="text-sm font-medium">حد مبلغ يومي</label><input type="number" className="w-full border rounded px-3 py-2 mt-1" value={form.maxDailyAmount} onChange={e => setForm(p => ({...p, maxDailyAmount: e.target.value}))} placeholder="100000" /></div>
-            <div><label className="text-sm font-medium">من ساعة</label><input type="number" className="w-full border rounded px-3 py-2 mt-1" value={form.allowedFromHour} onChange={e => setForm(p => ({...p, allowedFromHour: e.target.value}))} placeholder="8" min="0" max="23" /></div>
-            <div><label className="text-sm font-medium">إلى ساعة</label><input type="number" className="w-full border rounded px-3 py-2 mt-1" value={form.allowedToHour} onChange={e => setForm(p => ({...p, allowedToHour: e.target.value}))} placeholder="17" min="0" max="23" /></div>
+            <div><label className="text-sm font-medium">الوحدة</label><select className="w-full border rounded px-3 py-2 mt-1" value={form.module} onChange={e => setForm(p => ({ ...p, module: e.target.value }))}>{MODULES.map(m => <option key={m}>{m}</option>)}</select></div>
+            <div><label className="text-sm font-medium">الإجراء</label><select className="w-full border rounded px-3 py-2 mt-1" value={form.action} onChange={e => setForm(p => ({ ...p, action: e.target.value }))}>{ACTIONS.map(a => <option key={a}>{a}</option>)}</select></div>
+            <div><label className="text-sm font-medium">حد يومي</label><input type="number" className="w-full border rounded px-3 py-2 mt-1" value={form.maxPerDay} onChange={e => setForm(p => ({ ...p, maxPerDay: e.target.value }))} placeholder="10" /></div>
+            <div><label className="text-sm font-medium">حد شهري</label><input type="number" className="w-full border rounded px-3 py-2 mt-1" value={form.maxPerMonth} onChange={e => setForm(p => ({ ...p, maxPerMonth: e.target.value }))} placeholder="200" /></div>
+            <div><label className="text-sm font-medium">حد مبلغ/عملية</label><input type="number" className="w-full border rounded px-3 py-2 mt-1" value={form.maxAmount} onChange={e => setForm(p => ({ ...p, maxAmount: e.target.value }))} placeholder="50000" /></div>
+            <div><label className="text-sm font-medium">حد مبلغ يومي</label><input type="number" className="w-full border rounded px-3 py-2 mt-1" value={form.maxDailyAmount} onChange={e => setForm(p => ({ ...p, maxDailyAmount: e.target.value }))} placeholder="100000" /></div>
+            <div><label className="text-sm font-medium">من ساعة</label><input type="number" className="w-full border rounded px-3 py-2 mt-1" value={form.allowedFromHour} onChange={e => setForm(p => ({ ...p, allowedFromHour: e.target.value }))} placeholder="8" min="0" max="23" /></div>
+            <div><label className="text-sm font-medium">إلى ساعة</label><input type="number" className="w-full border rounded px-3 py-2 mt-1" value={form.allowedToHour} onChange={e => setForm(p => ({ ...p, allowedToHour: e.target.value }))} placeholder="17" min="0" max="23" /></div>
             <div><label className="text-sm font-medium">الأيام</label>
               <div className="flex gap-1 mt-1">{DAYS.map((d, i) => (
-                <button key={i} onClick={() => setForm(p => ({...p, allowedDays: p.allowedDays.includes(i) ? p.allowedDays.filter(x=>x!==i) : [...p.allowedDays, i]}))}
+                <button key={i} onClick={() => setForm(p => ({ ...p, allowedDays: p.allowedDays.includes(i) ? p.allowedDays.filter(x => x !== i) : [...p.allowedDays, i] }))}
                   className={`px-2 py-1 rounded text-xs ${form.allowedDays.includes(i) ? 'bg-blue-600 text-white' : 'bg-gray-100'}`}>{d}</button>
               ))}</div></div>
           </div>

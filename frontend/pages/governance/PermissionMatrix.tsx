@@ -49,9 +49,9 @@ export default function PermissionMatrix() {
 
   const loadPermissions = async () => {
     try {
-      const r = await fetch('/api/trpc/admin.permissions.list');
+      const r = await fetch('/api/v1/admin/permissions/matrix');
       const data = await r.json();
-      if (data?.result?.data) setPerms(data.result.data);
+      if (data) setPerms(data);
     } catch { /* use empty state */ }
   };
 
@@ -64,9 +64,10 @@ export default function PermissionMatrix() {
   const save = async () => {
     setSaving(true);
     try {
-      await fetch('/api/trpc/admin.permissions.updateMatrix', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ json: { permissions: perms } }),
+      await fetch('/api/v1/admin/permissions/matrix', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(perms),
       });
       setDirty(false);
     } catch (e) { console.error(e); }

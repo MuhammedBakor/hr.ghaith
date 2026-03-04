@@ -25,6 +25,11 @@ public class AuditLogController {
         return ResponseEntity.ok(auditLogService.getWorkflowLogs());
     }
 
+    @PostMapping("/extended")
+    public ResponseEntity<List<AuditLog>> getExtendedLogs(@RequestBody java.util.Map<String, Object> params) {
+        return ResponseEntity.ok(auditLogService.getAllLogs());
+    }
+
     @PostMapping
     public ResponseEntity<AuditLog> createLog(@RequestBody AuditLog log) {
         return ResponseEntity.ok(auditLogService.createLog(log));

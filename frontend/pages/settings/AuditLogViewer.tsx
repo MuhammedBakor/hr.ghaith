@@ -17,14 +17,18 @@ export default function AuditLogViewer() {
   const load = async () => {
     setLoading(true);
     try {
-      const params: any = { limit: pageSize, offset: page * pageSize };
-      if (actionFilter) params.action = actionFilter;
-      if (dateFrom) params.dateFrom = dateFrom;
-      if (dateTo) params.dateTo = dateTo;
-      const r = await fetch('/api/trpc/admin.auditLogsExtended.list', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ json: params }) });
+      const url = new URL('http://localhost:8080/api/v1/audit/logs');
+      url.searchParams.append('page', page.toString());
+      url.searchParams.append('size', pageSize.toString());
+      if (actionFilter) url.searchParams.append('action', actionFilter);
+
+      const r = await fetch(url.toString());
       const d = await r.json();
-      if (d?.result?.data) setLogs(Array.isArray(d.result.data) ? d.result.data : d.result.data.logs || []);
-    } catch {} setLoading(false);
+      if (Array.isArray(d)) setLogs(d);
+    } catch (error) {
+      console.error('Failed to load audit logs:', error);
+    }
+    setLoading(false);
   };
 
   const filtered = logs.filter(l => !search || (l.action + (l.userName || '') + (l.details || '')).includes(search));

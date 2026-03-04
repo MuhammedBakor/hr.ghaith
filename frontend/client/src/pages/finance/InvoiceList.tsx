@@ -1,5 +1,4 @@
-import React from "react";
-import { useState } from 'react';
+import React, { useState, useEffect } from "react";
 import { useAppContext } from '@/contexts/AppContext';
 import {
   Table,
@@ -25,11 +24,11 @@ import {
   FileText,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { trpc } from '@/lib/trpc';
+import { financeService, Invoice } from '@/services/financeService';
 import { toast } from 'sonner';
 import { PrintButton } from "@/components/PrintButton";
 import { Dialog } from "@/components/ui/dialog";
-
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 // دالة توليد رقم الفاتورة التلقائي
 const generateInvoiceNumber = () => {
@@ -37,16 +36,6 @@ const generateInvoiceNumber = () => {
   const random = Array.from(crypto.getRandomValues(new Uint8Array(4)), b => b.toString(36)).join("").substring(0, 4).toUpperCase();
   return `INV-${timestamp.slice(-4)}${random}`;
 };
-
-interface Invoice {
-  id: number;
-  invoiceNumber: string;
-  clientName?: string | null;
-  amount: string;
-  issueDate?: Date | null;
-  dueDate?: Date | null;
-  status: string;
-}
 
 type ViewMode = 'list' | 'add';
 
@@ -57,7 +46,7 @@ export default function InvoiceList() {
   const [inlineData, setInlineData] = useState<any>({});
 
   const { selectedRole: userRole } = useAppContext();
-  const canEdit = userRole === "admin" || userRole === "manager";
+  const canEdit = userRole === "admin" || userRole === "general_manager" || userRole === "finance_manager";
   const canDelete = userRole === "admin";
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -75,22 +64,24 @@ export default function InvoiceList() {
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editItem, setEditItem] = React.useState<any>(null);
 
-  const utils = trpc.useUtils();
+  const queryClient = useQueryClient();
 
   // جلب الفواتير
-  const { data: invoicesData, isLoading, refetch, isError, error } = trpc.invoices.list.useQuery();
-  const invoices: Invoice[] = invoicesData || [];
+  const { data: invoices = [], isLoading, refetch, isError, error } = useQuery({
+    queryKey: ["invoices"],
+    queryFn: () => financeService.getInvoices(),
+  });
 
   // إنشاء فاتورة جديدة
-  const createInvoiceMutation = trpc.invoices.create.useMutation({
+  const createInvoiceMutation = useMutation({
+    mutationFn: (data: Invoice) => financeService.createInvoice(data),
     onSuccess: () => {
       toast.success('تم إنشاء الفاتورة بنجاح');
-      utils.invoices.list.invalidate();
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
       setViewMode('list');
       resetForm();
-      refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error('فشل في إنشاء الفاتورة: ' + error.message);
     },
   });
@@ -111,8 +102,9 @@ export default function InvoiceList() {
     createInvoiceMutation.mutate({
       invoiceNumber: invoiceNumber,
       clientName: clientName || undefined,
-      amount: totalAmount,
-      status: status as 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled',
+      amount: parseFloat(totalAmount),
+      status: status,
+      issueDate: new Date().toISOString(),
     });
   };
 
@@ -124,9 +116,9 @@ export default function InvoiceList() {
 
   // حساب الإحصائيات
   const stats = {
-    total: invoices.reduce((sum, inv) => sum + parseFloat(inv.amount || '0'), 0),
-    paid: invoices.filter(inv => inv.status === 'paid').reduce((sum, inv) => sum + parseFloat(inv.amount || '0'), 0),
-    overdue: invoices.filter(inv => inv.status === 'overdue').reduce((sum, inv) => sum + parseFloat(inv.amount || '0'), 0),
+    total: invoices.reduce((sum, inv) => sum + parseFloat(inv.amount?.toString() || '0'), 0),
+    paid: invoices.filter(inv => inv.status === 'paid').reduce((sum, inv) => sum + parseFloat(inv.amount?.toString() || '0'), 0),
+    overdue: invoices.filter(inv => inv.status === 'overdue').reduce((sum, inv) => sum + parseFloat(inv.amount?.toString() || '0'), 0),
   };
 
   const getStatusBadge = (status: string) => {
@@ -171,11 +163,10 @@ export default function InvoiceList() {
 
   // نموذج إنشاء فاتورة جديدة
   if (viewMode === 'add') {
-
     if (isError) return (
       <div className="p-8 text-center">
         <p className="text-red-500 text-lg">حدث خطأ في تحميل البيانات</p>
-        <p className="text-gray-500 mt-2">{error?.message}</p>
+        <p className="text-gray-500 mt-2">{(error as any)?.message}</p>
       </div>
     );
 
@@ -385,23 +376,27 @@ export default function InvoiceList() {
       </Card>
 
       {/* Dialog for Create/Edit */}
-      {dialogOpen && (<div className="mt-4 p-6 bg-white border rounded-xl shadow-sm">
-        <div>
-          <div className="mb-4 border-b pb-3">
-            <h3 className="text-lg font-bold">{editItem ? "تعديل" : "إضافة جديد"}</h3>
-          </div>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">الاسم / الوصف</label>
-              <input className="w-full border rounded-md px-3 py-2" placeholder="أدخل البيانات..." />
+      {dialogOpen && (
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <div className="mt-4 p-6 bg-white border rounded-xl shadow-sm">
+            <div>
+              <div className="mb-4 border-b pb-3">
+                <h3 className="text-lg font-bold">{editItem ? "تعديل" : "إضافة جديد"}</h3>
+              </div>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">الاسم / الوصف</label>
+                  <input className="w-full border rounded-md px-3 py-2" placeholder="أدخل البيانات..." />
+                </div>
+              </div>
+              <div className="flex gap-2 mt-4 pt-3 border-t justify-end">
+                <Button variant="outline" onClick={() => setDialogOpen(false)}>إلغاء</Button>
+                <Button onClick={() => { setDialogOpen(false); }}>حفظ</Button>
+              </div>
             </div>
           </div>
-          <div className="flex gap-2 mt-4 pt-3 border-t justify-end">
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>إلغاء</Button>
-            <Button onClick={() => { setDialogOpen(false); }}>حفظ</Button>
-          </div>
-        </div>
-      </div>)}
+        </Dialog>
+      )}
     </div>
   );
 }

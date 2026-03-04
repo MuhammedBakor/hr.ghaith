@@ -10,16 +10,19 @@ export default function SessionMonitor() {
 
   const load = async () => {
     try {
-      const r = await fetch('/api/trpc/auth.sessions.list');
+      const r = await fetch('/api/v1/auth/sessions');
       const d = await r.json();
-      if (d?.result?.data) setSessions(d.result.data);
-    } catch {} finally { setLoading(false); }
+      if (Array.isArray(d)) setSessions(d);
+    } catch { } finally { setLoading(false); }
   };
 
   const terminate = async (sessionId: string) => {
     try {
-      await fetch('/api/trpc/auth.sessions.terminate', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ json: { sessionId, reason: 'admin_terminated' } }) });
+      await fetch('/api/v1/auth/sessions/terminate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, reason: 'admin_terminated' })
+      });
       await load();
     } catch (e) { console.error(e); }
   };
@@ -51,7 +54,7 @@ export default function SessionMonitor() {
               <th className="px-4 py-3 text-center">إجراء</th>
             </tr></thead>
             <tbody>{sessions.map((s, i) => (
-              <tr key={s.id} className={`${i%2===0 ? 'bg-white' : 'bg-gray-50'} ${s.isRevoked ? 'opacity-50' : ''}`}>
+              <tr key={s.id} className={`${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'} ${s.isRevoked ? 'opacity-50' : ''}`}>
                 <td className="px-4 py-2 font-medium">{s.userName || `User #${s.userId}`}</td>
                 <td className="px-4 py-2 font-mono text-sm">{s.ipAddress}</td>
                 <td className="px-4 py-2 text-sm">{parseUA(s.userAgent)}</td>

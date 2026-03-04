@@ -45,34 +45,34 @@ export interface Interview {
 export const recruitmentService = {
     // Jobs
     getJobs: async () => {
-        const response = await api.get<RecruitmentJob[]>("/api/v1/recruitment/jobs");
+        const response = await api.get<RecruitmentJob[]>("/recruitment/jobs");
         return response.data;
     },
     getJob: async (id: number) => {
-        const response = await api.get<RecruitmentJob>(`/api/v1/recruitment/jobs/${id}`);
+        const response = await api.get<RecruitmentJob>(`/recruitment/jobs/${id}`);
         return response.data;
     },
     createJob: async (data: Partial<RecruitmentJob>) => {
-        const response = await api.post<RecruitmentJob>("/api/v1/recruitment/jobs", data);
+        const response = await api.post<RecruitmentJob>("/recruitment/jobs", data);
         return response.data;
     },
     updateJob: async ({ id, ...data }: { id: number } & Partial<RecruitmentJob>) => {
-        const response = await api.put<RecruitmentJob>(`/api/v1/recruitment/jobs/${id}`, data);
+        const response = await api.put<RecruitmentJob>(`/recruitment/jobs/${id}`, data);
         return response.data;
     },
     deleteJob: async (id: number) => {
-        await api.delete(`/api/v1/recruitment/jobs/${id}`);
+        await api.delete(`/recruitment/jobs/${id}`);
     },
 
     // Applications
     getApplications: async () => {
-        const response = await api.get<JobApplication[]>("/api/v1/recruitment/applications");
+        const response = await api.get<JobApplication[]>("/recruitment/applications");
         return response.data;
     },
     updateApplicationStatus: async ({ id, status }: { id: number, status: string }) => {
         // Standardizing status to uppercase for the backend enum if needed, 
         // but the controller handles it. Let's send it clearly.
-        const response = await api.put<JobApplication>(`/api/v1/recruitment/applications/${id}/status`, status, {
+        const response = await api.put<JobApplication>(`/recruitment/applications/${id}/status`, status, {
             headers: { 'Content-Type': 'text/plain' }
         });
         return response.data;
@@ -80,11 +80,11 @@ export const recruitmentService = {
 
     // Interviews
     getInterviews: async () => {
-        const response = await api.get<Interview[]>("/api/v1/recruitment/interviews");
+        const response = await api.get<Interview[]>("/recruitment/interviews");
         return response.data;
     },
     createInterview: async (data: Partial<Interview>) => {
-        const response = await api.post<Interview>("/api/v1/recruitment/interviews", data);
+        const response = await api.post<Interview>("/recruitment/interviews", data);
         return response.data;
     }
 };

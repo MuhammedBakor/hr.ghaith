@@ -37,8 +37,20 @@ export default function PermissionChangeLog() {
 
   const load = async () => {
     try {
-      const res = await fetch('/api/trpc/admin.permissionChanges.list');
-      if (res.ok) { const d = await res.json(); if (d?.result?.data) setEntries(d.result.data); }
+      const res = await fetch('/api/v1/audit/logs');
+      if (res.ok) {
+        const d = await res.json();
+        if (Array.isArray(d)) {
+          // Filter governance logs if needed, or mapping fields
+          setEntries(d.map((l: any) => ({
+            ...l,
+            changeType: l.eventType,
+            changedByName: l.userName,
+            details: l.description,
+            createdAt: l.createdAt
+          })));
+        }
+      }
     } catch { /* */ }
     setLoading(false);
   };
@@ -76,31 +88,31 @@ export default function PermissionChangeLog() {
 
       <div className="space-y-2">
         {loading ? <div className="text-center py-8 text-gray-400">⏳ جاري التحميل...</div> :
-         filtered.length === 0 ? <div className="text-center py-12 text-gray-400"><div className="text-4xl mb-3">📋</div><p>لا توجد تغييرات مسجلة</p></div> :
-         filtered.map(e => {
-          const info = TYPE_LABELS[e.changeType] || { label: e.changeType, icon: '•', color: '' };
-          return (
-            <div key={e.id} className="border rounded-lg p-3 bg-white hover:bg-gray-50 transition-colors">
-              <div className="flex justify-between items-start">
-                <div className="flex items-start gap-3">
-                  <span className="text-xl">{info.icon}</span>
-                  <div>
-                    <span className={`font-bold text-sm ${info.color}`}>{info.label}</span>
-                    {e.targetUserName && <span className="text-gray-600 mr-2">← {e.targetUserName}</span>}
-                    {e.targetRoleName && <span className="text-blue-600 mr-2">[{e.targetRoleName}]</span>}
-                    <div className="text-xs text-gray-500 mt-1">{e.details}</div>
-                    {e.reason && <div className="text-xs text-gray-400 mt-0.5">السبب: {e.reason}</div>}
+          filtered.length === 0 ? <div className="text-center py-12 text-gray-400"><div className="text-4xl mb-3">📋</div><p>لا توجد تغييرات مسجلة</p></div> :
+            filtered.map(e => {
+              const info = TYPE_LABELS[e.changeType] || { label: e.changeType, icon: '•', color: '' };
+              return (
+                <div key={e.id} className="border rounded-lg p-3 bg-white hover:bg-gray-50 transition-colors">
+                  <div className="flex justify-between items-start">
+                    <div className="flex items-start gap-3">
+                      <span className="text-xl">{info.icon}</span>
+                      <div>
+                        <span className={`font-bold text-sm ${info.color}`}>{info.label}</span>
+                        {e.targetUserName && <span className="text-gray-600 mr-2">← {e.targetUserName}</span>}
+                        {e.targetRoleName && <span className="text-blue-600 mr-2">[{e.targetRoleName}]</span>}
+                        <div className="text-xs text-gray-500 mt-1">{e.details}</div>
+                        {e.reason && <div className="text-xs text-gray-400 mt-0.5">السبب: {e.reason}</div>}
+                      </div>
+                    </div>
+                    <div className="text-left text-xs text-gray-400">
+                      <div>{formatDate(e.createdAt)}</div>
+                      <div>بواسطة: {e.changedByName || `#${e.changedBy}`}</div>
+                      {e.ipAddress && <div className="font-mono">{e.ipAddress}</div>}
+                    </div>
                   </div>
                 </div>
-                <div className="text-left text-xs text-gray-400">
-                  <div>{formatDate(e.createdAt)}</div>
-                  <div>بواسطة: {e.changedByName || `#${e.changedBy}`}</div>
-                  {e.ipAddress && <div className="font-mono">{e.ipAddress}</div>}
-                </div>
-              </div>
-            </div>
-          );
-        })}
+              );
+            })}
       </div>
     </div>
   );

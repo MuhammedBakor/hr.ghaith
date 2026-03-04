@@ -2,7 +2,9 @@ package com.ghaith.erp.service;
 
 import com.ghaith.erp.dto.*;
 import com.ghaith.erp.model.User;
+import com.ghaith.erp.model.Employee;
 import com.ghaith.erp.repository.UserRepository;
+import com.ghaith.erp.repository.EmployeeRepository;
 import com.ghaith.erp.security.JwtService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -18,6 +20,7 @@ public class AuthenticationService {
         private final PasswordEncoder passwordEncoder;
         private final JwtService jwtService;
         private final AuthenticationManager authenticationManager;
+        private final EmployeeRepository employeeRepository;
 
         public AuthenticationResponse register(RegisterRequest request) {
                 var user = User.builder()
@@ -34,10 +37,17 @@ public class AuthenticationService {
         }
 
         public AuthenticationResponse authenticate(AuthenticationRequest request) {
-                authenticationManager.authenticate(
-                                new UsernamePasswordAuthenticationToken(
-                                                request.getEmail(),
-                                                request.getPassword()));
+                try {
+                        authenticationManager.authenticate(
+                                        new UsernamePasswordAuthenticationToken(
+                                                        request.getEmail(),
+                                                        request.getPassword()));
+                } catch (org.springframework.security.authentication.DisabledException e) {
+                        throw new RuntimeException(
+                                        "الحساب غير مفعل، يرجى تفعيل الحساب أولاً باستخدام كود التفعيل المرسل لإيميلك");
+                } catch (org.springframework.security.core.AuthenticationException e) {
+                        throw new RuntimeException("خطأ في اسم المستخدم أو كلمة المرور");
+                }
                 var user = repository.findByEmail(request.getEmail())
                                 .orElseThrow();
                 var jwtToken = jwtService.generateToken(user);
@@ -47,20 +57,32 @@ public class AuthenticationService {
         }
 
         public VerifyCodeResponse verifyCode(String code) {
-                // Mock verification logic for now
-                if (code != null && code.startsWith("GH-")) {
-                        return VerifyCodeResponse.builder()
-                                        .success(true)
-                                        .subscription(VerifyCodeResponse.SubscriptionDto.builder()
-                                                        .code(code)
-                                                        .companyName("شركة غيث للتجارة")
-                                                        .build())
-                                        .build();
-                }
-                return VerifyCodeResponse.builder()
-                                .success(false)
-                                .error("رمز التفعيل غير صحيح")
-                                .build();
+                return repository.findByVerificationCode(code)
+                                .map(user -> VerifyCodeResponse.builder()
+                                                .success(true)
+                                                .subscription(VerifyCodeResponse.SubscriptionDto.builder()
+                                                                .code(code)
+                                                                .companyName("منصة غيث - حساب موظف")
+                                                                .build())
+                                                .build())
+                                .orElseGet(() -> {
+                                        // Fallback to existing mock logic for GH- codes if necessary,
+                                        // or just return failure
+                                        if (code != null && code.startsWith("GH-")) {
+                                                return VerifyCodeResponse.builder()
+                                                                .success(true)
+                                                                .subscription(VerifyCodeResponse.SubscriptionDto
+                                                                                .builder()
+                                                                                .code(code)
+                                                                                .companyName("شركة غيث للتجارة")
+                                                                                .build())
+                                                                .build();
+                                        }
+                                        return VerifyCodeResponse.builder()
+                                                        .success(false)
+                                                        .error("رمز التفعيل غير صحيح")
+                                                        .build();
+                                });
         }
 
         public void sendResetCode(ResetCodeRequest request) {
@@ -69,12 +91,21 @@ public class AuthenticationService {
         }
 
         public void resetPassword(ResetPasswordRequest request) {
-                User user = repository.findByUsername(request.getCode())
+                User user = repository.findByVerificationCode(request.getCode())
+                                .or(() -> repository.findByUsername(request.getCode()))
                                 .or(() -> repository.findByEmail(request.getCode()))
-                                .orElseThrow(() -> new RuntimeException("المستخدم غير موجود"));
+                                .orElseThrow(() -> new RuntimeException("المستخدم غير موجود أو رمز التفعيل خاطئ"));
 
                 user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+                user.setEnabled(true);
+                user.setVerificationCode(null);
                 repository.save(user);
+
+                // If this is an employee, update their status to active
+                employeeRepository.findByUserId(user.getId()).ifPresent(employee -> {
+                        employee.setStatus(Employee.EmployeeStatus.active);
+                        employeeRepository.save(employee);
+                });
         }
 
         public UserResponse getMe() {
