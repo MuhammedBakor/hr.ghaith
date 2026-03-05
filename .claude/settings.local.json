@@ -11,7 +11,8 @@
       "Bash(curl:*)",
       "Bash(chmod +x:*)",
       "Bash(javac:*)",
-      "Bash(npx vite:*)"
+      "Bash(npx vite:*)",
+      "Bash(read f:*)"
     ]
   }
 }
