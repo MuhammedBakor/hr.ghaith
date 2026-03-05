@@ -21,7 +21,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Search, RefreshCw, AlertTriangle, Eye, CheckCircle, XCircle, Clock, Shield, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog } from "@/components/ui/dialog";
@@ -32,7 +33,7 @@ export default function AnomalyDetections() {
 
   // حالة النموذج المتكامل
   const [formData, setFormData] = useState<Record<string, any>>({ 'name': '', 'threshold': '', 'module': '' });
-  const [formErrors, setFormErrors] = useState < Record<string, string>({});
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleFieldChange = (field: string, value: any) => {
@@ -49,12 +50,10 @@ export default function AnomalyDetections() {
     return Object.keys(errors).length === 0;
   };
 
-  const saveMutation = trpc.governance.create.useMutation({
+  const saveMutation = useMutation({
+    mutationFn: (data: any) => api.post('/governance', data).then(r => r.data),
     onSuccess: () => {
-      setFormData({
-        'name': '', 'threshold': '', 'module': '',
-        onError: (e: any) => toast.error(e?.message || 'حدث خطأ')
-      });
+      setFormData({ 'name': '', 'threshold': '', 'module': '' });
       setIsSubmitting(false);
       alert('تم الحفظ بنجاح');
     },
@@ -85,7 +84,10 @@ export default function AnomalyDetections() {
   const [severityFilter, setSeverityFilter] = useState<string>("all");
 
   // جلب بيانات كشف الشذوذ من API
-  const { data: anomalyData, isLoading, refetch, isError, error } = trpc.governanceDashboard.anomalyDetections.useQuery();
+  const { data: anomalyData, isLoading, refetch, isError, error } = useQuery({
+    queryKey: ['anomaly-detections'],
+    queryFn: () => api.get('/governance/anomaly-detections').then(r => r.data),
+  });
 
 
   { !anomalyData?.length && <p className="text-center text-gray-500 py-8">لا توجد بيانات</p> }
@@ -101,14 +103,14 @@ export default function AnomalyDetections() {
     threshold: det.threshold || '-',
   }));
 
-  const filteredDetections = detections.filter((det) => {
+  const filteredDetections = detections?.filter((det: any) => {
     const matchesSearch =
       det.ruleName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       det.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === "all" || det.status === statusFilter;
     const matchesSeverity = severityFilter === "all" || det.severity === severityFilter;
     return matchesSearch && matchesStatus && matchesSeverity;
-  });
+  }) || [];
 
   const getSeverityBadge = (severity: string) => {
     switch (severity) {
@@ -136,10 +138,10 @@ export default function AnomalyDetections() {
   };
 
   const stats = {
-    total: detections.length,
-    pending: detections.filter(d => d.status === "pending").length,
-    critical: detections.filter(d => d.severity === "critical").length,
-    blocked: detections.filter(d => d.status === "blocked").length,
+    total: detections?.length || 0,
+    pending: detections?.filter((d: any) => d.status === "pending").length || 0,
+    critical: detections?.filter((d: any) => d.severity === "critical").length || 0,
+    blocked: detections?.filter((d: any) => d.status === "blocked").length || 0,
   };
 
 
@@ -295,7 +297,7 @@ export default function AnomalyDetections() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredDetections?.map((det) => (
+              {filteredDetections?.map((det: any) => (
                 <TableRow key={det.id}>
                   <TableCell className="font-medium">{det.ruleName}</TableCell>
                   <TableCell className="max-w-xs">

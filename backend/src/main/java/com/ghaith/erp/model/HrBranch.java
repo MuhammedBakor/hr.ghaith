@@ -14,10 +14,6 @@ import java.math.BigDecimal;
 @Table(name = "hr_branches")
 public class HrBranch extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
     @Column(unique = true, nullable = false, length = 20)
     private String code;
 

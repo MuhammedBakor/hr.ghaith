@@ -1,7 +1,8 @@
 import { useAppContext } from '@/contexts/AppContext';
 import React from "react";
 import { useState } from "react";
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -74,33 +75,36 @@ export default function Vendors() {
   const [editItem, setEditItem] = React.useState<any>(null);
 
   // جلب قائمة الموردين
-  const { data: vendors, isLoading, refetch, isError, error } = trpc.finance.vendors?.list?.useQuery({
-    search: searchTerm || undefined,
+  const { data: vendors, isLoading, refetch, isError, error } = useQuery({
+    queryKey: ['finance', 'vendors', searchTerm],
+    queryFn: () => api.get('/finance/vendors', { params: { search: searchTerm || undefined } }).then(r => r.data),
   });
 
   // إنشاء مورد جديد
-  const createVendorMutation = trpc.finance.vendors?.create?.useMutation({
+  const createVendorMutation = useMutation({
+    mutationFn: (data: any) => api.post('/finance/vendors', data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم إضافة المورد بنجاح");
       setViewMode('list');
       resetForm();
       refetch();
     },
-    onError: (error) => {
-      toast.error(`فشل في إضافة المورد: ${error.message}`);
+    onError: (error: any) => {
+      toast.error(`فشل في إضافة المورد: ${error?.response?.data?.message || error.message}`);
     },
   });
 
   // تحديث مورد
-  const updateVendorMutation = trpc.finance.vendors?.update?.useMutation({
+  const updateVendorMutation = useMutation({
+    mutationFn: (data: any) => api.put(`/finance/vendors/${data.id}`, data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم تحديث بيانات المورد بنجاح");
       setViewMode('list');
       setSelectedVendor(null);
       refetch();
     },
-    onError: (error) => {
-      toast.error(`فشل في تحديث المورد: ${error.message}`);
+    onError: (error: any) => {
+      toast.error(`فشل في تحديث المورد: ${error?.response?.data?.message || error.message}`);
     },
   });
 

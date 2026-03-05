@@ -1,7 +1,7 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
 /**
  * Persona-driven Inbox - صندوق الوارد التشغيلي
- * 
+ *
  * كل دور يرى مهامه فقط:
  * - المدير العام: اعتمادات كبيرة، تصعيدات، استثناءات
  * - مدير المالية: فواتير، قيود، ميزانيات
@@ -9,6 +9,7 @@ import { formatDate, formatDateTime } from '@/lib/formatDate';
  * - الموظف: مهامه الشخصية فقط
  */
 
+import React from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Inbox as InboxIcon, Clock, AlertTriangle, CheckCircle2, FileText, Users, DollarSign, Scale, Car, Building2, Eye, Check, X, ArrowUpRight } from "lucide-react";
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import api from "@/lib/api";
+import { useUser } from "@/services/authService";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Link } from "wouter";
@@ -77,9 +80,14 @@ interface InboxItem {
 }
 
 export default function Inbox() {
-  const deleteMutation = trpc.platform.notifications.delete.useMutation({ onSuccess: () => { refetch(); } });
+  const queryClient = useQueryClient();
 
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const deleteMutation = useMutation({
+    mutationFn: (data: { id: string }) => api.delete(`/inbox/notifications/${data.id}`).then(res => res.data),
+    onSuccess: () => { refetch(); },
+  });
+
+  const { data: currentUser, isError, error } = useUser();
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -91,20 +99,29 @@ export default function Inbox() {
 
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('pending');
-  
+
   // جلب المهام من API
-  const { data: tasks, isLoading, refetch } = trpc.inbox.getMyTasks.useQuery();
-  
-  const { data: stats } = trpc.inbox.getStats.useQuery();
+  const { data: tasks, isLoading, refetch } = useQuery({
+    queryKey: ['inbox-tasks'],
+    queryFn: () => api.get('/inbox/tasks').then(res => res.data),
+  });
+
+  const { data: stats } = useQuery({
+    queryKey: ['inbox-stats'],
+    queryFn: () => api.get('/inbox/stats').then(res => res.data),
+  });
+
   // تصفية المهام حسب التبويب
   const filteredTasks = tasks?.filter((task: any) => {
     if (activeTab === 'pending') return task.type === 'approval';
     if (activeTab === 'in_progress') return task.type === 'action';
     return true;
   }) || [];
-  
+
   // Mutations for approve/reject
-  const approveMutation = trpc.inbox.approve.useMutation({
+  const approveMutation = useMutation({
+    mutationFn: (data: { taskId: string; entityType: string; entityId: number }) =>
+      api.post('/inbox/approve', data).then(res => res.data),
     onSuccess: (data) => {
       if (data.success) {
         toast.success(data.message);
@@ -113,12 +130,14 @@ export default function Inbox() {
         toast.error(data.message);
       }
     },
-    onError: (error) => {
-      toast.error('حدث خطأ: ' + error.message);
+    onError: (error: any) => {
+      toast.error('حدث خطأ: ' + (error.response?.data?.message || error.message));
     },
   });
-  
-  const rejectMutation = trpc.inbox.reject.useMutation({
+
+  const rejectMutation = useMutation({
+    mutationFn: (data: { taskId: string; entityType: string; entityId: number; reason: string }) =>
+      api.post('/inbox/reject', data).then(res => res.data),
     onSuccess: (data) => {
       if (data.success) {
         toast.success(data.message);
@@ -127,19 +146,19 @@ export default function Inbox() {
         toast.error(data.message);
       }
     },
-    onError: (error) => {
-      toast.error('حدث خطأ: ' + error.message);
+    onError: (error: any) => {
+      toast.error('حدث خطأ: ' + (error.response?.data?.message || error.message));
     },
   });
-  
+
   const handleApprove = async (taskId: string, entityType: string, entityId: number) => {
     approveMutation.mutate({ taskId, entityType, entityId });
   };
-  
+
   const handleReject = async (taskId: string, entityType: string, entityId: number, reason: string) => {
     rejectMutation.mutate({ taskId, entityType, entityId, reason });
   };
-  
+
   const getPriorityBadge = (priority: string) => {
     const colors: Record<string, string> = {
       urgent: 'bg-red-500 text-white',
@@ -155,13 +174,13 @@ export default function Inbox() {
     };
     return <Badge className={colors[priority]}>{labels[priority]}</Badge>;
   };
-  
+
   const getTimeAgo = (date: Date) => {
     const now = new Date();
     const diff = now.getTime() - new Date(date).getTime();
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const days = Math.floor(hours / 24);
-    
+
     if (days > 0) return `منذ ${days} يوم`;
     if (hours > 0) return `منذ ${hours} ساعة`;
     return 'الآن';
@@ -169,7 +188,7 @@ export default function Inbox() {
 
   if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>;
 
-  
+
   return (
     <DashboardLayout>
         <div className="mb-4 flex items-center gap-2">
@@ -190,14 +209,14 @@ export default function Inbox() {
             <p className="text-muted-foreground">
               المهام والطلبات المعلقة التي تتطلب إجراءك
             </p>
-          
+
           <button onClick={() => setShowDialog(true)} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm">+ إضافة</button>
         </div>
           <Button variant="outline" onClick={() => refetch()}>
             تحديث
           </Button>
         </div>
-        
+
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-4">
           <Card>
@@ -211,7 +230,7 @@ export default function Inbox() {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="p-4 flex items-center gap-4">
               <div className="p-3 bg-red-100 rounded-full">
@@ -223,7 +242,7 @@ export default function Inbox() {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="p-4 flex items-center gap-4">
               <div className="p-3 bg-blue-100 rounded-full">
@@ -235,7 +254,7 @@ export default function Inbox() {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="p-4 flex items-center gap-4">
               <div className="p-3 bg-green-100 rounded-full">
@@ -248,7 +267,7 @@ export default function Inbox() {
             </CardContent>
           </Card>
         </div>
-        
+
         {/* Tasks Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
@@ -262,7 +281,7 @@ export default function Inbox() {
               مكتمل
             </TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value={activeTab} className="mt-4">
             {isLoading ? (
               <div className="text-center py-8 text-muted-foreground">
@@ -274,7 +293,7 @@ export default function Inbox() {
                   <InboxIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                   <h3 className="text-lg font-medium">لا توجد مهام</h3>
                   <p className="text-muted-foreground">
-                    {activeTab === 'pending' 
+                    {activeTab === 'pending'
                       ? 'لا توجد مهام معلقة تتطلب إجراءك'
                       : activeTab === 'in_progress'
                       ? 'لا توجد مهام قيد التنفيذ'
@@ -293,7 +312,7 @@ export default function Inbox() {
                           <div className={`p-3 rounded-lg ${TASK_TYPE_COLORS[item.type] || 'bg-gray-100'}`}>
                             {MODULE_ICONS[item.module] || <FileText className="h-4 w-4" />}
                           </div>
-                          
+
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
                               <h3 className="font-medium">{item.title}</h3>
@@ -311,7 +330,7 @@ export default function Inbox() {
                             </div>
                           </div>
                         </div>
-                        
+
                         {/* Right: Actions */}
                         <div className="flex items-center gap-2">
                           {(item.actions || []).map((action: any) => (
@@ -323,9 +342,9 @@ export default function Inbox() {
                                 </Button>
                               </Link>
                             ) : action.type === 'approve' ? (
-                              <Button 
+                              <Button
                                 key={action.id}
-                                variant="default" 
+                                variant="default"
                                 size="sm"
                                 className="bg-green-600 hover:bg-green-700"
                                 onClick={() => handleApprove(item.id, item.entityType, item.entityId)}
@@ -335,9 +354,9 @@ export default function Inbox() {
                                 اعتماد
                               </Button>
                             ) : action.type === 'reject' ? (
-                              <Button 
+                              <Button
                                 key={action.id}
-                                variant="destructive" 
+                                variant="destructive"
                                 size="sm"
                                 onClick={() => handleReject(item.id, item.entityType, item.entityId, 'رفض')}
                                 disabled={false}
@@ -346,9 +365,9 @@ export default function Inbox() {
                                 رفض
                               </Button>
                             ) : action.type === 'escalate' ? (
-                              <Button disabled={deleteMutation.isPending} 
+                              <Button disabled={deleteMutation.isPending}
                                 key={action.id}
-                                variant="outline" 
+                                variant="outline"
                                 size="sm"
                               >
                                 <ArrowUpRight className="h-4 w-4 ms-1" />
@@ -359,7 +378,7 @@ export default function Inbox() {
                         </div>
                       </div>
                     </CardContent>
-                  
+
                 <div className="flex gap-2 mt-2"> <button onClick={() => window.confirm("هل أنت متأكد من الحذف؟") && deleteMutation.mutate({id: item.id})} className="text-red-600 hover:text-red-800 text-sm">حذف</button></div>
               </Card>
                 ))}
@@ -367,7 +386,7 @@ export default function Inbox() {
             )}
           </TabsContent>
         </Tabs>
-      
+
         {showDialog && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowDialog(false)}>
             <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl" dir="rtl" onClick={e => e.stopPropagation()}>

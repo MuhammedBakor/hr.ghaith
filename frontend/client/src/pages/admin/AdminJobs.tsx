@@ -3,10 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
-import { trpc } from "@/lib/trpc";
+import { useQuery } from "@tanstack/react-query";
+import api from "@/lib/api";
 
 export default function AdminJobs() {
-  const { data, isLoading, isError, refetch } = trpc.automation.list.useQuery(undefined, {
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["automation", "list"],
+    queryFn: () => api.get("/api/automation/list").then(r => r.data),
     retry: 1,
     refetchOnWindowFocus: false,
   });

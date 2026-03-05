@@ -1,6 +1,7 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
 import { useState } from 'react';
-import { trpc } from '@/lib/trpc';
+import { useAuditLogs } from '@/services/systemService';
+import { useUser } from '@/services/authService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -9,13 +10,13 @@ import { History, Search, Loader2, Activity, User, Clock } from 'lucide-react';
 import { PrintButton } from "@/components/PrintButton";
 
 export default function AuditLogs() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error } = useUser();
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
-  
-  const { data: logs, isLoading } = trpc.audit.logs.useQuery({ limit: 100 });
-  
+
+  const { data: logs, isLoading } = useAuditLogs();
+
   const filteredLogs = (logs || []).filter((log: any) =>
     log.action?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     log.module?.includes(searchTerm)
@@ -24,7 +25,7 @@ export default function AuditLogs() {
   if (isLoading) {
     if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>;
 
-    
+
     return (
     <div className="flex items-center justify-center h-64" dir="rtl">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

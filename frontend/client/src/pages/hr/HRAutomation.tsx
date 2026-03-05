@@ -1,6 +1,7 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
 import { useState } from 'react';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -369,35 +370,48 @@ export default function HRAutomation() {
   const [filterStatus, setFilterStatus] = useState('all');
 
   // ── API calls ────────────────────────────────────────────────────────────
-  const { data: services = [], refetch, isLoading } = trpc.hrAutomation.list.useQuery();
-  const { data: stats }                             = trpc.hrAutomation.stats.useQuery();
-  const { data: logs = [] }                         = trpc.hrAutomation.logs.useQuery({ limit: 200 });
-
-  const initialize = trpc.hrAutomation.initialize.useMutation({
-    onSuccess: (r) => { toast.success(`تمت التهيئة: ${r.created} جديد، ${r.existing} موجود`); refetch(); },
-    onError:   (e) => toast.error(e.message),
+  const { data: services = [], refetch, isLoading } = useQuery({
+    queryKey: ['hrAutomation'],
+    queryFn: () => api.get('/hr/automation').then(res => res.data),
+  });
+  const { data: stats } = useQuery({
+    queryKey: ['hrAutomationStats'],
+    queryFn: () => api.get('/hr/automation/stats').then(res => res.data),
+  });
+  const { data: logs = [] } = useQuery({
+    queryKey: ['hrAutomationLogs'],
+    queryFn: () => api.get('/hr/automation/logs', { params: { limit: 200 } }).then(res => res.data),
   });
 
-  const toggle = trpc.hrAutomation.toggle.useMutation({
-    onSuccess: (r, vars) => {
-      toast.success(`${r.isEnabled ? '✅ تم تفعيل' : '⏸ تم إيقاف'} الخدمة`);
+  const initialize = useMutation({
+    mutationFn: (data: any) => api.post('/hr/automation/initialize', data).then(res => res.data),
+    onSuccess: (r: any) => { toast.success(`تمت التهيئة: ${r.created} جديد، ${r.existing} موجود`); refetch(); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const toggle = useMutation({
+    mutationFn: (data: any) => api.post('/hr/automation/toggle', data).then(res => res.data),
+    onSuccess: (r: any) => {
+      toast.success(`${r.isEnabled ? 'تم تفعيل' : 'تم إيقاف'} الخدمة`);
       refetch();
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e: any) => toast.error(e.message),
   });
 
-  const runNow = trpc.hrAutomation.runNow.useMutation({
-    onSuccess: (r) => {
-      if (r.success) toast.success(`✅ ${r.message} — ${r.affected} سجل`);
-      else           toast.error(`❌ ${r.message}`);
+  const runNow = useMutation({
+    mutationFn: (data: any) => api.post('/hr/automation/run-now', data).then(res => res.data),
+    onSuccess: (r: any) => {
+      if (r.success) toast.success(`${r.message} -- ${r.affected} سجل`);
+      else           toast.error(`${r.message}`);
       refetch();
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e: any) => toast.error(e.message),
   });
 
-  const update = trpc.hrAutomation.update.useMutation({
-    onSuccess: () => { toast.success('✅ حُفظت الإعدادات'); refetch(); },
-    onError:   (e) => toast.error(e.message),
+  const update = useMutation({
+    mutationFn: (data: any) => api.put('/hr/automation/update', data).then(res => res.data),
+    onSuccess: () => { toast.success('حُفظت الإعدادات'); refetch(); },
+    onError: (e: any) => toast.error(e.message),
   });
 
   // ── فلترة ────────────────────────────────────────────────────────────────

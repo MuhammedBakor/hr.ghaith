@@ -11,7 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { toast } from "sonner";
 import { ArrowDownLeft, Search, Calendar, Building2, Clock, CheckCircle2, AlertCircle, Filter, Download, Eye, Forward, MoreHorizontal, Inbox, Mail, FileInput, Printer } from "lucide-react";
 import {
@@ -78,22 +79,28 @@ export default function IncomingMail() {
   const [detailItem, setDetailItem] = useState<any>(null);
 
   // جلب قائمة الوارد
-  const { data: incomingList, isLoading, refetch, isError, error} = trpc.correspondenceSystem.incoming.list.useQuery({
-    status: filterStatus,
-    mailType: filterType,
+  const { data: incomingList, isLoading, refetch, isError, error} = useQuery({
+    queryKey: ['correspondence', 'incoming', filterStatus, filterType],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (filterStatus) params.append('status', filterStatus);
+      if (filterType) params.append('mailType', filterType);
+      return api.get(`/correspondence/incoming?${params.toString()}`).then(r => r.data);
+    },
   });
 
   // جلب الفروع
-  const { data: branches } = trpc.hrAdvanced.branches?.list?.useQuery();
+  const { data: branches } = useQuery({ queryKey: ['hr-advanced', 'branches'], queryFn: () => api.get('/hr-advanced/branches').then(r => r.data) });
 
   // إنشاء وارد جديد
-  const createMutation = trpc.correspondenceSystem.incoming.create.useMutation({
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/correspondence/incoming', data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم تسجيل الوارد بنجاح");
       setIsCreateOpen(false);
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(error.message || "حدث خطأ أثناء تسجيل الوارد");
     },
   });

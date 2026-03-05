@@ -1,20 +1,23 @@
-import React from "react";
-import { trpc } from '@/lib/trpc';
+import React, { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Shield, Key, Lock, Loader2, Inbox } from 'lucide-react';
 
 export default function IamAdvanced() {
+  const queryClient = useQueryClient();
   const confirmDelete = (fn: () => void) => { if (window.confirm("هل أنت متأكد من الحذف؟")) fn(); };
 
   const handleSubmit = () => { createMut.mutate({}); };
 
   const [searchTerm, setSearchTerm] = useState('');
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error } = useQuery({
+    queryKey: ['auth-me'],
+    queryFn: () => api.get('/auth/me').then(r => r.data),
+  });
   const userRole = currentUser?.role || 'user';
   const requiredRole = 'admin';
   const hasAccess = userRole === 'admin' || userRole === requiredRole || requiredRole === 'user';
-
-  const utils = trpc.useUtils();
 
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
@@ -22,16 +25,24 @@ export default function IamAdvanced() {
   const [showDialog, setShowDialog] = React.useState(false);
   const [formData, setFormData] = React.useState<Record<string, any>>({});
 
-  const { data: rolesData, isLoading } = trpc.controlKernel.roles.list.useQuery();
+  const { data: rolesData, isLoading } = useQuery({
+    queryKey: ['roles-list'],
+    queryFn: () => api.get('/roles').then(r => r.data),
+  });
 
-  const createMut = trpc.controlKernel.create.useMutation({ onError: (e: any) => { alert(e.message || "حدث خطأ"); }, onSuccess: () => {
-        utils.controlKernel.invalidate();
- window.location.reload(); } });
+  const createMut = useMutation({
+    mutationFn: (data: any) => api.post('/governance', data).then(r => r.data),
+    onError: (e: any) => { alert(e.message || "حدث خطأ"); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['roles-list'] });
+      window.location.reload();
+    },
+  });
   const roles = (rolesData || []) as any[];
 
   if (isLoading) {
     if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>;
-    
+
     return (
     <div className="flex items-center justify-center h-64" dir="rtl">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -99,7 +110,7 @@ export default function IamAdvanced() {
           </div>
         </CardContent>
       </Card>
-    
+
         {showDialog && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowDialog(false)}>
             <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl" dir="rtl" onClick={e => e.stopPropagation()}>

@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { useUser } from '@/services/authService';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -46,7 +48,7 @@ const calculationTypeLabels: Record<string, string> = {
 export default function SalaryComponents() {
   const confirmDelete = (fn: () => void) => { if (window.confirm("هل أنت متأكد من الحذف؟")) fn(); };
 
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useUser();
   const userRole = currentUser?.role || 'user';
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -66,9 +68,13 @@ export default function SalaryComponents() {
     description: "",
   });
 
-  const { data: components, isLoading, refetch } = trpc.hrAdvanced.salaryComponents.list.useQuery();
+  const { data: components, isLoading, refetch } = useQuery({
+    queryKey: ['salaryComponents'],
+    queryFn: () => api.get('/hr/salary-components').then(res => res.data),
+  });
 
-  const createComponentMutation = trpc.hrAdvanced.salaryComponents.create.useMutation({
+  const createComponentMutation = useMutation({
+    mutationFn: (data: any) => api.post('/hr/salary-components', data).then(res => res.data),
     onSuccess: () => {
       toast.success("تم إنشاء مكون الراتب بنجاح");
       setIsCreateOpen(false);

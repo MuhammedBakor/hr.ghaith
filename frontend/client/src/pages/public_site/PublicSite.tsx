@@ -21,7 +21,8 @@ import { Globe, FileText, Eye, Plus, Search, Filter, Edit, Trash2, ExternalLink,
 import { useState, useMemo } from "react";
 import { useReactTable, getCoreRowModel, getSortedRowModel, getFilteredRowModel, flexRender } from "@tanstack/react-table";
 import { toast } from "sonner";
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 
 interface Page {
   id: number;
@@ -35,7 +36,8 @@ interface Page {
 }
 
 export default function PublicSite() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const queryClient = useQueryClient();
+  const { data: currentUser, isError, error} = useQuery({ queryKey: ['auth', 'me'], queryFn: () => api.get('/auth/me').then(r => r.data) });
   const userRole = currentUser?.role || 'user';
 
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -61,39 +63,41 @@ export default function PublicSite() {
   });
 
   // جلب الصفحات من API
-  const { data: pagesApiData, isLoading, refetch } = trpc.publicSite.pages.list.useQuery();
+  const { data: pagesApiData, isLoading, refetch } = useQuery({ queryKey: ['publicSite', 'pages'], queryFn: () => api.get('/public-site/pages').then(r => r.data) });
 
   // Mutations
-  const createPageMutation = trpc.publicSite.pages.create.useMutation({
+  const createPageMutation = useMutation({
+    mutationFn: (data: any) => api.post('/public-site/pages', data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم إنشاء الصفحة بنجاح");
       setShowCreateDialog(false);
-      setNewPage({ title: "", slug: "", metaDescription: "", metaKeywords: "", template: "default",
-      onError: (e: any) => toast.error(e?.message || 'حدث خطأ')});
+      setNewPage({ title: "", slug: "", metaDescription: "", metaKeywords: "", template: "default" });
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`فشل إنشاء الصفحة: ${error.message}`);
     },
   });
 
-  const updatePageMutation = trpc.publicSite.pages.update.useMutation({
+  const updatePageMutation = useMutation({
+    mutationFn: (data: any) => api.put(`/public-site/pages/${data.id}`, data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم تحديث الصفحة بنجاح");
       setShowEditDialog(false);
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`فشل تحديث الصفحة: ${error.message}`);
     },
   });
 
-  const deletePageMutation = trpc.publicSite.pages.delete.useMutation({
+  const deletePageMutation = useMutation({
+    mutationFn: (data: any) => api.delete(`/public-site/pages/${data.id}`).then(r => r.data),
     onSuccess: () => {
       toast.success("تم حذف الصفحة بنجاح");
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`فشل حذف الصفحة: ${error.message}`);
     },
   });

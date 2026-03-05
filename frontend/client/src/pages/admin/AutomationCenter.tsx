@@ -22,7 +22,8 @@ import {
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Play, RefreshCw, Settings2, Activity, Zap, AlertTriangle, CheckCircle2, XCircle, Clock, Search, Filter, RotateCcw, Layers, ChevronRight, Calendar } from 'lucide-react';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation } from "@tanstack/react-query";
+import api from "@/lib/api";
 import { toast } from 'sonner';
 
 // ─── أنواع ──────────────────────────────────────────────────────────────────
@@ -69,47 +70,64 @@ export default function AutomationCenter() {
   const [tab, setTab] = useState('all');
 
   // ─── بيانات ────────────────────────────────────────────────────────────────
-  const { data: dashData, refetch: refetchDash } = trpc.automation.dashboard.useQuery(undefined, {
+  const { data: dashData, refetch: refetchDash } = useQuery({
+    queryKey: ["automation", "dashboard"],
+    queryFn: () => api.get("/api/automation/dashboard").then(r => r.data),
     refetchInterval: 30_000,
   });
 
-  const { data: servicesData, refetch: refetchServices } = trpc.automation.listAll.useQuery({
-    module:    filterModule !== 'all' ? filterModule : undefined,
-    isEnabled: filterEnabled === 'all' ? undefined : filterEnabled === 'enabled',
-    runMode:   filterMode   !== 'all' ? filterMode  : undefined,
-    search:    search || undefined,
-    pageSize:  200,
-  }, { refetchInterval: 30_000 });
+  const { data: servicesData, refetch: refetchServices } = useQuery({
+    queryKey: ["automation", "listAll", filterModule, filterEnabled, filterMode, search],
+    queryFn: () => api.get("/api/automation/list-all", { params: {
+      module:    filterModule !== 'all' ? filterModule : undefined,
+      isEnabled: filterEnabled === 'all' ? undefined : filterEnabled === 'enabled',
+      runMode:   filterMode   !== 'all' ? filterMode  : undefined,
+      search:    search || undefined,
+      pageSize:  200,
+    }}).then(r => r.data),
+    refetchInterval: 30_000,
+  });
 
-  const { data: logsData, isLoading } = trpc.automation.recentLogs.useQuery({ limit: 30 });
-  const { data: problemsData } = trpc.automation.problems.useQuery();
+  const { data: logsData, isLoading } = useQuery({
+    queryKey: ["automation", "recentLogs"],
+    queryFn: () => api.get("/api/automation/recent-logs", { params: { limit: 30 } }).then(r => r.data),
+  });
+  const { data: problemsData } = useQuery({
+    queryKey: ["automation", "problems"],
+    queryFn: () => api.get("/api/automation/problems").then(r => r.data),
+  });
 
   // ─── Mutations ────────────────────────────────────────────────────────────
-  const runService  = trpc.automation.runService.useMutation({
-    onSuccess: (r, vars) => { toast.success(`✅ تم تشغيل ${vars.serviceKey}: ${r.message}`); refetchServices(); },
-    onError: (e) => toast.error(`❌ خطأ: ${e.message}`),
+  const runService = useMutation({
+    mutationFn: (vars: { module: string; serviceKey: string }) => api.post("/api/automation/run-service", vars).then(r => r.data),
+    onSuccess: (r: any, vars) => { toast.success(`تم تشغيل ${vars.serviceKey}: ${r.message}`); refetchServices(); },
+    onError: (e: any) => toast.error(`خطأ: ${e.message}`),
   });
 
-  const toggleService = trpc.automation.toggleService.useMutation({
-    onSuccess: (_, vars) => {
-      toast.success(vars.isEnabled ? '✅ تم تفعيل الخدمة' : '🔴 تم إيقاف الخدمة');
+  const toggleService = useMutation({
+    mutationFn: (vars: { module: string; serviceKey: string; isEnabled: boolean }) => api.post("/api/automation/toggle-service", vars).then(r => r.data),
+    onSuccess: (_: any, vars: any) => {
+      toast.success(vars.isEnabled ? 'تم تفعيل الخدمة' : 'تم إيقاف الخدمة');
       refetchServices(); refetchDash();
     },
-    onError: (e) => toast.error(`❌ خطأ: ${e.message}`),
+    onError: (e: any) => toast.error(`خطأ: ${e.message}`),
   });
 
-  const initAll = trpc.automation.initAll.useMutation({
-    onSuccess: (r) => { toast.success(`✅ تهيئة ${r.totalInitialized} خدمة جديدة`); refetchServices(); refetchDash(); },
-    onError: (e) => toast.error(`❌ خطأ: ${e.message}`),
+  const initAll = useMutation({
+    mutationFn: (data: any) => api.post("/api/automation/init-all", data).then(r => r.data),
+    onSuccess: (r: any) => { toast.success(`تهيئة ${r.totalInitialized} خدمة جديدة`); refetchServices(); refetchDash(); },
+    onError: (e: any) => toast.error(`خطأ: ${e.message}`),
   });
 
-  const runAll = trpc.automation.runAll.useMutation({
-    onSuccess: (r) => { toast.success(`✅ تشغيل ${r.succeeded}/${r.ran} خدمة بنجاح`); refetchServices(); },
-    onError: (e) => toast.error(`❌ خطأ: ${e.message}`),
+  const runAll = useMutation({
+    mutationFn: (data: any) => api.post("/api/automation/run-all", data).then(r => r.data),
+    onSuccess: (r: any) => { toast.success(`تشغيل ${r.succeeded}/${r.ran} خدمة بنجاح`); refetchServices(); },
+    onError: (e: any) => toast.error(`خطأ: ${e.message}`),
   });
 
-  const clearCache = trpc.automation.clearCache.useMutation({
-    onSuccess: () => { toast.success('✅ تم مسح الكاش'); refetchDash(); refetchServices(); },
+  const clearCache = useMutation({
+    mutationFn: (data: any) => api.post("/api/automation/clear-cache", data).then(r => r.data),
+    onSuccess: () => { toast.success('تم مسح الكاش'); refetchDash(); refetchServices(); },
   });
 
   // ─── إحصاءات ──────────────────────────────────────────────────────────────

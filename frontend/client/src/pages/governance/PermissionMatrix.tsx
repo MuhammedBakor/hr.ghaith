@@ -1,14 +1,17 @@
 import { useState } from "react";
+import { useQuery } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Search, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { trpc } from "@/lib/trpc";
 
 export default function PermissionMatrix() {
   const [search, setSearch] = useState("");
-  const { data, isLoading, isError, refetch } = trpc.rolePacks.list.useQuery(undefined, {
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ['role-packs-list'],
+    queryFn: () => api.get('/role-packs').then(r => r.data),
     retry: 1,
     refetchOnWindowFocus: false,
   });

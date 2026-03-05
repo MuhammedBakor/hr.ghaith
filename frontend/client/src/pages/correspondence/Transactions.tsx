@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { toast } from "sonner";
 import { FileStack, Search, FileText, Calendar, User, Clock, CheckCircle2, Filter, Eye, RotateCcw, MoreHorizontal, Link2, History, Hash } from "lucide-react";
 import {
@@ -59,7 +60,7 @@ const statusOptions = [
 export default function Transactions() {
   const confirmDelete = (fn: () => void) => { if (window.confirm("هل أنت متأكد من الحذف؟")) fn(); };
 
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useQuery({ queryKey: ['auth', 'me'], queryFn: () => api.get('/auth/me').then(r => r.data) });
   const userRole = currentUser?.role || 'user';
 
   const { user } = useAuth();
@@ -74,28 +75,35 @@ export default function Transactions() {
   const [historyItem, setHistoryItem] = useState<any>(null);
 
   // جلب قائمة المعاملات
-  const { data: transactionsList, isLoading, refetch } = trpc.correspondenceSystem.transactions.list.useQuery({
-    status: filterStatus,
-    transactionType: filterType,
+  const { data: transactionsList, isLoading, refetch } = useQuery({
+    queryKey: ['correspondence', 'transactions', filterStatus, filterType],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (filterStatus) params.append('status', filterStatus);
+      if (filterType) params.append('transactionType', filterType);
+      return api.get(`/correspondence/transactions?${params.toString()}`).then(r => r.data);
+    },
   });
 
   // جلب الفروع
-  const { data: branches } = trpc.hrAdvanced.branches?.list?.useQuery();
+  const { data: branches } = useQuery({ queryKey: ['hr-advanced', 'branches'], queryFn: () => api.get('/hr-advanced/branches').then(r => r.data) });
 
   // إنشاء معاملة جديدة
-  const createMutation = trpc.correspondenceSystem.transactions.create.useMutation({
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/correspondence/transactions', data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم إنشاء المعاملة بنجاح");
       setIsCreateOpen(false);
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(error.message || "حدث خطأ أثناء إنشاء المعاملة");
     },
   });
 
   // إعادة معاملة
-  const returnMutation = trpc.correspondenceSystem.transactions.return.useMutation({
+  const returnMutation = useMutation({
+    mutationFn: (data: any) => api.post(`/correspondence/transactions/${data.transactionId}/return`, data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم إعادة المعاملة بنجاح");
       setIsReturnOpen(false);
@@ -103,16 +111,17 @@ export default function Transactions() {
       setReturnReason("");
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(error.message || "حدث خطأ أثناء إعادة المعاملة");
     },
   });
 
   // جلب سجل حركة المعاملة
-  const { data: historyData } = trpc.correspondenceSystem.transactions.getHistory.useQuery(
-    { transactionId: historyItem?.id },
-    { enabled: !!historyItem }
-  );
+  const { data: historyData } = useQuery({
+    queryKey: ['correspondence', 'transactions', 'history', historyItem?.id],
+    queryFn: () => api.get(`/correspondence/transactions/${historyItem?.id}/history`).then(r => r.data),
+    enabled: !!historyItem
+  });
 
   const handleCreateSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

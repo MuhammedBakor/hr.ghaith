@@ -10,7 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { toast } from "sonner";
 import { Send, Search, FileText, Calendar, User, Clock, CheckCircle2, AlertCircle, Filter, Download, Eye, Printer, MoreHorizontal, ArrowUpRight, Mail, Stamp } from "lucide-react";
 import {
@@ -60,7 +61,7 @@ export default function OutgoingMail() {
 
   const [showInlineForm, setShowInlineForm] = useState(false);
 
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useQuery({ queryKey: ['auth', 'me'], queryFn: () => api.get('/auth/me').then(r => r.data) });
   const userRole = currentUser?.role || 'user';
 
   const { user } = useAuth();
@@ -70,22 +71,28 @@ export default function OutgoingMail() {
   const [filterType, setFilterType] = useState<string | undefined>();
 
   // جلب قائمة الصادر
-  const { data: outgoingList, isLoading, refetch } = trpc.correspondenceSystem.outgoing.list.useQuery({
-    status: filterStatus,
-    mailType: filterType,
+  const { data: outgoingList, isLoading, refetch } = useQuery({
+    queryKey: ['correspondence', 'outgoing', filterStatus, filterType],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (filterStatus) params.append('status', filterStatus);
+      if (filterType) params.append('mailType', filterType);
+      return api.get(`/correspondence/outgoing?${params.toString()}`).then(r => r.data);
+    },
   });
 
   // جلب الفروع
-  const { data: branches } = trpc.hrAdvanced.branches?.list?.useQuery();
+  const { data: branches } = useQuery({ queryKey: ['hr-advanced', 'branches'], queryFn: () => api.get('/hr-advanced/branches').then(r => r.data) });
 
   // إنشاء صادر جديد
-  const createMutation = trpc.correspondenceSystem.outgoing.create.useMutation({
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/correspondence/outgoing', data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم إنشاء الصادر بنجاح");
       setIsCreateOpen(false);
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(error.message || "حدث خطأ أثناء إنشاء الصادر");
     },
   });
@@ -94,10 +101,11 @@ export default function OutgoingMail() {
   const [selectedBranchId, setSelectedBranchId] = useState<number | null>(null);
   const [printItem, setPrintItem] = useState<any>(null);
   const [detailItem, setDetailItem] = useState<any>(null);
-  const { data: letterheadCheck } = trpc.correspondenceSystem.letterhead.checkAvailability.useQuery(
-    { branchId: selectedBranchId! },
-    { enabled: !!selectedBranchId }
-  );
+  const { data: letterheadCheck } = useQuery({
+    queryKey: ['correspondence', 'letterhead', 'check', selectedBranchId],
+    queryFn: () => api.get(`/correspondence/letterhead/check-availability?branchId=${selectedBranchId}`).then(r => r.data),
+    enabled: !!selectedBranchId
+  });
 
   const handleCreateSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

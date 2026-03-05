@@ -1,12 +1,14 @@
 import React from "react";
 import { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { trpc } from '../../lib/trpc';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
 
 export default function LeaveTypesPage() {
+  const queryClient = useQueryClient();
   const [showInlineForm, setShowInlineForm] = useState(false);
   const [inlineData, setInlineData] = useState<any>({});
 
@@ -19,12 +21,27 @@ export default function LeaveTypesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
 
-  const { data, isLoading, refetch, isError, error } = trpc.leaveTypes.list.useQuery({});
+  const { data, isLoading, refetch, isError, error } = useQuery({
+    queryKey: ['leaveTypes'],
+    queryFn: () => api.get('/hr/leave-types').then(res => res.data),
+  });
   const list = (data || []) as any[];
 
-  const createMut = trpc.leaveTypes.create.useMutation({ onSuccess: () => { refetch(); setOpen(false); resetForm(); }, onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
-  const updateMut = trpc.leaveTypes.update.useMutation({ onSuccess: () => { refetch(); setOpen(false); resetForm(); }, onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
-  const deleteMut = trpc.leaveTypes.delete.useMutation({ onSuccess: () => refetch(), onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
+  const createMut = useMutation({
+    mutationFn: (data: any) => api.post('/hr/leave-types', data).then(res => res.data),
+    onSuccess: () => { refetch(); setOpen(false); resetForm(); },
+    onError: (e: any) => { alert(e.message || "حدث خطأ"); },
+  });
+  const updateMut = useMutation({
+    mutationFn: ({ id, ...data }: any) => api.put(`/hr/leave-types/${id}`, data).then(res => res.data),
+    onSuccess: () => { refetch(); setOpen(false); resetForm(); },
+    onError: (e: any) => { alert(e.message || "حدث خطأ"); },
+  });
+  const deleteMut = useMutation({
+    mutationFn: ({ id }: any) => api.delete(`/hr/leave-types/${id}`),
+    onSuccess: () => refetch(),
+    onError: (e: any) => { alert(e.message || "حدث خطأ"); },
+  });
 
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
@@ -101,9 +118,9 @@ export default function LeaveTypesPage() {
                 {list?.filter((item: any) => !searchTerm || JSON.stringify(item).toLowerCase().includes(searchTerm.toLowerCase()))?.map((item: any, idx: number) => (
                   <tr key={item.id || idx} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm">{item.id || idx + 1}</td>
-                    <td className="px-4 py-3 text-sm">{String(item.name || "—")}</td>
-                    <td className="px-4 py-3 text-sm">{String(item.nameAr || "—")}</td>
-                    <td className="px-4 py-3 text-sm">{String(item.daysAllowed || "—")}</td>
+                    <td className="px-4 py-3 text-sm">{String(item.name || "\u2014")}</td>
+                    <td className="px-4 py-3 text-sm">{String(item.nameAr || "\u2014")}</td>
+                    <td className="px-4 py-3 text-sm">{String(item.daysAllowed || "\u2014")}</td>
                     <td className="px-4 py-3 text-sm space-x-2 space-x-reverse">
                       <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-800">تعديل</button>
                       {deleteConfirm === item.id ? (

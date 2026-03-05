@@ -1,21 +1,24 @@
 import { useState } from "react";
+import { useQuery } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { trpc } from "@/lib/trpc";
 
 export default function SessionMonitor() {
   const [search, setSearch] = useState("");
-  const { data, isLoading, isError, refetch } = trpc.sessions.list.useQuery(undefined, {
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ['sessions-list'],
+    queryFn: () => api.get('/sessions').then(r => r.data),
     retry: 1,
     refetchOnWindowFocus: false,
   });
 
   const items = Array.isArray(data) ? data : (data as any)?.items || (data as any)?.logs || [];
-  const filtered = search 
-    ? items.filter((item: any) => 
+  const filtered = search
+    ? items.filter((item: any) =>
         JSON.stringify(item).toLowerCase().includes(search.toLowerCase())
       )
     : items;

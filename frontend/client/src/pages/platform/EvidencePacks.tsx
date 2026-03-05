@@ -26,11 +26,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Progress } from "@/components/ui/progress";
 import { Search, Eye, Trash2, FileText, Image, Video, FileAudio, File, CheckCircle, Clock, Send, Loader2, RefreshCw, Download, Share2, Package, CheckCircle2, User } from "lucide-react";
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { toast } from "sonner";
 
 export default function EvidencePacks() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useQuery({ queryKey: ['auth', 'me'], queryFn: () => api.get('/auth/me').then(r => r.data) });
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -51,63 +52,68 @@ export default function EvidencePacks() {
   });
 
   // Fetch evidence packs
-  const { data: packs = [], isLoading, refetch } = trpc.evidencePacks.list.useQuery();
-  const { data: stats } = trpc.evidencePacks.stats.useQuery();
-  const { data: selectedPackFiles = [] } = trpc.evidencePacks.files.list.useQuery(
-    { packId: selectedPack?.id || 0 },
-    { enabled: !!selectedPack }
-  );
+  const { data: packs = [], isLoading, refetch } = useQuery({ queryKey: ['evidencePacks', 'list'], queryFn: () => api.get('/evidence-packs').then(r => r.data) });
+  const { data: stats } = useQuery({ queryKey: ['evidencePacks', 'stats'], queryFn: () => api.get('/evidence-packs/stats').then(r => r.data) });
+  const { data: selectedPackFiles = [] } = useQuery({
+    queryKey: ['evidencePacks', 'files', selectedPack?.id],
+    queryFn: () => api.get(`/evidence-packs/${selectedPack?.id}/files`).then(r => r.data),
+    enabled: !!selectedPack
+  });
 
   // Mutations
-  const createMutation = trpc.evidencePacks.create.useMutation({
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/evidence-packs', data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم إنشاء حزمة الأدلة بنجاح");
       setIsCreateDialogOpen(false);
-      setFormData({ title: "", description: "", caseNumber: "", caseType: "", location: "",
-      onError: (e: any) => toast.error(e?.message || 'حدث خطأ')});
+      setFormData({ title: "", description: "", caseNumber: "", caseType: "", location: "" });
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error("فشل في إنشاء حزمة الأدلة: " + error.message);
     },
   });
 
-  const deleteMutation = trpc.evidencePacks.delete.useMutation({
+  const deleteMutation = useMutation({
+    mutationFn: (data: any) => api.delete(`/evidence-packs/${data.id}`).then(r => r.data),
     onSuccess: () => {
       toast.success("تم حذف حزمة الأدلة بنجاح");
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error("فشل في حذف حزمة الأدلة: " + error.message);
     },
   });
 
-  const submitMutation = trpc.evidencePacks.submit.useMutation({
+  const submitMutation = useMutation({
+    mutationFn: (data: any) => api.post(`/evidence-packs/${data.id}/submit`).then(r => r.data),
     onSuccess: () => {
       toast.success("تم تقديم حزمة الأدلة للمراجعة");
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error("فشل في تقديم حزمة الأدلة: " + error.message);
     },
   });
 
-  const approveMutation = trpc.evidencePacks.approve.useMutation({
+  const approveMutation = useMutation({
+    mutationFn: (data: any) => api.post(`/evidence-packs/${data.id}/approve`).then(r => r.data),
     onSuccess: () => {
       toast.success("تم اعتماد حزمة الأدلة");
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error("فشل في اعتماد حزمة الأدلة: " + error.message);
     },
   });
 
-  const verifyFileMutation = trpc.evidencePacks.files.verify.useMutation({
+  const verifyFileMutation = useMutation({
+    mutationFn: (data: any) => api.post(`/evidence-packs/files/${data.id}/verify`).then(r => r.data),
     onSuccess: () => {
       toast.success("تم التحقق من الملف");
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error("فشل في التحقق من الملف: " + error.message);
     },
   });

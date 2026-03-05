@@ -20,7 +20,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Search, RefreshCw, Shield, Users, CheckCircle, XCircle, Clock, Eye, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog } from "@/components/ui/dialog";
@@ -31,7 +32,7 @@ export default function DualControl() {
 
   // حالة النموذج المتكامل
   const [formData, setFormData] = useState<Record<string, any>>({ 'operation': '', 'requiredApprovers': '', 'module': '' });
-  const [formErrors, setFormErrors] = useState < Record<string, string>({});
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleFieldChange = (field: string, value: any) => {
@@ -48,11 +49,11 @@ export default function DualControl() {
     return Object.keys(errors).length === 0;
   };
 
-  const saveMutation = trpc.governance.create.useMutation({
+  const saveMutation = useMutation({
+    mutationFn: (data: any) => api.post('/governance', data).then(r => r.data),
     onSuccess: () => {
       setFormData({
         'operation': '', 'requiredApprovers': '', 'module': '',
-        onError: (e: any) => toast.error(e?.message || 'حدث خطأ')
       });
       setIsSubmitting(false);
       alert('تم الحفظ بنجاح');
@@ -72,7 +73,10 @@ export default function DualControl() {
   const [showInlineForm, setShowInlineForm] = useState(false);
   const [inlineData, setInlineData] = useState<any>({});
 
-  const { data: currentUser, isError, error } = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error } = useQuery({
+    queryKey: ['auth', 'me'],
+    queryFn: () => api.get('/auth/me').then(r => r.data),
+  });
   const userRole = currentUser?.role || 'user';
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -82,7 +86,10 @@ export default function DualControl() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
   // جلب طلبات الرقابة المزدوجة من API
-  const { data: dualControlData, isLoading, refetch } = trpc.governanceDashboard.dualControlRequests.useQuery();
+  const { data: dualControlData, isLoading, refetch } = useQuery({
+    queryKey: ['governance', 'dualControlRequests'],
+    queryFn: () => api.get('/governance/dual-control-requests').then(r => r.data),
+  });
 
 
   { !dualControlData?.length && <p className="text-center text-gray-500 py-8">لا توجد بيانات</p> }

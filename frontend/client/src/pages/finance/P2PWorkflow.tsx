@@ -25,7 +25,8 @@ import { Dialog } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { ShoppingCart, CheckCircle2, FileText, CreditCard, BookOpen, Plus, Upload, Clock, CheckCircle, XCircle, Loader2, ChevronRight, Send, Eye, RefreshCw, Trash2 } from "lucide-react";
 
 // أنواع البيانات
@@ -66,41 +67,50 @@ export default function P2PWorkflow() {
   const [selectedPOId, setSelectedPOId] = useState<number | null>(null);
   
   // جلب طلبات الشراء من API
-  const { data: purchaseOrders, isLoading, refetch, isError, error} = trpc.finance.purchaseOrders?.list?.useQuery({});
-  
+  const { data: purchaseOrders, isLoading, refetch, isError, error} = useQuery({
+    queryKey: ['finance', 'purchase-orders'],
+    queryFn: () => api.get('/finance/purchase-orders').then(r => r.data),
+  });
+
   // جلب الموردين من API
-  const { data: vendors } = trpc.finance.vendors?.list?.useQuery({});
-  
+  const { data: vendors } = useQuery({
+    queryKey: ['finance', 'vendors'],
+    queryFn: () => api.get('/finance/vendors').then(r => r.data),
+  });
+
   // Mutations
-  const createPOMutation = trpc.finance.purchaseOrders?.create?.useMutation({
+  const createPOMutation = useMutation({
+    mutationFn: (data: any) => api.post('/finance/purchase-orders', data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم إنشاء طلب الشراء بنجاح");
       setShowNewRequestDialog(false);
       resetForm();
       refetch();
     },
-    onError: (error) => {
-      toast.error(`فشل إنشاء الطلب: ${error.message}`);
+    onError: (error: any) => {
+      toast.error(`فشل إنشاء الطلب: ${error?.response?.data?.message || error.message}`);
     },
   });
-  
-  const submitPOMutation = trpc.finance.purchaseOrders?.submit?.useMutation({
+
+  const submitPOMutation = useMutation({
+    mutationFn: (data: any) => api.put(`/finance/purchase-orders/${data.id}/submit`, data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم تقديم الطلب للاعتماد");
       refetch();
     },
-    onError: (error) => {
-      toast.error(`فشل تقديم الطلب: ${error.message}`);
+    onError: (error: any) => {
+      toast.error(`فشل تقديم الطلب: ${error?.response?.data?.message || error.message}`);
     },
   });
-  
-  const approvePOMutation = trpc.finance.purchaseOrders?.approve?.useMutation({
+
+  const approvePOMutation = useMutation({
+    mutationFn: (data: any) => api.put(`/finance/purchase-orders/${data.id}/approve`, data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم اعتماد الطلب بنجاح");
       refetch();
     },
-    onError: (error) => {
-      toast.error(`فشل اعتماد الطلب: ${error.message}`);
+    onError: (error: any) => {
+      toast.error(`فشل اعتماد الطلب: ${error?.response?.data?.message || error.message}`);
     },
   });
   

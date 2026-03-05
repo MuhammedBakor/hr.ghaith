@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { useUser } from '@/services/authService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,7 +20,7 @@ export default function Roles() {
 
   // حالة النموذج المتكامل
   const [formData, setFormData] = useState<Record<string, any>>({ 'name': '', 'description': '', 'permissions': '' });
-  const [formErrors, setFormErrors] = useState < Record<string, string>({});
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleFieldChange = (field: string, value: any) => {
@@ -35,11 +37,15 @@ export default function Roles() {
     return Object.keys(errors).length === 0;
   };
 
-  const saveMutation = trpc.admin.create.useMutation({
+  const queryClient = useQueryClient();
+
+  const saveMutation = useMutation({
+    mutationFn: (data: any) => api.post('/admin/roles', data).then(res => res.data),
     onSuccess: () => {
       setFormData({ 'name': '', 'description': '', 'permissions': '' });
       setIsSubmitting(false);
       toast.success('تم الحفظ بنجاح');
+      queryClient.invalidateQueries({ queryKey: ['roles-list'] });
     },
     onError: (err: any) => {
       setIsSubmitting(false);
@@ -53,7 +59,7 @@ export default function Roles() {
     saveMutation.mutate(formData);
   };
 
-  const { data: currentUser, isError, error } = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error } = useUser();
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -61,20 +67,24 @@ export default function Roles() {
   const [selectedRole, setSelectedRole] = useState<any>(null);
   const [showPermissionsDialog, setShowPermissionsDialog] = useState(false);
 
-  const utils = trpc.useUtils();
-  const { data: roles, isLoading } = trpc.controlKernel.roles?.list?.useQuery();
+  const { data: roles, isLoading } = useQuery({
+    queryKey: ['roles-list'],
+    queryFn: () => api.get('/roles').then(res => res.data),
+  });
 
   // جلب صلاحيات الدور المحدد
-  const { data: rolePermissions, isLoading: isLoadingPermissions } = trpc.controlKernel.roles?.getPermissions?.useQuery(
-    { roleId: selectedRole?.id },
-    { enabled: !!selectedRole?.id && showPermissionsDialog }
-  );
+  const { data: rolePermissions, isLoading: isLoadingPermissions } = useQuery({
+    queryKey: ['role-permissions', selectedRole?.id],
+    queryFn: () => api.get(`/roles/${selectedRole?.id}/permissions`).then(res => res.data),
+    enabled: !!selectedRole?.id && showPermissionsDialog,
+  });
 
   // Seed defaults mutation
-  const seedDefaultsMutation = trpc.controlKernel.roles?.seedDefaults?.useMutation({
+  const seedDefaultsMutation = useMutation({
+    mutationFn: () => api.post('/roles/seed-defaults').then(res => res.data),
     onSuccess: () => {
       toast.success('تم تهيئة الأدوار الافتراضية بنجاح');
-      utils.controlKernel.roles?.list?.invalidate();
+      queryClient.invalidateQueries({ queryKey: ['roles-list'] });
     },
     onError: (error: any) => {
       toast.error('فشل في تهيئة الأدوار: ' + error.message);
@@ -216,7 +226,7 @@ export default function Roles() {
           <p className="text-gray-500">إدارة أدوار وصلاحيات النظام</p>
         </div>
         <Button
-          onClick={() => seedDefaultsMutation.mutate({})}
+          onClick={() => seedDefaultsMutation.mutate()}
           disabled={seedDefaultsMutation.isPending}
           variant="outline"
         >

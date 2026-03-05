@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -68,7 +69,7 @@ const statusIcons: Record<string, React.ReactNode> = {
 };
 
 export default function ProjectTasks() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useQuery({ queryKey: ['auth', 'me'], queryFn: () => api.get('/auth/me').then(r => r.data) });
   const userRole = currentUser?.role || 'user';
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -76,7 +77,7 @@ export default function ProjectTasks() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
-  
+
   const [newTask, setNewTask] = useState<{
     projectId: number;
     title: string;
@@ -93,12 +94,14 @@ export default function ProjectTasks() {
     estimatedHours: "",
   });
 
-  const { data: tasks, isLoading, refetch } = trpc.projects.tasks?.list?.useQuery(
-    selectedProjectId ? { projectId: selectedProjectId } : undefined
-  );
-  const { data: projects } = trpc.projects?.list?.useQuery();
+  const { data: tasks, isLoading, refetch } = useQuery({
+    queryKey: ['projects', 'tasks', selectedProjectId],
+    queryFn: () => api.get(selectedProjectId ? `/projects/tasks?projectId=${selectedProjectId}` : '/projects/tasks').then(r => r.data),
+  });
+  const { data: projects } = useQuery({ queryKey: ['projects', 'list'], queryFn: () => api.get('/projects').then(r => r.data) });
 
-  const createTaskMutation = trpc.projects.tasks?.create?.useMutation({
+  const createTaskMutation = useMutation({
+    mutationFn: (data: any) => api.post('/projects/tasks', data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم إنشاء المهمة بنجاح");
       setIsCreateOpen(false);
@@ -109,30 +112,32 @@ export default function ProjectTasks() {
         priority: "medium",
         status: "todo",
         estimatedHours: "",
-      onError: (e: any) => toast.error(e?.message || 'حدث خطأ')});
+      });
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(error.message);
     },
   });
 
-  const updateTaskMutation = trpc.projects.tasks?.update?.useMutation({
+  const updateTaskMutation = useMutation({
+    mutationFn: (data: any) => api.put(`/projects/tasks/${data.id}`, data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم تحديث المهمة بنجاح");
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(error.message);
     },
   });
 
-  const deleteTaskMutation = trpc.projects.tasks?.delete?.useMutation({
+  const deleteTaskMutation = useMutation({
+    mutationFn: (data: any) => api.delete(`/projects/tasks/${data.id}`).then(r => r.data),
     onSuccess: () => {
       toast.success("تم حذف المهمة بنجاح");
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(error.message);
     },
   });

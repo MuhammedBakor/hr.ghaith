@@ -2,7 +2,8 @@ import { formatDate, formatDateTime } from '@/lib/formatDate';
 import React from "react";
 import { useState, useMemo } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { trpc } from '../../lib/trpc';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 
 type InboxItem = {
   id: string;
@@ -26,7 +27,7 @@ export default function UnifiedInbox() {
   const handleSubmit = () => { createMut.mutate({}); };
 
   const [searchTerm, setSearchTerm] = useState('');
-  const utils = trpc.useUtils();
+  const queryClient = useQueryClient();
 
   const { selectedRole: userRole } = useAppContext();
   const canEdit = userRole === "admin" || userRole === "manager";
@@ -43,12 +44,12 @@ export default function UnifiedInbox() {
   const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'all'>('pending');
   
   // جلب كل البيانات المعلقة
-  const { data: pendingBalances = [] } = trpc.admin.pendingBalances.list.useQuery({ status: 'pending' });
-  const { data: reserves = [], isError, error} = trpc.reserves.list.useQuery({ status: 'requested' });
-  const { data: leavesPending = [] } = trpc.hr.leaves.list.useQuery();
+  const { data: pendingBalances = [] } = useQuery({ queryKey: ['admin', 'pendingBalances', 'pending'], queryFn: () => api.get('/api/pending-balances', { params: { status: 'pending' } }).then(r => r.data) });
+  const { data: reserves = [], isError, error} = useQuery({ queryKey: ['reserves', 'requested'], queryFn: () => api.get('/api/reserves', { params: { status: 'requested' } }).then(r => r.data) });
+  const { data: leavesPending = [] } = useQuery({ queryKey: ['hr', 'leaves'], queryFn: () => api.get('/api/hr/leaves').then(r => r.data) });
 
-  const createMut = trpc.admin.create.useMutation({ onError: (e: any) => { alert(e.message || "حدث خطأ"); }, onSuccess: () => {
-        utils.admin.invalidate();
+  const createMut = useMutation({ mutationFn: (data: any) => api.post('/api/admin', data).then(r => r.data), onError: (e: any) => { alert(e.message || "حدث خطأ"); }, onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['admin'] });
  window.location.reload(); } });
   
   // تحويل كل شيء لـ inbox items

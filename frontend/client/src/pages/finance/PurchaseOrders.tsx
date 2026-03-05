@@ -2,7 +2,8 @@ import { formatDate, formatDateTime } from '@/lib/formatDate';
 import { useAppContext } from '@/contexts/AppContext';
 import React from "react";
 import { useState } from "react";
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -90,31 +91,40 @@ export default function PurchaseOrders() {
     unit: string;
   }>>([{ description: "", quantity: 1, unitPrice: 0, unit: "وحدة" }]);
   
-  const { data: purchaseOrders, isLoading, refetch, isError, error} = trpc.finance.purchaseOrders?.list?.useQuery(
-    statusFilter !== "all" ? { status: statusFilter } : undefined
-  );
-  const { data: vendors } = trpc.finance.vendors?.list?.useQuery();
-  
-  const createMutation = trpc.finance.purchaseOrders?.create?.useMutation({
+  const { data: purchaseOrders, isLoading, refetch, isError, error} = useQuery({
+    queryKey: ['finance', 'purchase-orders', statusFilter],
+    queryFn: () => api.get('/finance/purchase-orders', {
+      params: statusFilter !== "all" ? { status: statusFilter } : undefined,
+    }).then(r => r.data),
+  });
+  const { data: vendors } = useQuery({
+    queryKey: ['finance', 'vendors'],
+    queryFn: () => api.get('/finance/vendors').then(r => r.data),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/finance/purchase-orders', data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم إنشاء طلب الشراء بنجاح");
       setViewMode('list');
       resetForm();
       refetch();
     },
-    onError: (error) => {
-      toast.error(`خطأ: ${error.message}`);
+    onError: (error: any) => {
+      toast.error(`خطأ: ${error?.response?.data?.message || error.message}`);
     },
   });
-  
-  const submitMutation = trpc.finance.purchaseOrders?.submit?.useMutation({
+
+  const submitMutation = useMutation({
+    mutationFn: (data: any) => api.put(`/finance/purchase-orders/${data.id}/submit`, data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم تقديم طلب الشراء للاعتماد");
       refetch();
     },
   });
-  
-  const approveMutation = trpc.finance.purchaseOrders?.approve?.useMutation({
+
+  const approveMutation = useMutation({
+    mutationFn: (data: any) => api.put(`/finance/purchase-orders/${data.id}/approve`, data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم اعتماد طلب الشراء");
       refetch();

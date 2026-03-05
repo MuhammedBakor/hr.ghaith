@@ -1,5 +1,6 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,7 +36,8 @@ interface Letter {
 export default function Letters() {
   const confirmDelete = (fn: () => void) => { if (window.confirm("هل أنت متأكد من الحذف؟")) fn(); };
 
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const queryClient = useQueryClient();
+  const { data: currentUser, isError, error} = useQuery({ queryKey: ['auth', 'me'], queryFn: () => api.get('/auth/me').then(r => r.data) });
   const userRole = currentUser?.role || 'user';
 
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -53,45 +55,43 @@ export default function Letters() {
     recipientDepartment: "",
   });
 
-  const utils = trpc.useUtils();
-
   // جلب البيانات من API
-  const { data: correspondencesData, isLoading, refetch } = trpc.comms.correspondences.list.useQuery({});
-  const { data: statsData } = trpc.comms.correspondences.stats.useQuery();
+  const { data: correspondencesData, isLoading, refetch } = useQuery({ queryKey: ['comms', 'correspondences'], queryFn: () => api.get('/comms/correspondences').then(r => r.data) });
+  const { data: statsData } = useQuery({ queryKey: ['comms', 'correspondences', 'stats'], queryFn: () => api.get('/comms/correspondences/stats').then(r => r.data) });
 
   // Mutations
-  const createMutation = trpc.comms.correspondences.create.useMutation({
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/comms/correspondences', data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم إنشاء الخطاب بنجاح");
       setShowCreateDialog(false);
       resetForm();
-      utils.comms.correspondences.list.invalidate();
-      utils.comms.correspondences.stats.invalidate();
+      queryClient.invalidateQueries({ queryKey: ['comms', 'correspondences'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`خطأ في إنشاء الخطاب: ${error.message}`);
     },
   });
 
-  const sendMutation = trpc.comms.correspondences.send.useMutation({
+  const sendMutation = useMutation({
+    mutationFn: (data: any) => api.post(`/comms/correspondences/${data.id}/send`).then(r => r.data),
     onSuccess: () => {
       toast.success("تم إرسال الخطاب بنجاح");
-      utils.comms.correspondences.list.invalidate();
-      utils.comms.correspondences.stats.invalidate();
+      queryClient.invalidateQueries({ queryKey: ['comms', 'correspondences'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`خطأ في إرسال الخطاب: ${error.message}`);
     },
   });
 
-  const updateStatusMutation = trpc.comms.correspondences.updateStatus.useMutation({
+  const updateStatusMutation = useMutation({
+    mutationFn: (data: any) => api.put(`/comms/correspondences/${data.id}/status`, data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم تحديث حالة الخطاب بنجاح");
       setShowEditDialog(false);
-      utils.comms.correspondences.list.invalidate();
-      utils.comms.correspondences.stats.invalidate();
+      queryClient.invalidateQueries({ queryKey: ['comms', 'correspondences'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`خطأ في تحديث الخطاب: ${error.message}`);
     },
   });

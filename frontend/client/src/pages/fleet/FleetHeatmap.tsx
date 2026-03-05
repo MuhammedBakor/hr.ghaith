@@ -1,14 +1,21 @@
 import { useState } from 'react';
-import { trpc } from '@/lib/trpc';
+import { useQuery } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Map, Activity, Loader2 } from 'lucide-react';
 
 export default function FleetHeatmap() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useQuery({
+    queryKey: ['auth', 'me'],
+    queryFn: () => api.get('/api/auth/me').then(r => r.data),
+  });
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
-  const { data: vehiclesData, isLoading } = trpc.fleet.vehicles.list.useQuery();
+  const { data: vehiclesData, isLoading } = useQuery({
+    queryKey: ['fleet', 'vehicles'],
+    queryFn: () => api.get('/api/fleet/vehicles').then(r => r.data),
+  });
   const vehicles = (vehiclesData || []) as any[];
 
   if (isLoading) {

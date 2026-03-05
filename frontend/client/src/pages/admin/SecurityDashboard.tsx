@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Shield, Lock, AlertTriangle, Ban, Eye, Activity, Zap, CheckCircle2, Clock, RefreshCw, Loader2, Server, Globe, BarChart3, ChevronDown, ChevronUp, Search } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -39,11 +40,12 @@ export default function SecurityDashboard() {
   const [searchIP, setSearchIP] = useState('');
   const [expandedEvent, setExpandedEvent] = useState<number | null>(null);
 
-  const { data: stats, isLoading, refetch } = trpc.integration.securityOverview.useQuery(undefined, { refetchInterval: 30_000 });
-  const { data: events = [] } = trpc.integration.securityEvents.useQuery({ limit: 100 }, { refetchInterval: 15_000 });
-  const { data: health } = trpc.integration.systemHealth.useQuery(undefined, { refetchInterval: 60_000 });
+  const { data: stats, isLoading, refetch } = useQuery({ queryKey: ['integration', 'securityOverview'], queryFn: () => api.get('/api/integration/security-overview').then(r => r.data), refetchInterval: 30_000 });
+  const { data: events = [] } = useQuery({ queryKey: ['integration', 'securityEvents'], queryFn: () => api.get('/api/integration/security-events', { params: { limit: 100 } }).then(r => r.data), refetchInterval: 15_000 });
+  const { data: health } = useQuery({ queryKey: ['integration', 'systemHealth'], queryFn: () => api.get('/api/integration/system-health').then(r => r.data), refetchInterval: 60_000 });
 
-  const unbanIP = trpc.userProfile.adminSecurity.unbanIP.useMutation({
+  const unbanIP = useMutation({
+    mutationFn: (data: { ip: string }) => api.post('/api/admin/security/unban-ip', data).then(r => r.data),
     onSuccess: () => {
       refetch();
       toast.success('تم رفع الحظر بنجاح');

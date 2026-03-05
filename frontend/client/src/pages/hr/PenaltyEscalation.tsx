@@ -19,12 +19,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { useUser } from '@/services/authService';
 import { Search, RefreshCw, AlertTriangle, ArrowUp, Trash2, Edit, Shield, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function PenaltyEscalation() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useUser();
   const userRole = currentUser?.role || 'user';
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -37,16 +39,26 @@ export default function PenaltyEscalation() {
   });
 
   // جلب قواعد التصعيد من API
-  const { data: escalationData, isLoading, refetch } = trpc.controlKernel.escalation.list.useQuery({});
-  
+  const { data: escalationData, isLoading, refetch } = useQuery({
+    queryKey: ['escalationRules'],
+    queryFn: () => api.get('/hr/control-kernel/escalation').then(res => res.data),
+  });
+
   // جلب أنواع المخالفات
-  const { data: violationTypes } = trpc.controlKernel.violationTypes?.list?.useQuery();
-  
+  const { data: violationTypes } = useQuery({
+    queryKey: ['violationTypes'],
+    queryFn: () => api.get('/hr/control-kernel/violation-types').then(res => res.data),
+  });
+
   // جلب أنواع الجزاءات
-  const { data: penaltyTypes } = trpc.controlKernel.penaltyTypes?.list?.useQuery();
+  const { data: penaltyTypes } = useQuery({
+    queryKey: ['penaltyTypes'],
+    queryFn: () => api.get('/hr/control-kernel/penalty-types').then(res => res.data),
+  });
 
   // إضافة قاعدة تصعيد جديدة
-  const createMutation = trpc.controlKernel.escalation.create.useMutation({
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/hr/control-kernel/escalation', data).then(res => res.data),
     onSuccess: () => {
       toast.success("تم إضافة قاعدة التصعيد بنجاح");
       setIsAddOpen(false);
@@ -64,7 +76,8 @@ export default function PenaltyEscalation() {
   });
 
   // حذف قاعدة تصعيد
-  const deleteMutation = trpc.controlKernel.escalation.delete.useMutation({
+  const deleteMutation = useMutation({
+    mutationFn: ({ id }: any) => api.delete(`/hr/control-kernel/escalation/${id}`),
     onSuccess: () => {
       toast.success("تم حذف قاعدة التصعيد بنجاح");
       refetch();

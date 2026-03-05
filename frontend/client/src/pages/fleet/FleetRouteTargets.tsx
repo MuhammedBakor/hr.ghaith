@@ -1,6 +1,7 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
 import { useState } from 'react';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,7 +24,10 @@ import { Loader2, Inbox, Target, Plus, Edit, Trash2, TrendingUp, Car, Fuel, Cloc
 import { toast } from 'sonner';
 
 export default function FleetRouteTargets() {
-  const { data: currentUser, isError, error } = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error } = useQuery({
+    queryKey: ['auth', 'me'],
+    queryFn: () => api.get('/api/auth/me').then(r => r.data),
+  });
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -35,42 +39,51 @@ export default function FleetRouteTargets() {
   const [filterVehicle, setFilterVehicle] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('');
 
-  const { data: vehiclesData, isLoading: vehiclesLoading } = trpc.fleet.vehicles.list.useQuery();
-  const { data: targetsData, isLoading: targetsLoading, refetch } = trpc.fleet.routeTargets.list.useQuery({
-    vehicleId: filterVehicle ? parseInt(filterVehicle) : undefined,
-    status: filterStatus || undefined,
+  const { data: vehiclesData, isLoading: vehiclesLoading } = useQuery({
+    queryKey: ['fleet', 'vehicles'],
+    queryFn: () => api.get('/api/fleet/vehicles').then(r => r.data),
   });
-  const { data: statsData } = trpc.fleet.routeTargets.stats.useQuery();
+  const { data: targetsData, isLoading: targetsLoading, refetch } = useQuery({
+    queryKey: ['fleet', 'route-targets', { vehicleId: filterVehicle ? parseInt(filterVehicle) : undefined, status: filterStatus || undefined }],
+    queryFn: () => api.get('/api/fleet/route-targets', { params: { vehicleId: filterVehicle ? parseInt(filterVehicle) : undefined, status: filterStatus || undefined } }).then(r => r.data),
+  });
+  const { data: statsData } = useQuery({
+    queryKey: ['fleet', 'route-targets', 'stats'],
+    queryFn: () => api.get('/api/fleet/route-targets/stats').then(r => r.data),
+  });
 
-  const createMutation = trpc.fleet.routeTargets.create.useMutation({
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/api/fleet/route-targets', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إنشاء الهدف بنجاح');
       setIsCreateOpen(false);
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error('فشل في إنشاء الهدف: ' + error.message);
     },
   });
 
-  const updateMutation = trpc.fleet.routeTargets.update.useMutation({
+  const updateMutation = useMutation({
+    mutationFn: (data: any) => api.put(`/api/fleet/route-targets/${data.id}`, data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم تحديث الهدف بنجاح');
       setIsEditOpen(false);
       setSelectedTarget(null);
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error('فشل في تحديث الهدف: ' + error.message);
     },
   });
 
-  const deleteMutation = trpc.fleet.routeTargets.delete.useMutation({
+  const deleteMutation = useMutation({
+    mutationFn: (data: any) => api.delete(`/api/fleet/route-targets/${data.id}`).then(r => r.data),
     onSuccess: () => {
       toast.success('تم حذف الهدف بنجاح');
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error('فشل في حذف الهدف: ' + error.message);
     },
   });

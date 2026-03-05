@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { trpc } from "@/lib/trpc";
+import { useQuery } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,7 +35,10 @@ function formatAmount(amount: number | string | null | undefined): string {
 }
 
 export default function FinanceReports() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useQuery({
+    queryKey: ['auth', 'me'],
+    queryFn: () => api.get('/auth/me').then(r => r.data),
+  });
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -48,33 +52,42 @@ export default function FinanceReports() {
   });
 
   // جلب ميزان المراجعة
-  const { data: trialBalance, isLoading: loadingTB, refetch: refetchTB } = trpc.finance.reports.trialBalance.useQuery(
-    filters.fromDate || filters.toDate ? {
-      fromDate: filters.fromDate ? new Date(filters.fromDate) : undefined,
-      toDate: filters.toDate ? new Date(filters.toDate) : undefined,
-      accountType: filters.accountType || undefined,
-      includeZeroBalances: filters.includeZeroBalances,
-    } : undefined,
-    { enabled: activeTab === "trial-balance" }
-  );
+  const { data: trialBalance, isLoading: loadingTB, refetch: refetchTB } = useQuery({
+    queryKey: ['finance', 'reports', 'trial-balance', filters],
+    queryFn: () => api.get('/finance/reports/trial-balance', {
+      params: filters.fromDate || filters.toDate ? {
+        fromDate: filters.fromDate || undefined,
+        toDate: filters.toDate || undefined,
+        accountType: filters.accountType || undefined,
+        includeZeroBalances: filters.includeZeroBalances,
+      } : undefined,
+    }).then(r => r.data),
+    enabled: activeTab === "trial-balance",
+  });
 
   // جلب دفتر الأستاذ
-  const { data: generalLedger, isLoading: loadingGL, refetch: refetchGL } = trpc.finance.reports.generalLedger.useQuery(
-    selectedAccountId ? { accountId: selectedAccountId, limit: 100 } : { limit: 100 },
-    { enabled: activeTab === "general-ledger" }
-  );
+  const { data: generalLedger, isLoading: loadingGL, refetch: refetchGL } = useQuery({
+    queryKey: ['finance', 'reports', 'general-ledger', selectedAccountId],
+    queryFn: () => api.get('/finance/reports/general-ledger', {
+      params: { accountId: selectedAccountId || undefined, limit: 100 },
+    }).then(r => r.data),
+    enabled: activeTab === "general-ledger",
+  });
 
   // جلب كشف حساب
-  const { data: accountStatement, isLoading: loadingAS, refetch: refetchAS } = trpc.finance.reports.accountStatement.useQuery(
-    { 
-      accountId: selectedAccountId || 1,
-      includeOpeningBalance: true,
-    },
-    { enabled: activeTab === "account-statement" && !!selectedAccountId }
-  );
+  const { data: accountStatement, isLoading: loadingAS, refetch: refetchAS } = useQuery({
+    queryKey: ['finance', 'reports', 'account-statement', selectedAccountId],
+    queryFn: () => api.get('/finance/reports/account-statement', {
+      params: { accountId: selectedAccountId || 1, includeOpeningBalance: true },
+    }).then(r => r.data),
+    enabled: activeTab === "account-statement" && !!selectedAccountId,
+  });
 
   // جلب قائمة الحسابات للاختيار
-  const { data: accounts } = trpc.finance.accounts?.list?.useQuery();
+  const { data: accounts } = useQuery({
+    queryKey: ['finance', 'accounts'],
+    queryFn: () => api.get('/finance/accounts').then(r => r.data),
+  });
 
   if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>;
 

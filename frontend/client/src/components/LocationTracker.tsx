@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Navigation, Loader2, AlertTriangle, CheckCircle } from "lucide-react";
@@ -26,12 +27,17 @@ export function LocationTracker({
   const [error, setError] = useState<string | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const recordMut = trpc.locationTracking.recordLocation.useMutation();
+  const recordMut = useMutation({
+    mutationFn: (data: any) => api.post('/hr/field-tracking/record-point', data).then(res => res.data),
+  });
 
-  const checkGeofence = trpc.locationTracking.checkGeofence.useQuery(
-    { employeeId: employeeId || 0, latitude: currentPos?.lat || 0, longitude: currentPos?.lng || 0 },
-    { enabled: !!employeeId && !!currentPos }
-  );
+  const checkGeofence = useQuery({
+    queryKey: ['geofence-check', employeeId, currentPos?.lat, currentPos?.lng],
+    queryFn: () => api.get('/hr/field-tracking/check-geofence', {
+      params: { employeeId, latitude: currentPos?.lat, longitude: currentPos?.lng }
+    }).then(res => res.data).catch(() => null),
+    enabled: !!employeeId && !!currentPos,
+  });
 
   useEffect(() => {
     if (checkGeofence.data) setFenceStatus(checkGeofence.data as any);
@@ -113,8 +119,8 @@ export function LocationTracker({
 
         {currentPos && (
           <Badge variant="outline" className="gap-1 text-xs">
-            📍 {currentPos.lat.toFixed(5)}, {currentPos.lng.toFixed(5)}
-            {currentPos.accuracy > 0 && ` (±${Math.round(currentPos.accuracy)}م)`}
+            {currentPos.lat.toFixed(5)}, {currentPos.lng.toFixed(5)}
+            {currentPos.accuracy > 0 && ` (${Math.round(currentPos.accuracy)}م)`}
           </Badge>
         )}
 
@@ -159,20 +165,18 @@ export function LocationTracker({
   );
 }
 
-// ═══════════════════════════════════
 // Live Map Component
-// ═══════════════════════════════════
-
 interface LiveMapProps {
   branchId?: number;
   className?: string;
 }
 
 export function LivePositionsPanel({ branchId, className }: LiveMapProps) {
-  const { data: positions, isLoading, refetch } = trpc.locationTracking.getLivePositions.useQuery(
-    { branchId },
-    { refetchInterval: 30000 }
-  );
+  const { data: positions, isLoading, refetch } = useQuery<any[]>({
+    queryKey: ['live-positions', branchId],
+    queryFn: () => api.get('/hr/field-tracking/live-positions', { params: { branchId } }).then(res => res.data).catch(() => []),
+    refetchInterval: 30000,
+  });
 
   return (
     <div className={`border rounded-lg p-4 ${className || ''}`}>
@@ -185,14 +189,14 @@ export function LivePositionsPanel({ branchId, className }: LiveMapProps) {
           تحديث
         </Button>
       </div>
-      
+
       {isLoading ? (
         <div className="text-center py-8"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></div>
       ) : !positions || positions.length === 0 ? (
         <p className="text-sm text-muted-foreground text-center py-4">لا توجد مواقع نشطة</p>
       ) : (
         <div className="space-y-2 max-h-[400px] overflow-y-auto">
-          {(positions as any[]).map((pos: any, i: number) => (
+          {positions.map((pos: any, i: number) => (
             <div key={i} className="flex items-center gap-3 p-2 rounded bg-muted/50 text-sm">
               <MapPin className="h-4 w-4 text-green-500 shrink-0" />
               <div className="flex-1 min-w-0">

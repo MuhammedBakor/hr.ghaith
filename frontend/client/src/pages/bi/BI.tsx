@@ -1,19 +1,20 @@
 import { useState } from 'react';
-import { trpc } from '@/lib/trpc';
+import { useQuery } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { BarChart3, TrendingUp, Users, Car, FileText, Building2, Activity, Loader2, ArrowUpRight } from 'lucide-react';
 
 export default function BIPage() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useQuery({ queryKey: ['auth', 'me'], queryFn: () => api.get('/api/auth/me').then(r => r.data) });
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
   // Fetch data from available APIs
-  const { data: vehiclesData, isLoading: vehiclesLoading } = trpc.fleet.vehicles.list.useQuery();
-  const { data: driversData, isLoading: driversLoading } = trpc.fleetExtended.drivers.list.useQuery();
-  const { data: documentsData, isLoading: documentsLoading } = trpc.documents.list.useQuery();
-  const { data: rolesData, isLoading: rolesLoading } = trpc.controlKernel.roles.list.useQuery();
-  const { data: branchesData, isLoading: branchesLoading } = trpc.controlKernel.branches.list.useQuery();
+  const { data: vehiclesData, isLoading: vehiclesLoading } = useQuery({ queryKey: ['fleet', 'vehicles'], queryFn: () => api.get('/api/fleet/vehicles').then(r => r.data) });
+  const { data: driversData, isLoading: driversLoading } = useQuery({ queryKey: ['fleet', 'drivers'], queryFn: () => api.get('/api/fleet/drivers').then(r => r.data) });
+  const { data: documentsData, isLoading: documentsLoading } = useQuery({ queryKey: ['documents', 'list'], queryFn: () => api.get('/api/documents').then(r => r.data) });
+  const { data: rolesData, isLoading: rolesLoading } = useQuery({ queryKey: ['controlKernel', 'roles'], queryFn: () => api.get('/api/control-kernel/roles').then(r => r.data) });
+  const { data: branchesData, isLoading: branchesLoading } = useQuery({ queryKey: ['controlKernel', 'branches'], queryFn: () => api.get('/api/control-kernel/branches').then(r => r.data) });
 
   const vehicles = vehiclesData || [];
   const drivers = driversData || [];

@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog } from '@/components/ui/dialog';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { toast } from 'sonner';
 import { CheckCircle, XCircle, Clock, DollarSign, Calendar, AlertTriangle } from 'lucide-react';
 
@@ -26,14 +27,14 @@ export default function PendingBalances() {
 
   const [reviewDialog, setReviewDialog] = useState<{ id: number; action: 'approve' | 'reject' } | null>(null);
   const [notes, setNotes] = useState('');
-  const utils = trpc.useUtils();
-  
-  const { data: balances, isLoading, isError, error} = trpc.pendingBalances.list.useQuery({ status: 'pending' });
-  
+  const queryClient = useQueryClient();
 
-  const approveMutation = trpc.pendingBalances.approve.useMutation({ onSuccess: () => { toast.success('تمت الموافقة'); setReviewDialog(null); utils.pendingBalances.list.invalidate(); }, onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
-  
-  const rejectMutation = trpc.pendingBalances.reject.useMutation({ onSuccess: () => { toast.success('تم الرفض'); setReviewDialog(null); utils.pendingBalances.list.invalidate(); }, onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
+  const { data: balances, isLoading, isError, error} = useQuery({ queryKey: ['pendingBalances', 'list', 'pending'], queryFn: () => api.get('/api/pending-balances', { params: { status: 'pending' } }).then(r => r.data) });
+
+
+  const approveMutation = useMutation({ mutationFn: (data: any) => api.post(`/api/pending-balances/${data.id}/approve`, data).then(r => r.data), onSuccess: () => { toast.success('تمت الموافقة'); setReviewDialog(null); queryClient.invalidateQueries({ queryKey: ['pendingBalances', 'list'] }); }, onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
+
+  const rejectMutation = useMutation({ mutationFn: (data: any) => api.post(`/api/pending-balances/${data.id}/reject`, data).then(r => r.data), onSuccess: () => { toast.success('تم الرفض'); setReviewDialog(null); queryClient.invalidateQueries({ queryKey: ['pendingBalances', 'list'] }); }, onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
 
   const typeLabels: Record<string, string> = {
     expense: 'مصروف', leave: 'إجازة', invoice: 'فاتورة',

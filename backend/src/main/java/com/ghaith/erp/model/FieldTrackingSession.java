@@ -34,5 +34,6 @@ public class FieldTrackingSession extends BaseEntity {
     private String status; // active, completed
 
     @OneToMany(mappedBy = "session", cascade = CascadeType.ALL)
-    private List<FieldTrackingPoint> points;
+    @Builder.Default
+    private List<FieldTrackingPoint> points = new java.util.ArrayList<>();
 }

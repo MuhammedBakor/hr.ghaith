@@ -19,7 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import {
   Search,
   RefreshCw,
@@ -35,7 +36,10 @@ import {
 } from "lucide-react";
 
 export default function BIAudit() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useQuery({
+    queryKey: ['auth', 'me'],
+    queryFn: () => api.get('/auth/me').then(r => r.data),
+  });
   const userRole = currentUser?.role || 'user';
   const requiredRole = 'admin';
   const hasAccess = userRole === 'admin' || userRole === requiredRole || requiredRole === 'user';

@@ -1,6 +1,8 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
 import React from "react";
 import { useState } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { useAppContext } from '@/contexts/AppContext';
 import { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/ui/data-table';
@@ -11,7 +13,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
 import { Dialog } from "@/components/ui/dialog";
 import {
@@ -105,21 +106,32 @@ export default function Maintenance() {
     performedBy: '',
   });
 
-  const { data: maintenanceData, isLoading, refetch, isError, error } = trpc.fleet.maintenance.list.useQuery();
-  const { data: vehiclesData } = trpc.fleet.vehicles.list.useQuery();
-  const { data: overdueData } = trpc.fleetSmart.overdueMaintenances.useQuery();
-  const completeMutation = trpc.fleetSmart.completeAndScheduleNext.useMutation({
+  const { data: maintenanceData, isLoading, refetch, isError, error } = useQuery({
+    queryKey: ['fleet', 'maintenance'],
+    queryFn: () => api.get('/api/fleet/maintenance').then(r => r.data),
+  });
+  const { data: vehiclesData } = useQuery({
+    queryKey: ['fleet', 'vehicles'],
+    queryFn: () => api.get('/api/fleet/vehicles').then(r => r.data),
+  });
+  const { data: overdueData } = useQuery({
+    queryKey: ['fleet-smart', 'overdue-maintenances'],
+    queryFn: () => api.get('/api/fleet-smart/overdue-maintenances').then(r => r.data),
+  });
+  const completeMutation = useMutation({
+    mutationFn: (data: any) => api.post('/api/fleet-smart/complete-and-schedule-next', data).then(r => r.data),
     onSuccess: () => { toast.success('تم إكمال الصيانة وجدولة القادمة'); refetch(); },
     onError: (e: any) => toast.error(e.message || 'خطأ'),
   });
-  const createMaintenanceMutation = trpc.fleet.maintenance.create.useMutation({
+  const createMaintenanceMutation = useMutation({
+    mutationFn: (data: any) => api.post('/api/fleet/maintenance', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إضافة سجل الصيانة بنجاح');
       setViewMode('list');
       resetForm();
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(error.message);
     },
   });

@@ -17,7 +17,7 @@ import {
   ArrowRight,
   Loader2
 } from 'lucide-react';
-import { trpc } from '@/lib/trpc';
+import { useEmployees, usePerformanceReviews, useCreatePerformanceReview } from '@/services/hrService';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -81,28 +81,16 @@ export default function Performance() {
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editItem, setEditItem] = React.useState<any>(null);
 
-  const utils = trpc.useUtils();
-
   // جلب قائمة الموظفين
-  const { data: employeesData, isError, error } = trpc.hr.employees.list.useQuery();
+  const { data: employeesData, isError, error } = useEmployees();
   const employees = (employeesData as any)?.items || employeesData || [];
 
   // جلب تقييمات الأداء
-  const { data: performanceData, isLoading } = trpc.hrExtended.performance.list.useQuery({});
+  const { data: performanceData, isLoading } = usePerformanceReviews();
   const records: PerformanceRecord[] = performanceData || [];
 
   // إنشاء تقييم جديد
-  const createPerformanceMutation = trpc.hrExtended.performance.create.useMutation({
-    onSuccess: () => {
-      toast.success('تم إنشاء التقييم بنجاح');
-      utils.hrExtended.performance.list.invalidate();
-      setViewMode('list');
-      resetForm();
-    },
-    onError: (error) => {
-      toast.error('فشل في إنشاء التقييم: ' + error.message);
-    }
-  });
+  const createPerformanceMutation = useCreatePerformanceReview();
 
   const resetForm = () => {
     setSelectedEmployee('');
@@ -126,6 +114,15 @@ export default function Performance() {
       overallRating: parseInt(rating),
       strengths: strengths,
       improvements: improvements,
+    }, {
+      onSuccess: () => {
+        toast.success('تم إنشاء التقييم بنجاح');
+        setViewMode('list');
+        resetForm();
+      },
+      onError: (error: any) => {
+        toast.error('فشل في إنشاء التقييم: ' + error.message);
+      }
     });
   };
 

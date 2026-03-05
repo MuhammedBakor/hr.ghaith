@@ -14,7 +14,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertTriangle, Clock, CheckCircle2, XCircle, ArrowUpCircle, RefreshCw, Timer, Briefcase, TrendingUp, AlertCircle, Activity } from 'lucide-react';
-import { trpc } from '@/lib/trpc';
+import { useQuery } from '@tanstack/react-query';
+import api from '@/lib/api';
 
 // أنواع البيانات
 interface SLATracking {
@@ -54,7 +55,7 @@ interface AutomationJob {
 }
 
 export default function SLADashboard() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useQuery({ queryKey: ['auth', 'me'], queryFn: () => api.get('/api/auth/me').then(r => r.data) });
   const userRole = currentUser?.role || 'user';
   const requiredRole = 'admin';
   const hasAccess = userRole === 'admin' || userRole === requiredRole || requiredRole === 'user';
@@ -68,23 +69,33 @@ export default function SLADashboard() {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // جلب البيانات من الـ API
-  const { data: stats, refetch: refetchStats, isLoading: loadingStats } = trpc.automation.getStatistics.useQuery(undefined, {
-    refetchInterval: 30000, // تحديث كل 30 ثانية
-  });
-
-  const { data: breachedSLAs, refetch: refetchBreached, isLoading: loadingBreached } = trpc.automation.getBreachedSLAs.useQuery(undefined, {
+  const { data: stats, refetch: refetchStats, isLoading: loadingStats } = useQuery({
+    queryKey: ['automation', 'statistics'],
+    queryFn: () => api.get('/api/automation/statistics').then(r => r.data),
     refetchInterval: 30000,
   });
 
-  const { data: escalations, refetch: refetchEscalations, isLoading: loadingEscalations } = trpc.automation.getActiveEscalations.useQuery(undefined, {
+  const { data: breachedSLAs, refetch: refetchBreached, isLoading: loadingBreached } = useQuery({
+    queryKey: ['automation', 'breached-slas'],
+    queryFn: () => api.get('/api/automation/breached-slas').then(r => r.data),
     refetchInterval: 30000,
   });
 
-  const { data: pendingJobs, refetch: refetchJobs, isLoading: loadingJobs } = trpc.automation.getPendingJobs.useQuery(undefined, {
+  const { data: escalations, refetch: refetchEscalations, isLoading: loadingEscalations } = useQuery({
+    queryKey: ['automation', 'active-escalations'],
+    queryFn: () => api.get('/api/automation/active-escalations').then(r => r.data),
     refetchInterval: 30000,
   });
 
-  const { data: failedJobs, refetch: refetchFailed } = trpc.automation.getFailedJobs.useQuery(undefined, {
+  const { data: pendingJobs, refetch: refetchJobs, isLoading: loadingJobs } = useQuery({
+    queryKey: ['automation', 'pending-jobs'],
+    queryFn: () => api.get('/api/automation/pending-jobs').then(r => r.data),
+    refetchInterval: 30000,
+  });
+
+  const { data: failedJobs, refetch: refetchFailed } = useQuery({
+    queryKey: ['automation', 'failed-jobs'],
+    queryFn: () => api.get('/api/automation/failed-jobs').then(r => r.data),
     refetchInterval: 60000,
   });
 

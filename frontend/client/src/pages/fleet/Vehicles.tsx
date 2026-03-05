@@ -1,5 +1,7 @@
 import React from "react";
 import { useState } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/ui/data-table';
 import { Button } from '@/components/ui/button';
@@ -8,7 +10,6 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
 import { Car, Plus, Wrench, MapPin, AlertTriangle, ArrowRight } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
@@ -80,21 +81,22 @@ export default function Vehicles() {
   const { selectedBranchId, branches } = useAppContext();
   const selectedBranch = branches?.find(b => b.id === selectedBranchId);
 
-  const { data: vehiclesData, isLoading, refetch, isError, error } = trpc.fleet.vehicles.list.useQuery({
-    branchId: selectedBranchId || undefined,
+  const { data: vehiclesData, isLoading, refetch, isError, error } = useQuery({
+    queryKey: ['fleet', 'vehicles', { branchId: selectedBranchId || undefined }],
+    queryFn: () => api.get('/api/fleet/vehicles', { params: { branchId: selectedBranchId || undefined } }).then(r => r.data),
   });
-  const createVehicleMutation = trpc.fleet.vehicles.create.useMutation({
+  const createVehicleMutation = useMutation({
+    mutationFn: (data: any) => api.post('/api/fleet/vehicles', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إضافة المركبة بنجاح');
       setView('list');
       setNewVehicle({
         plateNumber: '', make: '', model: '', year: new Date().getFullYear(), status: 'available',
-        onError: (e: any) => toast.error(e?.message || 'حدث خطأ')
       });
       refetch();
     },
-    onError: (error) => {
-      toast.error(error.message);
+    onError: (error: any) => {
+      toast.error(error?.message || 'حدث خطأ');
     },
   });
 

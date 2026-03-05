@@ -8,7 +8,8 @@
 
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -85,19 +86,20 @@ const moduleLabels: Record<string, string> = {
 export default function SetupWizard() {
   const [showInlineForm, setShowInlineForm] = useState(false);
 
+  const queryClient = useQueryClient();
   const [editingItem, setEditingItem] = useState<any>(null);
-  const updateMutation = trpc.settings.settings.update.useMutation({ onSuccess: () => { refetch(); setEditingItem(null); } });
+  const updateMutation = useMutation({ mutationFn: (data: any) => api.put('/settings/settings', data).then(r => r.data), onSuccess: () => { refetch(); setEditingItem(null); } });
 
-  const deleteMutation = trpc.settings.settings.delete.useMutation({ onSuccess: () => { refetch(); } });
+  const deleteMutation = useMutation({ mutationFn: (data: any) => api.delete(`/settings/settings/${data.id}`).then(r => r.data), onSuccess: () => { refetch(); } });
 
   // ═══ Real API connection ═══
-  const setupProgressQuery = trpc.setup.getProgress.useQuery();
-  
+  const setupProgressQuery = useQuery({ queryKey: ['setup', 'progress'], queryFn: () => api.get('/setup/progress').then(r => r.data) });
+
   const handleSave = () => {
     updateMutation.mutate(editingItem);
   };
 
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useQuery({ queryKey: ['auth', 'me'], queryFn: () => api.get('/auth/me').then(r => r.data) });
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -107,14 +109,15 @@ export default function SetupWizard() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // جلب حالة الإعداد
-  const { data: setupStatus, isLoading, refetch } = trpc.setup.getStatus.useQuery() as {
+  const { data: setupStatus, isLoading, refetch } = useQuery({ queryKey: ['setup', 'status'], queryFn: () => api.get('/setup/status').then(r => r.data) }) as {
     data: SetupStatus | undefined;
     isLoading: boolean;
     refetch: () => void;
   };
 
   // Mutations للإعداد
-  const createCompany = trpc.kernel.companies.create.useMutation({
+  const createCompany = useMutation({
+    mutationFn: (data: any) => api.post('/kernel/companies', data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم إنشاء الشركة بنجاح");
       refetch();
@@ -124,7 +127,8 @@ export default function SetupWizard() {
     }
   });
 
-  const createBranch = trpc.hrAdvanced.branches.create.useMutation({
+  const createBranch = useMutation({
+    mutationFn: (data: any) => api.post('/hr-advanced/branches', data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم إنشاء الفرع بنجاح");
       refetch();
@@ -134,7 +138,8 @@ export default function SetupWizard() {
     }
   });
 
-  const createDepartment = trpc.hrAdvanced.departments.create.useMutation({
+  const createDepartment = useMutation({
+    mutationFn: (data: any) => api.post('/hr-advanced/departments', data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم إنشاء القسم بنجاح");
       refetch();

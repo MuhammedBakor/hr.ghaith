@@ -1,7 +1,8 @@
 import React from "react";
 import { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { trpc } from '../../lib/trpc';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { toast } from 'sonner';
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,7 @@ export default function PrintTemplates() {
 
   const [searchTerm, setSearchTerm] = useState('');
 
-  const utils = trpc.useUtils();
+  const queryClient = useQueryClient();
 
   const { selectedRole: userRole } = useAppContext();
   const canEdit = userRole === "admin" || userRole === "manager";
@@ -26,11 +27,12 @@ export default function PrintTemplates() {
 
   const isProcessing = false; // Loading state
 
-  const { data: templates = [], isError, error } = trpc.printTemplates.list.useQuery({});
+  const { data: templates = [], isError, error } = useQuery({ queryKey: ['printTemplates', 'list'], queryFn: () => api.get('/api/print-templates').then(r => r.data) });
 
-  const createMut = trpc.printTemplates.create.useMutation({
+  const createMut = useMutation({
+    mutationFn: (data: any) => api.post('/api/print-templates', data).then(r => r.data),
     onSuccess: () => {
-      utils.printTemplates.invalidate();
+      queryClient.invalidateQueries({ queryKey: ['printTemplates'] });
       toast.success('تم إضافة القالب');
     },
     onError: (e: any) => toast.error(e.message)
@@ -39,7 +41,8 @@ export default function PrintTemplates() {
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [preview, setPreview] = useState<string>('');
 
-  const renderMut = trpc.printTemplates.render.useMutation({
+  const renderMut = useMutation({
+    mutationFn: (data: any) => api.post('/api/print-templates/render', data).then(r => r.data),
     onSuccess: (data: any) => {
       setPreview(data.html);
       toast.success('تم إنشاء المعاينة');

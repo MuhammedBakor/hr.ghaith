@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -108,7 +109,10 @@ const getStatusBadge = (status: string) => {
 };
 
 export default function FleetStops() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useQuery({
+    queryKey: ['auth', 'me'],
+    queryFn: () => api.get('/api/auth/me').then(r => r.data),
+  });
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -130,15 +134,25 @@ export default function FleetStops() {
     sequence: 0,
   });
 
-  const { data: stopsData, isLoading, refetch } = trpc.fleet.tripStops.list.useQuery();
-  const { data: tripsData } = trpc.fleetExtended.trips.list.useQuery();
-  const { data: vehiclesData } = trpc.fleet.vehicles.list.useQuery();
+  const { data: stopsData, isLoading, refetch } = useQuery({
+    queryKey: ['fleet', 'trip-stops'],
+    queryFn: () => api.get('/api/fleet/trip-stops').then(r => r.data),
+  });
+  const { data: tripsData } = useQuery({
+    queryKey: ['fleet-extended', 'trips'],
+    queryFn: () => api.get('/api/fleet-extended/trips').then(r => r.data),
+  });
+  const { data: vehiclesData } = useQuery({
+    queryKey: ['fleet', 'vehicles'],
+    queryFn: () => api.get('/api/fleet/vehicles').then(r => r.data),
+  });
   
   const stops = (stopsData || []) as TripStop[];
   const trips = tripsData || [];
   const vehicles = vehiclesData || [];
 
-  const createMutation = trpc.fleet.tripStops.create.useMutation({
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/api/fleet/trip-stops', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إضافة محطة التوقف بنجاح');
       setIsAddOpen(false);
@@ -150,7 +164,8 @@ export default function FleetStops() {
     },
   });
 
-  const updateMutation = trpc.fleet.tripStops.update.useMutation({
+  const updateMutation = useMutation({
+    mutationFn: (data: any) => api.put(`/api/fleet/trip-stops/${data.id}`, data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم تحديث محطة التوقف بنجاح');
       setEditingStop(null);
@@ -162,7 +177,8 @@ export default function FleetStops() {
     },
   });
 
-  const deleteMutation = trpc.fleet.tripStops.delete.useMutation({
+  const deleteMutation = useMutation({
+    mutationFn: (data: any) => api.delete(`/api/fleet/trip-stops/${data.id}`).then(r => r.data),
     onSuccess: () => {
       toast.success('تم حذف محطة التوقف بنجاح');
       refetch();

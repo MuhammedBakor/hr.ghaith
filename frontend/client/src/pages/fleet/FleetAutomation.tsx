@@ -1,4 +1,5 @@
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import AutomationDashboard, { CategoryMeta } from '@/components/automation/AutomationDashboard';
 import {
   Wrench, Shield, Users, AlertOctagon, BarChart3, DollarSign,
@@ -14,14 +15,37 @@ const CATEGORY_META: Record<string, CategoryMeta> = {
 };
 
 export default function FleetAutomation() {
-  const { data: services = [], isLoading, refetch } = trpc.fleetAutomation.list.useQuery();
-  const { data: logs    = [] }                      = trpc.fleetAutomation.logs.useQuery({ limit: 200 });
-  const { data: stats }                             = trpc.fleetAutomation.stats.useQuery();
+  const queryClient = useQueryClient();
 
-  const toggleMut   = trpc.fleetAutomation.toggle.useMutation({ onSuccess: () => { utils.invalidateQueries(); } });
-  const runNowMut   = trpc.fleetAutomation.runNow.useMutation({ onSuccess: () => { utils.invalidateQueries(); } });
-  const updateMut   = trpc.fleetAutomation.update.useMutation({ onSuccess: () => { utils.invalidateQueries(); } });
-  const initMut     = trpc.fleetAutomation.initialize.useMutation({ onSuccess: () => { utils.invalidateQueries(); } });
+  const { data: services = [], isLoading, refetch } = useQuery({
+    queryKey: ['fleet-automation'],
+    queryFn: () => api.get('/api/fleet-automation').then(r => r.data),
+  });
+  const { data: logs = [] } = useQuery({
+    queryKey: ['fleet-automation', 'logs'],
+    queryFn: () => api.get('/api/fleet-automation/logs', { params: { limit: 200 } }).then(r => r.data),
+  });
+  const { data: stats } = useQuery({
+    queryKey: ['fleet-automation', 'stats'],
+    queryFn: () => api.get('/api/fleet-automation/stats').then(r => r.data),
+  });
+
+  const toggleMut = useMutation({
+    mutationFn: (data: any) => api.post('/api/fleet-automation/toggle', data).then(r => r.data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['fleet-automation'] }); },
+  });
+  const runNowMut = useMutation({
+    mutationFn: (data: any) => api.post('/api/fleet-automation/run-now', data).then(r => r.data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['fleet-automation'] }); },
+  });
+  const updateMut = useMutation({
+    mutationFn: (data: any) => api.put('/api/fleet-automation', data).then(r => r.data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['fleet-automation'] }); },
+  });
+  const initMut = useMutation({
+    mutationFn: () => api.post('/api/fleet-automation/initialize').then(r => r.data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['fleet-automation'] }); },
+  });
 
   return (
     <AutomationDashboard

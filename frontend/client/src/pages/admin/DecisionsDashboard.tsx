@@ -10,7 +10,8 @@ import { formatDate, formatDateTime } from '@/lib/formatDate';
  */
 
 import { useState } from "react";
-import { trpc } from "@/lib/trpc";
+import { useQuery } from "@tanstack/react-query";
+import api from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -116,7 +117,10 @@ const moduleLabels: Record<string, string> = {
 type ViewMode = "list" | "details";
 
 export default function DecisionsDashboard() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useQuery({
+    queryKey: ["auth", "me"],
+    queryFn: () => api.get("/api/auth/me").then(r => r.data),
+  });
   const userRole = currentUser?.role || 'user';
   const requiredRole = 'admin';
   const hasAccess = userRole === 'admin' || userRole === requiredRole || requiredRole === 'user';
@@ -133,15 +137,21 @@ export default function DecisionsDashboard() {
   const pageSize = 20;
 
   // Fetch decisions from API
-  const { data: decisionsData, isLoading: isLoadingDecisions, refetch: refetchDecisions } = trpc.decisions.getDecisions.useQuery({
-    action: actionFilter === "all" ? undefined : actionFilter,
-    module: moduleFilter === "all" ? undefined : moduleFilter,
-    limit: pageSize,
-    offset: (page - 1) * pageSize,
+  const { data: decisionsData, isLoading: isLoadingDecisions, refetch: refetchDecisions } = useQuery({
+    queryKey: ["decisions", "list", actionFilter, moduleFilter, page, pageSize],
+    queryFn: () => api.get("/api/decisions", { params: {
+      action: actionFilter === "all" ? undefined : actionFilter,
+      module: moduleFilter === "all" ? undefined : moduleFilter,
+      limit: pageSize,
+      offset: (page - 1) * pageSize,
+    }}).then(r => r.data),
   });
 
   // Fetch stats from API
-  const { data: statsData, isLoading: isLoadingStats, refetch: refetchStats } = trpc.decisions.getDecisionStats.useQuery({});
+  const { data: statsData, isLoading: isLoadingStats, refetch: refetchStats } = useQuery({
+    queryKey: ["decisions", "stats"],
+    queryFn: () => api.get("/api/decisions/stats").then(r => r.data),
+  });
 
   // Map API data to component format
   const decisionsArray = decisionsData?.decisions || [];

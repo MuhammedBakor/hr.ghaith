@@ -7,7 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import api from "@/lib/api";
 import { toast } from 'sonner';
 import { Plus, Ban, Shield, Clock } from 'lucide-react';
 
@@ -17,9 +18,17 @@ export default function Delegations() {
 
   const [editingItem, setEditingItem] = useState<any>(null);
 
-  const deleteMutation = trpc.delegation.delete.useMutation({ onSuccess: () => { refetch(); } });
+  const queryClient = useQueryClient();
 
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const deleteMutation = useMutation({
+    mutationFn: (data: any) => api.delete(`/api/delegations/${data.id}`).then(r => r.data),
+    onSuccess: () => { refetch(); },
+  });
+
+  const { data: currentUser, isError, error} = useQuery({
+    queryKey: ["auth", "me"],
+    queryFn: () => api.get("/api/auth/me").then(r => r.data),
+  });
   const userRole = currentUser?.role || 'user';
   const requiredRole = 'admin';
   const hasAccess = userRole === 'admin' || userRole === requiredRole || requiredRole === 'user';
@@ -30,9 +39,14 @@ export default function Delegations() {
   const pageSize = 20;
 
   const [isOpen, setIsOpen] = useState(false);
-  const utils = trpc.useUtils();
-  const { data: delegations, isLoading } = trpc.delegation.list.useQuery();
-  const { data: usersList } = trpc.kernel.users.list.useQuery();
+  const { data: delegations, isLoading, refetch } = useQuery({
+    queryKey: ["delegation", "list"],
+    queryFn: () => api.get("/api/delegations").then(r => r.data),
+  });
+  const { data: usersList } = useQuery({
+    queryKey: ["kernel", "users", "list"],
+    queryFn: () => api.get("/api/users").then(r => r.data),
+  });
 
   const [form, setForm] = useState({
     delegatorId: 0, delegateId: 0,
@@ -41,14 +55,16 @@ export default function Delegations() {
     maxAmount: '',
   });
 
-  const createMutation = trpc.delegation.create.useMutation({
-    onSuccess: () => { toast.success('تم إنشاء التفويض بنجاح'); setIsOpen(false); utils.delegation.list.invalidate(); },
-    onError: (e) => toast.error(e.message),
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post("/api/delegations", data).then(r => r.data),
+    onSuccess: () => { toast.success('تم إنشاء التفويض بنجاح'); setIsOpen(false); queryClient.invalidateQueries({ queryKey: ["delegation", "list"] }); },
+    onError: (e: any) => toast.error(e.message),
   });
 
-  const revokeMutation = trpc.delegation.revoke.useMutation({
-    onSuccess: () => { toast.success('تم إلغاء التفويض'); utils.delegation.list.invalidate(); },
-    onError: (e) => toast.error(e.message),
+  const revokeMutation = useMutation({
+    mutationFn: (data: any) => api.post(`/api/delegations/${data.id}/revoke`, data).then(r => r.data),
+    onSuccess: () => { toast.success('تم إلغاء التفويض'); queryClient.invalidateQueries({ queryKey: ["delegation", "list"] }); },
+    onError: (e: any) => toast.error(e.message),
   });
 
   const statusColors: Record<string, string> = {

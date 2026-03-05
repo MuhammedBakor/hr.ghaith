@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -55,13 +56,22 @@ export default function FinancialCommitments() {
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createData, setCreateData] = useState<any>({});
-  const createMutation = trpc.finance.financialRequests.create.useMutation({ onSuccess: () => { refetch(); setShowCreateForm(false); setCreateData({}); } });
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/finance/financial-requests', data).then(r => r.data),
+    onSuccess: () => { refetch(); setShowCreateForm(false); setCreateData({}); },
+  });
 
   const [editingItem, setEditingItem] = useState<any>(null);
 
-  const deleteMutation = trpc.finance.financialRequests.delete.useMutation({ onSuccess: () => { refetch(); } });
+  const deleteMutation = useMutation({
+    mutationFn: (data: any) => api.delete(`/finance/financial-requests/${data.id}`).then(r => r.data),
+    onSuccess: () => { refetch(); },
+  });
 
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useQuery({
+    queryKey: ['auth', 'me'],
+    queryFn: () => api.get('/auth/me').then(r => r.data),
+  });
   const userRole = currentUser?.role || 'user';
   const requiredRole = 'finance_manager';
   const hasAccess = userRole === 'admin' || userRole === requiredRole || requiredRole === 'user';

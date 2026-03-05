@@ -25,7 +25,8 @@ import {
   Settings2,
   Loader2
 } from "lucide-react";
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import api from "@/lib/api";
 import { toast } from "sonner";
 import { PrintButton } from "@/components/PrintButton";
 
@@ -198,22 +199,20 @@ export default function SchedulerDashboard() {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // جلب سجلات التنفيذ
-  const { data: jobLogs, refetch: refetchLogs, isError, error} = trpc.scheduler.getLogs.useQuery(
-    { limit: 20 },
-    { 
-      enabled: true,
-      refetchInterval: 30000 // تحديث كل 30 ثانية
-    }
-  );
+  const { data: jobLogs, refetch: refetchLogs, isError, error} = useQuery({
+    queryKey: ['admin', 'scheduler', 'logs'],
+    queryFn: () => api.get('/admin/scheduler/logs', { params: { limit: 20 } }).then(r => r.data),
+    enabled: true,
+    refetchInterval: 30000, // تحديث كل 30 ثانية
+  });
 
   // جلب حالة المهام
-  const { data: jobStatuses, refetch: refetchStatuses } = trpc.scheduler.getJobStatuses.useQuery(
-    undefined,
-    { 
-      enabled: true,
-      refetchInterval: 30000
-    }
-  );
+  const { data: jobStatuses, refetch: refetchStatuses } = useQuery({
+    queryKey: ['admin', 'scheduler', 'job-statuses'],
+    queryFn: () => api.get('/admin/scheduler/job-statuses').then(r => r.data),
+    enabled: true,
+    refetchInterval: 30000,
+  });
 
   // تحديث حالة المهام عند جلب البيانات
   useEffect(() => {
@@ -249,10 +248,11 @@ export default function SchedulerDashboard() {
   }, [jobLogs]);
 
   // تفعيل/تعطيل مهمة
-  const toggleJobMutation = trpc.scheduler.toggleJob.useMutation({
-    onSuccess: (_, variables) => {
-      setJobs(prev => prev.map(job => 
-        job.id === variables.jobType 
+  const toggleJobMutation = useMutation({
+    mutationFn: (data: { jobType: string; enabled: boolean }) => api.post('/admin/scheduler/toggle-job', data).then(r => r.data),
+    onSuccess: (_: any, variables: { jobType: string; enabled: boolean }) => {
+      setJobs(prev => prev.map(job =>
+        job.id === variables.jobType
           ? { ...job, isEnabled: variables.enabled }
           : job
       ));
@@ -264,8 +264,9 @@ export default function SchedulerDashboard() {
   });
 
   // تشغيل مهمة يدوياً
-  const runJobMutation = trpc.scheduler.runJob.useMutation({
-    onSuccess: (result) => {
+  const runJobMutation = useMutation({
+    mutationFn: (data: { jobType: string }) => api.post('/admin/scheduler/run-job', data).then(r => r.data),
+    onSuccess: (result: any) => {
       setRunningJob(null);
       if (result.success) {
         toast.success(`تم تنفيذ المهمة بنجاح: ${result.message}`);

@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
-import { trpc } from "@/lib/trpc";
+import { useQuery } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -55,7 +56,7 @@ const AVAILABLE_REPORTS = [
 ];
 
 export default function ReportsDashboard() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useQuery({ queryKey: ['auth', 'me'], queryFn: () => api.get('/auth/me').then(r => r.data) });
   const userRole = currentUser?.role || 'user';
   const requiredRole = 'user';
   const hasAccess = userRole === 'admin' || userRole === requiredRole || requiredRole === 'user';
@@ -65,7 +66,7 @@ export default function ReportsDashboard() {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
 
-  const { data: stats, isLoading: statsLoading } = trpc.bi.dashboardStats.useQuery();
+  const { data: stats, isLoading: statsLoading } = useQuery({ queryKey: ['bi', 'dashboardStats'], queryFn: () => api.get('/bi/dashboard-stats').then(r => r.data) });
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedReport, setSelectedReport] = useState<string | null>(null);

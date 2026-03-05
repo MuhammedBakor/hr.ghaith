@@ -21,7 +21,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Search, RefreshCw, Database, Server, Cloud, FileSpreadsheet, CheckCircle, XCircle, Settings, Trash2, Play, Pause, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -43,7 +44,10 @@ export default function BIDataSources() {
   });
 
   // جلب مصادر البيانات من API
-  const { data: dataSources, isLoading, refetch, isError, error } = trpc.bi.dataSources?.list?.useQuery();
+  const { data: dataSources, isLoading, refetch, isError, error } = useQuery({
+    queryKey: ['bi', 'dataSources'],
+    queryFn: () => api.get('/bi/data-sources').then(r => r.data),
+  });
 
 
   const sourcesList = dataSources || [];

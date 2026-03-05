@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -28,7 +29,8 @@ export default function FleetReplay() {
     return Object.keys(errors).length === 0;
   };
 
-  const saveMutation = trpc.fleetSmart.create.useMutation({
+  const saveMutation = useMutation({
+    mutationFn: (data: any) => api.post('/api/fleet-smart', data).then(r => r.data),
     onSuccess: () => {
       setFormData({ 'vehicleId': '', 'startDate': '', 'endDate': '',
       onError: (e: any) => toast.error(e?.message || 'حدث خطأ')});
@@ -47,14 +49,20 @@ export default function FleetReplay() {
     saveMutation.mutate(formData);
   };
 
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useQuery({
+    queryKey: ['auth', 'me'],
+    queryFn: () => api.get('/api/auth/me').then(r => r.data),
+  });
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedVehicle, setSelectedVehicle] = useState('');
   const [isPlaying, setIsPlaying] = useState(false);
 
-  const { data: vehiclesData, isLoading } = trpc.fleet.vehicles.list.useQuery();
+  const { data: vehiclesData, isLoading } = useQuery({
+    queryKey: ['fleet', 'vehicles'],
+    queryFn: () => api.get('/api/fleet/vehicles').then(r => r.data),
+  });
   const vehicles = (vehiclesData || []) as any[];
 
   if (isLoading) {

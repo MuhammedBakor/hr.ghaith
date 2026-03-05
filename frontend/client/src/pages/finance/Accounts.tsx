@@ -1,7 +1,8 @@
 import { useAppContext } from '@/contexts/AppContext';
 import React, { useState } from "react";
 import { useLocation } from "wouter";
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -84,10 +85,14 @@ export default function Accounts() {
   });
 
   // Fetch accounts
-  const { data: accounts = [], isLoading, refetch, isError, error} = trpc.finance.accounts.list.useQuery();
+  const { data: accounts = [], isLoading, refetch, isError, error} = useQuery({
+    queryKey: ['finance', 'accounts'],
+    queryFn: () => api.get('/finance/accounts').then(r => r.data),
+  });
 
   // Mutations
-  const createMutation = trpc.finance.accounts.create.useMutation({
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/finance/accounts', data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم إنشاء الحساب بنجاح");
       setViewMode("list");
@@ -95,12 +100,13 @@ export default function Accounts() {
       refetch();
     },
     onError: (error: any) => {
-      toast.error(error.message || "حدث خطأ أثناء إنشاء الحساب");
+      toast.error(error?.response?.data?.message || error.message || "حدث خطأ أثناء إنشاء الحساب");
     },
   });
 
   // Mutations للتحديث والحذف
-  const updateMutation = trpc.finance.accounts.update.useMutation({
+  const updateMutation = useMutation({
+    mutationFn: (data: any) => api.put(`/finance/accounts/${data.id}`, data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم تحديث الحساب بنجاح");
       setViewMode("list");
@@ -108,17 +114,18 @@ export default function Accounts() {
       refetch();
     },
     onError: (error: any) => {
-      toast.error(error.message || "حدث خطأ أثناء تحديث الحساب");
+      toast.error(error?.response?.data?.message || error.message || "حدث خطأ أثناء تحديث الحساب");
     },
   });
 
-  const deleteMutation = trpc.finance.accounts.delete.useMutation({
+  const deleteMutation = useMutation({
+    mutationFn: (data: any) => api.delete(`/finance/accounts/${data.id}`).then(r => r.data),
     onSuccess: () => {
       toast.success("تم حذف الحساب بنجاح");
       refetch();
     },
     onError: (error: any) => {
-      toast.error(error.message || "حدث خطأ أثناء حذف الحساب");
+      toast.error(error?.response?.data?.message || error.message || "حدث خطأ أثناء حذف الحساب");
     },
   });
 

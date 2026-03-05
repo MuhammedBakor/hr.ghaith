@@ -16,7 +16,9 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { ArrowRight, AlertTriangle, Gavel, Eye, FileText, MessageSquare, Clock, CheckCircle, Scale, Printer, Download, Send } from 'lucide-react';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { useUser } from '@/services/authService';
 import { toast } from 'sonner';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { PrintButton } from "@/components/PrintButton";
@@ -64,7 +66,7 @@ const severityColors: Record<string, string> = {
 export default function MyViolations() {
   const confirmDelete = (fn: () => void) => { if (window.confirm("هل أنت متأكد من الحذف؟")) fn(); };
 
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useUser();
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -78,13 +80,26 @@ export default function MyViolations() {
   const employeeId = user?.id || 1;
 
   // Fetch data for current employee
-  const { data: violationTypes } = trpc.controlKernel.violationTypes?.list?.useQuery();
-  const { data: penaltyTypes } = trpc.controlKernel.penaltyTypes?.list?.useQuery();
-  const { data: violations, isLoading: loadingViolations } = trpc.controlKernel.violations?.list?.useQuery({ employeeId });
-  const { data: penalties, isLoading: loadingPenalties, refetch: refetchPenalties } = trpc.controlKernel.penalties?.list?.useQuery({ employeeId });
+  const { data: violationTypes } = useQuery({
+    queryKey: ['violationTypes'],
+    queryFn: () => api.get('/hr/control-kernel/violation-types').then(res => res.data),
+  });
+  const { data: penaltyTypes } = useQuery({
+    queryKey: ['penaltyTypes'],
+    queryFn: () => api.get('/hr/control-kernel/penalty-types').then(res => res.data),
+  });
+  const { data: violations, isLoading: loadingViolations } = useQuery({
+    queryKey: ['violations', employeeId],
+    queryFn: () => api.get('/hr/control-kernel/violations', { params: { employeeId } }).then(res => res.data),
+  });
+  const { data: penalties, isLoading: loadingPenalties, refetch: refetchPenalties } = useQuery({
+    queryKey: ['controlPenalties', employeeId],
+    queryFn: () => api.get('/hr/control-kernel/penalties', { params: { employeeId } }).then(res => res.data),
+  });
 
   // Appeal mutation
-  const appealPenalty = trpc.controlKernel.penalties?.appeal?.useMutation({
+  const appealPenalty = useMutation({
+    mutationFn: (data: any) => api.post(`/hr/control-kernel/penalties/${data.id}/appeal`, { reason: data.reason }).then(res => res.data),
     onSuccess: () => {
       toast.success('تم تقديم الاستئناف بنجاح');
       setIsAppealOpen(false);

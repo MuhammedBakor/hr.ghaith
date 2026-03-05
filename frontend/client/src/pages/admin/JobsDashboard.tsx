@@ -1,6 +1,7 @@
 import { useAppContext } from '@/contexts/AppContext';
 import { useState } from "react";
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import api from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -78,7 +79,8 @@ export default function JobsDashboard() {
     return Object.keys(errors).length === 0;
   };
 
-  const saveMutation = trpc.admin.create.useMutation({
+  const saveMutation = useMutation({
+    mutationFn: (data: any) => api.post('/admin', data).then(r => r.data),
     onSuccess: () => {
       setFormData({ 'title': '', 'department': '', 'status': '' });
       setIsSubmitting(false);
@@ -109,58 +111,71 @@ export default function JobsDashboard() {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
 
-  const utils = trpc.useUtils();
+  const queryClient = useQueryClient();
 
-  const { data: jobsData, isLoading, refetch, isError, error } = trpc.system.jobs.list.useQuery({
-    status: statusFilter === "all" ? undefined : statusFilter,
-    type: typeFilter === "all" ? undefined : typeFilter,
-    limit: 50,
+  const { data: jobsData, isLoading, refetch, isError, error } = useQuery({
+    queryKey: ['admin', 'jobs', 'list', statusFilter, typeFilter],
+    queryFn: () => api.get('/admin/jobs', {
+      params: {
+        status: statusFilter === "all" ? undefined : statusFilter,
+        type: typeFilter === "all" ? undefined : typeFilter,
+        limit: 50,
+      },
+    }).then(r => r.data),
   });
 
-  const { data: statsData } = trpc.system.jobs.stats.useQuery();
+  const { data: statsData } = useQuery({
+    queryKey: ['admin', 'jobs', 'stats'],
+    queryFn: () => api.get('/admin/jobs/stats').then(r => r.data),
+  });
 
-  const { data: jobDetails, isLoading: isLoadingDetails } = trpc.system.jobs.get.useQuery(
-    { jobId: selectedJobId! },
-    { enabled: !!selectedJobId && viewMode === "details" }
-  );
+  const { data: jobDetails, isLoading: isLoadingDetails } = useQuery({
+    queryKey: ['admin', 'jobs', 'get', selectedJobId],
+    queryFn: () => api.get(`/admin/jobs/${selectedJobId}`).then(r => r.data),
+    enabled: !!selectedJobId && viewMode === "details",
+  });
 
-  const retryMutation = trpc.system.jobs.retry.useMutation({
+  const retryMutation = useMutation({
+    mutationFn: (data: { jobId: string }) => api.post(`/admin/jobs/${data.jobId}/retry`).then(r => r.data),
     onSuccess: () => {
       toast.success("تم إعادة جدولة المهمة");
-      utils.system.jobs.list.invalidate();
+      queryClient.invalidateQueries({ queryKey: ['admin', 'jobs', 'list'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`فشل في إعادة المحاولة: ${error.message}`);
     },
   });
 
-  const cancelMutation = trpc.system.jobs.cancel.useMutation({
+  const cancelMutation = useMutation({
+    mutationFn: (data: { jobId: string }) => api.post(`/admin/jobs/${data.jobId}/cancel`).then(r => r.data),
     onSuccess: () => {
       toast.success("تم إلغاء المهمة");
-      utils.system.jobs.list.invalidate();
+      queryClient.invalidateQueries({ queryKey: ['admin', 'jobs', 'list'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`فشل في الإلغاء: ${error.message}`);
     },
   });
 
-  const cleanupMutation = trpc.system.jobs.cleanup.useMutation({
-    onSuccess: (data) => {
+  const cleanupMutation = useMutation({
+    mutationFn: (data: { olderThanDays: number }) => api.post('/admin/jobs/cleanup', data).then(r => r.data),
+    onSuccess: (data: any) => {
       toast.success(`تم حذف ${data.deleted} مهمة قديمة`);
-      utils.system.jobs.list.invalidate();
-      utils.system.jobs.stats.invalidate();
+      queryClient.invalidateQueries({ queryKey: ['admin', 'jobs', 'list'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'jobs', 'stats'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`فشل في التنظيف: ${error.message}`);
     },
   });
 
-  const releaseStale = trpc.system.jobs.releaseStale.useMutation({
-    onSuccess: (data) => {
+  const releaseStale = useMutation({
+    mutationFn: (data: any) => api.post('/admin/jobs/release-stale', data).then(r => r.data),
+    onSuccess: (data: any) => {
       toast.success(`تم تحرير ${data.released} مهمة معلقة`);
-      utils.system.jobs.list.invalidate();
+      queryClient.invalidateQueries({ queryKey: ['admin', 'jobs', 'list'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`فشل في التحرير: ${error.message}`);
     },
   });

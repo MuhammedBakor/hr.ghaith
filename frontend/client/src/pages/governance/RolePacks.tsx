@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -56,6 +57,7 @@ const SCOPES = [
 ];
 
 export default function RolePacks() {
+  const queryClient = useQueryClient();
   const confirmDelete = (fn: () => void) => { if (window.confirm("هل أنت متأكد من الحذف؟")) fn(); };
 
   const [showInlineForm, setShowInlineForm] = useState(false);
@@ -73,7 +75,7 @@ export default function RolePacks() {
   const [selectedPack, setSelectedPack] = useState<RolePack | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [showPermissionsDialog, setShowPermissionsDialog] = useState(false);
-  
+
   // Form state
   const [formData, setFormData] = useState({
     code: '',
@@ -85,21 +87,25 @@ export default function RolePacks() {
     isDefault: false,
     priority: 50,
   });
-  
-  const utils = trpc.useUtils();
-  const { data: rolePacks, isLoading, isError, error} = trpc.kernel.rolePacks?.list?.useQuery();
-  
+
+  const { data: rolePacks, isLoading, isError, error } = useQuery({
+    queryKey: ['role-packs-list'],
+    queryFn: () => api.get('/role-packs').then(r => r.data),
+  });
+
   // جلب صلاحيات الحزمة المحددة
-  const { data: packPermissions, isLoading: isLoadingPermissions } = trpc.kernel.rolePacks?.getPermissions?.useQuery(
-    { rolePackId: selectedPack?.id || 0 },
-    { enabled: !!selectedPack?.id && showPermissionsDialog }
-  );
-  
+  const { data: packPermissions, isLoading: isLoadingPermissions } = useQuery({
+    queryKey: ['role-pack-permissions', selectedPack?.id],
+    queryFn: () => api.get(`/role-packs/${selectedPack?.id}/permissions`).then(r => r.data),
+    enabled: !!selectedPack?.id && showPermissionsDialog,
+  });
+
   // Create mutation
-  const createMutation = trpc.kernel.rolePacks?.create?.useMutation({
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/role-packs', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إنشاء الصفة بنجاح');
-      utils.kernel.rolePacks?.list?.invalidate();
+      queryClient.invalidateQueries({ queryKey: ['role-packs-list'] });
       setViewMode('list');
       resetForm();
     },
@@ -107,7 +113,7 @@ export default function RolePacks() {
       toast.error('فشل في إنشاء الصفة: ' + error.message);
     },
   });
-  
+
   const resetForm = () => {
     setFormData({
       code: '',
@@ -120,26 +126,26 @@ export default function RolePacks() {
       priority: 50,
     });
   };
-  
+
   const filteredPacks = (rolePacks || []).filter((pack: RolePack) => {
-    const matchesSearch = 
+    const matchesSearch =
       pack.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       pack.nameAr?.includes(searchTerm) ||
       pack.code?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === 'all' || pack.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
-  
+
   const openViewDialog = (pack: RolePack) => {
     setSelectedPack(pack);
     setViewMode('view');
   };
-  
+
   const openPermissionsDialog = (pack: RolePack) => {
     setSelectedPack(pack);
     setShowPermissionsDialog(true);
   };
-  
+
   const openEditDialog = (pack: RolePack) => {
     setSelectedPack(pack);
     setFormData({
@@ -154,7 +160,7 @@ export default function RolePacks() {
     });
     setViewMode('edit');
   };
-  
+
   const handleSubmit = () => {
     if (!formData.code || !formData.name) {
       toast.error('يرجى ملء جميع الحقول المطلوبة');
@@ -162,11 +168,11 @@ export default function RolePacks() {
     }
     createMutation.mutate(formData);
   };
-  
+
   const getCategoryLabel = (category: string) => {
     return CATEGORIES.find(c => c.value === category)?.labelAr || category;
   };
-  
+
   const getScopeLabel = (scope: string) => {
     return SCOPES.find(s => s.value === scope)?.labelAr || scope;
   };
@@ -174,7 +180,7 @@ export default function RolePacks() {
   if (isLoading) {
     if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>;
 
-    
+
     return (
       <div className="flex items-center justify-center h-64" dir="rtl">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -365,7 +371,7 @@ export default function RolePacks() {
                 </label>
               </div>
             </div>
-            
+
             <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t mt-6">
               <Button variant="outline" onClick={() => { setViewMode('list'); resetForm(); }}>
                 إلغاء
@@ -514,7 +520,7 @@ export default function RolePacks() {
               قائمة الصلاحيات المرتبطة بهذه الصفة
             </p>
           </div>
-          
+
           {isLoadingPermissions ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -543,7 +549,7 @@ export default function RolePacks() {
               لا توجد صلاحيات مرتبطة بهذه الصفة
             </div>
           )}
-          
+
           <div className="flex gap-2 mt-4 pt-3 border-t justify-end">
             <Button variant="outline" onClick={() => setShowPermissionsDialog(false)}>
               إغلاق

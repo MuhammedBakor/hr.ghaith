@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { trpc } from '@/lib/trpc';
+import { useQuery } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -7,15 +8,24 @@ import { toast } from 'sonner';
 import { Download, Car, Users, Wrench } from 'lucide-react';
 
 export default function FleetExports() {
-  const { data: currentUser, isError, error, isLoading} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error, isLoading} = useQuery({
+    queryKey: ['auth', 'me'],
+    queryFn: () => api.get('/api/auth/me').then(r => r.data),
+  });
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
   const [exportType, setExportType] = useState('vehicles');
   const [format, setFormat] = useState('csv');
 
-  const { data: vehiclesData } = trpc.fleet.vehicles.list.useQuery();
-  const { data: driversData } = trpc.fleetExtended.drivers.list.useQuery();
+  const { data: vehiclesData } = useQuery({
+    queryKey: ['fleet', 'vehicles'],
+    queryFn: () => api.get('/api/fleet/vehicles').then(r => r.data),
+  });
+  const { data: driversData } = useQuery({
+    queryKey: ['fleet-extended', 'drivers'],
+    queryFn: () => api.get('/api/fleet-extended/drivers').then(r => r.data),
+  });
 
   const vehicles = (vehiclesData || []) as any[];
   const drivers = (driversData || []) as any[];

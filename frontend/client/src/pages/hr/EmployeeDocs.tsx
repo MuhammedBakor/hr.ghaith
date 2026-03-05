@@ -1,12 +1,14 @@
 import React from "react";
 import { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { trpc } from '../../lib/trpc';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
 
 export default function EmployeeDocumentsPage() {
+  const queryClient = useQueryClient();
   const [showInlineForm, setShowInlineForm] = useState(false);
   const [inlineData, setInlineData] = useState<any>({});
 
@@ -19,12 +21,27 @@ export default function EmployeeDocumentsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
 
-  const { data, isLoading, refetch, isError, error } = trpc.employeeDocuments.list.useQuery({});
+  const { data, isLoading, refetch, isError, error } = useQuery({
+    queryKey: ['employeeDocuments'],
+    queryFn: () => api.get('/hr/employee-documents').then(res => res.data),
+  });
   const list = (data || []) as any[];
 
-  const createMut = trpc.employeeDocuments.create.useMutation({ onSuccess: () => { refetch(); setOpen(false); resetForm(); }, onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
-  const updateMut = trpc.employeeDocuments.update.useMutation({ onSuccess: () => { refetch(); setOpen(false); resetForm(); }, onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
-  const deleteMut = trpc.employeeDocuments.delete.useMutation({ onSuccess: () => refetch(), onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
+  const createMut = useMutation({
+    mutationFn: (data: any) => api.post('/hr/employee-documents', data).then(res => res.data),
+    onSuccess: () => { refetch(); setOpen(false); resetForm(); },
+    onError: (e: any) => { alert(e.message || "حدث خطأ"); },
+  });
+  const updateMut = useMutation({
+    mutationFn: ({ id, ...data }: any) => api.put(`/hr/employee-documents/${id}`, data).then(res => res.data),
+    onSuccess: () => { refetch(); setOpen(false); resetForm(); },
+    onError: (e: any) => { alert(e.message || "حدث خطأ"); },
+  });
+  const deleteMut = useMutation({
+    mutationFn: ({ id }: any) => api.delete(`/hr/employee-documents/${id}`),
+    onSuccess: () => refetch(),
+    onError: (e: any) => { alert(e.message || "حدث خطأ"); },
+  });
 
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
@@ -99,9 +116,9 @@ export default function EmployeeDocumentsPage() {
                 {list?.filter((item: any) => !searchTerm || JSON.stringify(item).toLowerCase().includes(searchTerm.toLowerCase()))?.map((item: any, idx: number) => (
                   <tr key={item.id || idx} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm">{item.id || idx + 1}</td>
-                    <td className="px-4 py-3 text-sm">{String(item.employeeId || "—")}</td>
-                    <td className="px-4 py-3 text-sm">{String(item.documentType || "—")}</td>
-                    <td className="px-4 py-3 text-sm">{String(item.title || "—")}</td>
+                    <td className="px-4 py-3 text-sm">{String(item.employeeId || "\u2014")}</td>
+                    <td className="px-4 py-3 text-sm">{String(item.documentType || "\u2014")}</td>
+                    <td className="px-4 py-3 text-sm">{String(item.title || "\u2014")}</td>
                     <td className="px-4 py-3 text-sm space-x-2 space-x-reverse">
                       <button onClick={() => handleEdit(item)} className="text-blue-600 hover:text-blue-800">تعديل</button>
                       {deleteConfirm === item.id ? (

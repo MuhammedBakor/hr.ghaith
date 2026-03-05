@@ -1,13 +1,14 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
-import { useState } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { useAppContext } from '@/contexts/AppContext';
 import { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/ui/data-table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { trpc } from '@/lib/trpc';
-import { 
+import {
   AlertTriangle,
   Gauge,
   Clock,
@@ -63,10 +64,11 @@ const getSeverityBadge = (severity: string) => {
 export default function FleetAlerts() {
   const confirmDelete = (fn: () => void) => { if (window.confirm("هل أنت متأكد من الحذف؟")) fn(); };
 
+  const queryClient = useQueryClient();
+
   const handleSubmit = () => { createMut.mutate({}); };
 
   const [searchTerm, setSearchTerm] = useState('');
-  const utils = trpc.useUtils();
 
   const { selectedRole: userRole } = useAppContext();
   const canEdit = userRole === "admin" || userRole === "manager";
@@ -81,13 +83,24 @@ export default function FleetAlerts() {
   const [typeFilter, setTypeFilter] = useState<string>('all');
 
   // البيانات من API
-  const { data: violationsData, isLoading, isError, error } = trpc.fleetExtended.violations.list.useQuery();
-  const { data: vehiclesData } = trpc.fleet.vehicles.list.useQuery();
+  const { data: violationsData, isLoading, isError, error } = useQuery({
+    queryKey: ['fleet-extended', 'violations'],
+    queryFn: () => api.get('/api/fleet-extended/violations').then(r => r.data),
+  });
+  const { data: vehiclesData } = useQuery({
+    queryKey: ['fleet', 'vehicles'],
+    queryFn: () => api.get('/api/fleet/vehicles').then(r => r.data),
+  });
 
-  const createMut = trpc.fleetExtended.create.useMutation({ onError: (e: any) => { alert(e.message || "حدث خطأ"); }, onSuccess: () => {
-        utils.fleetExtended.invalidate();
- window.location.reload(); } });
-  
+  const createMut = useMutation({
+    mutationFn: (data: any) => api.post('/api/fleet-extended', data).then(r => r.data),
+    onError: (e: any) => { alert(e.message || "حدث خطأ"); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['fleet-extended'] });
+      window.location.reload();
+    },
+  });
+
   const vehicles = vehiclesData || [];
   const alerts = violationsData?.filter((item: any) => !searchTerm || JSON.stringify(item).toLowerCase().includes(searchTerm.toLowerCase()))?.map((v: any) => ({
     id: v.id,
@@ -101,8 +114,8 @@ export default function FleetAlerts() {
   })) as Alert[];
 
   // Filter alerts based on type
-  const filteredAlerts = typeFilter === 'all' 
-    ? alerts 
+  const filteredAlerts = typeFilter === 'all'
+    ? alerts
     : alerts.filter(a => a.type === typeFilter);
 
   const stats = {
@@ -269,7 +282,7 @@ export default function FleetAlerts() {
           )}
         </CardContent>
       </Card>
-    
+
         {showDialog && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowDialog(false)}>
             <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl" dir="rtl" onClick={e => e.stopPropagation()}>

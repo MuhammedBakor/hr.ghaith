@@ -5,7 +5,8 @@ import { DataTable } from '@/components/ui/data-table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { User, Award, TrendingUp, AlertTriangle } from 'lucide-react';
 
 interface DriverScore {
@@ -49,7 +50,8 @@ export default function FleetDriverScores() {
     return Object.keys(errors).length === 0;
   };
 
-  const saveMutation = trpc.fleetSmart.create.useMutation({
+  const saveMutation = useMutation({
+    mutationFn: (data: any) => api.post('/api/fleet-smart', data).then(r => r.data),
     onSuccess: () => {
       setFormData({ 'driverId': '', 'score': '', 'notes': '',
       onError: (e: any) => toast.error(e?.message || 'حدث خطأ')});
@@ -68,10 +70,16 @@ export default function FleetDriverScores() {
     saveMutation.mutate(formData);
   };
 
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useQuery({
+    queryKey: ['auth', 'me'],
+    queryFn: () => api.get('/api/auth/me').then(r => r.data),
+  });
   const userRole = currentUser?.role || 'user';
 
-  const { data: driversData, isLoading } = trpc.fleetExtended.drivers.list.useQuery();
+  const { data: driversData, isLoading } = useQuery({
+    queryKey: ['fleet-extended', 'drivers'],
+    queryFn: () => api.get('/api/fleet-extended/drivers').then(r => r.data),
+  });
   const drivers = driversData || [];
 
   const driverScores: DriverScore[] = useMemo(() => {

@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import api from "@/lib/api";
 import { toast } from 'sonner';
 import { Settings, Save, Clock } from 'lucide-react';
 
@@ -31,11 +32,15 @@ export default function ApprovalSettingsPage() {
   const [showDialog, setShowDialog] = React.useState(false);
   const [formData, setFormData] = React.useState<Record<string, any>>({});
 
-  const { data: settings, isLoading, refetch, isError, error} = trpc.approvalSettings.list.useQuery();
+  const { data: settings, isLoading, refetch, isError, error} = useQuery({
+    queryKey: ["approvalSettings", "list"],
+    queryFn: () => api.get("/api/approval-settings").then(r => r.data),
+  });
 
-  const upsertMutation = trpc.approvalSettings.upsert.useMutation({
+  const upsertMutation = useMutation({
+    mutationFn: (data: any) => api.post("/api/approval-settings", data).then(r => r.data),
     onSuccess: () => { toast.success('تم حفظ الإعدادات'); refetch(); },
-    onError: (e) => toast.error(e.message),
+    onError: (e: any) => toast.error(e.message),
   });
 
   const getSettingValue = (module: string, entityType: string, field: string) => {

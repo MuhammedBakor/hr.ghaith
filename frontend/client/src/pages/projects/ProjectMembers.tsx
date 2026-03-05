@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -41,7 +42,7 @@ const roleLabels: Record<string, string> = {
 };
 
 export default function ProjectMembers() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useQuery({ queryKey: ['auth', 'me'], queryFn: () => api.get('/auth/me').then(r => r.data) });
   const userRole = currentUser?.role || 'user';
 
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -50,14 +51,16 @@ export default function ProjectMembers() {
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [selectedRole, setSelectedRole] = useState<string>("member");
 
-  const { data: projects } = trpc.projects?.list?.useQuery();
-  const { data: users } = trpc.hr.employees.list.useQuery();
-  const { data: members, isLoading, refetch } = trpc.projects.members?.list?.useQuery(
-    { projectId: selectedProjectId! },
-    { enabled: !!selectedProjectId }
-  );
+  const { data: projects } = useQuery({ queryKey: ['projects', 'list'], queryFn: () => api.get('/projects').then(r => r.data) });
+  const { data: users } = useQuery({ queryKey: ['hr', 'employees'], queryFn: () => api.get('/hr/employees').then(r => r.data) });
+  const { data: members, isLoading, refetch } = useQuery({
+    queryKey: ['projects', 'members', selectedProjectId],
+    queryFn: () => api.get(`/projects/members?projectId=${selectedProjectId}`).then(r => r.data),
+    enabled: !!selectedProjectId
+  });
 
-  const addMemberMutation = trpc.projects.members?.add?.useMutation({
+  const addMemberMutation = useMutation({
+    mutationFn: (data: any) => api.post('/projects/members', data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم إضافة العضو بنجاح");
       setIsAddOpen(false);
@@ -65,17 +68,18 @@ export default function ProjectMembers() {
       setSelectedRole("member");
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(error.message);
     },
   });
 
-  const removeMemberMutation = trpc.projects.members?.remove?.useMutation({
+  const removeMemberMutation = useMutation({
+    mutationFn: (data: any) => api.delete(`/projects/members/${data.id}?projectId=${data.projectId}`).then(r => r.data),
     onSuccess: () => {
       toast.success("تم إزالة العضو بنجاح");
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(error.message);
     },
   });

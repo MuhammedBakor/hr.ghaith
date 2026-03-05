@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/ui/data-table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,8 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { trpc } from '@/lib/trpc';
-import { 
+import {
   Radio,
   RefreshCw,
   MapPin,
@@ -61,22 +62,34 @@ const getStatusBadge = (status: string) => {
 };
 
 export default function FleetLive() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useQuery({
+    queryKey: ['auth', 'me'],
+    queryFn: () => api.get('/api/auth/me').then(r => r.data),
+  });
   const userRole = currentUser?.role || 'user';
 
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [refreshInterval, setRefreshInterval] = useState(10);
 
-  const { data: vehiclesData, isLoading: vehiclesLoading, refetch } = trpc.fleet.vehicles.list.useQuery();
-  const { data: driversData } = trpc.fleetExtended.drivers.list.useQuery();
-  const { data: tripsData } = trpc.fleetExtended.trips.list.useQuery();
-  
+  const { data: vehiclesData, isLoading: vehiclesLoading, refetch } = useQuery({
+    queryKey: ['fleet', 'vehicles'],
+    queryFn: () => api.get('/api/fleet/vehicles').then(r => r.data),
+  });
+  const { data: driversData } = useQuery({
+    queryKey: ['fleet-extended', 'drivers'],
+    queryFn: () => api.get('/api/fleet-extended/drivers').then(r => r.data),
+  });
+  const { data: tripsData } = useQuery({
+    queryKey: ['fleet-extended', 'trips'],
+    queryFn: () => api.get('/api/fleet-extended/trips').then(r => r.data),
+  });
+
   const vehicles = vehiclesData || [];
   const drivers = driversData || [];
   const trips = tripsData || [];
   const isLoading = vehiclesLoading;
 
-  // Auto refresh — مع إصلاح memory leak
+  // Auto refresh
   useEffect(() => {
     if (!autoRefresh) return;
 
@@ -84,7 +97,6 @@ export default function FleetLive() {
       refetch();
     }, refreshInterval * 1000);
 
-    // FIX: دالة cleanup دائماً تُرجع — لا early return قبلها
     return () => clearInterval(interval);
   }, [autoRefresh, refreshInterval, refetch]);
 
@@ -92,15 +104,12 @@ export default function FleetLive() {
   // Generate live data from vehicles with real trip data
   const liveData: LiveVehicle[] = useMemo(() => {
     return vehicles.map((v: any) => {
-      // البحث عن الرحلة النشطة لهذه المركبة
-      const activeTrip = trips.find((t: any) => 
+      const activeTrip = trips.find((t: any) =>
         t.vehicleId === v.id && t.status === 'in_progress'
       );
-      
-      // البحث عن السائق
+
       const driver = activeTrip ? drivers.find((d: any) => d.id === activeTrip.driverId) : null;
-      
-      // تحديد الحالة بناءً على حالة المركبة والرحلة
+
       let status = 'offline';
       if (v.status === 'in_use' || activeTrip) {
         status = 'moving';
@@ -108,12 +117,11 @@ export default function FleetLive() {
         status = 'idle';
       }
 
-      // استخدام بيانات الرحلة إذا كانت متاحة
-      const lat = activeTrip?.startLocation ? 
-        parseFloat(activeTrip.startLocation.split(',')[0]) || 24.7136 : 
+      const lat = activeTrip?.startLocation ?
+        parseFloat(activeTrip.startLocation.split(',')[0]) || 24.7136 :
         24.7136 + (Math.random() - 0.5) * 0.05;
-      const lng = activeTrip?.startLocation ? 
-        parseFloat(activeTrip.startLocation.split(',')[1]) || 46.6753 : 
+      const lng = activeTrip?.startLocation ?
+        parseFloat(activeTrip.startLocation.split(',')[1]) || 46.6753 :
         46.6753 + (Math.random() - 0.5) * 0.05;
 
       return {
@@ -189,8 +197,8 @@ export default function FleetLive() {
       header: 'الاتجاه',
       cell: ({ row }) => (
         <div className="flex items-center gap-1">
-          <Navigation 
-            className="h-4 w-4 text-blue-500" 
+          <Navigation
+            className="h-4 w-4 text-blue-500"
             style={{ transform: `rotate(${row.original.heading}deg)` }}
           />
           <span>{row.original.heading}°</span>
@@ -239,9 +247,9 @@ export default function FleetLive() {
             />
             <Label htmlFor="auto-refresh">تحديث تلقائي</Label>
           </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => refetch()}
             className="gap-2"
           >

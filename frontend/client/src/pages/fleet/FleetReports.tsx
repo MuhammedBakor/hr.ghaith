@@ -1,6 +1,7 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
 import { useState } from 'react';
-import { trpc } from '@/lib/trpc';
+import { useQuery } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -11,7 +12,10 @@ import { Loader2, Car, Fuel, Wrench, Route, Download, Printer, Calendar } from '
 import { PrintButton } from "@/components/PrintButton";
 
 export default function FleetReports() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useQuery({
+    queryKey: ['auth', 'me'],
+    queryFn: () => api.get('/api/auth/me').then(r => r.data),
+  });
   const userRole = currentUser?.role || 'user';
   const requiredRole = 'fleet_manager';
   const hasAccess = userRole === 'admin' || userRole === requiredRole || requiredRole === 'user';
@@ -25,10 +29,22 @@ export default function FleetReports() {
   const [reportType, setReportType] = useState('vehicles');
   const [dateRange, setDateRange] = useState('month');
 
-  const { data: vehiclesData, isLoading: vehiclesLoading } = trpc.fleet.vehicles.list.useQuery();
-  const { data: maintenanceData, isLoading: maintenanceLoading } = trpc.fleet.maintenance.list.useQuery();
-  const { data: fuelData, isLoading: fuelLoading } = trpc.fleetExtended.fuelLogs.list.useQuery({});
-  const { data: tripsData, isLoading: tripsLoading } = trpc.fleetExtended.trips.list.useQuery({});
+  const { data: vehiclesData, isLoading: vehiclesLoading } = useQuery({
+    queryKey: ['fleet', 'vehicles'],
+    queryFn: () => api.get('/api/fleet/vehicles').then(r => r.data),
+  });
+  const { data: maintenanceData, isLoading: maintenanceLoading } = useQuery({
+    queryKey: ['fleet', 'maintenance'],
+    queryFn: () => api.get('/api/fleet/maintenance').then(r => r.data),
+  });
+  const { data: fuelData, isLoading: fuelLoading } = useQuery({
+    queryKey: ['fleet-extended', 'fuel-logs'],
+    queryFn: () => api.get('/api/fleet-extended/fuel-logs').then(r => r.data),
+  });
+  const { data: tripsData, isLoading: tripsLoading } = useQuery({
+    queryKey: ['fleet-extended', 'trips'],
+    queryFn: () => api.get('/api/fleet-extended/trips').then(r => r.data),
+  });
 
   const vehicles = vehiclesData || [];
   const maintenance = maintenanceData || [];
@@ -67,7 +83,7 @@ export default function FleetReports() {
   };
 
   if (isLoading) {
-    
+
   if (isError) return (
     <div className="p-8 text-center">
       <p className="text-red-500 text-lg">حدث خطأ في تحميل البيانات</p>

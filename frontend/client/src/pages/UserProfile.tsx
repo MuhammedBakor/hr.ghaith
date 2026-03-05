@@ -1,11 +1,10 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
 /**
- * ════════════════════════════════════════════════════════════════════
  * USER PROFILE v3 — صفحة الملف الشخصي الشاملة المتكاملة
- * ════════════════════════════════════════════════════════════════════
  */
 import { useState, useEffect } from 'react';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useAppContext, roleLabels, roleColors } from '@/contexts/AppContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,40 +22,40 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { User, Settings, Bell, Shield, Moon, Sun, Monitor, Lock, Activity, Eye, EyeOff, CheckCircle2, AlertTriangle, Palette, Type, Clock, Grid3x3, List, Mail, Smartphone, Loader2, Check, X, Info, TrendingUp, Calendar, Building, Volume2, Briefcase, Bell as BellIcon, Save, Key, AlertCircle, History } from 'lucide-react';
 import { toast } from 'sonner';
 
-// ═══════════════════════════════════════════════
-// PASSWORD STRENGTH BAR
-// ═══════════════════════════════════════════════
+// PasswordStrengthBar — since there's no matching service hook, we use a simple local check
 function PasswordStrengthBar({ password }: { password: string }) {
-  const { data } = trpc.userProfile.profile?.checkPasswordStrength?.useQuery(
-    { password }, { enabled: password.length > 2 }
-  );
-  if (!data || !password) return null;
+  if (!password || password.length < 3) return null;
+
+  // Simple client-side strength check
+  let score = 0;
+  if (password.length >= 8) score += 25;
+  if (password.length >= 12) score += 15;
+  if (/[A-Z]/.test(password)) score += 15;
+  if (/[a-z]/.test(password)) score += 10;
+  if (/[0-9]/.test(password)) score += 15;
+  if (/[^A-Za-z0-9]/.test(password)) score += 20;
+
+  const level = score >= 80 ? 'very_strong' : score >= 60 ? 'strong' : score >= 40 ? 'good' : score >= 25 ? 'fair' : 'weak';
   const colors: Record<string, string> = { weak: 'bg-red-500', fair: 'bg-amber-500', good: 'bg-blue-500', strong: 'bg-emerald-500', very_strong: 'bg-emerald-600' };
   const widths: Record<string, number> = { weak: 20, fair: 40, good: 65, strong: 85, very_strong: 100 };
   const labels: Record<string, string> = { weak: 'ضعيفة جداً', fair: 'مقبولة', good: 'جيدة', strong: 'قوية', very_strong: 'قوية جداً' };
+
   return (
     <div className="space-y-1.5 mt-2">
       <div className="flex justify-between text-xs">
         <span className="text-gray-500">قوة كلمة المرور</span>
-        <span className={`font-semibold ${data.score >= 70 ? 'text-emerald-600' : data.score >= 50 ? 'text-blue-600' : data.score >= 30 ? 'text-amber-600' : 'text-red-600'}`}>
-          {labels[data.level ?? 'weak']} ({data.score}/100)
+        <span className={`font-semibold ${score >= 70 ? 'text-emerald-600' : score >= 50 ? 'text-blue-600' : score >= 30 ? 'text-amber-600' : 'text-red-600'}`}>
+          {labels[level]} ({score}/100)
         </span>
       </div>
       <div className="h-2 rounded-full bg-gray-200 overflow-hidden">
-        <div className={`h-full rounded-full transition-all duration-500 ${colors[data.level ?? 'weak']}`} style={{ width: `${widths[data.level ?? 'weak']}%` }} />
+        <div className={`h-full rounded-full transition-all duration-500 ${colors[level]}`} style={{ width: `${widths[level]}%` }} />
       </div>
-      {data.feedback?.length > 0 && (
-        <ul className="space-y-1 text-xs text-gray-500">
-          {data?.feedback?.map((f, i) => <li key={f.id ?? `li-${i}`} className="flex items-center gap-1.5"><AlertTriangle className="w-3 h-3 text-amber-500 shrink-0" />{f}</li>)}
-        </ul>
-      )}
     </div>
   );
 }
 
-// ═══════════════════════════════════════════════
 // KPI CARD
-// ═══════════════════════════════════════════════
 function KPICard({ label, value, icon: Icon, color = 'blue', sub }: { label: string; value: string | number; icon: React.ComponentType<{className?: string}>; color?: string; sub?: string }) {
   const colorMap: Record<string, { bg: string; icon: string }> = {
     blue: { bg: 'bg-blue-50', icon: 'text-blue-600' },
@@ -77,9 +76,7 @@ function KPICard({ label, value, icon: Icon, color = 'blue', sub }: { label: str
   );
 }
 
-// ═══════════════════════════════════════════════
 // NOTIFICATION ITEM
-// ═══════════════════════════════════════════════
 function NotifItem({ n, onMarkRead }: { n: any; onMarkRead: (id: string) => void }) {
   const typeIcons: Record<string, React.ComponentType<{className?: string}>> = { success: CheckCircle2, error: X, warning: AlertTriangle, info: Info };
   const typeColors: Record<string, string> = { success: 'text-emerald-600 bg-emerald-50', error: 'text-red-600 bg-red-50', warning: 'text-amber-600 bg-amber-50', info: 'text-blue-600 bg-blue-50' };
@@ -104,9 +101,7 @@ function NotifItem({ n, onMarkRead }: { n: any; onMarkRead: (id: string) => void
   );
 }
 
-// ═══════════════════════════════════════════════
 // ACTIVITY ITEM
-// ═══════════════════════════════════════════════
 function ActivityItem({ a }: { a: any }) {
   const resultColors: Record<string, string> = { success: 'bg-emerald-500', failure: 'bg-red-500', warning: 'bg-amber-500' };
   return (
@@ -124,40 +119,66 @@ function ActivityItem({ a }: { a: any }) {
   );
 }
 
-// ═══════════════════════════════════════════════
 // MAIN COMPONENT
-// ═══════════════════════════════════════════════
 export default function UserProfile() {
   const { user } = useAuth();
   const { selectedRole } = useAppContext();
-  const utils = trpc.useUtils();
+  const queryClient = useQueryClient();
 
-  // Data
-  const { data: profile, isLoading } = trpc.userProfile.profile?.get?.useQuery();
-  const { data: activity } = trpc.userProfile.activity?.getMine?.useQuery({ limit: 30 });
-  const { data: notifications } = trpc.userProfile.notifications?.list?.useQuery({ limit: 20 });
-  const { data: kpis } = trpc.userProfile.activity?.myKPIs?.useQuery();
-  const { data: unread } = trpc.userProfile.notifications?.unreadCount?.useQuery();
+  // Data - using direct API calls since there's no userProfile service
+  const { data: profile, isLoading } = useQuery({
+    queryKey: ['user-profile'],
+    queryFn: () => api.get('/user/profile').then(res => res.data),
+  });
+
+  const { data: activity } = useQuery({
+    queryKey: ['user-activity'],
+    queryFn: () => api.get('/user/activity', { params: { limit: 30 } }).then(res => res.data),
+  });
+
+  const { data: notifications } = useQuery({
+    queryKey: ['user-notifications'],
+    queryFn: () => api.get('/user/notifications', { params: { limit: 20 } }).then(res => res.data),
+  });
+
+  const { data: kpis } = useQuery({
+    queryKey: ['user-kpis'],
+    queryFn: () => api.get('/user/kpis').then(res => res.data),
+  });
+
+  const { data: unread } = useQuery({
+    queryKey: ['user-notifications-unread'],
+    queryFn: () => api.get('/user/notifications/unread-count').then(res => res.data),
+  });
 
   // Mutations
-  const updateProfile = trpc.userProfile.profile?.update?.useMutation({
-    onSuccess: () => { toast.success('تم حفظ الملف الشخصي'); utils.userProfile.profile?.get?.invalidate(); },
-    onError: (err) => toast.error(err.message),
+  const updateProfile = useMutation({
+    mutationFn: (data: any) => api.put('/user/profile', data).then(res => res.data),
+    onSuccess: () => { toast.success('تم حفظ الملف الشخصي'); queryClient.invalidateQueries({ queryKey: ['user-profile'] }); },
+    onError: (err: any) => toast.error(err.response?.data?.message || err.message),
   });
-  const changePassword = trpc.userProfile.profile?.changePassword?.useMutation({
-    onSuccess: () => { toast.success('تم تغيير كلمة المرور بنجاح'); setPassForm({ current: '', newPass: '', confirm: '',
-      onError: (e: any) => toast.error(e?.message || 'حدث خطأ')}); },
-    onError: (err) => toast.error(err.message),
+
+  const changePassword = useMutation({
+    mutationFn: (data: any) => api.post('/user/change-password', data).then(res => res.data),
+    onSuccess: () => { toast.success('تم تغيير كلمة المرور بنجاح'); setPassForm({ current: '', newPass: '', confirm: '' }); },
+    onError: (err: any) => toast.error(err.response?.data?.message || err.message),
   });
-  const updatePrefs = trpc.userProfile.preferences.update.useMutation({
-    onSuccess: () => toast.success('تم حفظ التفضيلات'),
-    onError: (err) => toast.error(err.message),
+
+  const updatePrefs = useMutation({
+    mutationFn: (data: any) => api.put('/user/preferences', data).then(res => res.data),
+    onSuccess: () => { toast.success('تم حفظ التفضيلات'); queryClient.invalidateQueries({ queryKey: ['user-profile'] }); },
+    onError: (err: any) => toast.error(err.response?.data?.message || err.message),
   });
-  const markRead = trpc.userProfile.notifications?.markRead?.useMutation({
-    onSuccess: () => utils.userProfile.notifications?.list?.invalidate(),
-      onError: (e: any) => toast.error(e?.message || 'حدث خطأ')});
-  const markAllRead = trpc.userProfile.notifications?.markRead?.useMutation({
-    onSuccess: () => { utils.userProfile.notifications?.list?.invalidate(); utils.userProfile.notifications?.unreadCount?.invalidate(); },
+
+  const markRead = useMutation({
+    mutationFn: (data: { id: string }) => api.post('/user/notifications/mark-read', data).then(res => res.data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['user-notifications'] }),
+    onError: (e: any) => toast.error(e?.response?.data?.message || e?.message || 'حدث خطأ'),
+  });
+
+  const markAllRead = useMutation({
+    mutationFn: (data: { id: string }) => api.post('/user/notifications/mark-read', data).then(res => res.data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['user-notifications'] }); queryClient.invalidateQueries({ queryKey: ['user-notifications-unread'] }); },
   });
 
   // Form state
@@ -175,7 +196,7 @@ export default function UserProfile() {
         jobTitle: (profile as any).jobTitle ?? '',
         department: (profile as any).department ?? '',
         bio: (profile as any).bio ?? '',
-      }, []);
+      });
     }
   }, [profile]);
 
@@ -194,7 +215,7 @@ export default function UserProfile() {
 
   return (
     <div className="min-h-screen bg-gray-50" dir="rtl">
-      {/* ─── HEADER ─────────────────────────────── */}
+      {/* HEADER */}
       <div className="bg-white border-b border-gray-100">
         <div className="max-w-4xl mx-auto px-4 py-6">
           <div className="flex items-start gap-4">
@@ -269,7 +290,7 @@ export default function UserProfile() {
         </div>
       </div>
 
-      {/* ─── TABS ───────────────────────────────────── */}
+      {/* TABS */}
       <div className="max-w-4xl mx-auto px-4 py-4">
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 w-full mb-4 bg-white border border-gray-100 rounded-xl p-1">
@@ -283,7 +304,7 @@ export default function UserProfile() {
             <TabsTrigger value="activity" className="text-xs gap-1.5 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700"><Activity className="w-3.5 h-3.5" />النشاط</TabsTrigger>
           </TabsList>
 
-          {/* ── PROFILE TAB ─────────────────────────── */}
+          {/* PROFILE TAB */}
           <TabsContent value="profile">
             <Card className="border-gray-100 shadow-sm">
               <CardHeader className="pb-3">
@@ -323,7 +344,7 @@ export default function UserProfile() {
                     placeholder="اكتب نبذة قصيرة عنك..." rows={3}
                     className="w-full rounded-lg border border-gray-200 p-2.5 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-blue-500" />
                 </div>
-                <Button disabled={updatePrefs.isPending} onClick={() => updateProfile.mutate(profileForm as any)} disabled={updateProfile.isPending} size="sm">
+                <Button onClick={() => updateProfile.mutate(profileForm as any)} disabled={updateProfile.isPending} size="sm">
                   {updateProfile.isPending ? <Loader2 className="w-4 h-4 animate-spin ms-2" /> : <Save className="w-4 h-4 ms-2" />}
                   حفظ التعديلات
                 </Button>
@@ -360,7 +381,7 @@ export default function UserProfile() {
                     <p className="text-xs text-red-500">كلمتا المرور غير متطابقتين</p>
                   )}
                 </div>
-                <Button disabled={updatePrefs.isPending} onClick={() => changePassword.mutate({ currentPassword: passForm.current, newPassword: passForm.newPass, confirmPassword: passForm.confirm })}
+                <Button onClick={() => changePassword.mutate({ currentPassword: passForm.current, newPassword: passForm.newPass, confirmPassword: passForm.confirm })}
                   disabled={changePassword.isPending || !passForm.current || !passForm.newPass || passForm.newPass !== passForm.confirm}
                   size="sm" variant="outline">
                   {changePassword.isPending ? <Loader2 className="w-4 h-4 animate-spin ms-2" /> : <Lock className="w-4 h-4 ms-2" />}
@@ -370,7 +391,7 @@ export default function UserProfile() {
             </Card>
           </TabsContent>
 
-          {/* ── PREFERENCES TAB ─────────────────────── */}
+          {/* PREFERENCES TAB */}
           <TabsContent value="preferences">
             <div className="space-y-4">
               {/* Appearance */}
@@ -493,7 +514,7 @@ export default function UserProfile() {
             </div>
           </TabsContent>
 
-          {/* ── NOTIFICATIONS TAB ───────────────────── */}
+          {/* NOTIFICATIONS TAB */}
           <TabsContent value="notifications">
             <Card className="border-gray-100 shadow-sm">
               <CardHeader className="pb-3">
@@ -525,7 +546,7 @@ export default function UserProfile() {
             </Card>
           </TabsContent>
 
-          {/* ── SECURITY TAB ────────────────────────── */}
+          {/* SECURITY TAB */}
           <TabsContent value="security">
             <div className="space-y-4">
               <Card className="border-gray-100 shadow-sm">
@@ -540,7 +561,7 @@ export default function UserProfile() {
                         </span>
                       </div>
                       <p className={`text-xs ${profile?.twoFactorEnabled ? 'text-emerald-600' : 'text-red-600'}`}>
-                        {profile?.twoFactorEnabled ? 'مفعّل ✓' : 'غير مفعّل'}
+                        {profile?.twoFactorEnabled ? 'مفعّل' : 'غير مفعّل'}
                       </p>
                     </div>
                     <div className="p-3 rounded-xl bg-blue-50 border border-blue-200">
@@ -583,7 +604,7 @@ export default function UserProfile() {
             </div>
           </TabsContent>
 
-          {/* ── ACTIVITY TAB ────────────────────────── */}
+          {/* ACTIVITY TAB */}
           <TabsContent value="activity">
             <Card className="border-gray-100 shadow-sm">
               <CardHeader className="pb-3">

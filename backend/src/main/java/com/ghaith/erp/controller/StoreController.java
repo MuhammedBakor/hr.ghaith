@@ -36,6 +36,12 @@ public class StoreController {
         return ResponseEntity.ok(storeService.updateProduct(id, product));
     }
 
+    @DeleteMapping("/products/{id}")
+    public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
+        storeService.deleteProduct(id);
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping("/orders")
     public ResponseEntity<List<Order>> getAllOrders() {
         return ResponseEntity.ok(storeService.getAllOrders());

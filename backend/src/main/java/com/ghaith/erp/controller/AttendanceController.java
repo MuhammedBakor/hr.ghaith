@@ -59,4 +59,10 @@ public class AttendanceController {
             @RequestParam Long userId) {
         return ResponseEntity.ok(attendanceService.checkInWithQR(payload, userId));
     }
+
+    @PostMapping("/early-leave")
+    public ResponseEntity<Map<String, Object>> requestEarlyLeave(@RequestBody Map<String, Object> payload) {
+        // Stub implementation - can be expanded later
+        return ResponseEntity.ok(Map.of("success", true, "message", "تم تقديم طلب المغادرة المبكرة"));
+    }
 }

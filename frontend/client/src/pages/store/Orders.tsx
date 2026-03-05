@@ -1,4 +1,5 @@
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,13 +39,13 @@ export default function Orders() {
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createData, setCreateData] = useState<any>({});
-  const createMutation = trpc.store.orders.create.useMutation({ onSuccess: () => { refetch(); setShowCreateForm(false); setCreateData({}); } });
+  const createMutation = useMutation({ mutationFn: (data: any) => api.post('/api/store/orders', data).then(r => r.data), onSuccess: () => { refetch(); setShowCreateForm(false); setCreateData({}); } });
 
   const [editingItem, setEditingItem] = useState<any>(null);
 
-  const deleteMutation = trpc.store.orders.delete.useMutation({ onSuccess: () => { refetch(); } });
+  const deleteMutation = useMutation({ mutationFn: (data: any) => api.delete(`/api/store/orders/${data.id}`).then(r => r.data), onSuccess: () => { refetch(); } });
 
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useQuery({ queryKey: ['auth', 'me'], queryFn: () => api.get('/api/auth/me').then(r => r.data) });
   const userRole = currentUser?.role || 'user';
   const requiredRole = 'user';
   const hasAccess = userRole === 'admin' || userRole === requiredRole || requiredRole === 'user';
@@ -58,7 +59,7 @@ export default function Orders() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   // جلب الطلبات من API
-  const { data: ordersApiData, isLoading, refetch } = trpc.store.orders.list.useQuery();
+  const { data: ordersApiData, isLoading, refetch } = useQuery({ queryKey: ['store', 'orders'], queryFn: () => api.get('/api/store/orders').then(r => r.data) });
 
   // تحويل البيانات من API
   const ordersData: Order[] = useMemo(() => {

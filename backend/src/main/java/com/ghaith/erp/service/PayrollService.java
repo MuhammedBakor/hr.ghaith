@@ -6,6 +6,8 @@ import com.ghaith.erp.repository.PayrollRepository;
 import com.ghaith.erp.repository.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -13,54 +15,67 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class PayrollService {
 
-    private final PayrollRepository payrollRepository;
-    private final EmployeeRepository employeeRepository;
+        private final PayrollRepository payrollRepository;
+        private final EmployeeRepository employeeRepository;
 
-    public List<PayrollRecord> getAllPayroll() {
-        return payrollRepository.findAll();
-    }
+        public List<PayrollRecord> getAllPayroll() {
+                return payrollRepository.findAll();
+        }
 
-    public List<PayrollRecord> getPayrollByEmployee(Long employeeId) {
-        return payrollRepository.findByEmployeeId(employeeId);
-    }
+        public List<PayrollRecord> getPayrollByEmployee(Long employeeId) {
+                return payrollRepository.findByEmployeeId(employeeId);
+        }
 
-    @org.springframework.transaction.annotation.Transactional
-    public PayrollRecord createPayroll(Map<String, Object> payload) {
-        Long employeeId = ((Number) payload.get("employeeId")).longValue();
-        Employee employee = employeeRepository.findById(employeeId)
-                .orElseThrow(() -> new RuntimeException("الموظف غير موجود"));
+        @org.springframework.transaction.annotation.Transactional
+        public PayrollRecord createPayroll(Map<String, Object> payload) {
+                Long employeeId = ((Number) payload.get("employeeId")).longValue();
+                Employee employee = employeeRepository.findById(employeeId)
+                                .orElseThrow(() -> new RuntimeException("الموظف غير موجود"));
 
-        PayrollRecord record = new PayrollRecord();
-        record.setEmployee(employee);
+                PayrollRecord record = new PayrollRecord();
+                record.setEmployee(employee);
 
-        record.setBasicSalary(
-                payload.get("basicSalary") != null ? ((Number) payload.get("basicSalary")).doubleValue() : 0.0);
-        record.setHousingAllowance(
-                payload.get("housingAllowance") != null ? ((Number) payload.get("housingAllowance")).doubleValue()
-                        : 0.0);
-        record.setTransportAllowance(
-                payload.get("transportAllowance") != null ? ((Number) payload.get("transportAllowance")).doubleValue()
-                        : 0.0);
-        record.setOtherAllowances(
-                payload.get("otherAllowances") != null ? ((Number) payload.get("otherAllowances")).doubleValue() : 0.0);
-        record.setDeductions(
-                payload.get("deductions") != null ? ((Number) payload.get("deductions")).doubleValue() : 0.0);
+                BigDecimal basicSalary = toBigDecimal(payload.get("basicSalary"));
+                BigDecimal housingAllowance = toBigDecimal(payload.get("housingAllowance"));
+                BigDecimal transportAllowance = toBigDecimal(payload.get("transportAllowance"));
+                BigDecimal otherAllowances = toBigDecimal(payload.get("otherAllowances"));
+                BigDecimal deductions = toBigDecimal(payload.get("deductions"));
 
-        double net = record.getBasicSalary() + record.getHousingAllowance() + record.getTransportAllowance()
-                + record.getOtherAllowances() - record.getDeductions();
-        record.setNetSalary(net);
+                record.setBasicSalary(basicSalary);
+                record.setHousingAllowance(housingAllowance);
+                record.setTransportAllowance(transportAllowance);
+                record.setOtherAllowances(otherAllowances);
+                record.setDeductions(deductions);
 
-        record.setMonth(payload.get("month") != null ? payload.get("month").toString() : "");
-        record.setYear(payload.get("year") != null ? ((Number) payload.get("year")).intValue()
-                : java.time.Year.now().getValue());
-        record.setStatus((String) payload.get("status"));
+                BigDecimal netSalary = basicSalary
+                                .add(housingAllowance)
+                                .add(transportAllowance)
+                                .add(otherAllowances)
+                                .subtract(deductions);
+                record.setNetSalary(netSalary);
 
-        return payrollRepository.save(record);
-    }
+                record.setMonth(payload.get("month") != null ? payload.get("month").toString() : "");
+                record.setYear(payload.get("year") != null
+                                ? ((Number) payload.get("year")).intValue()
+                                : java.time.Year.now().getValue());
+                record.setStatus((String) payload.get("status"));
 
-    public PayrollRecord updateStatus(Long id, String status) {
-        PayrollRecord record = payrollRepository.findById(id).orElseThrow();
-        record.setStatus(status);
-        return payrollRepository.save(record);
-    }
+                return payrollRepository.save(record);
+        }
+
+        public PayrollRecord updateStatus(Long id, String status) {
+                PayrollRecord record = payrollRepository.findById(id).orElseThrow();
+                record.setStatus(status);
+                return payrollRepository.save(record);
+        }
+
+        // ── helpers ──────────────────────────────────────────────────────────────
+
+        private BigDecimal toBigDecimal(Object value) {
+                if (value == null)
+                        return BigDecimal.ZERO;
+                if (value instanceof BigDecimal)
+                        return (BigDecimal) value;
+                return new BigDecimal(value.toString());
+        }
 }

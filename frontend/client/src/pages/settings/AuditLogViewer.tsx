@@ -4,11 +4,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { trpc } from "@/lib/trpc";
+import { useQuery } from "@tanstack/react-query";
+import api from "@/lib/api";
 
 export default function AuditLogViewer() {
   const [search, setSearch] = useState("");
-  const { data, isLoading, isError, refetch } = trpc.auditLogs.list.useQuery(undefined, {
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ['audit', 'logs'],
+    queryFn: () => api.get('/audit/logs').then(r => r.data),
     retry: 1,
     refetchOnWindowFocus: false,
   });

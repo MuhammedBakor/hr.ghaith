@@ -8,7 +8,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowRight, CheckCircle2, XCircle, Clock, User, FileText, Eye, Edit, Printer, RefreshCw } from 'lucide-react';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { useUser } from '@/services/authService';
 import { toast } from 'sonner';
 import { useAppContext } from '@/contexts/AppContext';
 
@@ -45,7 +47,7 @@ const getStatusBadge = (status: string) => {
 };
 
 export default function OnboardingReview() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useUser();
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -60,13 +62,19 @@ export default function OnboardingReview() {
   const { selectedBranchId } = useAppContext();
 
   // جلب طلبات التسجيل
-  const { data: requestsData, isLoading, refetch } = trpc.employeeOnboarding.getPendingRequests.useQuery({
-    branchId: selectedBranchId || undefined,
-    status: activeTab === 'all' ? undefined : activeTab,
+  const { data: requestsData, isLoading, refetch } = useQuery({
+    queryKey: ['onboardingRequests', selectedBranchId, activeTab],
+    queryFn: () => api.get('/hr/employee-onboarding/pending-requests', {
+      params: {
+        branchId: selectedBranchId || undefined,
+        status: activeTab === 'all' ? undefined : activeTab,
+      }
+    }).then(res => res.data),
   });
 
   // Mutation للمراجعة
-  const reviewMutation = trpc.employeeOnboarding.reviewRequest.useMutation({
+  const reviewMutation = useMutation({
+    mutationFn: (data: any) => api.post('/hr/employee-onboarding/review', data).then(res => res.data),
     onSuccess: () => {
       toast.success(
         reviewAction === 'approve' ? 'تم اعتماد الطلب بنجاح' :

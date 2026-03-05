@@ -1,62 +1,82 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
-import React from "react";
-import { trpc } from '@/lib/trpc';
+import React, { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Shield, Users, FileText, Loader2, AlertTriangle, CheckCircle2, XCircle, ClipboardCheck, Key, Lock, Activity, FileCheck } from 'lucide-react';
 import { Link } from 'wouter';
 
 export default function GovernanceLayer() {
-  const confirmDelete = (fn: () => void) => { if (window.confirm("هل أنت متأكد من الحذف؟")) fn(); };
-
-  const handleSubmit = () => { createMut.mutate({}); };
-
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
-  const userRole = currentUser?.role || 'user';
-  const requiredRole = 'admin';
-  const hasAccess = userRole === 'admin' || userRole === requiredRole || requiredRole === 'user';
+  const queryClient = useQueryClient();
 
   const [searchTerm, setSearchTerm] = useState('');
-  const utils = trpc.useUtils();
-
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
 
   const [showDialog, setShowDialog] = React.useState(false);
   const [formData, setFormData] = React.useState<Record<string, any>>({});
-  const { data: rolesData, isLoading: loadingRoles } = trpc.controlKernel.roles.list.useQuery();
-  const { data: documentsData, isLoading: loadingDocs } = trpc.documents.list.useQuery();
-  const { data: violationsData, isLoading: loadingViolations } = trpc.fleetExtended.violations.list.useQuery();
-  const { data: auditsData, isLoading: loadingAudits } = trpc.audit.logs.useQuery({ limit: 100 });
 
-  const createMut = trpc.controlKernel.create.useMutation({ onError: (e: any) => { alert(e.message || "حدث خطأ"); }, onSuccess: () => {
-        utils.controlKernel.invalidate();
- window.location.reload(); } });
-  
+  const { data: currentUser, isError, error } = useQuery({
+    queryKey: ['auth-me'],
+    queryFn: () => api.get('/auth/me').then(r => r.data),
+  });
+  const userRole = currentUser?.role || 'user';
+  const requiredRole = 'admin';
+  const hasAccess = userRole === 'admin' || userRole === requiredRole || requiredRole === 'user';
+
+  const { data: rolesData, isLoading: loadingRoles } = useQuery({
+    queryKey: ['roles-list'],
+    queryFn: () => api.get('/roles').then(r => r.data),
+  });
+  const { data: documentsData, isLoading: loadingDocs } = useQuery({
+    queryKey: ['documents-list'],
+    queryFn: () => api.get('/documents').then(r => r.data),
+  });
+  const { data: violationsData, isLoading: loadingViolations } = useQuery({
+    queryKey: ['violations-list'],
+    queryFn: () => api.get('/fleet/violations').then(r => r.data),
+  });
+  const { data: auditsData, isLoading: loadingAudits } = useQuery({
+    queryKey: ['audit-logs', { limit: 100 }],
+    queryFn: () => api.get('/audit/logs', { params: { limit: 100 } }).then(r => r.data),
+  });
+
+  const createMut = useMutation({
+    mutationFn: (data: any) => api.post('/governance', data).then(r => r.data),
+    onError: (e: any) => { alert(e.message || "حدث خطأ"); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['governance'] });
+      window.location.reload();
+    },
+  });
+
+  const confirmDelete = (fn: () => void) => { if (window.confirm("هل أنت متأكد من الحذف؟")) fn(); };
+  const handleSubmit = () => { createMut.mutate({}); };
+
   const roles = (rolesData || []) as any[];
   const documents = (documentsData || []) as any[];
   const violations = (violationsData || []) as any[];
   const audits = (auditsData || []) as any[];
-  
+
   const policies = documents.filter((d: any) => d.documentType === 'policy');
   const approvedPolicies = policies.filter((p: any) => p.status === 'approved' || p.status === 'published');
   const pendingViolations = violations.filter((v: any) => v.status === 'pending' || v.status === 'under_review');
   const recentAudits = audits.slice(0, 5);
-  
-  // حساب نسبة الامتثال الفعلية
+
   const calculateComplianceRate = () => {
     if (policies.length === 0) return 100;
     const policyRate = (approvedPolicies.length / (policies.length || 1)) * 100;
     const violationPenalty = Math.min(pendingViolations.length * 5, 50);
     return Math.max(0, Math.round(policyRate - violationPenalty));
   };
-  
+
   const complianceRate = calculateComplianceRate();
   const isLoading = loadingRoles || loadingDocs || loadingViolations || loadingAudits;
 
   if (isLoading) {
     if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>;
-    
+
     return (
       <div className="flex items-center justify-center h-64" dir="rtl">
         <div className="mb-4 flex items-center gap-2">
@@ -67,7 +87,7 @@ export default function GovernanceLayer() {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full md:w-64 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
-          {searchTerm && <button onClick={() => setSearchTerm('')} className="text-gray-400 hover:text-gray-600">✕</button>}
+          {searchTerm && <button onClick={() => setSearchTerm('')} className="text-gray-400 hover:text-gray-600">X</button>}
         </div>
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
@@ -79,52 +99,52 @@ export default function GovernanceLayer() {
     if (rate >= 70) return { bg: 'bg-amber-50', text: 'text-amber-600', icon: AlertTriangle };
     return { bg: 'bg-red-50', text: 'text-red-600', icon: XCircle };
   };
-  
+
   const complianceStyle = getComplianceColor(complianceRate);
   const ComplianceIcon = complianceStyle.icon;
 
   const sections = [
-    { 
-      title: 'إدارة الهوية والوصول', 
+    {
+      title: 'إدارة الهوية والوصول',
       description: 'إدارة المستخدمين والأدوار والصلاحيات',
-      icon: Users, 
-      path: '/governance/iam', 
+      icon: Users,
+      path: '/governance/iam',
       count: roles.length,
       unit: 'دور',
       color: 'bg-blue-50 text-blue-600'
     },
-    { 
-      title: 'الامتثال والالتزام', 
+    {
+      title: 'الامتثال والالتزام',
       description: 'متابعة الامتثال للسياسات واللوائح',
-      icon: Shield, 
-      path: '/governance/compliance', 
+      icon: Shield,
+      path: '/governance/compliance',
       count: complianceRate,
       unit: '%',
       color: complianceStyle.bg + ' ' + complianceStyle.text
     },
-    { 
-      title: 'السياسات', 
+    {
+      title: 'السياسات',
       description: 'إدارة سياسات المنظمة',
-      icon: FileText, 
-      path: '/governance/policies', 
+      icon: FileText,
+      path: '/governance/policies',
       count: policies.length,
       unit: 'سياسة',
       color: 'bg-purple-50 text-purple-600'
     },
-    { 
-      title: 'المخاطر', 
+    {
+      title: 'المخاطر',
       description: 'تقييم وإدارة المخاطر',
-      icon: AlertTriangle, 
-      path: '/governance/risks', 
+      icon: AlertTriangle,
+      path: '/governance/risks',
       count: pendingViolations.length,
       unit: 'مخالفة معلقة',
       color: 'bg-amber-50 text-amber-600'
     },
-    { 
-      title: 'التدقيق', 
+    {
+      title: 'التدقيق',
       description: 'سجلات التدقيق والمراجعة',
-      icon: ClipboardCheck, 
-      path: '/governance/audits', 
+      icon: ClipboardCheck,
+      path: '/governance/audits',
       count: audits.length,
       unit: 'سجل',
       color: 'bg-emerald-50 text-emerald-600'
@@ -146,10 +166,9 @@ export default function GovernanceLayer() {
         </div>
       </div>
 
-      {/* بطاقات الإحصائيات */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         {sections.map((section, index) => (
-          <Link key={section.id ?? `Link-${index}`} href={section.path}>
+          <Link key={`Link-${index}`} href={section.path}>
             <Card className="cursor-pointer hover:shadow-md transition-all hover:-translate-y-1">
               <CardContent className="p-5">
                 <div className="flex items-start justify-between mb-3">
@@ -169,7 +188,6 @@ export default function GovernanceLayer() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        {/* حالة الامتثال */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
@@ -223,7 +241,6 @@ export default function GovernanceLayer() {
           </CardContent>
         </Card>
 
-        {/* آخر سجلات التدقيق */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
@@ -263,9 +280,9 @@ export default function GovernanceLayer() {
                       </div>
                     </div>
                     <span className="text-xs text-gray-400">
-                      {new Date(audit.createdAt).toLocaleTimeString('ar-SA', { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
+                      {new Date(audit.createdAt).toLocaleTimeString('ar-SA', {
+                        hour: '2-digit',
+                        minute: '2-digit'
                       })}
                     </span>
                   </div>
@@ -276,7 +293,6 @@ export default function GovernanceLayer() {
         </Card>
       </div>
 
-      {/* تنبيهات الامتثال */}
       {pendingViolations.length > 0 && (
         <Card className="border-amber-200 bg-amber-50/50">
           <CardHeader>
@@ -311,7 +327,7 @@ export default function GovernanceLayer() {
           </CardContent>
         </Card>
       )}
-    
+
         {showDialog && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowDialog(false)}>
             <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl" dir="rtl" onClick={e => e.stopPropagation()}>

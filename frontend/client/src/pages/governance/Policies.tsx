@@ -1,7 +1,8 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
 import { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -66,6 +67,7 @@ const categoryLabels: Record<string, string> = {
 };
 
 export default function Policies() {
+  const queryClient = useQueryClient();
   const confirmDelete = (fn: () => void) => { if (window.confirm("هل أنت متأكد من الحذف؟")) fn(); };
 
   const { selectedRole: userRole } = useAppContext();
@@ -80,7 +82,7 @@ export default function Policies() {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [selectedPolicy, setSelectedPolicy] = useState<Policy | null>(null);
-  
+
   // نموذج إضافة سياسة جديدة
   const [newPolicy, setNewPolicy] = useState({
     code: '',
@@ -93,30 +95,35 @@ export default function Policies() {
   });
 
   // استخدام API الحقيقي
-  const { data: policiesData, isLoading, refetch, isError, error} = trpc.hrAdvanced.policies.list.useQuery();
+  const { data: policiesData, isLoading, refetch, isError, error } = useQuery({
+    queryKey: ['policies-list'],
+    queryFn: () => api.get('/policies').then(r => r.data),
+  });
   const policies = policiesData || [];
 
   // Mutations
-  const createMutation = trpc.hrAdvanced.policies.create.useMutation({
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/policies', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إضافة السياسة بنجاح');
       setViewMode('list');
       resetForm();
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`فشل في إضافة السياسة: ${error.message}`);
     },
   });
 
-  const updateMutation = trpc.hrAdvanced.policies.update.useMutation({
+  const updateMutation = useMutation({
+    mutationFn: (data: any) => api.put(`/policies/${data.id}`, data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم تحديث السياسة بنجاح');
       setViewMode('list');
       setSelectedPolicy(null);
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`فشل في تحديث السياسة: ${error.message}`);
     },
   });
@@ -143,10 +150,10 @@ export default function Policies() {
   };
 
   const sortedPolicies = [...policies]
-    .filter((p: Policy) => 
-      p.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    .filter((p: Policy) =>
+      p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.nameAr?.includes(searchTerm) ||
-      p.code?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      p.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.category?.includes(searchTerm)
     )
     .sort((a: Policy, b: Policy) => {
@@ -177,7 +184,7 @@ export default function Policies() {
   if (isLoading) {
     if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>;
 
-    
+
     return (
       <div className="flex items-center justify-center h-64" dir="rtl">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -280,7 +287,7 @@ export default function Policies() {
               <Button variant="outline" onClick={() => { setViewMode('list'); resetForm(); }}>
                 إلغاء
               </Button>
-              <Button 
+              <Button
                 onClick={() => {
                   if (!newPolicy.code || !newPolicy.name || !newPolicy.nameAr || !newPolicy.content) {
                     toast.error('يرجى ملء جميع الحقول المطلوبة');

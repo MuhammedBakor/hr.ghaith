@@ -1,5 +1,7 @@
 import { useAppContext } from '@/contexts/AppContext';
 import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,11 +23,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { trpc } from "@/lib/trpc";
 import { Search, RefreshCw, AlertTriangle, Trash2, Edit, Zap, TrendingUp, DollarSign, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function AnomalyRules() {
+  const queryClient = useQueryClient();
   const { selectedRole: userRole } = useAppContext();
   const canEdit = userRole === "admin" || userRole === "manager";
   const canDelete = userRole === "admin";
@@ -46,10 +48,17 @@ export default function AnomalyRules() {
   });
 
   // جلب قواعد الشذوذ من API
-  const { data: anomalyRules, isLoading, refetch, isError, error} = trpc.anomalyRules?.list?.useQuery();
-  const { data: stats } = trpc.anomalyRules?.getStats?.useQuery();
-  
-  const createMutation = trpc.anomalyRules?.create?.useMutation({
+  const { data: anomalyRules, isLoading, refetch, isError, error } = useQuery({
+    queryKey: ['anomaly-rules-list'],
+    queryFn: () => api.get('/anomaly-rules').then(r => r.data),
+  });
+  const { data: stats } = useQuery({
+    queryKey: ['anomaly-rules-stats'],
+    queryFn: () => api.get('/anomaly-rules/stats').then(r => r.data),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/anomaly-rules', data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم إضافة قاعدة الشذوذ بنجاح");
       setIsAddOpen(false);
@@ -61,22 +70,24 @@ export default function AnomalyRules() {
         threshold: 0,
         severity: "medium",
         action: "alert",
-      onError: (e: any) => toast.error(e?.message || 'حدث خطأ')});
+      });
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`فشل في إضافة القاعدة: ${error.message}`);
     },
   });
 
-  const toggleMutation = trpc.anomalyRules?.toggle?.useMutation({
+  const toggleMutation = useMutation({
+    mutationFn: (data: any) => api.put(`/anomaly-rules/${data.id}/toggle`, data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم تحديث حالة القاعدة");
       refetch();
     },
   });
 
-  const deleteMutation = trpc.anomalyRules?.delete?.useMutation({
+  const deleteMutation = useMutation({
+    mutationFn: (data: any) => api.delete(`/anomaly-rules/${data.id}`).then(r => r.data),
     onSuccess: () => {
       toast.success("تم حذف القاعدة");
       refetch();
@@ -135,7 +146,7 @@ export default function AnomalyRules() {
   const ruleStats = stats || { total: 0, active: 0, triggered: 0, critical: 0 };
 
   if (isLoading) {
-    
+
   if (isError) return (
     <div className="p-8 text-center">
       <p className="text-red-500 text-lg">حدث خطأ في تحميل البيانات</p>
@@ -164,8 +175,8 @@ export default function AnomalyRules() {
             تحديث
           </Button>
           {isAddOpen && (<div className="mt-4 p-6 bg-white border rounded-xl shadow-sm animate-in fade-in">
-            
-            
+
+
               <div className="mb-4 border-b pb-3">
                 <h3 className="text-lg font-bold">إضافة قاعدة شذوذ جديدة</h3>
               </div>
@@ -229,7 +240,7 @@ export default function AnomalyRules() {
                     <Label>الخطورة</Label>
                     <Select
                       value={newRule.severity}
-                      onValueChange={(value: "low" | "medium" | "high" | "critical") => 
+                      onValueChange={(value: "low" | "medium" | "high" | "critical") =>
                         setNewRule({ ...newRule, severity: value })
                       }
                     >
@@ -248,7 +259,7 @@ export default function AnomalyRules() {
                     <Label>الإجراء</Label>
                     <Select
                       value={newRule.action}
-                      onValueChange={(value: "alert" | "block" | "escalate") => 
+                      onValueChange={(value: "alert" | "block" | "escalate") =>
                         setNewRule({ ...newRule, action: value })
                       }
                     >
@@ -263,8 +274,8 @@ export default function AnomalyRules() {
                     </Select>
                   </div>
                 </div>
-                <Button 
-                  onClick={handleAddRule} 
+                <Button
+                  onClick={handleAddRule}
                   className="w-full"
                   disabled={createMutation.isPending}
                 >
@@ -278,7 +289,7 @@ export default function AnomalyRules() {
                   )}
                 </Button>
               </div>
-            
+
           </div>)}
 
         </div>
@@ -378,9 +389,9 @@ export default function AnomalyRules() {
                     <TableCell>{getSeverityBadge(rule.severity)}</TableCell>
                     <TableCell>{getActionBadge(rule.action)}</TableCell>
                     <TableCell>
-                      <Switch 
-                        checked={rule.isActive} 
-                        onCheckedChange={(checked) => 
+                      <Switch
+                        checked={rule.isActive}
+                        onCheckedChange={(checked) =>
                           toggleMutation.mutate({ id: rule.id, isActive: checked })
                         }
                       />
@@ -390,9 +401,9 @@ export default function AnomalyRules() {
                         <Button variant="ghost" size="icon" onClick={() => toast.info("ميزة التعديل متاح")}>
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="text-red-500"
                           onClick={() => {
                             if (confirm("هل أنت متأكد من حذف هذه القاعدة؟")) {

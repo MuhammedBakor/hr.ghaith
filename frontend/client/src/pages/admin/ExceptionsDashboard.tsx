@@ -16,7 +16,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertTriangle, Clock, CheckCircle2, RefreshCw, ArrowUpCircle, Eye, Search, AlertCircle, Pause, Play, SkipForward, ArrowRight } from 'lucide-react';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation } from "@tanstack/react-query";
+import api from "@/lib/api";
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -284,21 +285,31 @@ export default function ExceptionsDashboard() {
   const [itemType, setItemType] = useState<'exception' | 'suspense'>('exception');
 
   // Fetch data
-  const { data: exceptionsData, refetch: refetchExceptions, isError, error, isLoading} = trpc.exceptions.getExceptions.useQuery({
-    status: statusFilter !== 'all' ? statusFilter as ExceptionStatus : undefined,
-    severity: severityFilter !== 'all' ? severityFilter as ExceptionSeverity : undefined,
-    module: moduleFilter !== 'all' ? moduleFilter : undefined,
+  const { data: exceptionsData, refetch: refetchExceptions, isError, error, isLoading} = useQuery({
+    queryKey: ["exceptions", "list", statusFilter, severityFilter, moduleFilter],
+    queryFn: () => api.get("/api/exceptions", { params: {
+      status: statusFilter !== 'all' ? statusFilter : undefined,
+      severity: severityFilter !== 'all' ? severityFilter : undefined,
+      module: moduleFilter !== 'all' ? moduleFilter : undefined,
+    }}).then(r => r.data),
   });
 
-  const { data: suspenseData, refetch: refetchSuspense } = trpc.exceptions.getSuspenseItems.useQuery({
-    isResolved: false,
-    module: moduleFilter !== 'all' ? moduleFilter : undefined,
+  const { data: suspenseData, refetch: refetchSuspense } = useQuery({
+    queryKey: ["exceptions", "suspenseItems", moduleFilter],
+    queryFn: () => api.get("/api/exceptions/suspense-items", { params: {
+      isResolved: false,
+      module: moduleFilter !== 'all' ? moduleFilter : undefined,
+    }}).then(r => r.data),
   });
 
-  const { data: statsData } = trpc.exceptions.getStats.useQuery();
+  const { data: statsData } = useQuery({
+    queryKey: ["exceptions", "stats"],
+    queryFn: () => api.get("/api/exceptions/stats").then(r => r.data),
+  });
 
   // Mutations
-  const resolveMutation = trpc.exceptions.resolveException.useMutation({
+  const resolveMutation = useMutation({
+    mutationFn: (data: any) => api.post("/api/exceptions/resolve", data).then(r => r.data),
     onSuccess: () => {
       showNotification('تم حل الاستثناء بنجاح');
       refetchExceptions();
@@ -306,21 +317,24 @@ export default function ExceptionsDashboard() {
     },
   });
 
-  const escalateMutation = trpc.exceptions.escalateException.useMutation({
+  const escalateMutation = useMutation({
+    mutationFn: (data: any) => api.post("/api/exceptions/escalate", data).then(r => r.data),
     onSuccess: () => {
       showNotification('تم تصعيد الاستثناء');
       refetchExceptions();
     },
   });
 
-  const acknowledgeMutation = trpc.exceptions.acknowledgeException.useMutation({
+  const acknowledgeMutation = useMutation({
+    mutationFn: (data: any) => api.post("/api/exceptions/acknowledge", data).then(r => r.data),
     onSuccess: () => {
       showNotification('تم تسجيل الاطلاع');
       refetchExceptions();
     },
   });
 
-  const resolveSuspenseMutation = trpc.exceptions.resolveSuspense.useMutation({
+  const resolveSuspenseMutation = useMutation({
+    mutationFn: (data: any) => api.post("/api/exceptions/resolve-suspense", data).then(r => r.data),
     onSuccess: () => {
       showNotification('تم حل المعلق بنجاح');
       refetchSuspense();

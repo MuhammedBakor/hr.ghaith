@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -72,7 +73,10 @@ const getStatusBadge = (status: string) => {
 };
 
 export default function FleetTripSegments() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useQuery({
+    queryKey: ['auth', 'me'],
+    queryFn: () => api.get('/api/auth/me').then(r => r.data),
+  });
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -95,15 +99,25 @@ export default function FleetTripSegments() {
     status: 'in_progress' as const,
   });
 
-  const { data: segmentsData, isLoading, refetch } = trpc.fleet.tripSegments.list.useQuery();
-  const { data: tripsData } = trpc.fleetExtended.trips.list.useQuery();
-  const { data: vehiclesData } = trpc.fleet.vehicles.list.useQuery();
+  const { data: segmentsData, isLoading, refetch } = useQuery({
+    queryKey: ['fleet', 'trip-segments'],
+    queryFn: () => api.get('/api/fleet/trip-segments').then(r => r.data),
+  });
+  const { data: tripsData } = useQuery({
+    queryKey: ['fleet-extended', 'trips'],
+    queryFn: () => api.get('/api/fleet-extended/trips').then(r => r.data),
+  });
+  const { data: vehiclesData } = useQuery({
+    queryKey: ['fleet', 'vehicles'],
+    queryFn: () => api.get('/api/fleet/vehicles').then(r => r.data),
+  });
   
   const segments = (segmentsData || []) as TripSegment[];
   const trips = tripsData || [];
   const vehicles = vehiclesData || [];
 
-  const createMutation = trpc.fleet.tripSegments.create.useMutation({
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/api/fleet/trip-segments', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إضافة مقطع الرحلة بنجاح');
       setIsAddOpen(false);
@@ -115,7 +129,8 @@ export default function FleetTripSegments() {
     },
   });
 
-  const updateMutation = trpc.fleet.tripSegments.update.useMutation({
+  const updateMutation = useMutation({
+    mutationFn: (data: any) => api.put(`/api/fleet/trip-segments/${data.id}`, data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم تحديث مقطع الرحلة بنجاح');
       setEditingSegment(null);
@@ -127,7 +142,8 @@ export default function FleetTripSegments() {
     },
   });
 
-  const deleteMutation = trpc.fleet.tripSegments.delete.useMutation({
+  const deleteMutation = useMutation({
+    mutationFn: (data: any) => api.delete(`/api/fleet/trip-segments/${data.id}`).then(r => r.data),
     onSuccess: () => {
       toast.success('تم حذف مقطع الرحلة بنجاح');
       refetch();

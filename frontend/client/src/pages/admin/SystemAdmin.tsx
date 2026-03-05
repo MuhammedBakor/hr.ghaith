@@ -1,6 +1,7 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
 import { useState } from "react";
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import api from "@/lib/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +20,11 @@ type ViewMode = "list" | "add-company" | "add-setting" | "add-rule" | "add-role-
 export default function SystemAdmin() {
   const confirmDelete = (fn: () => void) => { if (window.confirm("هل أنت متأكد من الحذف؟")) fn(); };
 
-  const { data: currentUser, isError, error } = trpc.auth.me.useQuery();
+  const queryClient = useQueryClient();
+  const { data: currentUser, isError, error } = useQuery({
+    queryKey: ['auth', 'me'],
+    queryFn: () => api.get('/auth/me').then(r => r.data),
+  });
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -68,16 +73,38 @@ export default function SystemAdmin() {
   });
 
   // Queries
-  const { data: companies, refetch: refetchCompanies } = trpc.kernel.companies?.list?.useQuery();
-  const { data: settings, isLoading } = trpc.kernel.settings?.getByCategory?.useQuery({ category: "system" });
-  const { data: rules, refetch: refetchRules } = trpc.kernel.automationRules.list.useQuery({});
-  const { data: dueTimers, refetch: refetchTimers } = trpc.kernel.timers.getDue.useQuery();
-  const { data: rolePacks, refetch: refetchRolePacks } = trpc.kernel.rolePacks?.list?.useQuery();
-  const { data: failedChecks } = trpc.kernel.governance.getFailedChecks.useQuery({});
-  const { data: protectedEndpoints } = trpc.kernel.governance.protectedEndpoints?.list?.useQuery();
+  const { data: companies, refetch: refetchCompanies } = useQuery({
+    queryKey: ['admin', 'companies'],
+    queryFn: () => api.get('/admin/companies').then(r => r.data),
+  });
+  const { data: settings, isLoading } = useQuery({
+    queryKey: ['admin', 'settings', 'system'],
+    queryFn: () => api.get('/admin/settings', { params: { category: 'system' } }).then(r => r.data),
+  });
+  const { data: rules, refetch: refetchRules } = useQuery({
+    queryKey: ['admin', 'automation-rules'],
+    queryFn: () => api.get('/admin/automation-rules').then(r => r.data),
+  });
+  const { data: dueTimers, refetch: refetchTimers } = useQuery({
+    queryKey: ['admin', 'timers', 'due'],
+    queryFn: () => api.get('/admin/timers/due').then(r => r.data),
+  });
+  const { data: rolePacks, refetch: refetchRolePacks } = useQuery({
+    queryKey: ['admin', 'role-packs'],
+    queryFn: () => api.get('/admin/role-packs').then(r => r.data),
+  });
+  const { data: failedChecks } = useQuery({
+    queryKey: ['admin', 'governance', 'failed-checks'],
+    queryFn: () => api.get('/admin/governance/failed-checks').then(r => r.data),
+  });
+  const { data: protectedEndpoints } = useQuery({
+    queryKey: ['admin', 'governance', 'protected-endpoints'],
+    queryFn: () => api.get('/admin/governance/protected-endpoints').then(r => r.data),
+  });
 
   // Mutations
-  const createCompanyMutation = trpc.kernel.companies?.create?.useMutation({
+  const createCompanyMutation = useMutation({
+    mutationFn: (data: any) => api.post('/admin/companies', data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم إنشاء الشركة بنجاح");
       setViewMode("list");
@@ -89,7 +116,8 @@ export default function SystemAdmin() {
     },
   });
 
-  const createSettingMutation = trpc.kernel.settings?.create?.useMutation({
+  const createSettingMutation = useMutation({
+    mutationFn: (data: any) => api.post('/admin/settings', data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم إنشاء الإعداد بنجاح");
       setViewMode("list");
@@ -100,7 +128,8 @@ export default function SystemAdmin() {
     },
   });
 
-  const createRuleMutation = trpc.kernel.automationRules.create.useMutation({
+  const createRuleMutation = useMutation({
+    mutationFn: (data: any) => api.post('/admin/automation-rules', data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم إنشاء القاعدة بنجاح");
       setViewMode("list");
@@ -112,7 +141,8 @@ export default function SystemAdmin() {
     },
   });
 
-  const createRolePackMutation = trpc.kernel.rolePacks?.create?.useMutation({
+  const createRolePackMutation = useMutation({
+    mutationFn: (data: any) => api.post('/admin/role-packs', data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم إنشاء حزمة الأدوار بنجاح");
       setViewMode("list");

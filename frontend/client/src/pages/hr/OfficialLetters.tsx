@@ -6,7 +6,8 @@ import { useAppContext } from '@/contexts/AppContext';
  */
 
 import { useState } from "react";
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -78,15 +79,24 @@ export default function OfficialLetters() {
   const [showPreview, setShowPreview] = useState(false);
 
   // جلب الخطابات
-  const { data: letters, isLoading, refetch, isError, error} = trpc.officialLetters.list.useQuery({
-    letterType: filterType !== "all" ? filterType : undefined,
-    status: filterStatus !== "all" ? filterStatus : undefined,
+  const { data: letters, isLoading, refetch, isError, error} = useQuery({
+    queryKey: ['officialLetters', filterType, filterStatus],
+    queryFn: () => api.get('/hr/official-letters', {
+      params: {
+        letterType: filterType !== "all" ? filterType : undefined,
+        status: filterStatus !== "all" ? filterStatus : undefined,
+      }
+    }).then(res => res.data),
   });
 
   // جلب قوالب الخطابات
-  const { data: templates } = trpc.officialLetters.getTemplates.useQuery();
+  const { data: templates } = useQuery({
+    queryKey: ['officialLetterTemplates'],
+    queryFn: () => api.get('/hr/official-letters/templates').then(res => res.data),
+  });
   // تسجيل طباعة
-  const logPrintMutation = trpc.officialLetters.logPrint.useMutation({
+  const logPrintMutation = useMutation({
+    mutationFn: (data: any) => api.post('/hr/official-letters/log-print', data).then(res => res.data),
     onError: (error: any) => { toast.error(error.message || "حدث خطأ"); },
     onSuccess: () => {
       toast.success("تم تسجيل الطباعة");
@@ -94,7 +104,8 @@ export default function OfficialLetters() {
   });
 
   // توقيع الموظف
-  const signByEmployeeMutation = trpc.officialLetters.signByEmployee.useMutation({
+  const signByEmployeeMutation = useMutation({
+    mutationFn: (data: any) => api.post('/hr/official-letters/sign-employee', data).then(res => res.data),
     onError: (error: any) => { toast.error(error.message || "حدث خطأ"); },
     onSuccess: () => {
       toast.success("تم توقيع الخطاب بنجاح");
@@ -103,7 +114,8 @@ export default function OfficialLetters() {
   });
 
   // اعتماد المدير
-  const approveByManagerMutation = trpc.officialLetters.approveByManager.useMutation({
+  const approveByManagerMutation = useMutation({
+    mutationFn: (data: any) => api.post('/hr/official-letters/approve-manager', data).then(res => res.data),
     onError: (error: any) => { toast.error(error.message || "حدث خطأ"); },
     onSuccess: () => {
       toast.success("تم اعتماد الخطاب بنجاح");
@@ -112,7 +124,8 @@ export default function OfficialLetters() {
   });
 
   // إصدار الخطاب
-  const issueMutation = trpc.officialLetters.issue.useMutation({
+  const issueMutation = useMutation({
+    mutationFn: (data: any) => api.post('/hr/official-letters/issue', data).then(res => res.data),
     onError: (error: any) => { toast.error(error.message || "حدث خطأ"); },
     onSuccess: () => {
       toast.success("تم إصدار الخطاب بنجاح");

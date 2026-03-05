@@ -2,7 +2,8 @@ import { formatDate, formatDateTime } from '@/lib/formatDate';
 import React from "react";
 import { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -112,13 +113,15 @@ export default function Subscriptions() {
     notes: '',
   });
 
-  const { data: subscriptions, isLoading, refetch, isError, error } = trpc.subscription.list.useQuery(
-    filterStatus === 'all' ? undefined : { status: filterStatus }
-  );
-  const { data: availableModules } = trpc.subscription.getAvailableModules.useQuery();
+  const { data: subscriptions, isLoading, refetch, isError, error } = useQuery({
+    queryKey: ['subscription', 'list', filterStatus],
+    queryFn: () => api.get('/api/subscriptions', { params: filterStatus === 'all' ? undefined : { status: filterStatus } }).then(r => r.data),
+  });
+  const { data: availableModules } = useQuery({ queryKey: ['subscription', 'availableModules'], queryFn: () => api.get('/api/subscriptions/available-modules').then(r => r.data) });
 
-  const createMutation = trpc.subscription.create.useMutation({
-    onSuccess: (result) => {
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/api/subscriptions', data).then(r => r.data),
+    onSuccess: (result: any) => {
       if (result.success) {
         toast.success(`تم إنشاء الاشتراك بنجاح. كود الاشتراك: ${result.subscriptionCode}`);
         setViewMode('list');
@@ -128,13 +131,14 @@ export default function Subscriptions() {
         toast.error(result.error || 'فشل في إنشاء الاشتراك');
       }
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(error.message);
     },
   });
 
-  const updateStatusMutation = trpc.subscription.updateStatus.useMutation({
-    onSuccess: (result) => {
+  const updateStatusMutation = useMutation({
+    mutationFn: (data: any) => api.put(`/api/subscriptions/${data.id}/status`, data).then(r => r.data),
+    onSuccess: (result: any) => {
       if (result.success) {
         toast.success('تم تحديث حالة الاشتراك');
         refetch();
@@ -144,8 +148,9 @@ export default function Subscriptions() {
     },
   });
 
-  const resendWelcomeMutation = trpc.subscription.resendWelcome.useMutation({
-    onSuccess: (result) => {
+  const resendWelcomeMutation = useMutation({
+    mutationFn: (data: any) => api.post(`/api/subscriptions/${data.subscriptionId}/resend-welcome`).then(r => r.data),
+    onSuccess: (result: any) => {
       if (result.success) {
         toast.success('تم إرسال رسالة الترحيب');
       } else {

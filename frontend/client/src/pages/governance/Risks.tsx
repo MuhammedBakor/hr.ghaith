@@ -1,4 +1,5 @@
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -54,7 +55,12 @@ const CATEGORIES = [
 ];
 
 export default function Risks() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const queryClient = useQueryClient();
+
+  const { data: currentUser, isError, error } = useQuery({
+    queryKey: ['auth-me'],
+    queryFn: () => api.get('/auth/me').then(r => r.data),
+  });
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -73,51 +79,58 @@ export default function Risks() {
     mitigationPlan: '',
   });
 
-  const utils = trpc.useUtils();
-  
   // جلب المخاطر
-  const { data: risks = [], isLoading } = trpc.governanceDashboard.risks.list.useQuery();
-  
+  const { data: risks = [], isLoading } = useQuery({
+    queryKey: ['governance-risks'],
+    queryFn: () => api.get('/governance/risks').then(r => r.data),
+  });
+
   // جلب الإحصائيات
-  const { data: stats } = trpc.governanceDashboard.risks.getStats.useQuery();
-  
+  const { data: stats } = useQuery({
+    queryKey: ['governance-risks-stats'],
+    queryFn: () => api.get('/governance/risks/stats').then(r => r.data),
+  });
+
   // إنشاء مخاطرة
-  const createMutation = trpc.governanceDashboard.risks.create.useMutation({
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/governance/risks', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إنشاء المخاطرة بنجاح');
-      utils.governanceDashboard.risks.list.invalidate();
-      utils.governanceDashboard.risks.getStats.invalidate();
+      queryClient.invalidateQueries({ queryKey: ['governance-risks'] });
+      queryClient.invalidateQueries({ queryKey: ['governance-risks-stats'] });
       setIsDialogOpen(false);
       resetForm();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error('فشل في إنشاء المخاطرة: ' + error.message);
     },
   });
-  
+
   // تحديث مخاطرة
-  const updateMutation = trpc.governanceDashboard.risks.update.useMutation({
+  const updateMutation = useMutation({
+    mutationFn: (data: any) => api.put(`/governance/risks/${data.id}`, data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم تحديث المخاطرة بنجاح');
-      utils.governanceDashboard.risks.list.invalidate();
-      utils.governanceDashboard.risks.getStats.invalidate();
+      queryClient.invalidateQueries({ queryKey: ['governance-risks'] });
+      queryClient.invalidateQueries({ queryKey: ['governance-risks-stats'] });
       setIsDialogOpen(false);
       setEditingRisk(null);
       resetForm();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error('فشل في تحديث المخاطرة: ' + error.message);
     },
   });
-  
+
   // حذف مخاطرة
-  const deleteMutation = trpc.governanceDashboard.risks.delete.useMutation({
+  const deleteMutation = useMutation({
+    mutationFn: (data: any) => api.delete(`/governance/risks/${data.id}`).then(r => r.data),
     onSuccess: () => {
       toast.success('تم حذف المخاطرة بنجاح');
-      utils.governanceDashboard.risks.list.invalidate();
-      utils.governanceDashboard.risks.getStats.invalidate();
+      queryClient.invalidateQueries({ queryKey: ['governance-risks'] });
+      queryClient.invalidateQueries({ queryKey: ['governance-risks-stats'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error('فشل في حذف المخاطرة: ' + error.message);
     },
   });
@@ -148,7 +161,7 @@ export default function Risks() {
       toast.error('يرجى ملء الحقول المطلوبة');
       return;
     }
-    
+
     if (editingRisk) {
       updateMutation.mutate({
         id: editingRisk.id,
@@ -174,9 +187,9 @@ export default function Risks() {
     setIsDialogOpen(true);
   };
 
-  const filteredRisks = risks.filter((r: any) => 
-    r.name?.includes(searchTerm) || 
-    r.code?.includes(searchTerm) || 
+  const filteredRisks = risks.filter((r: any) =>
+    r.name?.includes(searchTerm) ||
+    r.code?.includes(searchTerm) ||
     r.category?.includes(searchTerm)
   );
 
@@ -215,7 +228,7 @@ export default function Risks() {
   if (isLoading) {
     if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ</div>;
 
-    
+
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -350,9 +363,9 @@ export default function Risks() {
                         <Button variant="ghost" size="icon" onClick={() => handleEdit(risk)}>
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => {
                             setItemToDelete(risk.id);
                             setDeleteDialogOpen(true);
@@ -376,7 +389,7 @@ export default function Risks() {
           <div className="mb-4 border-b pb-3">
             <h3 className="text-lg font-bold">{editingRisk ? 'تعديل المخاطرة' : 'تسجيل مخاطرة جديدة'}</h3>
           </div>
-          
+
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -397,7 +410,7 @@ export default function Risks() {
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <Label>الوصف</Label>
               <Textarea
@@ -407,7 +420,7 @@ export default function Risks() {
                 rows={3}
               />
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>التصنيف</Label>
@@ -443,7 +456,7 @@ export default function Risks() {
                 </Select>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>الاحتمالية</Label>
@@ -478,7 +491,7 @@ export default function Risks() {
                 </Select>
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <Label>خطة المعالجة</Label>
               <Textarea
@@ -489,12 +502,12 @@ export default function Risks() {
               />
             </div>
           </div>
-          
+
           <div className="flex gap-2 mt-4 pt-3 border-t justify-end">
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
               إلغاء
             </Button>
-            <Button 
+            <Button
               onClick={handleSubmit}
               disabled={createMutation.isPending || updateMutation.isPending}
             >
@@ -506,7 +519,7 @@ export default function Risks() {
           </div>
         </div>
       </div>)}
-    
+
       {/* AlertDialog لتأكيد الحذف */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>

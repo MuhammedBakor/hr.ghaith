@@ -1,6 +1,7 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
 import { useState } from 'react';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,15 +36,25 @@ interface Role {
 }
 
 export default function IAM() {
+  const queryClient = useQueryClient();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createData, setCreateData] = useState<any>({});
-  const createMutation = trpc.admin.rbac.create.useMutation({ onSuccess: () => { refetch(); setShowCreateForm(false); setCreateData({}); } });
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/admin/rbac', data).then(r => r.data),
+    onSuccess: () => { refetch(); setShowCreateForm(false); setCreateData({}); },
+  });
 
   const [editingItem, setEditingItem] = useState<any>(null);
 
-  const deleteMutation = trpc.admin.rbac.delete.useMutation({ onSuccess: () => { refetch(); } });
+  const deleteMutation = useMutation({
+    mutationFn: (data: any) => api.delete(`/admin/rbac/${data.id}`).then(r => r.data),
+    onSuccess: () => { refetch(); },
+  });
 
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error } = useQuery({
+    queryKey: ['auth-me'],
+    queryFn: () => api.get('/auth/me').then(r => r.data),
+  });
   const userRole = currentUser?.role || 'user';
   const requiredRole = 'admin';
   const hasAccess = userRole === 'admin' || userRole === requiredRole || requiredRole === 'user';
@@ -56,15 +67,21 @@ export default function IAM() {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('users');
 
-  // Users list from API - استخدام kernel.users.list
-  const { data: usersData, isLoading: usersLoading } = trpc.kernel.users.list.useQuery();
-  // Use hrAdvanced.roles.list which has actual data
-  const { data: rolesData, isLoading: rolesLoading } = trpc.hrAdvanced.roles.list.useQuery();
+  // Users list from API
+  const { data: usersData, isLoading: usersLoading, refetch } = useQuery({
+    queryKey: ['users-list'],
+    queryFn: () => api.get('/users').then(r => r.data),
+  });
+  // Roles list
+  const { data: rolesData, isLoading: rolesLoading } = useQuery({
+    queryKey: ['roles-list'],
+    queryFn: () => api.get('/roles').then(r => r.data),
+  });
 
   const users = (usersData || []) as User[];
   const roles = (rolesData || []) as Role[];
 
-  const filteredUsers = users.filter(user => 
+  const filteredUsers = users.filter(user =>
     user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.username?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -93,7 +110,7 @@ export default function IAM() {
   const isLoading = usersLoading || rolesLoading;
 
   if (isLoading) {
-    
+
   if (isError) return (
     <div className="p-8 text-center">
         {/* إضافة جديد */}
@@ -315,7 +332,7 @@ export default function IAM() {
           </Card>
         </TabsContent>
       </Tabs>
-    
+
                 <div className="flex gap-2 mt-2"> <button onClick={() => setEditingItem(user)} className="text-blue-600 hover:text-blue-800 text-sm">تعديل</button> <button onClick={() => window.confirm("هل أنت متأكد من الحذف؟") && deleteMutation.mutate({id: user.id})} className="text-red-600 hover:text-red-800 text-sm">حذف</button></div>
               </div>
   );

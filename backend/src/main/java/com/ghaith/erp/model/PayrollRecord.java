@@ -16,12 +16,12 @@ public class PayrollRecord extends BaseEntity {
     @JoinColumn(name = "employee_id", nullable = false)
     private Employee employee;
 
-    private Double basicSalary;
-    private Double housingAllowance;
-    private Double transportAllowance;
-    private Double otherAllowances;
-    private Double deductions;
-    private Double netSalary;
+    private java.math.BigDecimal basicSalary;
+    private java.math.BigDecimal housingAllowance;
+    private java.math.BigDecimal transportAllowance;
+    private java.math.BigDecimal otherAllowances;
+    private java.math.BigDecimal deductions;
+    private java.math.BigDecimal netSalary;
 
     private String status; // draft, approved, paid
 

@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,9 +62,15 @@ type ViewMode = 'list' | 'add';
 export default function TaxSystem() {
   const [editingItem, setEditingItem] = useState<any>(null);
 
-  const deleteMutation = trpc.finance.tax.delete.useMutation({ onSuccess: () => { refetch(); } });
+  const deleteMutation = useMutation({
+    mutationFn: (data: any) => api.delete(`/finance/tax/rates/${data.id}`).then(r => r.data),
+    onSuccess: () => { refetch(); },
+  });
 
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useQuery({
+    queryKey: ['auth', 'me'],
+    queryFn: () => api.get('/auth/me').then(r => r.data),
+  });
   const userRole = currentUser?.role || 'user';
   const requiredRole = 'finance_manager';
   const hasAccess = userRole === 'admin' || userRole === requiredRole || requiredRole === 'user';
@@ -84,23 +91,34 @@ export default function TaxSystem() {
   const [appliesTo, setAppliesTo] = useState<"sales" | "purchases" | "both">("both");
   const [description, setDescription] = useState("");
   
-  const { data: taxRates, isLoading, refetch } = trpc.finance.tax.rates.useQuery();
-  const { data: taxReport } = trpc.finance.tax.report.useQuery({ taxPeriod });
-  const { data: zakatCalc } = trpc.finance.tax.calculateZakat.useQuery({ fiscalYear });
-  const { data: calcResult } = trpc.finance.tax.calculate.useQuery(
-    { amount: calcAmount, taxRateId: selectedTaxRateId || undefined },
-    { enabled: calcAmount > 0 }
-  );
-  
-  const createMutation = trpc.finance.tax.createRate.useMutation({
+  const { data: taxRates, isLoading, refetch } = useQuery({
+    queryKey: ['finance', 'tax', 'rates'],
+    queryFn: () => api.get('/finance/tax/rates').then(r => r.data),
+  });
+  const { data: taxReport } = useQuery({
+    queryKey: ['finance', 'tax', 'report', taxPeriod],
+    queryFn: () => api.get('/finance/tax/report', { params: { taxPeriod } }).then(r => r.data),
+  });
+  const { data: zakatCalc } = useQuery({
+    queryKey: ['finance', 'tax', 'zakat', fiscalYear],
+    queryFn: () => api.get('/finance/tax/calculate-zakat', { params: { fiscalYear } }).then(r => r.data),
+  });
+  const { data: calcResult } = useQuery({
+    queryKey: ['finance', 'tax', 'calculate', calcAmount, selectedTaxRateId],
+    queryFn: () => api.get('/finance/tax/calculate', { params: { amount: calcAmount, taxRateId: selectedTaxRateId || undefined } }).then(r => r.data),
+    enabled: calcAmount > 0,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/finance/tax/rates', data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم إنشاء معدل الضريبة بنجاح");
       setViewMode('list');
       resetForm();
       refetch();
     },
-    onError: (error) => {
-      toast.error(`خطأ: ${error.message}`);
+    onError: (error: any) => {
+      toast.error(`خطأ: ${error?.response?.data?.message || error.message}`);
     },
   });
   

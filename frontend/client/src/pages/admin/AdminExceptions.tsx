@@ -3,10 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
-import { trpc } from "@/lib/trpc";
+import { useQuery } from "@tanstack/react-query";
+import api from "@/lib/api";
 
 export default function AdminExceptions() {
-  const { data, isLoading, isError, refetch } = trpc.governance.getExceptions.useQuery(undefined, {
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["governance", "exceptions"],
+    queryFn: () => api.get("/api/governance/exceptions").then(r => r.data),
     retry: 1,
     refetchOnWindowFocus: false,
   });

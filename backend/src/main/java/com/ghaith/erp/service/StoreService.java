@@ -53,6 +53,11 @@ public class StoreService {
         return productRepository.save(product);
     }
 
+    @Transactional
+    public void deleteProduct(Long id) {
+        productRepository.deleteById(id);
+    }
+
     public List<Order> getAllOrders() {
         return orderRepository.findAllByOrderByCreatedAtDesc();
     }

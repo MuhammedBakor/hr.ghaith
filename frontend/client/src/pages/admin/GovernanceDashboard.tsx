@@ -1,7 +1,8 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
 import { useAppContext } from '@/contexts/AppContext';
 import { useState } from "react";
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import api from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -41,22 +42,32 @@ export default function GovernanceDashboard() {
   const [typeFilter, setTypeFilter] = useState<string>("all");
 
   // Fetch governance stats
-  const { data: stats, isLoading: statsLoading, refetch: refetchStats, isError, error} = 
-    trpc.governanceDashboard.getStats.useQuery();
+  const { data: stats, isLoading: statsLoading, refetch: refetchStats, isError, error} =
+    useQuery({
+      queryKey: ["governanceDashboard", "stats"],
+      queryFn: () => api.get("/api/governance-dashboard/stats").then(r => r.data),
+    });
 
   // Fetch violations
-  const { data: violations, isLoading: violationsLoading, refetch: refetchViolations } = 
-    trpc.governanceDashboard.getViolations.useQuery({
-      severity: severityFilter !== "all" ? severityFilter as any : undefined,
-      type: typeFilter !== "all" ? typeFilter as any : undefined,
+  const { data: violations, isLoading: violationsLoading, refetch: refetchViolations } =
+    useQuery({
+      queryKey: ["governanceDashboard", "violations", severityFilter, typeFilter],
+      queryFn: () => api.get("/api/governance-dashboard/violations", { params: {
+        severity: severityFilter !== "all" ? severityFilter : undefined,
+        type: typeFilter !== "all" ? typeFilter : undefined,
+      }}).then(r => r.data),
     });
 
   // Fetch audit trail
-  const { data: auditTrail, isLoading: auditLoading, refetch: refetchAudit } = 
-    trpc.governanceDashboard.getAuditTrail.useQuery({ limit: 50 });
+  const { data: auditTrail, isLoading: auditLoading, refetch: refetchAudit } =
+    useQuery({
+      queryKey: ["governanceDashboard", "auditTrail"],
+      queryFn: () => api.get("/api/governance-dashboard/audit-trail", { params: { limit: 50 } }).then(r => r.data),
+    });
 
   // Run governance check mutation
-  const runCheckMutation = trpc.governanceDashboard.runCheck.useMutation({
+  const runCheckMutation = useMutation({
+    mutationFn: (data: any) => api.post("/api/governance-dashboard/run-check", data).then(r => r.data),
     onSuccess: () => {
       refetchStats();
       refetchViolations();

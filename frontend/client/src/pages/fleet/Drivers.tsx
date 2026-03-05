@@ -1,5 +1,7 @@
 import React from "react";
 import { useState } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/ui/data-table';
 import { Button } from '@/components/ui/button';
@@ -8,9 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
-import { 
+import {
   User,
   Plus,
   Car,
@@ -91,24 +92,25 @@ export default function Drivers() {
   const { selectedBranchId, branches } = useAppContext();
   const selectedBranch = branches?.find(b => b.id === selectedBranchId);
 
-  const { data: driversData, isLoading, refetch, isError, error} = trpc.fleetExtended.drivers.list.useQuery({
-    branchId: selectedBranchId || undefined,
+  const { data: driversData, isLoading, refetch, isError, error} = useQuery({
+    queryKey: ['fleet-extended', 'drivers', { branchId: selectedBranchId || undefined }],
+    queryFn: () => api.get('/api/fleet-extended/drivers', { params: { branchId: selectedBranchId || undefined } }).then(r => r.data),
   });
-  const createDriverMutation = trpc.fleetExtended.drivers.create.useMutation({
+  const createDriverMutation = useMutation({
+    mutationFn: (data: any) => api.post('/api/fleet-extended/drivers', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إضافة السائق بنجاح');
       setView('list');
-      setNewDriver({ licenseNumber: '', licenseType: 'light', status: 'active',
-      onError: (e: any) => toast.error(e?.message || 'حدث خطأ')});
+      setNewDriver({ licenseNumber: '', licenseType: 'light', status: 'active' });
       refetch();
     },
-    onError: (error) => {
-      toast.error(error.message);
+    onError: (error: any) => {
+      toast.error(error?.message || 'حدث خطأ');
     },
   });
 
   const drivers = driversData || [];
-  
+
   const stats = {
     total: drivers.length,
     active: drivers.filter((d: Driver) => d.status === 'active').length,
@@ -145,13 +147,13 @@ export default function Drivers() {
         if (!row.original.licenseExpiry) return '-';
         const expiry = new Date(row.original.licenseExpiry);
         const isExpiringSoon = expiry < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-        
+
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editItem, setEditItem] = React.useState<any>(null);
 
   if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>;
 
-  
+
   return (
           <span className={isExpiringSoon ? 'text-red-600 font-medium' : ''}>
             {expiry.toLocaleDateString('ar-SA')}
@@ -349,7 +351,7 @@ export default function Drivers() {
           )}
         </CardContent>
       </Card>
-    
+
       {/* Dialog for Create/Edit */}
       {dialogOpen && (<div className="mt-4 p-6 bg-white border rounded-xl shadow-sm">
         <div>

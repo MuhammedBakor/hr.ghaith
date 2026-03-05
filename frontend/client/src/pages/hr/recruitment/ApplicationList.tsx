@@ -1,5 +1,6 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -48,33 +49,41 @@ export default function ApplicationList() {
     source: 'website' as const
   });
 
-  const utils = trpc.useUtils();
+  const queryClient = useQueryClient();
 
   // جلب البيانات من API
-  const { data: applications = [], isLoading, isError, error} = trpc.recruitment.applications.list.useQuery();
-  const { data: jobs = [] } = trpc.recruitment.jobs.list.useQuery();
+  const { data: applications = [], isLoading, isError, error} = useQuery({
+    queryKey: ['recruitment-applications'],
+    queryFn: () => api.get('/recruitment/applications').then(res => res.data),
+  });
+  const { data: jobs = [] } = useQuery({
+    queryKey: ['recruitment-jobs'],
+    queryFn: () => api.get('/recruitment/jobs').then(res => res.data),
+  });
 
   // Mutations
-  const createApplicationMutation = trpc.recruitment.applications.create.useMutation({
+  const createApplicationMutation = useMutation({
+    mutationFn: (data: any) => api.post('/recruitment/applications', data).then(res => res.data),
     onSuccess: () => {
       toast.success('تم إضافة الطلب بنجاح');
-      utils.recruitment.applications.list.invalidate();
+      queryClient.invalidateQueries({ queryKey: ['recruitment-applications'] });
       setShowNewApplication(false);
       resetNewApplication();
     },
-    onError: (error) => {
-      toast.error('فشل في إضافة الطلب: ' + error.message);
+    onError: (error: any) => {
+      toast.error('فشل في إضافة الطلب: ' + (error?.response?.data?.message || error.message));
     }
   });
 
-  const updateStatusMutation = trpc.recruitment.applications.updateStatus.useMutation({
+  const updateStatusMutation = useMutation({
+    mutationFn: (data: { id: number; status: string }) => api.patch(`/recruitment/applications/${data.id}/status`, { status: data.status }).then(res => res.data),
     onSuccess: () => {
       toast.success('تم تحديث الحالة بنجاح');
-      utils.recruitment.applications.list.invalidate();
+      queryClient.invalidateQueries({ queryKey: ['recruitment-applications'] });
       setShowDetails(false);
     },
-    onError: (error) => {
-      toast.error('فشل في تحديث الحالة: ' + error.message);
+    onError: (error: any) => {
+      toast.error('فشل في تحديث الحالة: ' + (error?.response?.data?.message || error.message));
     }
   });
 

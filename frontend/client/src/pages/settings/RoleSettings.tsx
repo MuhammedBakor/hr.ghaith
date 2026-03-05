@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,7 +32,10 @@ interface Permission {
 }
 
 export default function RoleSettings() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error } = useQuery({
+    queryKey: ['auth-me'],
+    queryFn: () => api.get('/auth/me').then(r => r.data),
+  });
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -45,19 +49,22 @@ export default function RoleSettings() {
     level: 1,
   });
 
-  const { data: rolesData, isLoading, refetch } = trpc.hrAdvanced.roles.list.useQuery();
-  
+  const { data: rolesData, isLoading, refetch } = useQuery({
+    queryKey: ['roles'],
+    queryFn: () => api.get('/roles').then(r => r.data),
+  });
+
   const roles = (rolesData || []) as Role[];
 
-  const createRoleMutation = trpc.hrAdvanced.roles.create.useMutation({
+  const createRoleMutation = useMutation({
+    mutationFn: (data: any) => api.post('/roles', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إنشاء الدور بنجاح');
       refetch();
       setIsOpen(false);
-      setNewRole({ code: '', nameAr: '', nameEn: '', description: '', level: 1,
-      onError: (e: any) => toast.error(e?.message || 'حدث خطأ')});
+      setNewRole({ code: '', nameAr: '', nameEn: '', description: '', level: 1 });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error('حدث خطأ أثناء إنشاء الدور: ' + error.message);
     },
   });
@@ -93,7 +100,7 @@ export default function RoleSettings() {
   if (isLoading) {
     if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>;
 
-    
+
     return (
     <div className="flex items-center justify-center h-64" dir="rtl">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -109,8 +116,8 @@ export default function RoleSettings() {
           <p className="text-gray-500">تعريف الأدوار وتعيين الصلاحيات للمستخدمين</p>
         </div>
         {isOpen && (<div className="mt-4 p-6 bg-white border rounded-xl shadow-sm animate-in fade-in">
-          
-          
+
+
             <div className="mb-4 border-b pb-3">
               <h3 className="text-lg font-bold">إنشاء دور جديد</h3>
             </div>
@@ -139,7 +146,7 @@ export default function RoleSettings() {
                 إنشاء الدور
               </Button>
             </div>
-          
+
         </div>)}
 
       </div>

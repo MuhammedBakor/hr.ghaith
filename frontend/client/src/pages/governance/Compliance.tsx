@@ -1,18 +1,19 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
 import { useAppContext } from '@/contexts/AppContext';
-import React from "react";
-import { trpc } from '@/lib/trpc';
+import React, { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, AlertTriangle, Shield, FileText, Loader2, XCircle } from 'lucide-react';
 
 export default function Compliance() {
+  const queryClient = useQueryClient();
   const confirmDelete = (fn: () => void) => { if (window.confirm("هل أنت متأكد من الحذف؟")) fn(); };
 
   const handleSubmit = () => { createMut.mutate({}); };
 
   const [searchTerm, setSearchTerm] = useState('');
-  const utils = trpc.useUtils();
 
   const { selectedRole: userRole } = useAppContext();
   const canEdit = userRole === "admin" || userRole === "manager";
@@ -23,44 +24,58 @@ export default function Compliance() {
 
   const [showDialog, setShowDialog] = React.useState(false);
   const [formData, setFormData] = React.useState<Record<string, any>>({});
-  const { data: documentsData, isLoading: loadingDocs, isError, error} = trpc.documents.list.useQuery();
-  const { data: violationsData, isLoading: loadingViolations } = trpc.fleetExtended.violations.list.useQuery();
-  const { data: auditsData, isLoading: loadingAudits } = trpc.audit.logs.useQuery({ limit: 100 });
+  const { data: documentsData, isLoading: loadingDocs, isError, error } = useQuery({
+    queryKey: ['documents-list'],
+    queryFn: () => api.get('/documents').then(r => r.data),
+  });
+  const { data: violationsData, isLoading: loadingViolations } = useQuery({
+    queryKey: ['violations-list'],
+    queryFn: () => api.get('/fleet/violations').then(r => r.data),
+  });
+  const { data: auditsData, isLoading: loadingAudits } = useQuery({
+    queryKey: ['audit-logs', { limit: 100 }],
+    queryFn: () => api.get('/audit/logs', { params: { limit: 100 } }).then(r => r.data),
+  });
 
-  const createMut = trpc.documents.create.useMutation({ onError: (e: any) => { alert(e.message || "حدث خطأ"); }, onSuccess: () => {
-        utils.documents.invalidate();
- window.location.reload(); } });
-  
+  const createMut = useMutation({
+    mutationFn: (data: any) => api.post('/documents', data).then(r => r.data),
+    onError: (e: any) => { alert(e.message || "حدث خطأ"); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['documents-list'] });
+      window.location.reload();
+    },
+  });
+
   const documents = (documentsData || []) as any[];
   const violations = (violationsData || []) as any[];
   const audits = (auditsData || []) as any[];
-  
+
   const policies = documents.filter((d: any) => d.documentType === 'policy');
   const approvedPolicies = policies.filter((p: any) => p.status === 'approved' || p.status === 'published');
   const pendingViolations = violations.filter((v: any) => v.status === 'pending' || v.status === 'under_review');
   const completedAudits = audits.filter((a: any) => a.status === 'completed');
-  
+
   // حساب نسبة الامتثال الفعلية
   const calculateComplianceRate = () => {
     // إذا لم تكن هناك سياسات، نعتبر النسبة 100%
     if (policies.length === 0) return 100;
-    
+
     // نسبة السياسات المعتمدة
     const policyRate = (approvedPolicies.length / (policies.length || 1)) * 100;
-    
+
     // نسبة المخالفات (كل مخالفة تخصم من النسبة)
     const violationPenalty = Math.min(pendingViolations.length * 5, 50); // حد أقصى 50%
-    
+
     const finalRate = Math.max(0, Math.round(policyRate - violationPenalty));
     return finalRate;
   };
-  
+
   const complianceRate = calculateComplianceRate();
   const isLoading = loadingDocs || loadingViolations || loadingAudits;
 
   if (isLoading) {
     if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>;
-    
+
     return (
       <div className="flex items-center justify-center h-64" dir="rtl">
         <div className="mb-4 flex items-center gap-2">
@@ -71,7 +86,7 @@ export default function Compliance() {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full md:w-64 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
-          {searchTerm && <button onClick={() => setSearchTerm('')} className="text-gray-400 hover:text-gray-600">✕</button>}
+          {searchTerm && <button onClick={() => setSearchTerm('')} className="text-gray-400 hover:text-gray-600">X</button>}
         </div>
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
@@ -83,7 +98,7 @@ export default function Compliance() {
     if (rate >= 70) return { bg: 'bg-amber-50', text: 'text-amber-600', icon: AlertTriangle };
     return { bg: 'bg-red-50', text: 'text-red-600', icon: XCircle };
   };
-  
+
   const complianceStyle = getComplianceColor(complianceRate);
   const ComplianceIcon = complianceStyle.icon;
 
@@ -206,7 +221,7 @@ export default function Compliance() {
           </CardContent>
         </Card>
       )}
-    
+
         {showDialog && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowDialog(false)}>
             <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl" dir="rtl" onClick={e => e.stopPropagation()}>

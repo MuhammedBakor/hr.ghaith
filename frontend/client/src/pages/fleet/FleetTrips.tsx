@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { useAppContext } from '@/contexts/AppContext';
-import { trpc } from '@/lib/trpc';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -60,28 +61,39 @@ export default function FleetTrips() {
     purpose: '',
   });
 
-  const { data: tripsData, isLoading, refetch, isError, error} = trpc.fleetExtended.trips.list.useQuery({});
-  const { data: vehiclesData } = trpc.fleet.vehicles.list.useQuery();
-  const { data: driversData } = trpc.fleetExtended.drivers.list.useQuery();
+  const { data: tripsData, isLoading, refetch, isError, error} = useQuery({
+    queryKey: ['fleet-extended', 'trips'],
+    queryFn: () => api.get('/api/fleet-extended/trips').then(r => r.data),
+  });
+  const { data: vehiclesData } = useQuery({
+    queryKey: ['fleet', 'vehicles'],
+    queryFn: () => api.get('/api/fleet/vehicles').then(r => r.data),
+  });
+  const { data: driversData } = useQuery({
+    queryKey: ['fleet-extended', 'drivers'],
+    queryFn: () => api.get('/api/fleet-extended/drivers').then(r => r.data),
+  });
 
-  const createTripMutation = trpc.fleetExtended.trips.create.useMutation({
+  const createTripMutation = useMutation({
+    mutationFn: (data: any) => api.post('/api/fleet-extended/trips', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إنشاء الرحلة بنجاح');
       setViewMode('list');
       resetForm();
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(error.message || 'فشل في إنشاء الرحلة');
     },
   });
 
-  const updateTripMutation = trpc.fleetExtended.trips.update.useMutation({
+  const updateTripMutation = useMutation({
+    mutationFn: (data: any) => api.put(`/api/fleet-extended/trips/${data.id}`, data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم تحديث الرحلة بنجاح');
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(error.message || 'فشل في تحديث الرحلة');
     },
   });
@@ -162,7 +174,7 @@ export default function FleetTrips() {
   if (viewMode === 'add') {
     if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>;
 
-    
+
     return (
       <div className="space-y-6" dir="rtl">
         <div className="flex items-center gap-4">
@@ -189,8 +201,8 @@ export default function FleetTrips() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>رقم الرحلة (تلقائي)</Label>
-                  <Input 
-                    value={tripCode} 
+                  <Input
+                    value={tripCode}
                     disabled
                     className="bg-muted font-mono"
                    placeholder="أدخل القيمة" />

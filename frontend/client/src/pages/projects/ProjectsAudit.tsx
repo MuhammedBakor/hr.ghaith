@@ -19,7 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { trpc } from "@/lib/trpc";
+import { useQuery } from '@tanstack/react-query';
+import api from '@/lib/api';
 import {
   Search,
   RefreshCw,
@@ -36,15 +37,13 @@ import {
 } from "lucide-react";
 
 export default function ProjectsAudit() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useQuery({ queryKey: ['auth', 'me'], queryFn: () => api.get('/auth/me').then(r => r.data) });
   const userRole = currentUser?.role || 'user';
 
   const [searchQuery, setSearchQuery] = useState("");
   const [actionFilter, setActionFilter] = useState<string>("all");
 
-  const { data: auditLogs, isLoading, refetch } = trpc.auditLogsExtended.list.useQuery({
-    limit: 100,
-  });
+  const { data: auditLogs, isLoading, refetch } = useQuery({ queryKey: ['auditLogs', 'list'], queryFn: () => api.get('/audit-logs?limit=100').then(r => r.data) });
 
   const filteredLogs = auditLogs?.filter((log: any) => {
     const matchesSearch = 

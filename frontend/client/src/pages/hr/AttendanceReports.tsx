@@ -12,7 +12,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Calendar, Printer, FileSpreadsheet, Users, XCircle, Timer, TrendingUp, TrendingDown, BarChart3 } from 'lucide-react';
-import { trpc } from '@/lib/trpc';
+import { useUser } from '@/services/authService';
+import { useEmployees, useAttendance } from '@/services/hrService';
 import { toast } from 'sonner';
 import { useAppContext } from '@/contexts/AppContext';
 import * as XLSX from 'xlsx';
@@ -38,7 +39,7 @@ interface EmployeeAttendanceReport {
 }
 
 export default function AttendanceReports() {
-  const { data: currentUser, isError, error } = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error } = useUser();
   const userRole = currentUser?.role || 'user';
   const requiredRole = 'hr_manager';
   const hasAccess = userRole === 'admin' || userRole === requiredRole || requiredRole === 'user';
@@ -58,9 +59,7 @@ export default function AttendanceReports() {
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
 
   // جلب الموظفين
-  const { data: employeesData } = trpc.hr.employees.list.useQuery({
-    branchId: selectedBranchId || undefined,
-  });
+  const { data: employeesData } = useEmployees();
 
   // جلب الأقسام - استخدام قائمة فريدة من الموظفين
   const departmentsData = useMemo(() => {
@@ -77,9 +76,7 @@ export default function AttendanceReports() {
   const startDate = new Date(selectedYear, selectedMonth - 1, 1);
   const endDate = new Date(selectedYear, selectedMonth, 0);
 
-  const { data: attendanceData, isLoading } = trpc.hr.attendance.list.useQuery({
-    branchId: selectedBranchId || undefined,
-  });
+  const { data: attendanceData, isLoading } = useAttendance();
 
   // حساب الإحصائيات لكل موظف
   const employeeReports = useMemo(() => {
@@ -227,8 +224,8 @@ export default function AttendanceReports() {
         <style>
           @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
           * { margin: 0; padding: 0; box-sizing: border-box; }
-          body { 
-            font-family: 'Cairo', sans-serif; 
+          body {
+            font-family: 'Cairo', sans-serif;
             padding: 20px;
             direction: rtl;
           }
@@ -279,9 +276,9 @@ export default function AttendanceReports() {
             font-size: 11px;
           }
           .signature { text-align: center; }
-          .signature-line { 
-            width: 150px; 
-            border-top: 1px solid #333; 
+          .signature-line {
+            width: 150px;
+            border-top: 1px solid #333;
             margin-top: 40px;
             padding-top: 5px;
           }
@@ -404,7 +401,7 @@ export default function AttendanceReports() {
   if (isError) return (
     <div className="p-8 text-center">
       <p className="text-red-500 text-lg">حدث خطأ في تحميل البيانات</p>
-      <p className="text-gray-500 mt-2">{error?.message}</p>
+      <p className="text-gray-500 mt-2">{(error as any)?.message}</p>
     </div>
   );
 
@@ -418,7 +415,7 @@ export default function AttendanceReports() {
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full md:w-64 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         />
-        {searchTerm && <button onClick={() => setSearchTerm('')} className="text-gray-400 hover:text-gray-600">✕</button>}
+        {searchTerm && <button onClick={() => setSearchTerm('')} className="text-gray-400 hover:text-gray-600">&#10005;</button>}
       </div>
       {/* العنوان والأزرار */}
       <div className="flex items-center justify-between">

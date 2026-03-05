@@ -1,7 +1,8 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
 import { useState } from "react";
 import { useRoute, useLocation } from "wouter";
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -69,7 +70,10 @@ const allowedTransitions: Record<string, string[]> = {
 
 export default function InvoiceDetails() {
   const { id } = useParams<{ id: string }>();
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useQuery({
+    queryKey: ['auth', 'me'],
+    queryFn: () => api.get('/auth/me').then(r => r.data),
+  });
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -108,64 +112,69 @@ export default function InvoiceDetails() {
   });
 
   // جلب بيانات الفاتورة
-  const { data: invoice, isLoading, refetch } = trpc.invoices.getById.useQuery(
-    { id: invoiceId },
-    { enabled: invoiceId > 0 }
-  );
+  const { data: invoice, isLoading, refetch } = useQuery({
+    queryKey: ['invoices', invoiceId],
+    queryFn: () => api.get(`/invoices/${invoiceId}`).then(r => r.data),
+    enabled: invoiceId > 0,
+  });
 
   // جلب بنود الفاتورة
-  const { data: items = [], refetch: refetchItems } = trpc.invoices.items.list.useQuery(
-    { invoiceId },
-    { enabled: invoiceId > 0 }
-  );
+  const { data: items = [], refetch: refetchItems } = useQuery({
+    queryKey: ['invoices', invoiceId, 'items'],
+    queryFn: () => api.get(`/invoices/${invoiceId}/items`).then(r => r.data),
+    enabled: invoiceId > 0,
+  });
 
   // جلب المدفوعات
-  const { data: payments = [], refetch: refetchPayments } = trpc.invoices.payments.list.useQuery(
-    { invoiceId },
-    { enabled: invoiceId > 0 }
-  );
+  const { data: payments = [], refetch: refetchPayments } = useQuery({
+    queryKey: ['invoices', invoiceId, 'payments'],
+    queryFn: () => api.get(`/invoices/${invoiceId}/payments`).then(r => r.data),
+    enabled: invoiceId > 0,
+  });
 
   // Mutations
-  const addItemMutation = trpc.invoices.items.add.useMutation({
+  const addItemMutation = useMutation({
+    mutationFn: (data: any) => api.post(`/invoices/${invoiceId}/items`, data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم إضافة البند بنجاح");
       setShowAddItem(false);
-      setNewItem({ description: "", quantity: 1, unitPrice: "", taxRate: "15", discount: "0",
-      onError: (e: any) => toast.error(e?.message || 'حدث خطأ')});
+      setNewItem({ description: "", quantity: 1, unitPrice: "", taxRate: "15", discount: "0" });
       refetchItems();
       refetch();
     },
     onError: (error: any) => {
-      toast.error(error.message || "حدث خطأ أثناء إضافة البند");
+      toast.error(error?.response?.data?.message || error.message || "حدث خطأ أثناء إضافة البند");
     },
   });
 
-  const deleteItemMutation = trpc.invoices.items.delete.useMutation({
+  const deleteItemMutation = useMutation({
+    mutationFn: (data: any) => api.delete(`/invoices/items/${data.id}`, { data: { reason: data.reason } }).then(r => r.data),
     onSuccess: () => {
       toast.success("تم حذف البند بنجاح");
       refetchItems();
       refetch();
     },
     onError: (error: any) => {
-      toast.error(error.message || "حدث خطأ أثناء حذف البند");
+      toast.error(error?.response?.data?.message || error.message || "حدث خطأ أثناء حذف البند");
     },
   });
 
-  const addPaymentMutation = trpc.invoices.payments.create.useMutation({
+  const addPaymentMutation = useMutation({
+    mutationFn: (data: any) => api.post(`/invoices/${invoiceId}/payments`, data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم تسجيل الدفعة بنجاح");
       setShowAddPayment(false);
-      setNewPayment({ amount: "", paymentMethod: "bank_transfer", reference: "", notes: "",
-      onError: (e: any) => toast.error(e?.message || 'حدث خطأ')});
+      setNewPayment({ amount: "", paymentMethod: "bank_transfer", reference: "", notes: "" });
       refetchPayments();
       refetch();
     },
     onError: (error: any) => {
-      toast.error(error.message || "حدث خطأ أثناء تسجيل الدفعة");
+      toast.error(error?.response?.data?.message || error.message || "حدث خطأ أثناء تسجيل الدفعة");
     },
   });
 
-  const updateStatusMutation = trpc.invoices.updateStatus.useMutation({
+  const updateStatusMutation = useMutation({
+    mutationFn: (data: any) => api.put(`/invoices/${data.id}/status`, data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم تحديث حالة الفاتورة بنجاح");
       setShowStatusChange(false);
@@ -174,7 +183,7 @@ export default function InvoiceDetails() {
       refetch();
     },
     onError: (error: any) => {
-      toast.error(error.message || "حدث خطأ أثناء تحديث الحالة");
+      toast.error(error?.response?.data?.message || error.message || "حدث خطأ أثناء تحديث الحالة");
     },
   });
 

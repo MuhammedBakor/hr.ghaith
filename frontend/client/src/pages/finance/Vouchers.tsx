@@ -1,6 +1,7 @@
 import React from "react";
 import { useState } from "react";
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -120,46 +121,58 @@ export default function Vouchers() {
   const { selectedBranchId, branches } = useAppContext();
   const selectedBranch = branches?.find(b => b.id === selectedBranchId);
 
-  const { data: vouchers, isLoading, refetch, isError, error } = trpc.finance.vouchers?.list?.useQuery({
-    status: filterStatus !== "all" ? filterStatus : undefined,
-    voucherType: filterType !== "all" ? filterType : undefined,
-    branchId: selectedBranchId || undefined,
+  const { data: vouchers, isLoading, refetch, isError, error } = useQuery({
+    queryKey: ['finance', 'vouchers', filterStatus, filterType, selectedBranchId],
+    queryFn: () => api.get('/finance/vouchers', {
+      params: {
+        status: filterStatus !== "all" ? filterStatus : undefined,
+        voucherType: filterType !== "all" ? filterType : undefined,
+        branchId: selectedBranchId || undefined,
+      }
+    }).then(r => r.data),
   });
 
-  const { data: accounts } = trpc.finance.accounts?.list?.useQuery();
-  const { data: approvedRequests } = trpc.finance.financialRequests.list.useQuery({
-    status: "approved",
+  const { data: accounts } = useQuery({
+    queryKey: ['finance', 'accounts'],
+    queryFn: () => api.get('/finance/accounts').then(r => r.data),
+  });
+  const { data: approvedRequests } = useQuery({
+    queryKey: ['finance', 'financial-requests', 'approved'],
+    queryFn: () => api.get('/finance/financial-requests', { params: { status: "approved" } }).then(r => r.data),
   });
 
-  const createMutation = trpc.finance.vouchers?.create?.useMutation({
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/finance/vouchers', data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم إنشاء السند بنجاح");
       setViewMode('list');
       resetForm();
       refetch();
     },
-    onError: (error) => {
-      toast.error(error.message || "حدث خطأ أثناء إنشاء السند");
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || error.message || "حدث خطأ أثناء إنشاء السند");
     },
   });
 
-  const approveMutation = trpc.finance.vouchers?.approve?.useMutation({
+  const approveMutation = useMutation({
+    mutationFn: (data: any) => api.put(`/finance/vouchers/${data.id}/approve`, data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم اعتماد السند بنجاح");
       refetch();
     },
-    onError: (error) => {
-      toast.error(error.message || "حدث خطأ أثناء اعتماد السند");
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || error.message || "حدث خطأ أثناء اعتماد السند");
     },
   });
 
-  const executeMutation = trpc.finance.vouchers?.execute?.useMutation({
-    onSuccess: (data) => {
+  const executeMutation = useMutation({
+    mutationFn: (data: any) => api.put(`/finance/vouchers/${data.id}/execute`, data).then(r => r.data),
+    onSuccess: (data: any) => {
       toast.success(`تم تنفيذ السند وإنشاء القيد المحاسبي رقم ${data.entryNumber}`);
       refetch();
     },
-    onError: (error) => {
-      toast.error(error.message || "حدث خطأ أثناء تنفيذ السند");
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || error.message || "حدث خطأ أثناء تنفيذ السند");
     },
   });
 

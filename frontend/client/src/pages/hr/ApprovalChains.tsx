@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { useUser } from '@/services/authService';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -37,7 +39,7 @@ const requestTypeLabels: Record<string, string> = {
 };
 
 export default function ApprovalChains() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useUser();
   const userRole = currentUser?.role || 'user';
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -53,9 +55,13 @@ export default function ApprovalChains() {
     steps: [] as { stepOrder: number; approverType: "direct_manager" | "department_manager" | "hr_manager" | "general_manager" | "specific_user" | "specific_role"; specificUserId?: number; specificRoleId?: number; isRequired: boolean; canDelegate: boolean; escalateAfterDays?: number }[],
   });
 
-  const { data: chains, isLoading, refetch } = trpc.hrAdvanced.approvalChains.list.useQuery();
+  const { data: chains, isLoading, refetch } = useQuery({
+    queryKey: ['approvalChains'],
+    queryFn: () => api.get('/hr/approval-chains').then(res => res.data),
+  });
 
-  const createChainMutation = trpc.hrAdvanced.approvalChains.create.useMutation({
+  const createChainMutation = useMutation({
+    mutationFn: (data: any) => api.post('/hr/approval-chains', data).then(res => res.data),
     onSuccess: () => {
       toast.success("تم إنشاء سلسلة الاعتماد بنجاح");
       setIsCreateOpen(false);
@@ -66,11 +72,11 @@ export default function ApprovalChains() {
         description: "",
         isActive: true,
         steps: [],
-      onError: (e: any) => toast.error(e?.message || 'حدث خطأ')});
+      });
       refetch();
     },
     onError: (error: any) => {
-      toast.error(error.message);
+      toast.error(error?.response?.data?.message || error.message);
     },
   });
 

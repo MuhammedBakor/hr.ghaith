@@ -23,6 +23,7 @@ public class DataInitializer implements CommandLineRunner {
                     .email("admin")
                     .password(passwordEncoder.encode("Admin@2026"))
                     .role(Role.ADMIN)
+                    .enabled(true)
                     .build();
             userRepository.save(admin);
             System.out.println("Default admin user created: admin / Admin@2026");
@@ -34,6 +35,7 @@ public class DataInitializer implements CommandLineRunner {
                     .email("admin2")
                     .password(passwordEncoder.encode("Admin2@2026"))
                     .role(Role.USER)
+                    .enabled(true)
                     .build();
             userRepository.save(admin2);
             System.out.println("Default admin2 user created: admin2 / Admin2@2026");

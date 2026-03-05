@@ -1,21 +1,35 @@
-import { useState } from 'react';
-import { trpc } from '@/lib/trpc';
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader2, Settings as SettingsIcon, Building2, Users, Bell, Shield, Database, Hash, Mail, MessageCircle, MessageSquare } from 'lucide-react';
 import { Link } from 'wouter';
 
 export default function Settings() {
+  const queryClient = useQueryClient();
   const confirmDelete = (fn: () => void) => { if (window.confirm("هل أنت متأكد من الحذف؟")) fn(); };
+
+  const createMut = useMutation({
+    mutationFn: (data: any) => api.post('/settings', data).then(r => r.data),
+    onError: (e: any) => { alert(e.message || "حدث خطأ"); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['hr-branches'] });
+      queryClient.invalidateQueries({ queryKey: ['roles'] });
+      window.location.reload();
+    },
+  });
 
   const handleSubmit = () => { createMut.mutate({}); };
 
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error } = useQuery({
+    queryKey: ['auth-me'],
+    queryFn: () => api.get('/auth/me').then(r => r.data),
+  });
   const userRole = currentUser?.role || 'user';
   const requiredRole = 'admin';
   const hasAccess = userRole === 'admin' || userRole === requiredRole || requiredRole === 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
-  const utils = trpc.useUtils();
 
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
@@ -23,12 +37,14 @@ export default function Settings() {
   const [showDialog, setShowDialog] = React.useState(false);
   const [formData, setFormData] = React.useState<Record<string, any>>({});
 
-  const { data: branches, isLoading } = trpc.controlKernel.branches?.list?.useQuery();
-  const { data: roles } = trpc.controlKernel.roles?.list?.useQuery();
-
-  const createMut = trpc.controlKernel.create.useMutation({ onError: (e: any) => { alert(e.message || "حدث خطأ"); }, onSuccess: () => {
-        utils.controlKernel.invalidate();
- window.location.reload(); } });
+  const { data: branches, isLoading } = useQuery({
+    queryKey: ['hr-branches'],
+    queryFn: () => api.get('/hr-branches').then(r => r.data),
+  });
+  const { data: roles } = useQuery({
+    queryKey: ['roles'],
+    queryFn: () => api.get('/roles').then(r => r.data),
+  });
 
   const settingsCards = [
     { title: 'الفروع', description: 'إدارة فروع المنظمة', icon: Building2, href: '/settings/branches', count: branches?.length || 0 },
@@ -45,7 +61,7 @@ export default function Settings() {
 
   if (isLoading) {
     if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>;
-    
+
     return (
     <div className="flex items-center justify-center h-64" dir="rtl">
         <div className="mb-4 flex items-center gap-2">
@@ -72,7 +88,7 @@ export default function Settings() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {settingsCards.map((card, index) => (
-          <Link key={card.id ?? `Link-${index}`} href={card.href}>
+          <Link key={index} href={card.href}>
             <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
               <CardContent className="p-6">
                 <div className="flex items-start gap-4">
@@ -92,7 +108,7 @@ export default function Settings() {
           </Link>
         ))}
       </div>
-    
+
         {showDialog && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowDialog(false)}>
             <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl" dir="rtl" onClick={e => e.stopPropagation()}>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -50,16 +51,19 @@ export default function BranchSettings() {
     email: '',
   });
 
-  const { data: branchesData, isLoading, refetch, isError, error} = trpc.hrAdvanced.branches.list.useQuery();
-  
+  const { data: branchesData, isLoading, refetch, isError, error } = useQuery({
+    queryKey: ['hr-branches'],
+    queryFn: () => api.get('/hr-branches').then(r => r.data),
+  });
+
   const branches = (branchesData || []) as Branch[];
 
-  const createBranchMutation = trpc.hrAdvanced.branches.create.useMutation({
+  const createBranchMutation = useMutation({
+    mutationFn: (data: any) => api.post('/hr-branches', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إنشاء الفرع بنجاح');
       setIsDialogOpen(false);
-      setNewBranch({ code: '', name: '', nameAr: '', address: '', city: '', phone: '', email: '',
-      onError: (e: any) => toast.error(e?.message || 'حدث خطأ')});
+      setNewBranch({ code: '', name: '', nameAr: '', address: '', city: '', phone: '', email: '' });
       refetch();
     },
     onError: (error: any) => {
@@ -67,13 +71,13 @@ export default function BranchSettings() {
     },
   });
 
-  const updateBranchMutation = trpc.hrAdvanced.branches.update.useMutation({
+  const updateBranchMutation = useMutation({
+    mutationFn: (data: any) => api.put(`/hr-branches/${data.id}`, data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم تحديث الفرع بنجاح');
       setIsDialogOpen(false);
       setEditingBranchId(null);
-      setNewBranch({ code: '', name: '', nameAr: '', address: '', city: '', phone: '', email: '',
-      onError: (e: any) => toast.error(e?.message || 'حدث خطأ')});
+      setNewBranch({ code: '', name: '', nameAr: '', address: '', city: '', phone: '', email: '' });
       refetch();
     },
     onError: (error: any) => {
@@ -111,7 +115,7 @@ export default function BranchSettings() {
   if (isLoading) {
     if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>;
 
-    
+
     return (
     <div className="flex items-center justify-center h-64" dir="rtl">
         <div className="mb-4 flex items-center gap-2">
@@ -137,7 +141,7 @@ export default function BranchSettings() {
           <p className="text-gray-500">إعداد وإدارة فروع المنظمة</p>
         </div>
         {isDialogOpen && (<div className="mt-4 p-6 bg-white border rounded-xl shadow-sm">
-          
+
           <div>
             <div className="mb-4 border-b pb-3">
               <h3 className="text-lg font-bold">إنشاء فرع جديد</h3>

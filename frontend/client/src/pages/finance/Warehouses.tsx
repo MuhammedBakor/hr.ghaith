@@ -1,7 +1,8 @@
 import { useAppContext } from '@/contexts/AppContext';
 import React from "react";
 import { useState } from "react";
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -89,34 +90,43 @@ export default function Warehouses() {
   const [movementType, setMovementType] = useState<"in" | "out" | "adjustment">("in");
   const [movementReason, setMovementReason] = useState("");
 
-  const { data: warehouses, isLoading, refetch, isError, error } = trpc.finance.warehouses?.list?.useQuery();
-  const { data: products } = trpc.store.products?.list?.useQuery();
-  const { data: warehouseInventory, refetch: refetchInventory } = trpc.finance.warehouses?.inventory?.useQuery(
-    { warehouseId: selectedWarehouse?.id || 0 },
-    { enabled: !!selectedWarehouse }
-  );
+  const { data: warehouses, isLoading, refetch, isError, error } = useQuery({
+    queryKey: ['finance', 'warehouses'],
+    queryFn: () => api.get('/finance/warehouses').then(r => r.data),
+  });
+  const { data: products } = useQuery({
+    queryKey: ['store', 'products'],
+    queryFn: () => api.get('/store/products').then(r => r.data),
+  });
+  const { data: warehouseInventory, refetch: refetchInventory } = useQuery({
+    queryKey: ['finance', 'warehouses', 'inventory', selectedWarehouse?.id],
+    queryFn: () => api.get(`/finance/warehouses/${selectedWarehouse?.id}/inventory`).then(r => r.data),
+    enabled: !!selectedWarehouse,
+  });
 
-  const createMutation = trpc.finance.warehouses?.create?.useMutation({
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/finance/warehouses', data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم إنشاء المستودع بنجاح");
       setViewMode('list');
       resetForm();
       refetch();
     },
-    onError: (error) => {
-      toast.error(`خطأ: ${error.message}`);
+    onError: (error: any) => {
+      toast.error(`خطأ: ${error?.response?.data?.message || error.message}`);
     },
   });
 
-  const updateInventoryMutation = trpc.finance.warehouses?.updateInventory?.useMutation({
-    onSuccess: (result) => {
+  const updateInventoryMutation = useMutation({
+    mutationFn: (data: any) => api.put(`/finance/warehouses/${data.warehouseId}/inventory`, data).then(r => r.data),
+    onSuccess: (result: any) => {
       toast.success(`تم تحديث المخزون. الكمية الجديدة: ${result.newQuantity}`);
       setViewMode('list');
       resetMovementForm();
       refetchInventory();
     },
-    onError: (error) => {
-      toast.error(`خطأ: ${error.message}`);
+    onError: (error: any) => {
+      toast.error(`خطأ: ${error?.response?.data?.message || error.message}`);
     },
   });
 

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useAuth } from '@/_core/hooks/useAuth';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { useUser } from '@/services/authService';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -11,7 +13,7 @@ import { toast } from 'sonner';
 import { Mail, Calendar, Clock, Users, Send, Settings, CheckCircle2, Loader2, Bell, FileText } from 'lucide-react';
 
 export default function AttendanceEmailReports() {
-  const { data: currentUser, isError, error, isLoading, refetch} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error, isLoading, refetch} = useUser();
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -27,25 +29,30 @@ export default function AttendanceEmailReports() {
   const [sendDay, setSendDay] = useState('1');
 
   // جلب الفروع
-  const { data: branches } = trpc.hrAdvanced.branches?.list?.useQuery();
+  const { data: branches } = useQuery({
+    queryKey: ['branches'],
+    queryFn: () => api.get('/hr/branches').then(res => res.data),
+  });
 
   // إرسال التقرير
-  const sendReportMutation = trpc.hr.attendance.sendMonthlyReport.useMutation({
+  const sendReportMutation = useMutation({
+    mutationFn: (data: any) => api.post('/hr/attendance/send-monthly-report', data).then(res => res.data),
     onSuccess: () => {
       toast.success('تم إرسال التقرير بنجاح');
     },
-    onError: (error) => {
-      toast.error(error.message || 'فشل في إرسال التقرير');
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || error.message || 'فشل في إرسال التقرير');
     },
   });
 
   // حفظ إعدادات الإرسال التلقائي
-  const saveSettingsMutation = trpc.hr.attendance.saveReportSettings.useMutation({
+  const saveSettingsMutation = useMutation({
+    mutationFn: (data: any) => api.post('/hr/attendance/report-settings', data).then(res => res.data),
     onSuccess: () => {
       toast.success('تم حفظ الإعدادات بنجاح');
     },
-    onError: (error) => {
-      toast.error(error.message || 'فشل في حفظ الإعدادات');
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || error.message || 'فشل في حفظ الإعدادات');
     },
   });
 

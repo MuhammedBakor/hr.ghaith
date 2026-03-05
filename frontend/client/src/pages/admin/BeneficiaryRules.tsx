@@ -1,4 +1,5 @@
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation } from "@tanstack/react-query";
+import api from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -44,7 +45,10 @@ import {
 import { PrintButton } from "@/components/PrintButton";
 
 export default function BeneficiaryRules() {
-  const { data: currentUser, isError, error } = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error } = useQuery({
+    queryKey: ["auth", "me"],
+    queryFn: () => api.get("/api/auth/me").then(r => r.data),
+  });
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -63,10 +67,14 @@ export default function BeneficiaryRules() {
   });
 
   // جلب القواعد من الـ API
-  const { data: rules, isLoading, refetch } = trpc.beneficiaryRules.list.useQuery();
+  const { data: rules, isLoading, refetch } = useQuery({
+    queryKey: ["beneficiaryRules", "list"],
+    queryFn: () => api.get("/api/beneficiary-rules").then(r => r.data),
+  });
 
   // mutations
-  const createMutation = trpc.beneficiaryRules.create.useMutation({
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post("/api/beneficiary-rules", data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إضافة القاعدة بنجاح');
       setShowAddDialog(false);
@@ -82,27 +90,29 @@ export default function BeneficiaryRules() {
       });
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`فشل في إضافة القاعدة: ${error.message}`);
     },
   });
 
-  const toggleActiveMutation = trpc.beneficiaryRules.toggleActive.useMutation({
+  const toggleActiveMutation = useMutation({
+    mutationFn: (data: any) => api.post("/api/beneficiary-rules/toggle-active", data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم تحديث حالة القاعدة');
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`فشل في تحديث الحالة: ${error.message}`);
     },
   });
 
-  const deleteMutation = trpc.beneficiaryRules.delete.useMutation({
+  const deleteMutation = useMutation({
+    mutationFn: (data: any) => api.delete(`/api/beneficiary-rules/${data.id}`).then(r => r.data),
     onSuccess: () => {
       toast.success('تم حذف القاعدة');
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`فشل في حذف القاعدة: ${error.message}`);
     },
   });

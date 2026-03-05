@@ -1,7 +1,7 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
 import { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { trpc } from '@/lib/trpc';
+import { useEmployees, useUpdateEmployee } from '@/services/hrService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,24 +42,11 @@ export default function Users() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [userToDelete, setUserToDelete] = useState<any>(null);
 
-  const utils = trpc.useUtils();
-
-  // استخدام hr.employees.list لجلب قائمة الموظفين
-  const { data: employees, isLoading, isError, error } = trpc.hr.employees?.list?.useQuery({});
+  // استخدام useEmployees لجلب قائمة الموظفين
+  const { data: employees, isLoading, isError, error } = useEmployees();
 
   // Mutation لتحديث الموظف
-  const updateMutation = trpc.hr.employees?.update?.useMutation({
-    onSuccess: () => {
-
-      toast.success('تم تحديث بيانات المستخدم بنجاح');
-      utils.hr.employees?.list?.invalidate();
-      setViewMode('list');
-      setSelectedUser(null);
-    },
-    onError: (error: any) => {
-      toast.error('فشل في التحديث: ' + error.message);
-    },
-  });
+  const updateMutation = useUpdateEmployee();
 
   const filteredUsers = (employees || []).filter((emp: any) =>
     emp.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -72,6 +59,15 @@ export default function Users() {
     updateMutation.mutate({
       id: selectedUser.id,
       status: newStatus as any,
+    }, {
+      onSuccess: () => {
+        toast.success('تم تحديث بيانات المستخدم بنجاح');
+        setViewMode('list');
+        setSelectedUser(null);
+      },
+      onError: (error: any) => {
+        toast.error('فشل في التحديث: ' + error.message);
+      },
     });
   };
 
@@ -96,6 +92,13 @@ export default function Users() {
     updateMutation.mutate({
       id: userToDelete.id,
       status: 'terminated',
+    }, {
+      onSuccess: () => {
+        toast.success('تم تحديث بيانات المستخدم بنجاح');
+      },
+      onError: (error: any) => {
+        toast.error('فشل في التحديث: ' + error.message);
+      },
     });
     setShowDeleteDialog(false);
     setUserToDelete(null);

@@ -1,7 +1,8 @@
 import { useAppContext } from '@/contexts/AppContext';
 import React from "react";
 import { useState } from "react";
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -113,38 +114,49 @@ export default function FinancialRequests() {
     budgetId: "",
   });
 
-  const { data: requests, isLoading, refetch, isError, error } = trpc.finance.financialRequests.list.useQuery({
-    status: filterStatus !== "all" ? filterStatus : undefined,
-    requestType: filterType !== "all" ? filterType : undefined,
+  const { data: requests, isLoading, refetch, isError, error } = useQuery({
+    queryKey: ['finance', 'financial-requests', filterStatus, filterType],
+    queryFn: () => api.get('/finance/financial-requests', {
+      params: {
+        status: filterStatus !== "all" ? filterStatus : undefined,
+        requestType: filterType !== "all" ? filterType : undefined,
+      }
+    }).then(r => r.data),
   });
 
-  const { data: budgets } = trpc.finance.budgets?.list?.useQuery();
+  const { data: budgets } = useQuery({
+    queryKey: ['finance', 'budgets'],
+    queryFn: () => api.get('/finance/budgets').then(r => r.data),
+  });
 
-  const createMutation = trpc.finance.financialRequests.create.useMutation({
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/finance/financial-requests', data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم إنشاء الطلب المالي بنجاح");
       setView('list');
       resetForm();
       refetch();
     },
-    onError: (error) => {
-      toast.error(error.message || "حدث خطأ أثناء إنشاء الطلب");
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || error.message || "حدث خطأ أثناء إنشاء الطلب");
     },
   });
 
-  const updateStatusMutation = trpc.finance.financialRequests.updateStatus.useMutation({
+  const updateStatusMutation = useMutation({
+    mutationFn: (data: any) => api.put(`/finance/financial-requests/${data.id}/status`, data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم تحديث حالة الطلب");
       refetch();
       setView('list');
     },
-    onError: (error) => {
-      toast.error(error.message || "حدث خطأ");
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || error.message || "حدث خطأ");
     },
   });
 
-  const checkBudgetMutation = trpc.finance.financialRequests.checkBudget.useMutation({
-    onSuccess: (data) => {
+  const checkBudgetMutation = useMutation({
+    mutationFn: (data: any) => api.post(`/finance/financial-requests/${data.requestId}/check-budget`, data).then(r => r.data),
+    onSuccess: (data: any) => {
       setBudgetCheckResult(data);
       if (data.status === 'within_budget') {
         toast.success("الطلب ضمن الميزانية المتاحة");
@@ -155,8 +167,8 @@ export default function FinancialRequests() {
       }
       refetch();
     },
-    onError: (error) => {
-      toast.error(error.message || "حدث خطأ أثناء فحص الميزانية");
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || error.message || "حدث خطأ أثناء فحص الميزانية");
     },
   });
 

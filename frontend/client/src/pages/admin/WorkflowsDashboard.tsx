@@ -12,18 +12,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Link } from "wouter";
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import api from "@/lib/api";
 import { ShoppingCart, Users, Car, Clock, CheckCircle, AlertTriangle, XCircle, Activity, RefreshCw, Eye, Loader2 } from "lucide-react";
 import { PrintButton } from "@/components/PrintButton";
 
 export default function WorkflowsDashboard() {
-  const saveMut = trpc.automation.update.useMutation({
+  const saveMut = useMutation({
+    mutationFn: (data: any) => api.put(`/admin/automation/${data.id}`, data).then(r => r.data),
     onSuccess: () => { toast.success('تم الحفظ بنجاح'); },
     onError: (e: any) => { toast.error(e.message || 'حدث خطأ'); },
   });
   const handleSave = (data?: any) => { if (data?.id) saveMut.mutate(data); else toast.success('تم الحفظ'); };
 
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useQuery({
+    queryKey: ['auth', 'me'],
+    queryFn: () => api.get('/auth/me').then(r => r.data),
+  });
   const userRole = currentUser?.role || 'user';
   const requiredRole = 'admin';
   const hasAccess = userRole === 'admin' || userRole === requiredRole || requiredRole === 'user';
@@ -37,14 +42,20 @@ export default function WorkflowsDashboard() {
   const [activeTab, setActiveTab] = useState("overview");
   
   // جلب البيانات من API
-  const { data: purchaseOrders, isLoading: loadingPO, refetch: refetchPO } = 
-    trpc.finance.purchaseOrders?.list?.useQuery({});
-  
-  const { data: leaveRequests, isLoading: loadingLeaves } = 
-    trpc.hr.leaves.list.useQuery({});
-  
-  const { data: exceptionsData, isLoading: loadingExceptions } = 
-    trpc.exceptions.getSuspenseItems.useQuery();
+  const { data: purchaseOrders, isLoading: loadingPO, refetch: refetchPO } = useQuery({
+    queryKey: ['admin', 'purchase-orders'],
+    queryFn: () => api.get('/admin/purchase-orders').then(r => r.data),
+  });
+
+  const { data: leaveRequests, isLoading: loadingLeaves } = useQuery({
+    queryKey: ['admin', 'leaves'],
+    queryFn: () => api.get('/admin/leaves').then(r => r.data),
+  });
+
+  const { data: exceptionsData, isLoading: loadingExceptions } = useQuery({
+    queryKey: ['admin', 'exceptions'],
+    queryFn: () => api.get('/admin/exceptions/suspense-items').then(r => r.data),
+  });
 
   const isLoading = loadingPO || loadingLeaves || loadingExceptions;
   const exceptions = exceptionsData?.items || [];

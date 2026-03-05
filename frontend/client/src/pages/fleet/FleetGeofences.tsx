@@ -1,5 +1,7 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
 import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { useAppContext } from '@/contexts/AppContext';
 import { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/ui/data-table';
@@ -20,9 +22,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
-import { 
+import {
   MapPin,
   Plus,
   Circle,
@@ -106,59 +107,65 @@ export default function FleetGeofences() {
     alertOnExit: true,
   });
 
-  const utils = trpc.useUtils();
-  
+  const queryClient = useQueryClient();
+
   // جلب السياجات من API
-  const { data: geofencesData, isLoading, isError, error} = trpc.fleet.geofences.list.useQuery();
+  const { data: geofencesData, isLoading, isError, error} = useQuery({
+    queryKey: ['fleet', 'geofences'],
+    queryFn: () => api.get('/api/fleet/geofences').then(r => r.data),
+  });
   const geofences: Geofence[] = (geofencesData || []) as Geofence[];
-  
+
   // جلب الإحصائيات
-  const { data: stats } = trpc.fleet.geofences.stats.useQuery();
-  
+  const { data: stats } = useQuery({
+    queryKey: ['fleet', 'geofences', 'stats'],
+    queryFn: () => api.get('/api/fleet/geofences/stats').then(r => r.data),
+  });
+
   // إنشاء سياج جديد
-  const createMutation = trpc.fleet.geofences.create.useMutation({
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/api/fleet/geofences', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إنشاء السياج الجغرافي بنجاح');
-      utils.fleet.geofences.list.invalidate();
-      utils.fleet.geofences.stats.invalidate();
+      queryClient.invalidateQueries({ queryKey: ['fleet', 'geofences'] });
       setViewMode('list');
       resetForm();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error('فشل في إنشاء السياج: ' + error.message);
     },
   });
-  
+
   // حذف سياج
-  const deleteMutation = trpc.fleet.geofences.delete.useMutation({
+  const deleteMutation = useMutation({
+    mutationFn: (data: any) => api.delete(`/api/fleet/geofences/${data.id}`).then(r => r.data),
     onSuccess: () => {
       toast.success('تم حذف السياج بنجاح');
-      utils.fleet.geofences.list.invalidate();
-      utils.fleet.geofences.stats.invalidate();
+      queryClient.invalidateQueries({ queryKey: ['fleet', 'geofences'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error('فشل في حذف السياج: ' + error.message);
     },
   });
-  
+
   // تحديث حالة السياج
-  const updateMutation = trpc.fleet.geofences.update.useMutation({
+  const updateMutation = useMutation({
+    mutationFn: (data: any) => api.put(`/api/fleet/geofences/${data.id}`, data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم تحديث السياج بنجاح');
-      utils.fleet.geofences.list.invalidate();
-      utils.fleet.geofences.stats.invalidate();
+      queryClient.invalidateQueries({ queryKey: ['fleet', 'geofences'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error('فشل في تحديث السياج: ' + error.message);
     },
   });
 
   const resetForm = () => {
-    setNewGeofence({ 
-      name: '', 
-      type: 'circle', 
-      centerLat: '', 
-      centerLng: '', 
+    setNewGeofence({
+      name: '',
+      type: 'circle',
+      centerLat: '',
+      centerLng: '',
       radius: '500',
       alertOnEntry: true,
       alertOnExit: true,
@@ -170,7 +177,7 @@ export default function FleetGeofences() {
       toast.error('يرجى ملء جميع الحقول المطلوبة');
       return;
     }
-    
+
     createMutation.mutate({
       code: geofenceCode,
       name: newGeofence.name,
@@ -248,15 +255,15 @@ export default function FleetGeofences() {
       header: 'الإجراءات',
       cell: ({ row }) => (
         <div className="flex gap-1">
-          <Button 
-            size="sm" 
+          <Button
+            size="sm"
             variant="outline"
             onClick={() => handleToggleStatus(row.original.id, row.original.status)}
           >
             <Settings className="h-4 w-4" />
           </Button>
-          <Button 
-            size="sm" 
+          <Button
+            size="sm"
             variant="outline"
             className="text-red-600"
             onClick={() => { if(window.confirm('هل أنت متأكد من الحذف؟')) handleDelete(row.original.id) }}
@@ -272,7 +279,7 @@ export default function FleetGeofences() {
   if (viewMode === 'add') {
     if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>;
 
-    
+
     return (
       <div className="space-y-6" dir="rtl">
         <div className="flex items-center gap-4">
@@ -298,16 +305,16 @@ export default function FleetGeofences() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>رقم السياج (تلقائي)</Label>
-                  <Input 
-                    value={geofenceCode} 
+                  <Input
+                    value={geofenceCode}
                     disabled
                     className="bg-muted font-mono"
                    placeholder="أدخل القيمة" />
                 </div>
                 <div className="space-y-2">
                   <Label>اسم السياج *</Label>
-                  <Input 
-                    value={newGeofence.name} 
+                  <Input
+                    value={newGeofence.name}
                     onChange={(e) => setNewGeofence({...newGeofence, name: e.target.value})}
                     placeholder="مثال: المقر الرئيسي"
                   />
@@ -330,9 +337,9 @@ export default function FleetGeofences() {
                 </div>
                 <div className="space-y-2">
                   <Label>نصف القطر (متر)</Label>
-                  <Input 
+                  <Input
                     type="number"
-                    value={newGeofence.radius} 
+                    value={newGeofence.radius}
                     onChange={(e) => setNewGeofence({...newGeofence, radius: e.target.value})}
                     placeholder="500"
                   />
@@ -342,20 +349,20 @@ export default function FleetGeofences() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>خط العرض *</Label>
-                  <Input 
+                  <Input
                     type="number"
                     step="0.0001"
-                    value={newGeofence.centerLat} 
+                    value={newGeofence.centerLat}
                     onChange={(e) => setNewGeofence({...newGeofence, centerLat: e.target.value})}
                     placeholder="أدخل..."
                   />
                 </div>
                 <div className="space-y-2">
                   <Label>خط الطول *</Label>
-                  <Input 
+                  <Input
                     type="number"
                     step="0.0001"
-                    value={newGeofence.centerLng} 
+                    value={newGeofence.centerLng}
                     onChange={(e) => setNewGeofence({...newGeofence, centerLng: e.target.value})}
                     placeholder="أدخل..."
                   />
@@ -368,7 +375,7 @@ export default function FleetGeofences() {
                     <Bell className="h-4 w-4 text-muted-foreground" />
                     <Label>تنبيه عند الدخول</Label>
                   </div>
-                  <Switch 
+                  <Switch
                     checked={newGeofence.alertOnEntry}
                     onCheckedChange={(v) => setNewGeofence({...newGeofence, alertOnEntry: v})}
                   />
@@ -378,7 +385,7 @@ export default function FleetGeofences() {
                     <Bell className="h-4 w-4 text-muted-foreground" />
                     <Label>تنبيه عند الخروج</Label>
                   </div>
-                  <Switch 
+                  <Switch
                     checked={newGeofence.alertOnExit}
                     onCheckedChange={(v) => setNewGeofence({...newGeofence, alertOnExit: v})}
                   />
@@ -503,8 +510,8 @@ export default function FleetGeofences() {
               </Button>
             </div>
           ) : (
-            <DataTable 
-              columns={columns} 
+            <DataTable
+              columns={columns}
               data={geofences}
               searchKey="name"
               searchPlaceholder="بحث بالاسم..."

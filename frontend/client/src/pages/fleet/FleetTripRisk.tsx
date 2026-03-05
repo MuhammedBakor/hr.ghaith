@@ -1,6 +1,7 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
 import { useState } from 'react';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -44,7 +45,10 @@ import { Plus, AlertTriangle, Loader2, Shield, Gauge, Zap, Inbox, Eye, Trash2, C
 import { PrintButton } from "@/components/PrintButton";
 
 export default function FleetTripRisk() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useQuery({
+    queryKey: ['auth', 'me'],
+    queryFn: () => api.get('/api/auth/me').then(r => r.data),
+  });
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -56,12 +60,22 @@ export default function FleetTripRisk() {
   const [selectedAssessment, setSelectedAssessment] = useState<any>(null);
   const [filterLevel, setFilterLevel] = useState<string>('all');
 
-  const { data: vehiclesData } = trpc.fleet.vehicles.list.useQuery();
-  const { data: driversData } = trpc.fleetExtended.drivers.list.useQuery();
-  const { data: assessmentsData, isLoading, refetch } = trpc.fleet.riskAssessments.list.useQuery(
-    filterLevel !== 'all' ? { riskLevel: filterLevel } : undefined
-  );
-  const { data: statsData } = trpc.fleet.riskAssessments.stats.useQuery();
+  const { data: vehiclesData } = useQuery({
+    queryKey: ['fleet', 'vehicles'],
+    queryFn: () => api.get('/api/fleet/vehicles').then(r => r.data),
+  });
+  const { data: driversData } = useQuery({
+    queryKey: ['fleet-extended', 'drivers'],
+    queryFn: () => api.get('/api/fleet-extended/drivers').then(r => r.data),
+  });
+  const { data: assessmentsData, isLoading, refetch } = useQuery({
+    queryKey: ['fleet', 'risk-assessments', filterLevel],
+    queryFn: () => api.get('/api/fleet/risk-assessments', { params: filterLevel !== 'all' ? { riskLevel: filterLevel } : undefined }).then(r => r.data),
+  });
+  const { data: statsData } = useQuery({
+    queryKey: ['fleet', 'risk-assessments', 'stats'],
+    queryFn: () => api.get('/api/fleet/risk-assessments/stats').then(r => r.data),
+  });
 
   const vehicles = vehiclesData || [];
   const drivers = driversData || [];
@@ -88,7 +102,8 @@ export default function FleetTripRisk() {
     recommendations: '',
   });
 
-  const createMutation = trpc.fleet.riskAssessments.create.useMutation({
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/api/fleet/risk-assessments', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إنشاء تقييم المخاطر بنجاح');
       setIsCreateOpen(false);
@@ -100,7 +115,8 @@ export default function FleetTripRisk() {
     },
   });
 
-  const updateMutation = trpc.fleet.riskAssessments.update.useMutation({
+  const updateMutation = useMutation({
+    mutationFn: (data: any) => api.put(`/api/fleet/risk-assessments/${data.id}`, data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم تحديث التقييم بنجاح');
       setSelectedAssessment(null);
@@ -111,7 +127,8 @@ export default function FleetTripRisk() {
     },
   });
 
-  const deleteMutation = trpc.fleet.riskAssessments.delete.useMutation({
+  const deleteMutation = useMutation({
+    mutationFn: (data: any) => api.delete(`/api/fleet/risk-assessments/${data.id}`).then(r => r.data),
     onSuccess: () => {
       toast.success('تم حذف التقييم بنجاح');
       refetch();

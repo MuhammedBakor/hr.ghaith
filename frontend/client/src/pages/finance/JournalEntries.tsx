@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -86,15 +87,20 @@ export default function JournalEntries() {
   const selectedBranch = branches?.find(b => b.id === selectedBranchId);
 
   // Fetch journal entries
-  const { data: entries = [], isLoading, refetch, isError, error} = trpc.finance.journalEntries.list.useQuery({
-    branchId: selectedBranchId || undefined,
+  const { data: entries = [], isLoading, refetch, isError, error} = useQuery({
+    queryKey: ['finance', 'journal-entries', selectedBranchId],
+    queryFn: () => api.get('/finance/journal-entries', { params: { branchId: selectedBranchId || undefined } }).then(r => r.data),
   });
 
   // Fetch accounts for dropdown
-  const { data: accounts = [] } = trpc.finance.accounts.list.useQuery();
+  const { data: accounts = [] } = useQuery({
+    queryKey: ['finance', 'accounts'],
+    queryFn: () => api.get('/finance/accounts').then(r => r.data),
+  });
 
   // Mutations
-  const createMutation = trpc.finance.journalEntries.create.useMutation({
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/finance/journal-entries', data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم إنشاء القيد بنجاح");
       setView('list');
@@ -102,49 +108,54 @@ export default function JournalEntries() {
       refetch();
     },
     onError: (error: any) => {
-      toast.error(error.message || "حدث خطأ أثناء إنشاء القيد");
+      toast.error(error?.response?.data?.message || error.message || "حدث خطأ أثناء إنشاء القيد");
     },
   });
 
   // Mutations for journal entry lifecycle
-  const submitMutation = trpc.finance.journalEntries.submit.useMutation({
+  const submitMutation = useMutation({
+    mutationFn: (data: any) => api.put(`/finance/journal-entries/${data.id}/submit`, data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم إرسال القيد للاعتماد");
       refetch();
     },
-    onError: (error: any) => toast.error(error.message || "حدث خطأ"),
+    onError: (error: any) => toast.error(error?.response?.data?.message || error.message || "حدث خطأ"),
   });
 
-  const approveMutation = trpc.finance.journalEntries.approve.useMutation({
+  const approveMutation = useMutation({
+    mutationFn: (data: any) => api.put(`/finance/journal-entries/${data.id}/approve`, data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم اعتماد القيد");
       refetch();
     },
-    onError: (error: any) => toast.error(error.message || "حدث خطأ"),
+    onError: (error: any) => toast.error(error?.response?.data?.message || error.message || "حدث خطأ"),
   });
 
-  const rejectMutation = trpc.finance.journalEntries.reject.useMutation({
+  const rejectMutation = useMutation({
+    mutationFn: (data: any) => api.put(`/finance/journal-entries/${data.id}/reject`, data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم رفض القيد");
       refetch();
     },
-    onError: (error: any) => toast.error(error.message || "حدث خطأ"),
+    onError: (error: any) => toast.error(error?.response?.data?.message || error.message || "حدث خطأ"),
   });
 
-  const postMutation = trpc.finance.journalEntries.post.useMutation({
+  const postMutation = useMutation({
+    mutationFn: (data: any) => api.put(`/finance/journal-entries/${data.id}/post`, data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم ترحيل القيد وتحديث أرصدة الحسابات");
       refetch();
     },
-    onError: (error: any) => toast.error(error.message || "حدث خطأ"),
+    onError: (error: any) => toast.error(error?.response?.data?.message || error.message || "حدث خطأ"),
   });
 
-  const reverseMutation = trpc.finance.journalEntries.reverse.useMutation({
+  const reverseMutation = useMutation({
+    mutationFn: (data: any) => api.put(`/finance/journal-entries/${data.id}/reverse`, data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم عكس القيد بنجاح");
       refetch();
     },
-    onError: (error: any) => toast.error(error.message || "حدث خطأ"),
+    onError: (error: any) => toast.error(error?.response?.data?.message || error.message || "حدث خطأ"),
   });
 
   const handleSubmit = (id: number) => {

@@ -2,14 +2,12 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { trpc } from "@/lib/trpc";
-import { Printer, FileText, Mail, Download, Send, Loader2 } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import api from "@/lib/api";
+import { Printer, FileText, Send, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-// ═══════════════════════════════════
-// 1. Document Print Button — طباعة مستند مع كليشة
-// ═══════════════════════════════════
-
+// 1. Document Print Button
 interface DocumentPrintProps {
   entityType: string;
   entityId: number;
@@ -25,20 +23,17 @@ export function DocumentPrintButton({
   entityType, entityId, companyId, branchId, className, variant = "outline", size = "sm", label,
 }: DocumentPrintProps) {
   const [loading, setLoading] = useState(false);
-  const printQuery = trpc.print.generatePrintData.useQuery(
-    { entityType, entityId, companyId, branchId },
-    { enabled: false }
-  );
-  const logPrintMut = trpc.print.logPrint.useMutation();
 
   const handlePrint = async () => {
     setLoading(true);
     try {
-      const result = await printQuery.refetch();
-      if (!result.data) { toast.error("لا توجد بيانات للطباعة"); return; }
+      const { data: result } = await api.get('/print/generate', {
+        params: { entityType, entityId, companyId, branchId }
+      });
+      if (!result) { toast.error("لا توجد بيانات للطباعة"); return; }
 
-      const { settings, template, data, printNumber } = result.data;
-      
+      const { settings, template, data, printNumber } = result;
+
       const printWindow = window.open("", "_blank");
       if (!printWindow) { toast.error("يرجى السماح بالنوافذ المنبثقة"); return; }
 
@@ -47,23 +42,14 @@ export function DocumentPrintButton({
 <html dir="rtl" lang="ar">
 <head>
   <meta charset="UTF-8">
-  <title>${template.nameAr} — ${printNumber}</title>
+  <title>${template?.nameAr || 'مستند'} — ${printNumber || ''}</title>
   <style>
-    @page { size: ${template.pageSize} ${template.orientation}; margin: ${template.margins.top}mm ${template.margins.right}mm ${template.margins.bottom}mm ${template.margins.left}mm; }
+    @page { size: ${template?.pageSize || 'A4'} ${template?.orientation || 'portrait'}; margin: ${template?.margins?.top || 20}mm ${template?.margins?.right || 15}mm ${template?.margins?.bottom || 20}mm ${template?.margins?.left || 15}mm; }
     body { font-family: 'Tajawal', 'Cairo', Arial, sans-serif; direction: rtl; text-align: right; color: #1a1a1a; line-height: 1.8; }
     .header { text-align: center; border-bottom: 3px double #333; padding-bottom: 15px; margin-bottom: 20px; }
     .header .company-name { font-size: 22px; font-weight: bold; color: #1a5276; }
-    .header .branch-name { font-size: 14px; color: #666; }
-    .header .logo { max-height: 80px; margin-bottom: 10px; }
-    .letterhead-img { max-width: 100%; max-height: 120px; }
     .body { min-height: 400px; padding: 20px 0; font-size: 14px; }
     .footer { border-top: 2px solid #ccc; padding-top: 10px; margin-top: 30px; font-size: 11px; color: #666; display: flex; justify-content: space-between; }
-    .stamp-area { text-align: center; margin-top: 40px; }
-    .stamp-img { max-height: 80px; opacity: 0.7; }
-    .signature-area { margin-top: 30px; }
-    .qr-code { text-align: left; margin-top: 20px; }
-    .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 72px; color: rgba(0,0,0,0.05); z-index: -1; }
-    .print-number { font-size: 10px; color: #999; }
     table { width: 100%; border-collapse: collapse; margin: 15px 0; }
     th, td { border: 1px solid #ddd; padding: 8px; text-align: right; }
     th { background: #f5f5f5; font-weight: bold; }
@@ -71,54 +57,28 @@ export function DocumentPrintButton({
   </style>
 </head>
 <body>
-  ${template.showWatermark && template.watermarkText ? `<div class="watermark">${template.watermarkText}</div>` : ''}
-  
   <div class="header">
-    ${settings.effectiveLetterhead ? `<img src="${settings.effectiveLetterhead}" class="letterhead-img" />` : ''}
-    ${settings.effectiveLogo ? `<img src="${settings.effectiveLogo}" class="logo" /><br/>` : ''}
-    <div class="company-name">${settings.companyNameAr || settings.companyName}</div>
-    ${settings.branchNameAr ? `<div class="branch-name">${settings.branchNameAr}</div>` : ''}
-    ${settings.taxNumber ? `<div style="font-size:11px;color:#888">الرقم الضريبي: ${settings.taxNumber}</div>` : ''}
+    <div class="company-name">${settings?.companyNameAr || settings?.companyName || ''}</div>
+    ${settings?.branchNameAr ? `<div style="font-size:14px;color:#666">${settings.branchNameAr}</div>` : ''}
   </div>
-
   <div style="text-align:center;margin-bottom:20px;">
-    <strong style="font-size:18px;border-bottom:2px solid #333;padding-bottom:5px;">
-      ${template.nameAr}
-    </strong>
-    <div class="print-number">رقم المطبوع: ${printNumber}</div>
+    <strong style="font-size:18px;border-bottom:2px solid #333;padding-bottom:5px;">${template?.nameAr || 'مستند'}</strong>
+    <div style="font-size:10px;color:#999">رقم المطبوع: ${printNumber || ''}</div>
   </div>
-
   <div class="body">
     <pre style="white-space:pre-wrap;font-family:inherit;">${JSON.stringify(data, null, 2)}</pre>
   </div>
-
-  ${template.showStamp && settings.effectiveStamp ? `
-    <div class="stamp-area">
-      <img src="${settings.effectiveStamp}" class="stamp-img" />
-    </div>
-  ` : ''}
-
-  ${template.showSignature && settings.effectiveSignature ? `
-    <div class="signature-area">
-      <p>التوقيع:</p>
-      <img src="${settings.effectiveSignature}" style="max-height:50px;" />
-    </div>
-  ` : ''}
-
   <div class="footer">
-    <div>${settings.effectiveAddress || ''} | ${settings.effectivePhone || ''}</div>
-    <div>${settings.email || ''} | ${settings.website || ''}</div>
+    <div>${settings?.effectiveAddress || ''} | ${settings?.effectivePhone || ''}</div>
+    <div>${settings?.email || ''} | ${settings?.website || ''}</div>
   </div>
-
-  <button class="no-print" onclick="window.print()" style="position:fixed;bottom:20px;left:20px;padding:10px 20px;background:#1a5276;color:white;border:none;border-radius:5px;cursor:pointer;font-size:16px;">
-    🖨️ طباعة
-  </button>
+  <button class="no-print" onclick="window.print()" style="position:fixed;bottom:20px;left:20px;padding:10px 20px;background:#1a5276;color:white;border:none;border-radius:5px;cursor:pointer;font-size:16px;">طباعة</button>
 </body>
 </html>`);
       printWindow.document.close();
 
       // Log print
-      logPrintMut.mutate({ entityType, entityId, templateId: template.id, printNumber, copies: 1 });
+      api.post('/print/log', { entityType, entityId, templateId: template?.id, printNumber, copies: 1 }).catch(() => {});
       toast.success("تم إعداد المستند للطباعة");
     } catch (err) {
       toast.error("خطأ في إعداد الطباعة");
@@ -135,10 +95,7 @@ export function DocumentPrintButton({
   );
 }
 
-// ═══════════════════════════════════
-// 2. Request Letter Button — خطاب من طلب
-// ═══════════════════════════════════
-
+// 2. Request Letter Button
 interface RequestLetterProps {
   letterType: string;
   requestId: number;
@@ -156,7 +113,8 @@ export function RequestLetterButton({
   letterType, requestId, requestType, employeeId, companyId, branchId,
   label = "إنشاء خطاب", variant = "outline", size = "sm", className,
 }: RequestLetterProps) {
-  const generateMut = trpc.correspondence.generateFromRequest.useMutation({
+  const generateMut = useMutation({
+    mutationFn: (data: any) => api.post('/correspondence/generate-from-request', data).then(res => res.data),
     onSuccess: (data) => {
       toast.success(`تم إنشاء الخطاب: ${data.letterNumber}`);
     },
@@ -175,10 +133,7 @@ export function RequestLetterButton({
   );
 }
 
-// ═══════════════════════════════════
-// 3. Quick Letter Dialog — حوار إنشاء خطاب سريع
-// ═══════════════════════════════════
-
+// 3. Quick Letter Dialog
 const LETTER_TYPES = [
   { value: 'salary_certificate', label: 'شهادة راتب' },
   { value: 'experience_certificate', label: 'شهادة خبرة' },
@@ -207,7 +162,8 @@ export function QuickLetterDialog({ employeeId, companyId, branchId, trigger }: 
   const [open, setOpen] = useState(false);
   const [selectedType, setSelectedType] = useState('');
 
-  const generateMut = trpc.correspondence.generateFromRequest.useMutation({
+  const generateMut = useMutation({
+    mutationFn: (data: any) => api.post('/correspondence/generate-from-request', data).then(res => res.data),
     onSuccess: (data) => {
       toast.success(`تم إنشاء الخطاب: ${data.letterNumber}`);
       setOpen(false);

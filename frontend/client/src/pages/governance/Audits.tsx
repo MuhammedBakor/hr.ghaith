@@ -1,5 +1,6 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
-import { trpc } from '@/lib/trpc';
+import { useQuery } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,7 +35,10 @@ interface AuditLog {
 }
 
 export default function Audits() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error } = useQuery({
+    queryKey: ['auth-me'],
+    queryFn: () => api.get('/auth/me').then(r => r.data),
+  });
   const userRole = currentUser?.role || 'user';
 
   const [showInlineForm, setShowInlineForm] = useState(false);
@@ -45,7 +49,10 @@ export default function Audits() {
   const [selectedAudit, setSelectedAudit] = useState<AuditLog | null>(null);
 
   // استخدام API الحقيقي لسجل التدقيق
-  const { data: auditLogs, isLoading } = trpc.audit.logs.useQuery({ limit: 100 });
+  const { data: auditLogs, isLoading } = useQuery({
+    queryKey: ['audit-logs', { limit: 100 }],
+    queryFn: () => api.get('/audit/logs', { params: { limit: 100 } }).then(r => r.data),
+  });
   const audits = auditLogs || [];
 
   const handleSort = (field: string) => {
@@ -58,8 +65,8 @@ export default function Audits() {
   };
 
   const sortedAudits = [...audits]
-    .filter((a: any) => 
-      a.action?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    .filter((a: any) =>
+      a.action?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       a.entityType?.toLowerCase().includes(searchTerm.toLowerCase())
     )
     .sort((a: any, b: any) => {

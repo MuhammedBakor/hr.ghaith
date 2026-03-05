@@ -4,17 +4,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Save, RefreshCw } from "lucide-react";
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import api from "@/lib/api";
 import { toast } from "sonner";
 
 export default function HrSettings() {
-  const { data, isLoading, refetch } = trpc.siteSettings.list.useQuery(undefined, {
+  const queryClient = useQueryClient();
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['settings', 'list'],
+    queryFn: () => api.get('/settings').then(r => r.data),
     retry: 1,
     refetchOnWindowFocus: false,
   });
-  const updateMutation = trpc.siteSettings.update.useMutation({
+  const updateMutation = useMutation({
+    mutationFn: (payload: any) => api.put(`/settings/${payload.id}`, payload).then(r => r.data),
     onSuccess: () => { toast.success("تم حفظ الإعدادات"); refetch(); },
-    onError: (e) => toast.error(e.message || "خطأ في الحفظ"),
+    onError: (e: any) => toast.error(e.message || "خطأ في الحفظ"),
   });
 
   const settings = Array.isArray(data) ? data : [];
@@ -40,7 +45,7 @@ export default function HrSettings() {
           <Button variant="outline" size="sm" onClick={() => refetch()}>
             <RefreshCw className="h-4 w-4 me-2" /> تحديث
           </Button>
-          <Button size="sm" onClick={handleSave} disabled={updateMutation.isLoading}>
+          <Button size="sm" onClick={handleSave} disabled={updateMutation.isPending}>
             <Save className="h-4 w-4 me-2" /> حفظ
           </Button>
         </div>

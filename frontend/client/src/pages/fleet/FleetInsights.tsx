@@ -1,15 +1,25 @@
 import { useState } from 'react';
-import { trpc } from '@/lib/trpc';
+import { useQuery } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp, BarChart3, PieChart, Loader2, Car, Users, Fuel } from 'lucide-react';
 
 export default function FleetInsights() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useQuery({
+    queryKey: ['auth', 'me'],
+    queryFn: () => api.get('/api/auth/me').then(r => r.data),
+  });
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
-  const { data: vehiclesData, isLoading: vLoading } = trpc.fleet.vehicles.list.useQuery();
-  const { data: driversData, isLoading: dLoading } = trpc.fleetExtended.drivers.list.useQuery();
+  const { data: vehiclesData, isLoading: vLoading } = useQuery({
+    queryKey: ['fleet', 'vehicles'],
+    queryFn: () => api.get('/api/fleet/vehicles').then(r => r.data),
+  });
+  const { data: driversData, isLoading: dLoading } = useQuery({
+    queryKey: ['fleet-extended', 'drivers'],
+    queryFn: () => api.get('/api/fleet-extended/drivers').then(r => r.data),
+  });
   
   const vehicles = (vehiclesData || []) as any[];
   const drivers = (driversData || []) as any[];

@@ -19,7 +19,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { useIsMobile } from "@/hooks/useMobile";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useAppContext, roleLabels, roleColors, type UserRoleType } from "@/contexts/AppContext";
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import api from "@/lib/api";
 import { Input } from "@/components/ui/input";
 import {
   LayoutDashboard, LogOut, PanelLeft, Users, Loader2, FileText,
@@ -141,10 +142,14 @@ const MAX_WIDTH = 400;
 
 // Notifications panel
 function NotificationPanel({ onClose }: { onClose: () => void }) {
-  const { data: notifications } = trpc.userProfile.notifications.list.useQuery({ limit: 12 });
-  const utils = trpc.useUtils();
-  const markRead = trpc.userProfile.notifications.markRead.useMutation({
-    onSuccess: () => utils.userProfile.notifications.unreadCount.invalidate(),
+  const queryClient = useQueryClient();
+  const { data: notifications } = useQuery<any[]>({
+    queryKey: ['notifications'],
+    queryFn: () => api.get('/notifications', { params: { limit: 12 } }).then(res => res.data).catch(() => []),
+  });
+  const markRead = useMutation({
+    mutationFn: (id: number) => api.put(`/notifications/${id}/read`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications-unread'] }),
   });
 
   const typeConfig: Record<string, { icon: any; color: string; bg: string }> = {
@@ -201,10 +206,11 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
 function QuickSearch({ onClose }: { onClose: () => void }) {
   const [query, setQuery] = useState("");
   const [, setLocation] = useLocation();
-  const { data: results, isLoading } = trpc.integration.search.useQuery(
-    { query, limit: 8 },
-    { enabled: query.length >= 2 }
-  );
+  const { data: results, isLoading } = useQuery<any[]>({
+    queryKey: ['quick-search', query],
+    queryFn: () => api.get('/dashboard/search', { params: { query } }).then(res => res.data).catch(() => []),
+    enabled: query.length >= 2,
+  });
 
   const moduleColors: Record<string, string> = {
     hr: "bg-blue-100 text-blue-700", finance: "bg-green-100 text-green-700",
@@ -294,7 +300,9 @@ function LayoutInner({ children, setSidebarWidth }: { children: React.ReactNode;
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
 
   const { selectedRole, setSelectedRole, canAccessModule } = useAppContext();
-  const { data: unread } = trpc.userProfile.notifications.unreadCount.useQuery(undefined, {
+  const { data: unread } = useQuery<{ count: number }>({
+    queryKey: ['notifications-unread'],
+    queryFn: () => api.get('/notifications/unread-count').then(res => res.data).catch(() => ({ count: 0 })),
     refetchInterval: 30_000,
   });
 

@@ -1,9 +1,10 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { trpc } from '@/lib/trpc';
-import { 
+import {
   MapPin,
   RefreshCw,
   ExternalLink,
@@ -49,18 +50,30 @@ const getStatusBadge = (status: string) => {
 export default function FleetMap() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createData, setCreateData] = useState<any>({});
-  const createMutation = trpc.fleet.geofences.create.useMutation({ onSuccess: () => { refetch(); setShowCreateForm(false); setCreateData({}); } });
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/api/fleet/geofences', data).then(r => r.data),
+    onSuccess: () => { refetch(); setShowCreateForm(false); setCreateData({}); },
+  });
 
   const [editingItem, setEditingItem] = useState<any>(null);
-  const updateMutation = trpc.fleet.geofences.update.useMutation({ onSuccess: () => { refetch(); setEditingItem(null); } });
+  const updateMutation = useMutation({
+    mutationFn: (data: any) => api.put(`/api/fleet/geofences/${data.id}`, data).then(r => r.data),
+    onSuccess: () => { refetch(); setEditingItem(null); },
+  });
 
-  const deleteMutation = trpc.fleet.geofences.delete.useMutation({ onSuccess: () => { refetch(); } });
+  const deleteMutation = useMutation({
+    mutationFn: (data: any) => api.delete(`/api/fleet/geofences/${data.id}`).then(r => r.data),
+    onSuccess: () => { refetch(); },
+  });
 
   const handleSave = () => {
     updateMutation.mutate(editingItem);
   };
 
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useQuery({
+    queryKey: ['auth', 'me'],
+    queryFn: () => api.get('/api/auth/me').then(r => r.data),
+  });
   const userRole = currentUser?.role || 'user';
   const requiredRole = 'fleet_manager';
   const hasAccess = userRole === 'admin' || userRole === requiredRole || requiredRole === 'user';
@@ -69,7 +82,10 @@ export default function FleetMap() {
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleLocation | null>(null);
 
   // البيانات من API
-  const { data: vehiclesData, isLoading, refetch } = trpc.fleet.vehicles.list.useQuery();
+  const { data: vehiclesData, isLoading, refetch } = useQuery({
+    queryKey: ['fleet', 'vehicles'],
+    queryFn: () => api.get('/api/fleet/vehicles').then(r => r.data),
+  });
   const vehicles = vehiclesData || [];
 
   // تحويل بيانات المركبات إلى مواقع (في الإنتاج ستأتي من GPS API)
@@ -99,7 +115,7 @@ export default function FleetMap() {
   const lng = selectedVehicle?.lng;
 
   if (isLoading) {
-    
+
   if (isError) return (
     <div className="p-8 text-center">
         {/* إضافة جديد */}
@@ -189,7 +205,7 @@ export default function FleetMap() {
                     <p className="text-xs text-gray-400 mt-1">
                       آخر تحديث: {new Date(vehicle.lastUpdate).toLocaleTimeString('ar-SA')}
                     </p>
-                  
+
                 <div className="flex gap-2 mt-2"> <button onClick={() => setEditingItem(vehicle)} className="text-blue-600 hover:text-blue-800 text-sm">تعديل</button> <button onClick={() => window.confirm("هل أنت متأكد من الحذف؟") && deleteMutation.mutate({id: vehicle.id})} className="text-red-600 hover:text-red-800 text-sm">حذف</button></div>
               </div>
                 ))

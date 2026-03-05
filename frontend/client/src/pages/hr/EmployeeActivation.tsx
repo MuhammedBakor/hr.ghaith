@@ -8,7 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CheckCircle2, KeyRound, User, Briefcase, CreditCard, Phone, FileText, Loader2, AlertCircle, Send } from 'lucide-react';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { toast } from 'sonner';
 
 type ActivationStep = 'code' | 'profile' | 'documents' | 'review' | 'complete';
@@ -17,7 +18,7 @@ export default function EmployeeActivation() {
   const [showInlineForm, setShowInlineForm] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState('');
-  const utils = trpc.useUtils();
+  const queryClient = useQueryClient();
 
   const { selectedRole: userRole } = useAppContext();
   const canEdit = userRole === "admin" || userRole === "manager";
@@ -81,7 +82,8 @@ export default function EmployeeActivation() {
   };
 
   // Mutation لتفعيل الحساب
-  const activateMutation = trpc.employeeOnboarding.activate.useMutation({
+  const activateMutation = useMutation({
+    mutationFn: (data: { activationCode: string }) => api.post('/hr/employee-onboarding/activate', data).then(res => res.data),
     onSuccess: (data) => {
       setEmployeeData(data);
       // التحقق من وجود البيانات
@@ -92,25 +94,25 @@ export default function EmployeeActivation() {
           lastName: (data as any).lastName || '',
           email: (data as any).email || '',
           phone: (data as any).phone || '',
-      onError: (e: any) => toast.error(e?.message || 'حدث خطأ')}));
+        }));
       }
       setStep('profile');
       toast.success('تم تفعيل الحساب بنجاح! يرجى إكمال بياناتك.');
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error('كود التفعيل غير صحيح أو منتهي الصلاحية');
     },
   });
 
   // Mutation لتحديث البيانات الكاملة
-  const updateProfileMutation = trpc.employeeOnboarding.updateFullProfile.useMutation({
+  const updateProfileMutation = useMutation({
+    mutationFn: (data: any) => api.put('/hr/employee-onboarding/update-profile', data).then(res => res.data),
     onSuccess: () => {
-        utils.employeeOnboarding.invalidate();
-
+      queryClient.invalidateQueries({ queryKey: ['employeeOnboarding'] });
       toast.success('تم حفظ البيانات بنجاح');
     },
-    onError: (error) => {
-      toast.error('حدث خطأ: ' + error.message);
+    onError: (error: any) => {
+      toast.error('حدث خطأ: ' + (error?.response?.data?.message || error.message));
     },
   });
 

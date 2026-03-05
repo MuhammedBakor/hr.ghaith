@@ -15,7 +15,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { toast } from "sonner";
 import {
   Megaphone,
@@ -51,7 +52,8 @@ import {
 } from "@/components/ui/select";
 
 export default function Marketing() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const queryClient = useQueryClient();
+  const { data: currentUser, isError, error} = useQuery({ queryKey: ['auth', 'me'], queryFn: () => api.get('/auth/me').then(r => r.data) });
   const userRole = currentUser?.role || 'user';
 
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -69,14 +71,14 @@ export default function Marketing() {
     endDate: '',
   });
 
-  const utils = trpc.useUtils();
-  const { data: campaigns = [], isLoading } = trpc.marketing.campaigns.list.useQuery();
-  const { data: leads = [] } = trpc.marketing.leads.list.useQuery();
+  const { data: campaigns = [], isLoading } = useQuery({ queryKey: ['marketing', 'campaigns'], queryFn: () => api.get('/marketing/campaigns').then(r => r.data) });
+  const { data: leads = [] } = useQuery({ queryKey: ['marketing', 'leads'], queryFn: () => api.get('/marketing/leads').then(r => r.data) });
 
-  const createMutation = trpc.marketing.campaigns.create.useMutation({
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/marketing/campaigns', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إنشاء الحملة بنجاح');
-      utils.marketing.campaigns.list.invalidate();
+      queryClient.invalidateQueries({ queryKey: ['marketing', 'campaigns'] });
       setIsCreateOpen(false);
       setNewCampaign({
         name: '',
@@ -86,19 +88,20 @@ export default function Marketing() {
         budget: '',
         startDate: '',
         endDate: '',
-      onError: (e: any) => toast.error(e?.message || 'حدث خطأ')});
+      });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error('حدث خطأ: ' + error.message);
     },
   });
 
-  const deleteMutation = trpc.marketing.campaigns.delete.useMutation({
+  const deleteMutation = useMutation({
+    mutationFn: (data: any) => api.delete(`/marketing/campaigns/${data.id}`).then(r => r.data),
     onSuccess: () => {
       toast.success('تم حذف الحملة بنجاح');
-      utils.marketing.campaigns.list.invalidate();
+      queryClient.invalidateQueries({ queryKey: ['marketing', 'campaigns'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error('حدث خطأ: ' + error.message);
     },
   });

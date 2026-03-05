@@ -18,7 +18,8 @@ import {
   Building2,
   FileText
 } from 'lucide-react';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { toast } from 'sonner';
 import { useAppContext } from '@/contexts/AppContext';
 import { LetterPrintWrapper, AppointmentLetter } from '@/components/letters';
@@ -26,11 +27,11 @@ import { LetterPrintWrapper, AppointmentLetter } from '@/components/letters';
 export default function LetterheadSettings() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createData, setCreateData] = useState<any>({});
-  const createMutation = trpc.officialLetters.updateBranchLetterhead.useMutation({ onSuccess: () => { refetch(); setShowCreateForm(false); setCreateData({}); } });
+  const createMutation = useMutation({ mutationFn: (data: any) => api.put('/api/official-letters/branch-letterhead', data).then(r => r.data), onSuccess: () => { refetch(); setShowCreateForm(false); setCreateData({}); } });
 
   const handleSubmit = () => { saveMutation.mutate({}); };
 
-  const { data: currentUser, isError, error, isLoading} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error, isLoading} = useQuery({ queryKey: ['auth', 'me'], queryFn: () => api.get('/api/auth/me').then(r => r.data) });
   const userRole = currentUser?.role || 'user';
   const requiredRole = 'admin';
   const hasAccess = userRole === 'admin' || userRole === requiredRole || requiredRole === 'user';
@@ -52,9 +53,9 @@ export default function LetterheadSettings() {
   const signatureInputRef = useRef<HTMLInputElement>(null);
 
   // جلب بيانات الكليشة الحالية
-  const { data: currentSettings, refetch } = trpc.officialLetters.getLetterhead.useQuery({
-    branchId: selectedBranch ? parseInt(selectedBranch) : undefined,
-  }, {
+  const { data: currentSettings, refetch } = useQuery({
+    queryKey: ['officialLetters', 'letterhead', selectedBranch],
+    queryFn: () => api.get('/api/official-letters/letterhead', { params: { branchId: selectedBranch ? parseInt(selectedBranch) : undefined } }).then(r => r.data),
     enabled: !!selectedBranch,
   });
 
@@ -66,12 +67,13 @@ export default function LetterheadSettings() {
   }
 
   // Mutation لحفظ الإعدادات
-  const saveMutation = trpc.officialLetters.updateBranchLetterhead.useMutation({
+  const saveMutation = useMutation({
+    mutationFn: (data: any) => api.put('/api/official-letters/branch-letterhead', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم حفظ الإعدادات بنجاح');
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error('حدث خطأ: ' + error.message);
     },
   });

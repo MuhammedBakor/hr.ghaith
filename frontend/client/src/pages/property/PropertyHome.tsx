@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,7 @@ import { PrintButton } from "@/components/PrintButton";
 export default function PropertyHome() {
   const confirmDelete = (fn: () => void) => { if (window.confirm("هل أنت متأكد من الحذف؟")) fn(); };
 
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useQuery({ queryKey: ['auth', 'me'], queryFn: () => api.get('/auth/me').then(r => r.data) });
   const userRole = currentUser?.role || 'user';
 
   const [isOpen, setIsOpen] = useState(false);
@@ -29,14 +30,14 @@ export default function PropertyHome() {
     purchasePrice: '',
   });
 
-  const { data: propertiesData, isLoading, refetch } = trpc.property.properties.list.useQuery();
-  
-  const createPropertyMutation = trpc.property.properties.create.useMutation({
+  const { data: propertiesData, isLoading, refetch } = useQuery({ queryKey: ['property', 'properties'], queryFn: () => api.get('/property/properties').then(r => r.data) });
+
+  const createPropertyMutation = useMutation({
+    mutationFn: (data: any) => api.post('/property/properties', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إضافة العقار بنجاح');
       setIsOpen(false);
-      setNewProperty({ name: '', propertyType: 'building', address: '', city: '', area: '', purchasePrice: '',
-      onError: (e: any) => toast.error(e?.message || 'حدث خطأ')});
+      setNewProperty({ name: '', propertyType: 'building', address: '', city: '', area: '', purchasePrice: '' });
       refetch();
     },
     onError: (error: any) => {

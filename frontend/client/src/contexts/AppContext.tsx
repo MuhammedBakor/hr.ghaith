@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useUser } from '@/services/authService';
-// import { trpc } from '@/lib/trpc';
+import { useQuery } from '@tanstack/react-query';
+import api from '@/lib/api';
 
 // أنواع الصفات المتاحة
 export type UserRoleType = 'admin' | 'general_manager' | 'hr_manager' | 'finance_manager' | 'fleet_manager' | 'legal_manager' | 'projects_manager' | 'store_manager' | 'supervisor' | 'employee' | 'department_manager';
@@ -309,9 +310,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   });
 
   // جلب الفروع من السيرفر
-  // const { data: branchesData, isLoading: branchesLoading } = trpc.controlKernel.branches.list.useQuery();
-  const branchesData: any[] = [];
-  const branchesLoading = false;
+  const { data: branchesData, isLoading: branchesLoading } = useQuery<any[]>({
+    queryKey: ['branches'],
+    queryFn: () => api.get('/hr/branches').then(r => r.data).catch(() => []),
+    staleTime: 5 * 60 * 1000,
+  });
 
   // جلب معلومات المستخدم الحالي
   const { data: authData } = useUser();
@@ -348,10 +351,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [authData?.role]);
 
   // جلب معلومات الموظف المرتبط بالمستخدم
-  // const { data: employeeData } = trpc.hr.employees.list.useQuery(undefined, {
-  //   enabled: !!currentUserId,
-  // });
-  const employeeData: any[] = [];
+  const { data: employeeData } = useQuery<any[]>({
+    queryKey: ['employees'],
+    queryFn: () => api.get('/hr/employees').then(r => r.data).catch(() => []),
+    enabled: !!currentUserId,
+    staleTime: 5 * 60 * 1000,
+  });
 
   // البحث عن الموظف المرتبط بالمستخدم الحالي
   const currentEmployee = employeeData?.find((emp: any) => emp.userId === currentUserId);

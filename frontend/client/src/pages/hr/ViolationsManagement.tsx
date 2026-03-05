@@ -39,7 +39,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { toast } from 'sonner';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { PrintButton } from "@/components/PrintButton";
@@ -199,54 +200,72 @@ export default function ViolationsManagement() {
   const permissions = rolePermissions[userRole] || rolePermissions.employee;
 
   // Fetch data
-  const { data: violationTypes, isLoading: loadingViolationTypes, isError, error} = trpc.controlKernel.violationTypes?.list?.useQuery();
-  const { data: penaltyTypes, isLoading: loadingPenaltyTypes } = trpc.controlKernel.penaltyTypes?.list?.useQuery();
-  const { data: violations, isLoading: loadingViolations, refetch: refetchViolations } = trpc.controlKernel.violations?.list?.useQuery({});
-  const { data: penalties, isLoading: loadingPenalties, refetch: refetchPenalties } = trpc.controlKernel.penalties?.list?.useQuery({});
-  const { data: escalationRules } = trpc.controlKernel.escalation.list.useQuery({});
+  const { data: violationTypes, isLoading: loadingViolationTypes, isError, error} = useQuery({
+    queryKey: ['violationTypes'],
+    queryFn: () => api.get('/hr/control-kernel/violation-types').then(res => res.data),
+  });
+  const { data: penaltyTypes, isLoading: loadingPenaltyTypes } = useQuery({
+    queryKey: ['penaltyTypes'],
+    queryFn: () => api.get('/hr/control-kernel/penalty-types').then(res => res.data),
+  });
+  const { data: violations, isLoading: loadingViolations, refetch: refetchViolations } = useQuery({
+    queryKey: ['violations'],
+    queryFn: () => api.get('/hr/control-kernel/violations').then(res => res.data),
+  });
+  const { data: penalties, isLoading: loadingPenalties, refetch: refetchPenalties } = useQuery({
+    queryKey: ['penalties'],
+    queryFn: () => api.get('/hr/control-kernel/penalties').then(res => res.data),
+  });
+  const { data: escalationRules } = useQuery({
+    queryKey: ['escalationRules'],
+    queryFn: () => api.get('/hr/control-kernel/escalation').then(res => res.data),
+  });
 
   // Mutations
-  const confirmViolation = trpc.controlKernel.violations?.confirm?.useMutation({
+  const confirmViolation = useMutation({
+    mutationFn: (data: { id: number }) => api.post(`/hr/control-kernel/violations/${data.id}/confirm`).then(res => res.data),
     onSuccess: () => {
       toast.success('تم تأكيد المخالفة وإنشاء الجزاء');
       refetchViolations();
       refetchPenalties();
     },
-    onError: (error) => {
-      toast.error('حدث خطأ: ' + error.message);
+    onError: (error: any) => {
+      toast.error('حدث خطأ: ' + (error?.response?.data?.message || error.message));
     },
   });
 
-  const approvePenalty = trpc.controlKernel.penalties?.approve?.useMutation({
+  const approvePenalty = useMutation({
+    mutationFn: (data: { id: number }) => api.post(`/hr/control-kernel/penalties/${data.id}/approve`).then(res => res.data),
     onSuccess: () => {
       toast.success('تم اعتماد الجزاء');
       refetchPenalties();
     },
-    onError: (error) => {
-      toast.error('حدث خطأ: ' + error.message);
+    onError: (error: any) => {
+      toast.error('حدث خطأ: ' + (error?.response?.data?.message || error.message));
     },
   });
 
-  const executePenalty = trpc.controlKernel.penalties?.execute?.useMutation({
+  const executePenalty = useMutation({
+    mutationFn: (data: { id: number }) => api.post(`/hr/control-kernel/penalties/${data.id}/execute`).then(res => res.data),
     onSuccess: () => {
       toast.success('تم تنفيذ الجزاء');
       refetchPenalties();
     },
-    onError: (error) => {
-      toast.error('حدث خطأ: ' + error.message);
+    onError: (error: any) => {
+      toast.error('حدث خطأ: ' + (error?.response?.data?.message || error.message));
     },
   });
 
-  const createViolation = trpc.controlKernel.violations?.create?.useMutation({
+  const createViolation = useMutation({
+    mutationFn: (data: any) => api.post('/hr/control-kernel/violations', data).then(res => res.data),
     onSuccess: () => {
       toast.success('تم تسجيل المخالفة بنجاح');
       setIsAddViolationOpen(false);
-      setNewViolation({ employeeId: 0, violationTypeId: 0, violationDate: '', description: '',
-      onError: (e: any) => toast.error(e?.message || 'حدث خطأ')});
+      setNewViolation({ employeeId: 0, violationTypeId: 0, violationDate: '', description: '' });
       refetchViolations();
     },
-    onError: (error) => {
-      toast.error('حدث خطأ: ' + error.message);
+    onError: (error: any) => {
+      toast.error('حدث خطأ: ' + (error?.response?.data?.message || error.message));
     },
   });
 
@@ -889,13 +908,14 @@ export default function ViolationsManagement() {
 }
 
 function SeedDefaultsButton() {
-  const seedDefaults = trpc.controlKernel.seedDefaults.useMutation({
+  const seedDefaults = useMutation({
+    mutationFn: (data: any) => api.post('/hr/control-kernel/seed-defaults', data).then(res => res.data),
     onSuccess: (data) => {
       toast.success('تم تهيئة البيانات الافتراضية بنجاح');
       window.location.reload();
     },
-    onError: (error) => {
-      toast.error('حدث خطأ: ' + error.message);
+    onError: (error: any) => {
+      toast.error('حدث خطأ: ' + (error?.response?.data?.message || error.message));
     },
   });
 

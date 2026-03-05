@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { trpc } from '@/lib/trpc';
+import { useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { toast } from 'sonner';
 import { CheckCircle2, Loader2, KeyRound, User, Lock, Eye, EyeOff } from 'lucide-react';
 import { Dialog } from "@/components/ui/dialog";
@@ -15,8 +16,6 @@ import { Dialog } from "@/components/ui/dialog";
 export default function Activate() {
   const [showInlineForm, setShowInlineForm] = useState(false);
   const [inlineData, setInlineData] = useState<any>({});
-
-  const utils = trpc.useUtils();
 
   const { selectedRole: userRole } = useAppContext();
   const canEdit = userRole === "admin" || userRole === "manager";
@@ -28,7 +27,7 @@ export default function Activate() {
   const [, navigate] = useLocation();
   const search = useSearch();
   const params = new URLSearchParams(search);
-  
+
   const [step, setStep] = useState<'verify' | 'password' | 'success'>('verify');
   const [employeeNumber, setEmployeeNumber] = useState(params.get('emp') || '');
   const [activationCode, setActivationCode] = useState(params.get('code') || '');
@@ -38,7 +37,9 @@ export default function Activate() {
   const [employeeName, setEmployeeName] = useState('');
 
   // Mutation للتحقق من الكود
-  const verifyMutation = trpc.employeeInvitation.verify.useMutation({
+  const verifyMutation = useMutation({
+    mutationFn: (data: { employeeNumber: string; activationCode: string }) =>
+      api.post('/auth/employee-invitation/verify', data).then(res => res.data),
     onSuccess: (result) => {
       if (result.valid) {
         setEmployeeName(result.employeeName || '');
@@ -48,13 +49,15 @@ export default function Activate() {
         toast.error(result.error || 'كود التفعيل غير صحيح');
       }
     },
-    onError: (error) => {
-      toast.error('حدث خطأ: ' + error.message);
+    onError: (error: any) => {
+      toast.error('حدث خطأ: ' + (error.response?.data?.message || error.message));
     },
   });
 
   // Mutation لإكمال التسجيل
-  const completeMutation = trpc.employeeInvitation.completeRegistration.useMutation({
+  const completeMutation = useMutation({
+    mutationFn: (data: { employeeNumber: string; activationCode: string; password: string }) =>
+      api.post('/auth/employee-invitation/complete', data).then(res => res.data),
     onSuccess: (result) => {
       if (result.success) {
         setStep('success');
@@ -63,8 +66,8 @@ export default function Activate() {
         toast.error(result.error || 'فشل تفعيل الحساب');
       }
     },
-    onError: (error) => {
-      toast.error('حدث خطأ: ' + error.message);
+    onError: (error: any) => {
+      toast.error('حدث خطأ: ' + (error.response?.data?.message || error.message));
     },
   });
 
@@ -92,7 +95,7 @@ export default function Activate() {
     completeMutation.mutate({ employeeNumber, activationCode, password });
   };
 
-  
+
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editItem, setEditItem] = React.useState<any>(null);
 
@@ -118,7 +121,7 @@ export default function Activate() {
             {step === 'success' && 'يمكنك الآن تسجيل الدخول إلى النظام'}
           </CardDescription>
         </CardHeader>
-        
+
         <CardContent className="space-y-6">
           {step === 'verify' && (
             <>
@@ -126,7 +129,7 @@ export default function Activate() {
                 <Label>الرقم الوظيفي</Label>
                 <div className="relative">
                   <User className="absolute end-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input 
+                  <Input
                     placeholder="أدخل..."
                     value={employeeNumber}
                     onChange={(e) => setEmployeeNumber(e.target.value)}
@@ -135,12 +138,12 @@ export default function Activate() {
                   />
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <Label>كود التفعيل</Label>
                 <div className="relative">
                   <KeyRound className="absolute end-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input 
+                  <Input
                     placeholder="أدخل..."
                     value={activationCode}
                     onChange={(e) => setActivationCode(e.target.value.toUpperCase())}
@@ -150,9 +153,9 @@ export default function Activate() {
                   />
                 </div>
               </div>
-              
-              <Button 
-                className="w-full" 
+
+              <Button
+                className="w-full"
                 onClick={handleVerify}
                 disabled={verifyMutation.isPending}
               >
@@ -174,7 +177,7 @@ export default function Activate() {
                 <Label>كلمة المرور الجديدة</Label>
                 <div className="relative">
                   <Lock className="absolute end-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input 
+                  <Input
                     type={showPassword ? 'text' : 'password'}
                     placeholder="••••••••"
                     value={password}
@@ -191,12 +194,12 @@ export default function Activate() {
                 </div>
                 <p className="text-xs text-gray-500">8 أحرف على الأقل</p>
               </div>
-              
+
               <div className="space-y-2">
                 <Label>تأكيد كلمة المرور</Label>
                 <div className="relative">
                   <Lock className="absolute end-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input 
+                  <Input
                     type={showPassword ? 'text' : 'password'}
                     placeholder="••••••••"
                     value={confirmPassword}
@@ -205,9 +208,9 @@ export default function Activate() {
                   />
                 </div>
               </div>
-              
-              <Button 
-                className="w-full" 
+
+              <Button
+                className="w-full"
                 onClick={handleComplete}
                 disabled={completeMutation.isPending}
               >
@@ -230,7 +233,7 @@ export default function Activate() {
                   تم تفعيل حسابك بنجاح. يمكنك الآن تسجيل الدخول باستخدام بريدك الإلكتروني وكلمة المرور الجديدة.
                 </p>
               </div>
-              
+
               <Button className="w-full" onClick={() => navigate('/')}>
                 الذهاب لتسجيل الدخول
               </Button>
@@ -238,7 +241,7 @@ export default function Activate() {
           )}
         </CardContent>
       </Card>
-    
+
       {/* Dialog for Create/Edit */}
       {dialogOpen && (<div className="mt-4 p-6 bg-white border rounded-xl shadow-sm">
         <div>

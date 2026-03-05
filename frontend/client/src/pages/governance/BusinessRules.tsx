@@ -1,14 +1,17 @@
 import { useState } from "react";
+import { useQuery } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Search, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { trpc } from "@/lib/trpc";
 
 export default function BusinessRules() {
   const [search, setSearch] = useState("");
-  const { data, isLoading, isError, refetch } = trpc.anomalyRules.list.useQuery(undefined, {
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ['anomaly-rules-list'],
+    queryFn: () => api.get('/anomaly-rules').then(r => r.data),
     retry: 1,
     refetchOnWindowFocus: false,
   });

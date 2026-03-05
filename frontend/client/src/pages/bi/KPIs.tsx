@@ -1,6 +1,7 @@
 import React from "react";
 import { toast } from 'sonner';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -67,7 +68,8 @@ export default function KPIs() {
     return Object.keys(errors).length === 0;
   };
 
-  const saveMutation = trpc.bi.create.useMutation({
+  const saveMutation = useMutation({
+    mutationFn: (data: any) => api.post('/api/bi', data).then(r => r.data),
     onSuccess: () => {
       setFormData({ 'name': '', 'target': '', 'unit': '' });
       setIsSubmitting(false);
@@ -88,7 +90,7 @@ export default function KPIs() {
   const [showInlineForm, setShowInlineForm] = useState(false);
   const [inlineData, setInlineData] = useState<any>({});
 
-  const utils = trpc.useUtils();
+  const queryClient = useQueryClient();
 
   const { selectedRole: userRole } = useAppContext();
   const canEdit = userRole === "admin" || userRole === "manager";
@@ -98,8 +100,8 @@ export default function KPIs() {
   const pageSize = 20;
 
   // جلب البيانات من API
-  const { data: dashboardStats, isLoading, isError, error } = trpc.bi.dashboardStats.useQuery();
-  const { data: widgets, isLoading: isLoading2 } = trpc.bi.widgets?.list?.useQuery();
+  const { data: dashboardStats, isLoading, isError, error } = useQuery({ queryKey: ['bi', 'dashboardStats'], queryFn: () => api.get('/api/bi/dashboard-stats').then(r => r.data) });
+  const { data: widgets, isLoading: isLoading2 } = useQuery({ queryKey: ['bi', 'widgets'], queryFn: () => api.get('/api/bi/widgets').then(r => r.data) });
 
 
   // تحويل widgets إلى KPIs

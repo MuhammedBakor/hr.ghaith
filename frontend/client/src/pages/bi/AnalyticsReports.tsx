@@ -1,5 +1,6 @@
 import React from "react";
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, FileText, Download, BarChart3, Users, FolderKanban, Receipt, Workflow, FileSpreadsheet, FileDown } from "lucide-react";
@@ -14,7 +15,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export default function AnalyticsReports() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useQuery({
+    queryKey: ['auth', 'me'],
+    queryFn: () => api.get('/auth/me').then(r => r.data),
+  });
   const userRole = currentUser?.role || 'user';
   const requiredRole = 'admin';
   const hasAccess = userRole === 'admin' || userRole === requiredRole || requiredRole === 'user';
@@ -38,7 +42,10 @@ export default function AnalyticsReports() {
     link.click();
   };
 
-  const { data: dashboardData, isLoading } = trpc.bi.dashboardStats.useQuery();
+  const { data: dashboardData, isLoading } = useQuery({
+    queryKey: ['bi', 'dashboardStats'],
+    queryFn: () => api.get('/bi/dashboard-stats').then(r => r.data),
+  });
   const [isExporting, setIsExporting] = useState(false);
   
   const stats = dashboardData || { projects: 0, users: 0, invoices: 0, workflows: 0 };

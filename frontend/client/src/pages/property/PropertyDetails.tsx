@@ -1,6 +1,7 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
 import { useState } from "react";
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { useRoute } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,9 +16,9 @@ export default function PropertyDetails() {
   const [showInlineForm, setShowInlineForm] = useState(false);
   const [inlineData, setInlineData] = useState<any>({});
 
-  const deleteMutation = trpc.property?.properties?.delete.useMutation({ onSuccess: () => { refetchUnits(); } });
+  const deleteMutation = useMutation({ mutationFn: (data: any) => api.delete(`/property/properties/${data.id}`).then(r => r.data), onSuccess: () => { refetchUnits(); } });
 
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useQuery({ queryKey: ['auth', 'me'], queryFn: () => api.get('/auth/me').then(r => r.data) });
   const userRole = currentUser?.role || 'user';
   const requiredRole = 'user';
   const hasAccess = userRole === 'admin' || userRole === requiredRole || requiredRole === 'user';
@@ -25,7 +26,7 @@ export default function PropertyDetails() {
   const [searchTerm, setSearchTerm] = useState('');
   const [, params] = useRoute("/property/:id");
   const propertyId = params?.id ? parseInt(params.id) : 0;
-  
+
   // State for add unit dialog
   const [showAddUnit, setShowAddUnit] = useState(false);
   const [unitForm, setUnitForm] = useState({
@@ -37,18 +38,21 @@ export default function PropertyDetails() {
     bathrooms: 1,
     monthlyRent: ''
   });
-  
-  const { data: property, isLoading, refetch } = trpc.property?.properties?.getById.useQuery(
-    { id: propertyId },
-    { enabled: propertyId > 0 }
-  );
 
-  const { data: units, refetch: refetchUnits } = trpc.property?.units?.list.useQuery(
-    { propertyId },
-    { enabled: propertyId > 0 }
-  );
+  const { data: property, isLoading, refetch } = useQuery({
+    queryKey: ['property', 'properties', propertyId],
+    queryFn: () => api.get(`/property/properties/${propertyId}`).then(r => r.data),
+    enabled: propertyId > 0
+  });
 
-  const createUnitMutation = trpc.property?.units?.create.useMutation({
+  const { data: units, refetch: refetchUnits } = useQuery({
+    queryKey: ['property', 'units', propertyId],
+    queryFn: () => api.get(`/property/units?propertyId=${propertyId}`).then(r => r.data),
+    enabled: propertyId > 0
+  });
+
+  const createUnitMutation = useMutation({
+    mutationFn: (data: any) => api.post('/property/units', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إضافة الوحدة بنجاح');
       setShowAddUnit(false);
@@ -60,7 +64,7 @@ export default function PropertyDetails() {
         bedrooms: 1,
         bathrooms: 1,
         monthlyRent: '',
-      onError: (e: any) => toast.error(e?.message || 'حدث خطأ')});
+      });
       refetchUnits();
     },
     onError: () => toast.error('فشل إضافة الوحدة')
