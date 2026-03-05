@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import api from '../../client/src/lib/api';
 
 interface AuditEntry { id: number; action: string; userId: number; userName?: string; entityType?: string; entityId?: number; details?: string; ipAddress?: string; createdAt: string; }
 
@@ -17,13 +18,11 @@ export default function AuditLogViewer() {
   const load = async () => {
     setLoading(true);
     try {
-      const url = new URL('http://localhost:8080/api/v1/audit/logs');
-      url.searchParams.append('page', page.toString());
-      url.searchParams.append('size', pageSize.toString());
-      if (actionFilter) url.searchParams.append('action', actionFilter);
+      const params: Record<string, string> = { page: page.toString(), size: pageSize.toString() };
+      if (actionFilter) params.action = actionFilter;
 
-      const r = await fetch(url.toString());
-      const d = await r.json();
+      const r = await api.get('/audit/logs', { params });
+      const d = r.data;
       if (Array.isArray(d)) setLogs(d);
     } catch (error) {
       console.error('Failed to load audit logs:', error);

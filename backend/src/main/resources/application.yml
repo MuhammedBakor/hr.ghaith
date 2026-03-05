@@ -5,9 +5,9 @@ spring:
     file:
       name: logs/ghaith-erp.log
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:5434/ghaith_erp
-    username: ghaith_admin
-    password: ghaith_pass
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5434}/${DB_NAME:ghaith_erp}
+    username: ${DB_USER:ghaith_admin}
+    password: ${DB_PASS:ghaith_pass}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
