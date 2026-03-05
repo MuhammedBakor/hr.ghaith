@@ -217,7 +217,7 @@ const EmailSettings = lazy(() => import("@/pages/settings/EmailSettings"));
 const WhatsAppSettings = lazy(() => import("@/pages/settings/WhatsAppSettings"));
 const SmsSettings = lazy(() => import("@/pages/settings/SmsSettings"));
 const MessageTemplates = lazy(() => import("@/pages/settings/MessageTemplates"));
-const MessageLogs = lazy(() => import("@/pages/logs/MessageLogs"));
+const MessageLogs = lazy(() => import("@/pages/logs/MessageLogs.tsx"));
 const DmsAdvanced = lazy(() => import("@/pages/platform/DmsAdvanced"));
 const AiPolicy = lazy(() => import("@/pages/platform/AiPolicy"));
 const PlatformMonitoring = lazy(() => import("@/pages/platform/PlatformMonitoring"));
