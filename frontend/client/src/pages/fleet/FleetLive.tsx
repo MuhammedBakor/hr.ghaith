@@ -64,7 +64,7 @@ const getStatusBadge = (status: string) => {
 export default function FleetLive() {
   const { data: currentUser, isError, error} = useQuery({
     queryKey: ['auth', 'me'],
-    queryFn: () => api.get('/api/auth/me').then(r => r.data),
+    queryFn: () => api.get('/auth/me').then(r => r.data),
   });
   const userRole = currentUser?.role || 'user';
 
@@ -73,15 +73,15 @@ export default function FleetLive() {
 
   const { data: vehiclesData, isLoading: vehiclesLoading, refetch } = useQuery({
     queryKey: ['fleet', 'vehicles'],
-    queryFn: () => api.get('/api/fleet/vehicles').then(r => r.data),
+    queryFn: () => api.get('/fleet/vehicles').then(r => r.data),
   });
   const { data: driversData } = useQuery({
     queryKey: ['fleet-extended', 'drivers'],
-    queryFn: () => api.get('/api/fleet-extended/drivers').then(r => r.data),
+    queryFn: () => api.get('/fleet-extended/drivers').then(r => r.data),
   });
   const { data: tripsData } = useQuery({
     queryKey: ['fleet-extended', 'trips'],
-    queryFn: () => api.get('/api/fleet-extended/trips').then(r => r.data),
+    queryFn: () => api.get('/fleet-extended/trips').then(r => r.data),
   });
 
   const vehicles = vehiclesData || [];

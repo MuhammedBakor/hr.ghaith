@@ -33,7 +33,12 @@ public class SecurityConfiguration {
                 http
                                 .csrf(AbstractHttpConfigurer::disable)
                                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                                .authorizeHttpRequests(req -> req.requestMatchers("/api/v1/auth/**", "/error")
+                                .authorizeHttpRequests(req -> req.requestMatchers(
+                                                "/api/v1/auth/**",
+                                                "/api/v1/health",
+                                                "/api/v1/setup/status",
+                                                "/api/v1/setup/progress",
+                                                "/error")
                                                 .permitAll()
                                                 .anyRequest()
                                                 .authenticated())

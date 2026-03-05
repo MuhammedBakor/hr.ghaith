@@ -119,7 +119,7 @@ type ViewMode = "list" | "details";
 export default function DecisionsDashboard() {
   const { data: currentUser, isError, error} = useQuery({
     queryKey: ["auth", "me"],
-    queryFn: () => api.get("/api/auth/me").then(r => r.data),
+    queryFn: () => api.get("/auth/me").then(r => r.data),
   });
   const userRole = currentUser?.role || 'user';
   const requiredRole = 'admin';
@@ -139,7 +139,7 @@ export default function DecisionsDashboard() {
   // Fetch decisions from API
   const { data: decisionsData, isLoading: isLoadingDecisions, refetch: refetchDecisions } = useQuery({
     queryKey: ["decisions", "list", actionFilter, moduleFilter, page, pageSize],
-    queryFn: () => api.get("/api/decisions", { params: {
+    queryFn: () => api.get("/decisions", { params: {
       action: actionFilter === "all" ? undefined : actionFilter,
       module: moduleFilter === "all" ? undefined : moduleFilter,
       limit: pageSize,
@@ -150,7 +150,7 @@ export default function DecisionsDashboard() {
   // Fetch stats from API
   const { data: statsData, isLoading: isLoadingStats, refetch: refetchStats } = useQuery({
     queryKey: ["decisions", "stats"],
-    queryFn: () => api.get("/api/decisions/stats").then(r => r.data),
+    queryFn: () => api.get("/decisions/stats").then(r => r.data),
   });
 
   // Map API data to component format

@@ -14,7 +14,7 @@ import { PrintButton } from "@/components/PrintButton";
 export default function FleetReports() {
   const { data: currentUser, isError, error} = useQuery({
     queryKey: ['auth', 'me'],
-    queryFn: () => api.get('/api/auth/me').then(r => r.data),
+    queryFn: () => api.get('/auth/me').then(r => r.data),
   });
   const userRole = currentUser?.role || 'user';
   const requiredRole = 'fleet_manager';
@@ -31,19 +31,19 @@ export default function FleetReports() {
 
   const { data: vehiclesData, isLoading: vehiclesLoading } = useQuery({
     queryKey: ['fleet', 'vehicles'],
-    queryFn: () => api.get('/api/fleet/vehicles').then(r => r.data),
+    queryFn: () => api.get('/fleet/vehicles').then(r => r.data),
   });
   const { data: maintenanceData, isLoading: maintenanceLoading } = useQuery({
     queryKey: ['fleet', 'maintenance'],
-    queryFn: () => api.get('/api/fleet/maintenance').then(r => r.data),
+    queryFn: () => api.get('/fleet/maintenance').then(r => r.data),
   });
   const { data: fuelData, isLoading: fuelLoading } = useQuery({
     queryKey: ['fleet-extended', 'fuel-logs'],
-    queryFn: () => api.get('/api/fleet-extended/fuel-logs').then(r => r.data),
+    queryFn: () => api.get('/fleet-extended/fuel-logs').then(r => r.data),
   });
   const { data: tripsData, isLoading: tripsLoading } = useQuery({
     queryKey: ['fleet-extended', 'trips'],
-    queryFn: () => api.get('/api/fleet-extended/trips').then(r => r.data),
+    queryFn: () => api.get('/fleet-extended/trips').then(r => r.data),
   });
 
   const vehicles = vehiclesData || [];

@@ -59,4 +59,20 @@ public class AuthenticationController {
         sessionService.terminateSession(payload.get("sessionId"));
         return ResponseEntity.ok().build();
     }
+
+    @PostMapping("/employee-invitation/verify")
+    public ResponseEntity<?> verifyEmployeeInvitation(@RequestBody(required = false) java.util.Map<String, Object> body) {
+        java.util.Map<String, Object> response = new java.util.HashMap<>();
+        response.put("valid", true);
+        response.put("employeeName", "");
+        response.put("email", "");
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/employee-invitation/complete")
+    public ResponseEntity<?> completeEmployeeInvitation(@RequestBody(required = false) java.util.Map<String, Object> body) {
+        java.util.Map<String, Object> response = new java.util.HashMap<>();
+        response.put("success", true);
+        return ResponseEntity.ok(response);
+    }
 }

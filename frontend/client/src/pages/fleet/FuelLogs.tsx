@@ -22,13 +22,13 @@ export default function FuelLogsPage() {
 
   const { data, isLoading, refetch, isError, error } = useQuery({
     queryKey: ['fuel-logs'],
-    queryFn: () => api.get('/api/fuel-logs').then(r => r.data),
+    queryFn: () => api.get('/fuel-logs').then(r => r.data),
   });
   const list = (data || []) as any[];
 
-  const createMut = useMutation({ mutationFn: (data: any) => api.post('/api/fuel-logs', data).then(r => r.data), onSuccess: () => { refetch(); setOpen(false); resetForm(); }, onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
-  const updateMut = useMutation({ mutationFn: (data: any) => api.put(`/api/fuel-logs/${data.id}`, data).then(r => r.data), onSuccess: () => { refetch(); setOpen(false); resetForm(); }, onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
-  const deleteMut = useMutation({ mutationFn: (data: any) => api.delete(`/api/fuel-logs/${data.id}`, { data }).then(r => r.data), onSuccess: () => refetch(), onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
+  const createMut = useMutation({ mutationFn: (data: any) => api.post('/fuel-logs', data).then(r => r.data), onSuccess: () => { refetch(); setOpen(false); resetForm(); }, onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
+  const updateMut = useMutation({ mutationFn: (data: any) => api.put(`/fuel-logs/${data.id}`, data).then(r => r.data), onSuccess: () => { refetch(); setOpen(false); resetForm(); }, onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
+  const deleteMut = useMutation({ mutationFn: (data: any) => api.delete(`/fuel-logs/${data.id}`, { data }).then(r => r.data), onSuccess: () => refetch(), onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
 
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);

@@ -69,7 +69,7 @@ export default function KPIs() {
   };
 
   const saveMutation = useMutation({
-    mutationFn: (data: any) => api.post('/api/bi', data).then(r => r.data),
+    mutationFn: (data: any) => api.post('/bi', data).then(r => r.data),
     onSuccess: () => {
       setFormData({ 'name': '', 'target': '', 'unit': '' });
       setIsSubmitting(false);
@@ -100,8 +100,8 @@ export default function KPIs() {
   const pageSize = 20;
 
   // جلب البيانات من API
-  const { data: dashboardStats, isLoading, isError, error } = useQuery({ queryKey: ['bi', 'dashboardStats'], queryFn: () => api.get('/api/bi/dashboard-stats').then(r => r.data) });
-  const { data: widgets, isLoading: isLoading2 } = useQuery({ queryKey: ['bi', 'widgets'], queryFn: () => api.get('/api/bi/widgets').then(r => r.data) });
+  const { data: dashboardStats, isLoading, isError, error } = useQuery({ queryKey: ['bi', 'dashboardStats'], queryFn: () => api.get('/bi/dashboard-stats').then(r => r.data) });
+  const { data: widgets, isLoading: isLoading2 } = useQuery({ queryKey: ['bi', 'widgets'], queryFn: () => api.get('/bi/widgets').then(r => r.data) });
 
 
   // تحويل widgets إلى KPIs

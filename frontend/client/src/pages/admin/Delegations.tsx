@@ -21,13 +21,13 @@ export default function Delegations() {
   const queryClient = useQueryClient();
 
   const deleteMutation = useMutation({
-    mutationFn: (data: any) => api.delete(`/api/delegations/${data.id}`).then(r => r.data),
+    mutationFn: (data: any) => api.delete(`/delegations/${data.id}`).then(r => r.data),
     onSuccess: () => { refetch(); },
   });
 
   const { data: currentUser, isError, error} = useQuery({
     queryKey: ["auth", "me"],
-    queryFn: () => api.get("/api/auth/me").then(r => r.data),
+    queryFn: () => api.get("/auth/me").then(r => r.data),
   });
   const userRole = currentUser?.role || 'user';
   const requiredRole = 'admin';
@@ -41,11 +41,11 @@ export default function Delegations() {
   const [isOpen, setIsOpen] = useState(false);
   const { data: delegations, isLoading, refetch } = useQuery({
     queryKey: ["delegation", "list"],
-    queryFn: () => api.get("/api/delegations").then(r => r.data),
+    queryFn: () => api.get("/delegations").then(r => r.data),
   });
   const { data: usersList } = useQuery({
     queryKey: ["kernel", "users", "list"],
-    queryFn: () => api.get("/api/users").then(r => r.data),
+    queryFn: () => api.get("/users").then(r => r.data),
   });
 
   const [form, setForm] = useState({
@@ -56,13 +56,13 @@ export default function Delegations() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => api.post("/api/delegations", data).then(r => r.data),
+    mutationFn: (data: any) => api.post("/delegations", data).then(r => r.data),
     onSuccess: () => { toast.success('تم إنشاء التفويض بنجاح'); setIsOpen(false); queryClient.invalidateQueries({ queryKey: ["delegation", "list"] }); },
     onError: (e: any) => toast.error(e.message),
   });
 
   const revokeMutation = useMutation({
-    mutationFn: (data: any) => api.post(`/api/delegations/${data.id}/revoke`, data).then(r => r.data),
+    mutationFn: (data: any) => api.post(`/delegations/${data.id}/revoke`, data).then(r => r.data),
     onSuccess: () => { toast.success('تم إلغاء التفويض'); queryClient.invalidateQueries({ queryKey: ["delegation", "list"] }); },
     onError: (e: any) => toast.error(e.message),
   });

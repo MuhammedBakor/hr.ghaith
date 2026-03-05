@@ -3,26 +3,26 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import api from "@/lib/api";
 
 export default function StateHistory() {
-  const { data: currentUser } = useQuery({ queryKey: ['auth', 'me'], queryFn: () => api.get('/api/auth/me').then(r => r.data) });
+  const { data: currentUser } = useQuery({ queryKey: ['auth', 'me'], queryFn: () => api.get('/auth/me').then(r => r.data) });
   const userRole = currentUser?.role || 'user';
   const hasAccess = userRole === 'admin' || userRole === 'admin';
 
-  const { data, refetch, isLoading, isError, error } = useQuery({ queryKey: ['stateTransitions', 'list'], queryFn: () => api.get('/api/state-transitions').then(r => r.data) });
+  const { data, refetch, isLoading, isError, error } = useQuery({ queryKey: ['stateTransitions', 'list'], queryFn: () => api.get('/state-transitions').then(r => r.data) });
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState<any>({});
   const [editingId, setEditingId] = useState<number | null>(null);
 
   const createMut = useMutation({
-    mutationFn: (data: any) => api.post('/api/state-transitions', data).then(r => r.data),
+    mutationFn: (data: any) => api.post('/state-transitions', data).then(r => r.data),
     onSuccess: () => { refetch(); setShowForm(false); setFormData({}); }
   });
   const updateMut = useMutation({
-    mutationFn: (data: any) => api.put(`/api/state-transitions/${data.id}`, data).then(r => r.data),
+    mutationFn: (data: any) => api.put(`/state-transitions/${data.id}`, data).then(r => r.data),
     onSuccess: () => { refetch(); setEditingId(null); setFormData({}); }
   });
   const deleteMut = useMutation({
-    mutationFn: (data: any) => api.delete(`/api/state-transitions/${data.id}`).then(r => r.data),
+    mutationFn: (data: any) => api.delete(`/state-transitions/${data.id}`).then(r => r.data),
     onSuccess: () => { refetch(); }
   });
 

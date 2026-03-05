@@ -19,31 +19,31 @@ export default function FleetAutomation() {
 
   const { data: services = [], isLoading, refetch } = useQuery({
     queryKey: ['fleet-automation'],
-    queryFn: () => api.get('/api/fleet-automation').then(r => r.data),
+    queryFn: () => api.get('/fleet-automation').then(r => r.data),
   });
   const { data: logs = [] } = useQuery({
     queryKey: ['fleet-automation', 'logs'],
-    queryFn: () => api.get('/api/fleet-automation/logs', { params: { limit: 200 } }).then(r => r.data),
+    queryFn: () => api.get('/fleet-automation/logs', { params: { limit: 200 } }).then(r => r.data),
   });
   const { data: stats } = useQuery({
     queryKey: ['fleet-automation', 'stats'],
-    queryFn: () => api.get('/api/fleet-automation/stats').then(r => r.data),
+    queryFn: () => api.get('/fleet-automation/stats').then(r => r.data),
   });
 
   const toggleMut = useMutation({
-    mutationFn: (data: any) => api.post('/api/fleet-automation/toggle', data).then(r => r.data),
+    mutationFn: (data: any) => api.post('/fleet-automation/toggle', data).then(r => r.data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['fleet-automation'] }); },
   });
   const runNowMut = useMutation({
-    mutationFn: (data: any) => api.post('/api/fleet-automation/run-now', data).then(r => r.data),
+    mutationFn: (data: any) => api.post('/fleet-automation/run-now', data).then(r => r.data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['fleet-automation'] }); },
   });
   const updateMut = useMutation({
-    mutationFn: (data: any) => api.put('/api/fleet-automation', data).then(r => r.data),
+    mutationFn: (data: any) => api.put('/fleet-automation', data).then(r => r.data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['fleet-automation'] }); },
   });
   const initMut = useMutation({
-    mutationFn: () => api.post('/api/fleet-automation/initialize').then(r => r.data),
+    mutationFn: () => api.post('/fleet-automation/initialize').then(r => r.data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['fleet-automation'] }); },
   });
 

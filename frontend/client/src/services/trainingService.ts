@@ -127,6 +127,28 @@ export const useCreateTrainingEnrollment = () => {
     });
 };
 
+// Type aliases for pages
+export type TrainingType = 'mandatory' | 'optional' | 'certification' | 'skill_development';
+export type DurationUnit = 'hours' | 'days' | 'weeks';
+export type ProgramStatus = 'draft' | 'active' | 'completed' | 'cancelled';
+
+// Aliases for pages that use shorter names
+export const usePrograms = useTrainingPrograms;
+export const useCreateProgram = useCreateTrainingProgram;
+export const useUpdateProgram = useUpdateTrainingProgram;
+export const useDeleteProgram = useDeleteTrainingProgram;
+export const useEnrollments = useTrainingEnrollments;
+
+export const useEnrollEmployee = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (data: { employeeId: number, programId: number }) => trainingService.createEnrollment(data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["training", "enrollments"] });
+        },
+    });
+};
+
 export const useUpdateTrainingEnrollment = () => {
     const queryClient = useQueryClient();
     return useMutation({

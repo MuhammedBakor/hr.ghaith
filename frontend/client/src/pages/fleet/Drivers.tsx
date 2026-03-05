@@ -94,10 +94,10 @@ export default function Drivers() {
 
   const { data: driversData, isLoading, refetch, isError, error} = useQuery({
     queryKey: ['fleet-extended', 'drivers', { branchId: selectedBranchId || undefined }],
-    queryFn: () => api.get('/api/fleet-extended/drivers', { params: { branchId: selectedBranchId || undefined } }).then(r => r.data),
+    queryFn: () => api.get('/fleet-extended/drivers', { params: { branchId: selectedBranchId || undefined } }).then(r => r.data),
   });
   const createDriverMutation = useMutation({
-    mutationFn: (data: any) => api.post('/api/fleet-extended/drivers', data).then(r => r.data),
+    mutationFn: (data: any) => api.post('/fleet-extended/drivers', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إضافة السائق بنجاح');
       setView('list');

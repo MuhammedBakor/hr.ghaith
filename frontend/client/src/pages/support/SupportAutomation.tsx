@@ -17,25 +17,25 @@ const CATEGORY_META: CategoryMeta = {
 export default function SupportAutomation() {
   const queryClient = useQueryClient();
 
-  const { data: services, isLoading } = useQuery({ queryKey: ['support', 'automation', 'list'], queryFn: () => api.get('/api/support/automation').then(r => r.data) });
+  const { data: services, isLoading } = useQuery({ queryKey: ['support', 'automation', 'list'], queryFn: () => api.get('/support/automation').then(r => r.data) });
 
   const initMut = useMutation({
-    mutationFn: (data: any) => api.post('/api/support/automation/initialize', data).then(r => r.data),
+    mutationFn: (data: any) => api.post('/support/automation/initialize', data).then(r => r.data),
     onSuccess: (r: any) => { toast.success(`تهيئة: ${r.initialized} جديد، ${r.existing} موجود`); queryClient.invalidateQueries({ queryKey: ['support', 'automation', 'list'] }); },
     onError: (e: any) => toast.error(e.message),
   });
   const toggleMut = useMutation({
-    mutationFn: (data: any) => api.post('/api/support/automation/toggle', data).then(r => r.data),
+    mutationFn: (data: any) => api.post('/support/automation/toggle', data).then(r => r.data),
     onSuccess: (_: any, v: any) => { toast.success(v.isEnabled ? 'تم التفعيل' : 'تم الإيقاف'); queryClient.invalidateQueries({ queryKey: ['support', 'automation', 'list'] }); },
     onError: (e: any) => toast.error(e.message),
   });
   const runNowMut = useMutation({
-    mutationFn: (data: any) => api.post('/api/support/automation/run-now', data).then(r => r.data),
+    mutationFn: (data: any) => api.post('/support/automation/run-now', data).then(r => r.data),
     onSuccess: (r: any) => toast.success(`${r.message} — ${r.affected} سجل`),
     onError: (e: any) => toast.error(e.message),
   });
   const updateMut = useMutation({
-    mutationFn: (data: any) => api.put('/api/support/automation/update', data).then(r => r.data),
+    mutationFn: (data: any) => api.put('/support/automation/update', data).then(r => r.data),
     onSuccess: () => { toast.success('تم حفظ الإعدادات'); queryClient.invalidateQueries({ queryKey: ['support', 'automation', 'list'] }); },
     onError: (e: any) => toast.error(e.message),
   });

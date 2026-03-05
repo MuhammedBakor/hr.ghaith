@@ -29,12 +29,12 @@ export default function PendingBalances() {
   const [notes, setNotes] = useState('');
   const queryClient = useQueryClient();
 
-  const { data: balances, isLoading, isError, error} = useQuery({ queryKey: ['pendingBalances', 'list', 'pending'], queryFn: () => api.get('/api/pending-balances', { params: { status: 'pending' } }).then(r => r.data) });
+  const { data: balances, isLoading, isError, error} = useQuery({ queryKey: ['pendingBalances', 'list', 'pending'], queryFn: () => api.get('/pending-balances', { params: { status: 'pending' } }).then(r => r.data) });
 
 
-  const approveMutation = useMutation({ mutationFn: (data: any) => api.post(`/api/pending-balances/${data.id}/approve`, data).then(r => r.data), onSuccess: () => { toast.success('تمت الموافقة'); setReviewDialog(null); queryClient.invalidateQueries({ queryKey: ['pendingBalances', 'list'] }); }, onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
+  const approveMutation = useMutation({ mutationFn: (data: any) => api.post(`/pending-balances/${data.id}/approve`, data).then(r => r.data), onSuccess: () => { toast.success('تمت الموافقة'); setReviewDialog(null); queryClient.invalidateQueries({ queryKey: ['pendingBalances', 'list'] }); }, onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
 
-  const rejectMutation = useMutation({ mutationFn: (data: any) => api.post(`/api/pending-balances/${data.id}/reject`, data).then(r => r.data), onSuccess: () => { toast.success('تم الرفض'); setReviewDialog(null); queryClient.invalidateQueries({ queryKey: ['pendingBalances', 'list'] }); }, onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
+  const rejectMutation = useMutation({ mutationFn: (data: any) => api.post(`/pending-balances/${data.id}/reject`, data).then(r => r.data), onSuccess: () => { toast.success('تم الرفض'); setReviewDialog(null); queryClient.invalidateQueries({ queryKey: ['pendingBalances', 'list'] }); }, onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
 
   const typeLabels: Record<string, string> = {
     expense: 'مصروف', leave: 'إجازة', invoice: 'فاتورة',

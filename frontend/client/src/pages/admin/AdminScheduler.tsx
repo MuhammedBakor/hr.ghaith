@@ -9,7 +9,7 @@ import api from "@/lib/api";
 export default function AdminScheduler() {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["automation", "stats"],
-    queryFn: () => api.get("/api/automation/stats").then(r => r.data),
+    queryFn: () => api.get("/automation/stats").then(r => r.data),
     retry: 1,
     refetchOnWindowFocus: false,
   });

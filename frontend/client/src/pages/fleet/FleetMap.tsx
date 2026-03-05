@@ -51,18 +51,18 @@ export default function FleetMap() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createData, setCreateData] = useState<any>({});
   const createMutation = useMutation({
-    mutationFn: (data: any) => api.post('/api/fleet/geofences', data).then(r => r.data),
+    mutationFn: (data: any) => api.post('/fleet/geofences', data).then(r => r.data),
     onSuccess: () => { refetch(); setShowCreateForm(false); setCreateData({}); },
   });
 
   const [editingItem, setEditingItem] = useState<any>(null);
   const updateMutation = useMutation({
-    mutationFn: (data: any) => api.put(`/api/fleet/geofences/${data.id}`, data).then(r => r.data),
+    mutationFn: (data: any) => api.put(`/fleet/geofences/${data.id}`, data).then(r => r.data),
     onSuccess: () => { refetch(); setEditingItem(null); },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (data: any) => api.delete(`/api/fleet/geofences/${data.id}`).then(r => r.data),
+    mutationFn: (data: any) => api.delete(`/fleet/geofences/${data.id}`).then(r => r.data),
     onSuccess: () => { refetch(); },
   });
 
@@ -72,7 +72,7 @@ export default function FleetMap() {
 
   const { data: currentUser, isError, error} = useQuery({
     queryKey: ['auth', 'me'],
-    queryFn: () => api.get('/api/auth/me').then(r => r.data),
+    queryFn: () => api.get('/auth/me').then(r => r.data),
   });
   const userRole = currentUser?.role || 'user';
   const requiredRole = 'fleet_manager';
@@ -84,7 +84,7 @@ export default function FleetMap() {
   // البيانات من API
   const { data: vehiclesData, isLoading, refetch } = useQuery({
     queryKey: ['fleet', 'vehicles'],
-    queryFn: () => api.get('/api/fleet/vehicles').then(r => r.data),
+    queryFn: () => api.get('/fleet/vehicles').then(r => r.data),
   });
   const vehicles = vehiclesData || [];
 

@@ -75,7 +75,7 @@ const getStatusBadge = (status: string) => {
 export default function FleetTripSegments() {
   const { data: currentUser, isError, error} = useQuery({
     queryKey: ['auth', 'me'],
-    queryFn: () => api.get('/api/auth/me').then(r => r.data),
+    queryFn: () => api.get('/auth/me').then(r => r.data),
   });
   const userRole = currentUser?.role || 'user';
 
@@ -101,15 +101,15 @@ export default function FleetTripSegments() {
 
   const { data: segmentsData, isLoading, refetch } = useQuery({
     queryKey: ['fleet', 'trip-segments'],
-    queryFn: () => api.get('/api/fleet/trip-segments').then(r => r.data),
+    queryFn: () => api.get('/fleet/trip-segments').then(r => r.data),
   });
   const { data: tripsData } = useQuery({
     queryKey: ['fleet-extended', 'trips'],
-    queryFn: () => api.get('/api/fleet-extended/trips').then(r => r.data),
+    queryFn: () => api.get('/fleet-extended/trips').then(r => r.data),
   });
   const { data: vehiclesData } = useQuery({
     queryKey: ['fleet', 'vehicles'],
-    queryFn: () => api.get('/api/fleet/vehicles').then(r => r.data),
+    queryFn: () => api.get('/fleet/vehicles').then(r => r.data),
   });
   
   const segments = (segmentsData || []) as TripSegment[];
@@ -117,7 +117,7 @@ export default function FleetTripSegments() {
   const vehicles = vehiclesData || [];
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => api.post('/api/fleet/trip-segments', data).then(r => r.data),
+    mutationFn: (data: any) => api.post('/fleet/trip-segments', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إضافة مقطع الرحلة بنجاح');
       setIsAddOpen(false);
@@ -130,7 +130,7 @@ export default function FleetTripSegments() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: any) => api.put(`/api/fleet/trip-segments/${data.id}`, data).then(r => r.data),
+    mutationFn: (data: any) => api.put(`/fleet/trip-segments/${data.id}`, data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم تحديث مقطع الرحلة بنجاح');
       setEditingSegment(null);
@@ -143,7 +143,7 @@ export default function FleetTripSegments() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (data: any) => api.delete(`/api/fleet/trip-segments/${data.id}`).then(r => r.data),
+    mutationFn: (data: any) => api.delete(`/fleet/trip-segments/${data.id}`).then(r => r.data),
     onSuccess: () => {
       toast.success('تم حذف مقطع الرحلة بنجاح');
       refetch();

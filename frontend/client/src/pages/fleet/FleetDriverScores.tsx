@@ -1,5 +1,5 @@
 import {  useMemo , useState } from 'react';
-import { toast } from 'react-hot-toast';
+import { toast } from 'sonner';
 import { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/ui/data-table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -51,7 +51,7 @@ export default function FleetDriverScores() {
   };
 
   const saveMutation = useMutation({
-    mutationFn: (data: any) => api.post('/api/fleet-smart', data).then(r => r.data),
+    mutationFn: (data: any) => api.post('/fleet-smart', data).then(r => r.data),
     onSuccess: () => {
       setFormData({ 'driverId': '', 'score': '', 'notes': '',
       onError: (e: any) => toast.error(e?.message || 'حدث خطأ')});
@@ -72,13 +72,13 @@ export default function FleetDriverScores() {
 
   const { data: currentUser, isError, error} = useQuery({
     queryKey: ['auth', 'me'],
-    queryFn: () => api.get('/api/auth/me').then(r => r.data),
+    queryFn: () => api.get('/auth/me').then(r => r.data),
   });
   const userRole = currentUser?.role || 'user';
 
   const { data: driversData, isLoading } = useQuery({
     queryKey: ['fleet-extended', 'drivers'],
-    queryFn: () => api.get('/api/fleet-extended/drivers').then(r => r.data),
+    queryFn: () => api.get('/fleet-extended/drivers').then(r => r.data),
   });
   const drivers = driversData || [];
 

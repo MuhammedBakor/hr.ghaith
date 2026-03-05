@@ -9,7 +9,7 @@ import api from "@/lib/api";
 export default function AdminDecisions() {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["governance", "decisions"],
-    queryFn: () => api.get("/api/governance/decisions").then(r => r.data),
+    queryFn: () => api.get("/governance/decisions").then(r => r.data),
     retry: 1,
     refetchOnWindowFocus: false,
   });

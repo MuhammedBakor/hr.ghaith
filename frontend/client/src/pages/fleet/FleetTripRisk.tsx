@@ -47,7 +47,7 @@ import { PrintButton } from "@/components/PrintButton";
 export default function FleetTripRisk() {
   const { data: currentUser, isError, error} = useQuery({
     queryKey: ['auth', 'me'],
-    queryFn: () => api.get('/api/auth/me').then(r => r.data),
+    queryFn: () => api.get('/auth/me').then(r => r.data),
   });
   const userRole = currentUser?.role || 'user';
 
@@ -62,19 +62,19 @@ export default function FleetTripRisk() {
 
   const { data: vehiclesData } = useQuery({
     queryKey: ['fleet', 'vehicles'],
-    queryFn: () => api.get('/api/fleet/vehicles').then(r => r.data),
+    queryFn: () => api.get('/fleet/vehicles').then(r => r.data),
   });
   const { data: driversData } = useQuery({
     queryKey: ['fleet-extended', 'drivers'],
-    queryFn: () => api.get('/api/fleet-extended/drivers').then(r => r.data),
+    queryFn: () => api.get('/fleet-extended/drivers').then(r => r.data),
   });
   const { data: assessmentsData, isLoading, refetch } = useQuery({
     queryKey: ['fleet', 'risk-assessments', filterLevel],
-    queryFn: () => api.get('/api/fleet/risk-assessments', { params: filterLevel !== 'all' ? { riskLevel: filterLevel } : undefined }).then(r => r.data),
+    queryFn: () => api.get('/fleet/risk-assessments', { params: filterLevel !== 'all' ? { riskLevel: filterLevel } : undefined }).then(r => r.data),
   });
   const { data: statsData } = useQuery({
     queryKey: ['fleet', 'risk-assessments', 'stats'],
-    queryFn: () => api.get('/api/fleet/risk-assessments/stats').then(r => r.data),
+    queryFn: () => api.get('/fleet/risk-assessments/stats').then(r => r.data),
   });
 
   const vehicles = vehiclesData || [];
@@ -103,7 +103,7 @@ export default function FleetTripRisk() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => api.post('/api/fleet/risk-assessments', data).then(r => r.data),
+    mutationFn: (data: any) => api.post('/fleet/risk-assessments', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إنشاء تقييم المخاطر بنجاح');
       setIsCreateOpen(false);
@@ -116,7 +116,7 @@ export default function FleetTripRisk() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: any) => api.put(`/api/fleet/risk-assessments/${data.id}`, data).then(r => r.data),
+    mutationFn: (data: any) => api.put(`/fleet/risk-assessments/${data.id}`, data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم تحديث التقييم بنجاح');
       setSelectedAssessment(null);
@@ -128,7 +128,7 @@ export default function FleetTripRisk() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (data: any) => api.delete(`/api/fleet/risk-assessments/${data.id}`).then(r => r.data),
+    mutationFn: (data: any) => api.delete(`/fleet/risk-assessments/${data.id}`).then(r => r.data),
     onSuccess: () => {
       toast.success('تم حذف التقييم بنجاح');
       refetch();

@@ -40,12 +40,12 @@ export default function SecurityDashboard() {
   const [searchIP, setSearchIP] = useState('');
   const [expandedEvent, setExpandedEvent] = useState<number | null>(null);
 
-  const { data: stats, isLoading, refetch } = useQuery({ queryKey: ['integration', 'securityOverview'], queryFn: () => api.get('/api/integration/security-overview').then(r => r.data), refetchInterval: 30_000 });
-  const { data: events = [] } = useQuery({ queryKey: ['integration', 'securityEvents'], queryFn: () => api.get('/api/integration/security-events', { params: { limit: 100 } }).then(r => r.data), refetchInterval: 15_000 });
-  const { data: health } = useQuery({ queryKey: ['integration', 'systemHealth'], queryFn: () => api.get('/api/integration/system-health').then(r => r.data), refetchInterval: 60_000 });
+  const { data: stats, isLoading, refetch } = useQuery({ queryKey: ['integration', 'securityOverview'], queryFn: () => api.get('/integration/security-overview').then(r => r.data), refetchInterval: 30_000 });
+  const { data: events = [] } = useQuery({ queryKey: ['integration', 'securityEvents'], queryFn: () => api.get('/integration/security-events', { params: { limit: 100 } }).then(r => r.data), refetchInterval: 15_000 });
+  const { data: health } = useQuery({ queryKey: ['integration', 'systemHealth'], queryFn: () => api.get('/integration/system-health').then(r => r.data), refetchInterval: 60_000 });
 
   const unbanIP = useMutation({
-    mutationFn: (data: { ip: string }) => api.post('/api/admin/security/unban-ip', data).then(r => r.data),
+    mutationFn: (data: { ip: string }) => api.post('/admin/security/unban-ip', data).then(r => r.data),
     onSuccess: () => {
       refetch();
       toast.success('تم رفع الحظر بنجاح');
@@ -116,7 +116,7 @@ export default function SecurityDashboard() {
                       <span className="font-mono text-sm text-red-800">{item.ip}</span>
                       <Badge className="bg-red-100 text-red-700 border-red-200 text-xs">نقاط: {item.score}</Badge>
                     </div>
-                    <Button disabled={unbanIP.isPending} size="sm" variant="outline" className="h-7 text-xs border-red-200 text-red-600" onClick={() => unbanIP.mutate({ ip: item.ip })} disabled={unbanIP.isPending}>
+                    <Button disabled={unbanIP.isPending} size="sm" variant="outline" className="h-7 text-xs border-red-200 text-red-600" onClick={() => unbanIP.mutate({ ip: item.ip })}>
                       رفع الحظر
                     </Button>
                   </div>

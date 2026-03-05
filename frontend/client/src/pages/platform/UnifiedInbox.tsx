@@ -2,7 +2,7 @@ import { formatDate, formatDateTime } from '@/lib/formatDate';
 import { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { trpc } from '../../lib/trpc';
-import { toast } from 'react-hot-toast';
+import { toast } from 'sonner';
 
 export default function UnifiedInbox() {
   const confirmDelete = (fn: () => void) => { if (window.confirm("هل أنت متأكد من الحذف؟")) fn(); };

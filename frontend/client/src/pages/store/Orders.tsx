@@ -39,13 +39,13 @@ export default function Orders() {
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createData, setCreateData] = useState<any>({});
-  const createMutation = useMutation({ mutationFn: (data: any) => api.post('/api/store/orders', data).then(r => r.data), onSuccess: () => { refetch(); setShowCreateForm(false); setCreateData({}); } });
+  const createMutation = useMutation({ mutationFn: (data: any) => api.post('/store/orders', data).then(r => r.data), onSuccess: () => { refetch(); setShowCreateForm(false); setCreateData({}); } });
 
   const [editingItem, setEditingItem] = useState<any>(null);
 
-  const deleteMutation = useMutation({ mutationFn: (data: any) => api.delete(`/api/store/orders/${data.id}`).then(r => r.data), onSuccess: () => { refetch(); } });
+  const deleteMutation = useMutation({ mutationFn: (data: any) => api.delete(`/store/orders/${data.id}`).then(r => r.data), onSuccess: () => { refetch(); } });
 
-  const { data: currentUser, isError, error} = useQuery({ queryKey: ['auth', 'me'], queryFn: () => api.get('/api/auth/me').then(r => r.data) });
+  const { data: currentUser, isError, error} = useQuery({ queryKey: ['auth', 'me'], queryFn: () => api.get('/auth/me').then(r => r.data) });
   const userRole = currentUser?.role || 'user';
   const requiredRole = 'user';
   const hasAccess = userRole === 'admin' || userRole === requiredRole || requiredRole === 'user';
@@ -59,7 +59,7 @@ export default function Orders() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   // جلب الطلبات من API
-  const { data: ordersApiData, isLoading, refetch } = useQuery({ queryKey: ['store', 'orders'], queryFn: () => api.get('/api/store/orders').then(r => r.data) });
+  const { data: ordersApiData, isLoading, refetch } = useQuery({ queryKey: ['store', 'orders'], queryFn: () => api.get('/store/orders').then(r => r.data) });
 
   // تحويل البيانات من API
   const ordersData: Order[] = useMemo(() => {

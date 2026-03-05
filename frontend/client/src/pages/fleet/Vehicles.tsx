@@ -83,10 +83,10 @@ export default function Vehicles() {
 
   const { data: vehiclesData, isLoading, refetch, isError, error } = useQuery({
     queryKey: ['fleet', 'vehicles', { branchId: selectedBranchId || undefined }],
-    queryFn: () => api.get('/api/fleet/vehicles', { params: { branchId: selectedBranchId || undefined } }).then(r => r.data),
+    queryFn: () => api.get('/fleet/vehicles', { params: { branchId: selectedBranchId || undefined } }).then(r => r.data),
   });
   const createVehicleMutation = useMutation({
-    mutationFn: (data: any) => api.post('/api/fleet/vehicles', data).then(r => r.data),
+    mutationFn: (data: any) => api.post('/fleet/vehicles', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إضافة المركبة بنجاح');
       setView('list');

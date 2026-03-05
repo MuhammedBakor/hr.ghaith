@@ -115,12 +115,12 @@ export default function Subscriptions() {
 
   const { data: subscriptions, isLoading, refetch, isError, error } = useQuery({
     queryKey: ['subscription', 'list', filterStatus],
-    queryFn: () => api.get('/api/subscriptions', { params: filterStatus === 'all' ? undefined : { status: filterStatus } }).then(r => r.data),
+    queryFn: () => api.get('/subscriptions', { params: filterStatus === 'all' ? undefined : { status: filterStatus } }).then(r => r.data),
   });
-  const { data: availableModules } = useQuery({ queryKey: ['subscription', 'availableModules'], queryFn: () => api.get('/api/subscriptions/available-modules').then(r => r.data) });
+  const { data: availableModules } = useQuery({ queryKey: ['subscription', 'availableModules'], queryFn: () => api.get('/subscriptions/available-modules').then(r => r.data) });
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => api.post('/api/subscriptions', data).then(r => r.data),
+    mutationFn: (data: any) => api.post('/subscriptions', data).then(r => r.data),
     onSuccess: (result: any) => {
       if (result.success) {
         toast.success(`تم إنشاء الاشتراك بنجاح. كود الاشتراك: ${result.subscriptionCode}`);
@@ -137,7 +137,7 @@ export default function Subscriptions() {
   });
 
   const updateStatusMutation = useMutation({
-    mutationFn: (data: any) => api.put(`/api/subscriptions/${data.id}/status`, data).then(r => r.data),
+    mutationFn: (data: any) => api.put(`/subscriptions/${data.id}/status`, data).then(r => r.data),
     onSuccess: (result: any) => {
       if (result.success) {
         toast.success('تم تحديث حالة الاشتراك');
@@ -149,7 +149,7 @@ export default function Subscriptions() {
   });
 
   const resendWelcomeMutation = useMutation({
-    mutationFn: (data: any) => api.post(`/api/subscriptions/${data.subscriptionId}/resend-welcome`).then(r => r.data),
+    mutationFn: (data: any) => api.post(`/subscriptions/${data.subscriptionId}/resend-welcome`).then(r => r.data),
     onSuccess: (result: any) => {
       if (result.success) {
         toast.success('تم إرسال رسالة الترحيب');

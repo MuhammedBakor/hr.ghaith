@@ -27,11 +27,11 @@ import { LetterPrintWrapper, AppointmentLetter } from '@/components/letters';
 export default function LetterheadSettings() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createData, setCreateData] = useState<any>({});
-  const createMutation = useMutation({ mutationFn: (data: any) => api.put('/api/official-letters/branch-letterhead', data).then(r => r.data), onSuccess: () => { refetch(); setShowCreateForm(false); setCreateData({}); } });
+  const createMutation = useMutation({ mutationFn: (data: any) => api.put('/official-letters/branch-letterhead', data).then(r => r.data), onSuccess: () => { refetch(); setShowCreateForm(false); setCreateData({}); } });
 
   const handleSubmit = () => { saveMutation.mutate({}); };
 
-  const { data: currentUser, isError, error, isLoading} = useQuery({ queryKey: ['auth', 'me'], queryFn: () => api.get('/api/auth/me').then(r => r.data) });
+  const { data: currentUser, isError, error, isLoading} = useQuery({ queryKey: ['auth', 'me'], queryFn: () => api.get('/auth/me').then(r => r.data) });
   const userRole = currentUser?.role || 'user';
   const requiredRole = 'admin';
   const hasAccess = userRole === 'admin' || userRole === requiredRole || requiredRole === 'user';
@@ -55,7 +55,7 @@ export default function LetterheadSettings() {
   // جلب بيانات الكليشة الحالية
   const { data: currentSettings, refetch } = useQuery({
     queryKey: ['officialLetters', 'letterhead', selectedBranch],
-    queryFn: () => api.get('/api/official-letters/letterhead', { params: { branchId: selectedBranch ? parseInt(selectedBranch) : undefined } }).then(r => r.data),
+    queryFn: () => api.get('/official-letters/letterhead', { params: { branchId: selectedBranch ? parseInt(selectedBranch) : undefined } }).then(r => r.data),
     enabled: !!selectedBranch,
   });
 
@@ -68,7 +68,7 @@ export default function LetterheadSettings() {
 
   // Mutation لحفظ الإعدادات
   const saveMutation = useMutation({
-    mutationFn: (data: any) => api.put('/api/official-letters/branch-letterhead', data).then(r => r.data),
+    mutationFn: (data: any) => api.put('/official-letters/branch-letterhead', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم حفظ الإعدادات بنجاح');
       refetch();
@@ -315,9 +315,6 @@ export default function LetterheadSettings() {
                   ref={letterheadInputRef}
                   type="file"
                   accept="image/png,image/jpeg,image/svg+xml"
-                  accept="image/png,image/jpeg,image/svg+xml"
-                  accept="image/png,image/jpeg,image/svg+xml"
-                  accept="image/*"
                   className="hidden"
                   onChange={(e) => {
                     const file = e.target.files?.[0];

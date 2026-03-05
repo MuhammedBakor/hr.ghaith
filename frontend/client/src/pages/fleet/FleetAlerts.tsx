@@ -85,15 +85,15 @@ export default function FleetAlerts() {
   // البيانات من API
   const { data: violationsData, isLoading, isError, error } = useQuery({
     queryKey: ['fleet-extended', 'violations'],
-    queryFn: () => api.get('/api/fleet-extended/violations').then(r => r.data),
+    queryFn: () => api.get('/fleet-extended/violations').then(r => r.data),
   });
   const { data: vehiclesData } = useQuery({
     queryKey: ['fleet', 'vehicles'],
-    queryFn: () => api.get('/api/fleet/vehicles').then(r => r.data),
+    queryFn: () => api.get('/fleet/vehicles').then(r => r.data),
   });
 
   const createMut = useMutation({
-    mutationFn: (data: any) => api.post('/api/fleet-extended', data).then(r => r.data),
+    mutationFn: (data: any) => api.post('/fleet-extended', data).then(r => r.data),
     onError: (e: any) => { alert(e.message || "حدث خطأ"); },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fleet-extended'] });

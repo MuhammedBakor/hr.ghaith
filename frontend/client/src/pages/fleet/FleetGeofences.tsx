@@ -112,19 +112,19 @@ export default function FleetGeofences() {
   // جلب السياجات من API
   const { data: geofencesData, isLoading, isError, error} = useQuery({
     queryKey: ['fleet', 'geofences'],
-    queryFn: () => api.get('/api/fleet/geofences').then(r => r.data),
+    queryFn: () => api.get('/fleet/geofences').then(r => r.data),
   });
   const geofences: Geofence[] = (geofencesData || []) as Geofence[];
 
   // جلب الإحصائيات
   const { data: stats } = useQuery({
     queryKey: ['fleet', 'geofences', 'stats'],
-    queryFn: () => api.get('/api/fleet/geofences/stats').then(r => r.data),
+    queryFn: () => api.get('/fleet/geofences/stats').then(r => r.data),
   });
 
   // إنشاء سياج جديد
   const createMutation = useMutation({
-    mutationFn: (data: any) => api.post('/api/fleet/geofences', data).then(r => r.data),
+    mutationFn: (data: any) => api.post('/fleet/geofences', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إنشاء السياج الجغرافي بنجاح');
       queryClient.invalidateQueries({ queryKey: ['fleet', 'geofences'] });
@@ -138,7 +138,7 @@ export default function FleetGeofences() {
 
   // حذف سياج
   const deleteMutation = useMutation({
-    mutationFn: (data: any) => api.delete(`/api/fleet/geofences/${data.id}`).then(r => r.data),
+    mutationFn: (data: any) => api.delete(`/fleet/geofences/${data.id}`).then(r => r.data),
     onSuccess: () => {
       toast.success('تم حذف السياج بنجاح');
       queryClient.invalidateQueries({ queryKey: ['fleet', 'geofences'] });
@@ -150,7 +150,7 @@ export default function FleetGeofences() {
 
   // تحديث حالة السياج
   const updateMutation = useMutation({
-    mutationFn: (data: any) => api.put(`/api/fleet/geofences/${data.id}`, data).then(r => r.data),
+    mutationFn: (data: any) => api.put(`/fleet/geofences/${data.id}`, data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم تحديث السياج بنجاح');
       queryClient.invalidateQueries({ queryKey: ['fleet', 'geofences'] });

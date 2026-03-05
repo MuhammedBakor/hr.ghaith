@@ -44,11 +44,11 @@ export default function UnifiedInbox() {
   const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'all'>('pending');
   
   // جلب كل البيانات المعلقة
-  const { data: pendingBalances = [] } = useQuery({ queryKey: ['admin', 'pendingBalances', 'pending'], queryFn: () => api.get('/api/pending-balances', { params: { status: 'pending' } }).then(r => r.data) });
-  const { data: reserves = [], isError, error} = useQuery({ queryKey: ['reserves', 'requested'], queryFn: () => api.get('/api/reserves', { params: { status: 'requested' } }).then(r => r.data) });
-  const { data: leavesPending = [] } = useQuery({ queryKey: ['hr', 'leaves'], queryFn: () => api.get('/api/hr/leaves').then(r => r.data) });
+  const { data: pendingBalances = [] } = useQuery({ queryKey: ['admin', 'pendingBalances', 'pending'], queryFn: () => api.get('/pending-balances', { params: { status: 'pending' } }).then(r => r.data) });
+  const { data: reserves = [], isError, error} = useQuery({ queryKey: ['reserves', 'requested'], queryFn: () => api.get('/reserves', { params: { status: 'requested' } }).then(r => r.data) });
+  const { data: leavesPending = [] } = useQuery({ queryKey: ['hr', 'leaves'], queryFn: () => api.get('/hr/leaves').then(r => r.data) });
 
-  const createMut = useMutation({ mutationFn: (data: any) => api.post('/api/admin', data).then(r => r.data), onError: (e: any) => { alert(e.message || "حدث خطأ"); }, onSuccess: () => {
+  const createMut = useMutation({ mutationFn: (data: any) => api.post('/admin', data).then(r => r.data), onError: (e: any) => { alert(e.message || "حدث خطأ"); }, onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['admin'] });
  window.location.reload(); } });
   

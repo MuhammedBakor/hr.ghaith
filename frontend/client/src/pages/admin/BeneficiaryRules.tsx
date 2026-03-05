@@ -47,7 +47,7 @@ import { PrintButton } from "@/components/PrintButton";
 export default function BeneficiaryRules() {
   const { data: currentUser, isError, error } = useQuery({
     queryKey: ["auth", "me"],
-    queryFn: () => api.get("/api/auth/me").then(r => r.data),
+    queryFn: () => api.get("/auth/me").then(r => r.data),
   });
   const userRole = currentUser?.role || 'user';
 
@@ -69,12 +69,12 @@ export default function BeneficiaryRules() {
   // جلب القواعد من الـ API
   const { data: rules, isLoading, refetch } = useQuery({
     queryKey: ["beneficiaryRules", "list"],
-    queryFn: () => api.get("/api/beneficiary-rules").then(r => r.data),
+    queryFn: () => api.get("/beneficiary-rules").then(r => r.data),
   });
 
   // mutations
   const createMutation = useMutation({
-    mutationFn: (data: any) => api.post("/api/beneficiary-rules", data).then(r => r.data),
+    mutationFn: (data: any) => api.post("/beneficiary-rules", data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إضافة القاعدة بنجاح');
       setShowAddDialog(false);
@@ -96,7 +96,7 @@ export default function BeneficiaryRules() {
   });
 
   const toggleActiveMutation = useMutation({
-    mutationFn: (data: any) => api.post("/api/beneficiary-rules/toggle-active", data).then(r => r.data),
+    mutationFn: (data: any) => api.post("/beneficiary-rules/toggle-active", data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم تحديث حالة القاعدة');
       refetch();
@@ -107,7 +107,7 @@ export default function BeneficiaryRules() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (data: any) => api.delete(`/api/beneficiary-rules/${data.id}`).then(r => r.data),
+    mutationFn: (data: any) => api.delete(`/beneficiary-rules/${data.id}`).then(r => r.data),
     onSuccess: () => {
       toast.success('تم حذف القاعدة');
       refetch();

@@ -2,7 +2,16 @@
   "permissions": {
     "allow": [
       "Bash(./mvnw compile:*)",
-      "Bash(where mvn:*)"
+      "Bash(where mvn:*)",
+      "Bash(ls:*)",
+      "Bash(sed:*)",
+      "Bash(grep:*)",
+      "Bash(mvn compile:*)",
+      "Bash(mkdir:*)",
+      "Bash(curl:*)",
+      "Bash(chmod +x:*)",
+      "Bash(javac:*)",
+      "Bash(npx vite:*)"
     ]
   }
 }

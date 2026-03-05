@@ -9,7 +9,7 @@ import api from "@/lib/api";
 export default function AdminExceptions() {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["governance", "exceptions"],
-    queryFn: () => api.get("/api/governance/exceptions").then(r => r.data),
+    queryFn: () => api.get("/governance/exceptions").then(r => r.data),
     retry: 1,
     refetchOnWindowFocus: false,
   });

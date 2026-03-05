@@ -922,7 +922,6 @@ function SeedDefaultsButton() {
   return (
     <Button disabled={seedDefaults.isPending}
       onClick={() => seedDefaults.mutate({})}
-      disabled={seedDefaults.isPending}
     >
       {seedDefaults.isPending ? 'جاري التهيئة...' : 'تهيئة البيانات الافتراضية'}
     </Button>

@@ -27,10 +27,10 @@ export default function PrintTemplates() {
 
   const isProcessing = false; // Loading state
 
-  const { data: templates = [], isError, error } = useQuery({ queryKey: ['printTemplates', 'list'], queryFn: () => api.get('/api/print-templates').then(r => r.data) });
+  const { data: templates = [], isError, error } = useQuery({ queryKey: ['printTemplates', 'list'], queryFn: () => api.get('/print-templates').then(r => r.data) });
 
   const createMut = useMutation({
-    mutationFn: (data: any) => api.post('/api/print-templates', data).then(r => r.data),
+    mutationFn: (data: any) => api.post('/print-templates', data).then(r => r.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['printTemplates'] });
       toast.success('تم إضافة القالب');
@@ -42,7 +42,7 @@ export default function PrintTemplates() {
   const [preview, setPreview] = useState<string>('');
 
   const renderMut = useMutation({
-    mutationFn: (data: any) => api.post('/api/print-templates/render', data).then(r => r.data),
+    mutationFn: (data: any) => api.post('/print-templates/render', data).then(r => r.data),
     onSuccess: (data: any) => {
       setPreview(data.html);
       toast.success('تم إنشاء المعاينة');

@@ -50,7 +50,7 @@ interface AuditLogEntry {
 export default function GovernanceAuditLog() {
   const { data: currentUser, isError, error} = useQuery({
     queryKey: ["auth", "me"],
-    queryFn: () => api.get("/api/auth/me").then(r => r.data),
+    queryFn: () => api.get("/auth/me").then(r => r.data),
   });
   const userRole = currentUser?.role || 'user';
 
@@ -66,7 +66,7 @@ export default function GovernanceAuditLog() {
   // جلب سجلات التدقيق
   const { data: auditLogs, isLoading, refetch } = useQuery({
     queryKey: ["governanceDashboard", "auditLogs", filterModule, filterAction, dateFrom, dateTo],
-    queryFn: () => api.get("/api/governance-dashboard/audit-logs", { params: {
+    queryFn: () => api.get("/governance-dashboard/audit-logs", { params: {
       limit: 100,
       module: filterModule !== "all" ? filterModule : undefined,
       action: filterAction !== "all" ? filterAction : undefined,

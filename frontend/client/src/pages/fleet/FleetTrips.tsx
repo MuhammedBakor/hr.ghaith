@@ -63,19 +63,19 @@ export default function FleetTrips() {
 
   const { data: tripsData, isLoading, refetch, isError, error} = useQuery({
     queryKey: ['fleet-extended', 'trips'],
-    queryFn: () => api.get('/api/fleet-extended/trips').then(r => r.data),
+    queryFn: () => api.get('/fleet-extended/trips').then(r => r.data),
   });
   const { data: vehiclesData } = useQuery({
     queryKey: ['fleet', 'vehicles'],
-    queryFn: () => api.get('/api/fleet/vehicles').then(r => r.data),
+    queryFn: () => api.get('/fleet/vehicles').then(r => r.data),
   });
   const { data: driversData } = useQuery({
     queryKey: ['fleet-extended', 'drivers'],
-    queryFn: () => api.get('/api/fleet-extended/drivers').then(r => r.data),
+    queryFn: () => api.get('/fleet-extended/drivers').then(r => r.data),
   });
 
   const createTripMutation = useMutation({
-    mutationFn: (data: any) => api.post('/api/fleet-extended/trips', data).then(r => r.data),
+    mutationFn: (data: any) => api.post('/fleet-extended/trips', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إنشاء الرحلة بنجاح');
       setViewMode('list');
@@ -88,7 +88,7 @@ export default function FleetTrips() {
   });
 
   const updateTripMutation = useMutation({
-    mutationFn: (data: any) => api.put(`/api/fleet-extended/trips/${data.id}`, data).then(r => r.data),
+    mutationFn: (data: any) => api.put(`/fleet-extended/trips/${data.id}`, data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم تحديث الرحلة بنجاح');
       refetch();

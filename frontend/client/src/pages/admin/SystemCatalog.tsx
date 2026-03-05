@@ -7,14 +7,14 @@ import { Database, Server, Shield, Settings } from 'lucide-react';
 import { Link } from 'wouter';
 
 export default function SystemCatalog() {
-  const { data: currentUser, isError, error, isLoading} = useQuery({ queryKey: ['auth', 'me'], queryFn: () => api.get('/api/auth/me').then(r => r.data) });
+  const { data: currentUser, isError, error, isLoading} = useQuery({ queryKey: ['auth', 'me'], queryFn: () => api.get('/auth/me').then(r => r.data) });
   const userRole = currentUser?.role || 'user';
   const requiredRole = 'admin';
   const hasAccess = userRole === 'admin' || userRole === requiredRole || requiredRole === 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
-  const { data: rolesData } = useQuery({ queryKey: ['controlKernel', 'roles'], queryFn: () => api.get('/api/control-kernel/roles').then(r => r.data) });
-  const { data: branchesData } = useQuery({ queryKey: ['controlKernel', 'branches'], queryFn: () => api.get('/api/control-kernel/branches').then(r => r.data) });
+  const { data: rolesData } = useQuery({ queryKey: ['controlKernel', 'roles'], queryFn: () => api.get('/control-kernel/roles').then(r => r.data) });
+  const { data: branchesData } = useQuery({ queryKey: ['controlKernel', 'branches'], queryFn: () => api.get('/control-kernel/branches').then(r => r.data) });
   
   const roles = (rolesData || []) as any[];
   const branches = (branchesData || []) as any[];

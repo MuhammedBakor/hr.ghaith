@@ -161,3 +161,56 @@ export const useCreateInterview = () => {
         },
     });
 };
+
+// Aliases for pages that use shorter names
+export const useInterviews = useRecruitmentInterviews;
+export const useApplications = useRecruitmentApplications;
+export const useScheduleInterview = useCreateInterview;
+export const useUpdateInterview = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (data: { id: number } & Partial<Interview>) =>
+            api.put(`/recruitment/interviews/${data.id}`, data).then(r => r.data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["recruitment", "interviews"] });
+        },
+    });
+};
+export const useDeleteInterview = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (id: number) => api.delete(`/recruitment/interviews/${id}`),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["recruitment", "interviews"] });
+        },
+    });
+};
+export const useCreateApplication = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (data: Partial<JobApplication>) =>
+            api.post('/recruitment/applications', data).then(r => r.data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["recruitment", "applications"] });
+        },
+    });
+};
+export const useUpdateApplication = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, ...data }: { id: number } & Partial<JobApplication>) =>
+            api.put(`/recruitment/applications/${id}`, data).then(r => r.data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["recruitment", "applications"] });
+        },
+    });
+};
+export const useDeleteApplication = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (id: number) => api.delete(`/recruitment/applications/${id}`),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["recruitment", "applications"] });
+        },
+    });
+};

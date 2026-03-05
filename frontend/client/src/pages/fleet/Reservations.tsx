@@ -22,13 +22,13 @@ export default function ReservationsPage() {
 
   const { data, isLoading, refetch, isError, error } = useQuery({
     queryKey: ['reservations'],
-    queryFn: () => api.get('/api/reservations').then(r => r.data),
+    queryFn: () => api.get('/reservations').then(r => r.data),
   });
   const list = (data || []) as any[];
 
-  const createMut = useMutation({ mutationFn: (data: any) => api.post('/api/reservations', data).then(r => r.data), onSuccess: () => { refetch(); setOpen(false); resetForm(); }, onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
-  const updateMut = useMutation({ mutationFn: (data: any) => api.put(`/api/reservations/${data.id}`, data).then(r => r.data), onSuccess: () => { refetch(); setOpen(false); resetForm(); }, onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
-  const deleteMut = useMutation({ mutationFn: (data: any) => api.delete(`/api/reservations/${data.id}`, { data }).then(r => r.data), onSuccess: () => refetch(), onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
+  const createMut = useMutation({ mutationFn: (data: any) => api.post('/reservations', data).then(r => r.data), onSuccess: () => { refetch(); setOpen(false); resetForm(); }, onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
+  const updateMut = useMutation({ mutationFn: (data: any) => api.put(`/reservations/${data.id}`, data).then(r => r.data), onSuccess: () => { refetch(); setOpen(false); resetForm(); }, onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
+  const deleteMut = useMutation({ mutationFn: (data: any) => api.delete(`/reservations/${data.id}`, { data }).then(r => r.data), onSuccess: () => refetch(), onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
 
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);

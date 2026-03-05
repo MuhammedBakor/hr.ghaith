@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import api from '@/lib/api';
-import { toast } from 'react-hot-toast';
+import { toast } from 'sonner';
 
 export default function PendingReserves() {
   const confirmDelete = (fn: () => void) => { if (window.confirm("هل أنت متأكد من الحذف؟")) fn(); };
@@ -21,24 +21,24 @@ export default function PendingReserves() {
   const [filter, setFilter] = useState<string>('');
   const { data: reserves = [], isLoading, refetch, isError, error} = useQuery({
     queryKey: ['reserves', 'list', filter],
-    queryFn: () => api.get('/api/reserves', { params: filter ? { status: filter } : undefined }).then(r => r.data),
+    queryFn: () => api.get('/reserves', { params: filter ? { status: filter } : undefined }).then(r => r.data),
   });
 
 
-  const createMut = useMutation({ mutationFn: (data: any) => api.post('/api/reserves', data).then(r => r.data), onSuccess: () => refetch(),
+  const createMut = useMutation({ mutationFn: (data: any) => api.post('/reserves', data).then(r => r.data), onSuccess: () => refetch(),
       onError: (e: any) => toast.error(e?.message || 'حدث خطأ')});
   const approveMutation = useMutation({
-    mutationFn: (data: any) => api.post(`/api/reserves/${data.id}/approve`).then(r => r.data),
+    mutationFn: (data: any) => api.post(`/reserves/${data.id}/approve`).then(r => r.data),
     onSuccess: () => { toast.success('تم اعتماد الحجز'); refetch(); },
     onError: (e: any) => toast.error(e.message),
   });
   const consumeMutation = useMutation({
-    mutationFn: (data: any) => api.post(`/api/reserves/${data.id}/consume`).then(r => r.data),
+    mutationFn: (data: any) => api.post(`/reserves/${data.id}/consume`).then(r => r.data),
     onSuccess: () => { toast.success('تم استهلاك الحجز'); refetch(); },
     onError: (e: any) => toast.error(e.message),
   });
   const releaseMutation = useMutation({
-    mutationFn: (data: any) => api.post(`/api/reserves/${data.id}/release`, data).then(r => r.data),
+    mutationFn: (data: any) => api.post(`/reserves/${data.id}/release`, data).then(r => r.data),
     onSuccess: () => { toast.success('تم إفراج الحجز'); refetch(); },
     onError: (e: any) => toast.error(e.message),
   });

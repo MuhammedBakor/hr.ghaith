@@ -10,7 +10,7 @@ import { Download, Car, Users, Wrench } from 'lucide-react';
 export default function FleetExports() {
   const { data: currentUser, isError, error, isLoading} = useQuery({
     queryKey: ['auth', 'me'],
-    queryFn: () => api.get('/api/auth/me').then(r => r.data),
+    queryFn: () => api.get('/auth/me').then(r => r.data),
   });
   const userRole = currentUser?.role || 'user';
 
@@ -20,11 +20,11 @@ export default function FleetExports() {
 
   const { data: vehiclesData } = useQuery({
     queryKey: ['fleet', 'vehicles'],
-    queryFn: () => api.get('/api/fleet/vehicles').then(r => r.data),
+    queryFn: () => api.get('/fleet/vehicles').then(r => r.data),
   });
   const { data: driversData } = useQuery({
     queryKey: ['fleet-extended', 'drivers'],
-    queryFn: () => api.get('/api/fleet-extended/drivers').then(r => r.data),
+    queryFn: () => api.get('/fleet-extended/drivers').then(r => r.data),
   });
 
   const vehicles = (vehiclesData || []) as any[];

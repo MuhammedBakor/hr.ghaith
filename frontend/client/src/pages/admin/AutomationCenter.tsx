@@ -72,13 +72,13 @@ export default function AutomationCenter() {
   // ─── بيانات ────────────────────────────────────────────────────────────────
   const { data: dashData, refetch: refetchDash } = useQuery({
     queryKey: ["automation", "dashboard"],
-    queryFn: () => api.get("/api/automation/dashboard").then(r => r.data),
+    queryFn: () => api.get("/automation/dashboard").then(r => r.data),
     refetchInterval: 30_000,
   });
 
   const { data: servicesData, refetch: refetchServices } = useQuery({
     queryKey: ["automation", "listAll", filterModule, filterEnabled, filterMode, search],
-    queryFn: () => api.get("/api/automation/list-all", { params: {
+    queryFn: () => api.get("/automation/list-all", { params: {
       module:    filterModule !== 'all' ? filterModule : undefined,
       isEnabled: filterEnabled === 'all' ? undefined : filterEnabled === 'enabled',
       runMode:   filterMode   !== 'all' ? filterMode  : undefined,
@@ -90,22 +90,22 @@ export default function AutomationCenter() {
 
   const { data: logsData, isLoading } = useQuery({
     queryKey: ["automation", "recentLogs"],
-    queryFn: () => api.get("/api/automation/recent-logs", { params: { limit: 30 } }).then(r => r.data),
+    queryFn: () => api.get("/automation/recent-logs", { params: { limit: 30 } }).then(r => r.data),
   });
   const { data: problemsData } = useQuery({
     queryKey: ["automation", "problems"],
-    queryFn: () => api.get("/api/automation/problems").then(r => r.data),
+    queryFn: () => api.get("/automation/problems").then(r => r.data),
   });
 
   // ─── Mutations ────────────────────────────────────────────────────────────
   const runService = useMutation({
-    mutationFn: (vars: { module: string; serviceKey: string }) => api.post("/api/automation/run-service", vars).then(r => r.data),
+    mutationFn: (vars: { module: string; serviceKey: string }) => api.post("/automation/run-service", vars).then(r => r.data),
     onSuccess: (r: any, vars) => { toast.success(`تم تشغيل ${vars.serviceKey}: ${r.message}`); refetchServices(); },
     onError: (e: any) => toast.error(`خطأ: ${e.message}`),
   });
 
   const toggleService = useMutation({
-    mutationFn: (vars: { module: string; serviceKey: string; isEnabled: boolean }) => api.post("/api/automation/toggle-service", vars).then(r => r.data),
+    mutationFn: (vars: { module: string; serviceKey: string; isEnabled: boolean }) => api.post("/automation/toggle-service", vars).then(r => r.data),
     onSuccess: (_: any, vars: any) => {
       toast.success(vars.isEnabled ? 'تم تفعيل الخدمة' : 'تم إيقاف الخدمة');
       refetchServices(); refetchDash();
@@ -114,19 +114,19 @@ export default function AutomationCenter() {
   });
 
   const initAll = useMutation({
-    mutationFn: (data: any) => api.post("/api/automation/init-all", data).then(r => r.data),
+    mutationFn: (data: any) => api.post("/automation/init-all", data).then(r => r.data),
     onSuccess: (r: any) => { toast.success(`تهيئة ${r.totalInitialized} خدمة جديدة`); refetchServices(); refetchDash(); },
     onError: (e: any) => toast.error(`خطأ: ${e.message}`),
   });
 
   const runAll = useMutation({
-    mutationFn: (data: any) => api.post("/api/automation/run-all", data).then(r => r.data),
+    mutationFn: (data: any) => api.post("/automation/run-all", data).then(r => r.data),
     onSuccess: (r: any) => { toast.success(`تشغيل ${r.succeeded}/${r.ran} خدمة بنجاح`); refetchServices(); },
     onError: (e: any) => toast.error(`خطأ: ${e.message}`),
   });
 
   const clearCache = useMutation({
-    mutationFn: (data: any) => api.post("/api/automation/clear-cache", data).then(r => r.data),
+    mutationFn: (data: any) => api.post("/automation/clear-cache", data).then(r => r.data),
     onSuccess: () => { toast.success('تم مسح الكاش'); refetchDash(); refetchServices(); },
   });
 

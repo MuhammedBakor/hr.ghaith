@@ -45,14 +45,14 @@ export default function GovernanceDashboard() {
   const { data: stats, isLoading: statsLoading, refetch: refetchStats, isError, error} =
     useQuery({
       queryKey: ["governanceDashboard", "stats"],
-      queryFn: () => api.get("/api/governance-dashboard/stats").then(r => r.data),
+      queryFn: () => api.get("/governance-dashboard/stats").then(r => r.data),
     });
 
   // Fetch violations
   const { data: violations, isLoading: violationsLoading, refetch: refetchViolations } =
     useQuery({
       queryKey: ["governanceDashboard", "violations", severityFilter, typeFilter],
-      queryFn: () => api.get("/api/governance-dashboard/violations", { params: {
+      queryFn: () => api.get("/governance-dashboard/violations", { params: {
         severity: severityFilter !== "all" ? severityFilter : undefined,
         type: typeFilter !== "all" ? typeFilter : undefined,
       }}).then(r => r.data),
@@ -62,12 +62,12 @@ export default function GovernanceDashboard() {
   const { data: auditTrail, isLoading: auditLoading, refetch: refetchAudit } =
     useQuery({
       queryKey: ["governanceDashboard", "auditTrail"],
-      queryFn: () => api.get("/api/governance-dashboard/audit-trail", { params: { limit: 50 } }).then(r => r.data),
+      queryFn: () => api.get("/governance-dashboard/audit-trail", { params: { limit: 50 } }).then(r => r.data),
     });
 
   // Run governance check mutation
   const runCheckMutation = useMutation({
-    mutationFn: (data: any) => api.post("/api/governance-dashboard/run-check", data).then(r => r.data),
+    mutationFn: (data: any) => api.post("/governance-dashboard/run-check", data).then(r => r.data),
     onSuccess: () => {
       refetchStats();
       refetchViolations();

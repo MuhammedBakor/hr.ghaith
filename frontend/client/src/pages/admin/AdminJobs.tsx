@@ -9,7 +9,7 @@ import api from "@/lib/api";
 export default function AdminJobs() {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["automation", "list"],
-    queryFn: () => api.get("/api/automation/list").then(r => r.data),
+    queryFn: () => api.get("/automation/list").then(r => r.data),
     retry: 1,
     refetchOnWindowFocus: false,
   });

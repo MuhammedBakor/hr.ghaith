@@ -22,13 +22,13 @@ export default function InsurancePage() {
 
   const { data, isLoading, refetch, isError, error } = useQuery({
     queryKey: ['insurance'],
-    queryFn: () => api.get('/api/insurance').then(r => r.data),
+    queryFn: () => api.get('/insurance').then(r => r.data),
   });
   const list = (data || []) as any[];
 
-  const createMut = useMutation({ mutationFn: (data: any) => api.post('/api/insurance', data).then(r => r.data), onSuccess: () => { refetch(); setOpen(false); resetForm(); }, onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
-  const updateMut = useMutation({ mutationFn: (data: any) => api.put(`/api/insurance/${data.id}`, data).then(r => r.data), onSuccess: () => { refetch(); setOpen(false); resetForm(); }, onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
-  const deleteMut = useMutation({ mutationFn: (data: any) => api.delete(`/api/insurance/${data.id}`, { data }).then(r => r.data), onSuccess: () => refetch(), onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
+  const createMut = useMutation({ mutationFn: (data: any) => api.post('/insurance', data).then(r => r.data), onSuccess: () => { refetch(); setOpen(false); resetForm(); }, onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
+  const updateMut = useMutation({ mutationFn: (data: any) => api.put(`/insurance/${data.id}`, data).then(r => r.data), onSuccess: () => { refetch(); setOpen(false); resetForm(); }, onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
+  const deleteMut = useMutation({ mutationFn: (data: any) => api.delete(`/insurance/${data.id}`, { data }).then(r => r.data), onSuccess: () => refetch(), onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
 
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);

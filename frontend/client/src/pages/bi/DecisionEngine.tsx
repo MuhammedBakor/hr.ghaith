@@ -5,11 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Brain, TrendingUp, Target, Loader2, Inbox, Lightbulb } from 'lucide-react';
 
 export default function DecisionEngine() {
-  const { data: currentUser, isError, error} = useQuery({ queryKey: ['auth', 'me'], queryFn: () => api.get('/api/auth/me').then(r => r.data) });
+  const { data: currentUser, isError, error} = useQuery({ queryKey: ['auth', 'me'], queryFn: () => api.get('/auth/me').then(r => r.data) });
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
-  const { data: vehiclesData, isLoading } = useQuery({ queryKey: ['fleet', 'vehicles'], queryFn: () => api.get('/api/fleet/vehicles').then(r => r.data) });
+  const { data: vehiclesData, isLoading } = useQuery({ queryKey: ['fleet', 'vehicles'], queryFn: () => api.get('/fleet/vehicles').then(r => r.data) });
   const vehicles = (vehiclesData || []) as any[];
 
   if (isLoading) {

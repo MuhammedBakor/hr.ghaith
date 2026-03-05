@@ -26,7 +26,7 @@ import { toast } from 'sonner';
 export default function FleetRouteTargets() {
   const { data: currentUser, isError, error } = useQuery({
     queryKey: ['auth', 'me'],
-    queryFn: () => api.get('/api/auth/me').then(r => r.data),
+    queryFn: () => api.get('/auth/me').then(r => r.data),
   });
   const userRole = currentUser?.role || 'user';
 
@@ -41,19 +41,19 @@ export default function FleetRouteTargets() {
 
   const { data: vehiclesData, isLoading: vehiclesLoading } = useQuery({
     queryKey: ['fleet', 'vehicles'],
-    queryFn: () => api.get('/api/fleet/vehicles').then(r => r.data),
+    queryFn: () => api.get('/fleet/vehicles').then(r => r.data),
   });
   const { data: targetsData, isLoading: targetsLoading, refetch } = useQuery({
     queryKey: ['fleet', 'route-targets', { vehicleId: filterVehicle ? parseInt(filterVehicle) : undefined, status: filterStatus || undefined }],
-    queryFn: () => api.get('/api/fleet/route-targets', { params: { vehicleId: filterVehicle ? parseInt(filterVehicle) : undefined, status: filterStatus || undefined } }).then(r => r.data),
+    queryFn: () => api.get('/fleet/route-targets', { params: { vehicleId: filterVehicle ? parseInt(filterVehicle) : undefined, status: filterStatus || undefined } }).then(r => r.data),
   });
   const { data: statsData } = useQuery({
     queryKey: ['fleet', 'route-targets', 'stats'],
-    queryFn: () => api.get('/api/fleet/route-targets/stats').then(r => r.data),
+    queryFn: () => api.get('/fleet/route-targets/stats').then(r => r.data),
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => api.post('/api/fleet/route-targets', data).then(r => r.data),
+    mutationFn: (data: any) => api.post('/fleet/route-targets', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إنشاء الهدف بنجاح');
       setIsCreateOpen(false);
@@ -65,7 +65,7 @@ export default function FleetRouteTargets() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: any) => api.put(`/api/fleet/route-targets/${data.id}`, data).then(r => r.data),
+    mutationFn: (data: any) => api.put(`/fleet/route-targets/${data.id}`, data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم تحديث الهدف بنجاح');
       setIsEditOpen(false);
@@ -78,7 +78,7 @@ export default function FleetRouteTargets() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (data: any) => api.delete(`/api/fleet/route-targets/${data.id}`).then(r => r.data),
+    mutationFn: (data: any) => api.delete(`/fleet/route-targets/${data.id}`).then(r => r.data),
     onSuccess: () => {
       toast.success('تم حذف الهدف بنجاح');
       refetch();

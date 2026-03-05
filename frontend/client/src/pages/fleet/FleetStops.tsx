@@ -111,7 +111,7 @@ const getStatusBadge = (status: string) => {
 export default function FleetStops() {
   const { data: currentUser, isError, error} = useQuery({
     queryKey: ['auth', 'me'],
-    queryFn: () => api.get('/api/auth/me').then(r => r.data),
+    queryFn: () => api.get('/auth/me').then(r => r.data),
   });
   const userRole = currentUser?.role || 'user';
 
@@ -136,15 +136,15 @@ export default function FleetStops() {
 
   const { data: stopsData, isLoading, refetch } = useQuery({
     queryKey: ['fleet', 'trip-stops'],
-    queryFn: () => api.get('/api/fleet/trip-stops').then(r => r.data),
+    queryFn: () => api.get('/fleet/trip-stops').then(r => r.data),
   });
   const { data: tripsData } = useQuery({
     queryKey: ['fleet-extended', 'trips'],
-    queryFn: () => api.get('/api/fleet-extended/trips').then(r => r.data),
+    queryFn: () => api.get('/fleet-extended/trips').then(r => r.data),
   });
   const { data: vehiclesData } = useQuery({
     queryKey: ['fleet', 'vehicles'],
-    queryFn: () => api.get('/api/fleet/vehicles').then(r => r.data),
+    queryFn: () => api.get('/fleet/vehicles').then(r => r.data),
   });
   
   const stops = (stopsData || []) as TripStop[];
@@ -152,7 +152,7 @@ export default function FleetStops() {
   const vehicles = vehiclesData || [];
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => api.post('/api/fleet/trip-stops', data).then(r => r.data),
+    mutationFn: (data: any) => api.post('/fleet/trip-stops', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إضافة محطة التوقف بنجاح');
       setIsAddOpen(false);
@@ -165,7 +165,7 @@ export default function FleetStops() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: any) => api.put(`/api/fleet/trip-stops/${data.id}`, data).then(r => r.data),
+    mutationFn: (data: any) => api.put(`/fleet/trip-stops/${data.id}`, data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم تحديث محطة التوقف بنجاح');
       setEditingStop(null);
@@ -178,7 +178,7 @@ export default function FleetStops() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (data: any) => api.delete(`/api/fleet/trip-stops/${data.id}`).then(r => r.data),
+    mutationFn: (data: any) => api.delete(`/fleet/trip-stops/${data.id}`).then(r => r.data),
     onSuccess: () => {
       toast.success('تم حذف محطة التوقف بنجاح');
       refetch();

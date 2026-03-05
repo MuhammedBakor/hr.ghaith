@@ -545,7 +545,6 @@ export default function EmployeeActivation() {
                     <Input
                       type="file"
                       accept="image/*,.pdf,.doc,.docx"
-                      accept="image/*,.pdf"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) {

@@ -376,7 +376,7 @@ function CasesSection() {
               <Button disabled={createM.isPending} onClick={() => {
                 if (!form.title.trim() || !form.caseNumber.trim()) return toast.error('يرجى ملء الحقول المطلوبة');
                 createM.mutate(form as any);
-              }} disabled={createM.isPending}>
+              }}>
                 {createM.isPending && <Loader2 className="w-4 h-4 ms-2 animate-spin" />}إنشاء
               </Button>
             </DialogFooter>

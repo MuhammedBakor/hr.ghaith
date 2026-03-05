@@ -9,7 +9,7 @@ import api from "@/lib/api";
 export default function AdminLetterhead() {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["controlKernel", "list"],
-    queryFn: () => api.get("/api/control-kernel/list").then(r => r.data),
+    queryFn: () => api.get("/control-kernel/list").then(r => r.data),
     retry: 1,
     refetchOnWindowFocus: false,
   });

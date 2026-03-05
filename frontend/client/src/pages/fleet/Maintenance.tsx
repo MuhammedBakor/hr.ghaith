@@ -108,23 +108,23 @@ export default function Maintenance() {
 
   const { data: maintenanceData, isLoading, refetch, isError, error } = useQuery({
     queryKey: ['fleet', 'maintenance'],
-    queryFn: () => api.get('/api/fleet/maintenance').then(r => r.data),
+    queryFn: () => api.get('/fleet/maintenance').then(r => r.data),
   });
   const { data: vehiclesData } = useQuery({
     queryKey: ['fleet', 'vehicles'],
-    queryFn: () => api.get('/api/fleet/vehicles').then(r => r.data),
+    queryFn: () => api.get('/fleet/vehicles').then(r => r.data),
   });
   const { data: overdueData } = useQuery({
     queryKey: ['fleet-smart', 'overdue-maintenances'],
-    queryFn: () => api.get('/api/fleet-smart/overdue-maintenances').then(r => r.data),
+    queryFn: () => api.get('/fleet-smart/overdue-maintenances').then(r => r.data),
   });
   const completeMutation = useMutation({
-    mutationFn: (data: any) => api.post('/api/fleet-smart/complete-and-schedule-next', data).then(r => r.data),
+    mutationFn: (data: any) => api.post('/fleet-smart/complete-and-schedule-next', data).then(r => r.data),
     onSuccess: () => { toast.success('تم إكمال الصيانة وجدولة القادمة'); refetch(); },
     onError: (e: any) => toast.error(e.message || 'خطأ'),
   });
   const createMaintenanceMutation = useMutation({
-    mutationFn: (data: any) => api.post('/api/fleet/maintenance', data).then(r => r.data),
+    mutationFn: (data: any) => api.post('/fleet/maintenance', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إضافة سجل الصيانة بنجاح');
       setViewMode('list');

@@ -249,7 +249,7 @@ export default function SystemAdmin() {
             </div>
             <div className="flex gap-3 pt-4">
               <Button variant="outline" onClick={handleBackToList}>إلغاء</Button>
-              <Button disabled={createRuleMutation.isPending} onClick={() => createCompanyMutation.mutate(newCompany)} disabled={createCompanyMutation.isPending}>
+              <Button disabled={createCompanyMutation.isPending} onClick={() => createCompanyMutation.mutate(newCompany)}>
                 {createCompanyMutation.isPending ? "جاري الإنشاء..." : "إنشاء الشركة"}
               </Button>
             </div>

@@ -55,7 +55,7 @@ interface AutomationJob {
 }
 
 export default function SLADashboard() {
-  const { data: currentUser, isError, error} = useQuery({ queryKey: ['auth', 'me'], queryFn: () => api.get('/api/auth/me').then(r => r.data) });
+  const { data: currentUser, isError, error} = useQuery({ queryKey: ['auth', 'me'], queryFn: () => api.get('/auth/me').then(r => r.data) });
   const userRole = currentUser?.role || 'user';
   const requiredRole = 'admin';
   const hasAccess = userRole === 'admin' || userRole === requiredRole || requiredRole === 'user';
@@ -71,31 +71,31 @@ export default function SLADashboard() {
   // جلب البيانات من الـ API
   const { data: stats, refetch: refetchStats, isLoading: loadingStats } = useQuery({
     queryKey: ['automation', 'statistics'],
-    queryFn: () => api.get('/api/automation/statistics').then(r => r.data),
+    queryFn: () => api.get('/automation/statistics').then(r => r.data),
     refetchInterval: 30000,
   });
 
   const { data: breachedSLAs, refetch: refetchBreached, isLoading: loadingBreached } = useQuery({
     queryKey: ['automation', 'breached-slas'],
-    queryFn: () => api.get('/api/automation/breached-slas').then(r => r.data),
+    queryFn: () => api.get('/automation/breached-slas').then(r => r.data),
     refetchInterval: 30000,
   });
 
   const { data: escalations, refetch: refetchEscalations, isLoading: loadingEscalations } = useQuery({
     queryKey: ['automation', 'active-escalations'],
-    queryFn: () => api.get('/api/automation/active-escalations').then(r => r.data),
+    queryFn: () => api.get('/automation/active-escalations').then(r => r.data),
     refetchInterval: 30000,
   });
 
   const { data: pendingJobs, refetch: refetchJobs, isLoading: loadingJobs } = useQuery({
     queryKey: ['automation', 'pending-jobs'],
-    queryFn: () => api.get('/api/automation/pending-jobs').then(r => r.data),
+    queryFn: () => api.get('/automation/pending-jobs').then(r => r.data),
     refetchInterval: 30000,
   });
 
   const { data: failedJobs, refetch: refetchFailed } = useQuery({
     queryKey: ['automation', 'failed-jobs'],
-    queryFn: () => api.get('/api/automation/failed-jobs').then(r => r.data),
+    queryFn: () => api.get('/automation/failed-jobs').then(r => r.data),
     refetchInterval: 60000,
   });
 

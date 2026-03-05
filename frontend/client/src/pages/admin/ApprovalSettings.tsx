@@ -34,11 +34,11 @@ export default function ApprovalSettingsPage() {
 
   const { data: settings, isLoading, refetch, isError, error} = useQuery({
     queryKey: ["approvalSettings", "list"],
-    queryFn: () => api.get("/api/approval-settings").then(r => r.data),
+    queryFn: () => api.get("/approval-settings").then(r => r.data),
   });
 
   const upsertMutation = useMutation({
-    mutationFn: (data: any) => api.post("/api/approval-settings", data).then(r => r.data),
+    mutationFn: (data: any) => api.post("/approval-settings", data).then(r => r.data),
     onSuccess: () => { toast.success('تم حفظ الإعدادات'); refetch(); },
     onError: (e: any) => toast.error(e.message),
   });

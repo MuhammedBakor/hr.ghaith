@@ -287,7 +287,7 @@ export default function ExceptionsDashboard() {
   // Fetch data
   const { data: exceptionsData, refetch: refetchExceptions, isError, error, isLoading} = useQuery({
     queryKey: ["exceptions", "list", statusFilter, severityFilter, moduleFilter],
-    queryFn: () => api.get("/api/exceptions", { params: {
+    queryFn: () => api.get("/exceptions", { params: {
       status: statusFilter !== 'all' ? statusFilter : undefined,
       severity: severityFilter !== 'all' ? severityFilter : undefined,
       module: moduleFilter !== 'all' ? moduleFilter : undefined,
@@ -296,7 +296,7 @@ export default function ExceptionsDashboard() {
 
   const { data: suspenseData, refetch: refetchSuspense } = useQuery({
     queryKey: ["exceptions", "suspenseItems", moduleFilter],
-    queryFn: () => api.get("/api/exceptions/suspense-items", { params: {
+    queryFn: () => api.get("/exceptions/suspense-items", { params: {
       isResolved: false,
       module: moduleFilter !== 'all' ? moduleFilter : undefined,
     }}).then(r => r.data),
@@ -304,12 +304,12 @@ export default function ExceptionsDashboard() {
 
   const { data: statsData } = useQuery({
     queryKey: ["exceptions", "stats"],
-    queryFn: () => api.get("/api/exceptions/stats").then(r => r.data),
+    queryFn: () => api.get("/exceptions/stats").then(r => r.data),
   });
 
   // Mutations
   const resolveMutation = useMutation({
-    mutationFn: (data: any) => api.post("/api/exceptions/resolve", data).then(r => r.data),
+    mutationFn: (data: any) => api.post("/exceptions/resolve", data).then(r => r.data),
     onSuccess: () => {
       showNotification('تم حل الاستثناء بنجاح');
       refetchExceptions();
@@ -318,7 +318,7 @@ export default function ExceptionsDashboard() {
   });
 
   const escalateMutation = useMutation({
-    mutationFn: (data: any) => api.post("/api/exceptions/escalate", data).then(r => r.data),
+    mutationFn: (data: any) => api.post("/exceptions/escalate", data).then(r => r.data),
     onSuccess: () => {
       showNotification('تم تصعيد الاستثناء');
       refetchExceptions();
@@ -326,7 +326,7 @@ export default function ExceptionsDashboard() {
   });
 
   const acknowledgeMutation = useMutation({
-    mutationFn: (data: any) => api.post("/api/exceptions/acknowledge", data).then(r => r.data),
+    mutationFn: (data: any) => api.post("/exceptions/acknowledge", data).then(r => r.data),
     onSuccess: () => {
       showNotification('تم تسجيل الاطلاع');
       refetchExceptions();
@@ -334,7 +334,7 @@ export default function ExceptionsDashboard() {
   });
 
   const resolveSuspenseMutation = useMutation({
-    mutationFn: (data: any) => api.post("/api/exceptions/resolve-suspense", data).then(r => r.data),
+    mutationFn: (data: any) => api.post("/exceptions/resolve-suspense", data).then(r => r.data),
     onSuccess: () => {
       showNotification('تم حل المعلق بنجاح');
       refetchSuspense();

@@ -9,7 +9,7 @@ import api from "@/lib/api";
 export default function AdminGovernanceAudit() {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["governance", "auditLogs"],
-    queryFn: () => api.get("/api/governance/audit-logs").then(r => r.data),
+    queryFn: () => api.get("/governance/audit-logs").then(r => r.data),
     retry: 1,
     refetchOnWindowFocus: false,
   });

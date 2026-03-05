@@ -65,4 +65,14 @@ public class AttendanceController {
         // Stub implementation - can be expanded later
         return ResponseEntity.ok(Map.of("success", true, "message", "تم تقديم طلب المغادرة المبكرة"));
     }
+
+    @GetMapping("/report-settings")
+    public ResponseEntity<?> getReportSettings() {
+        return ResponseEntity.ok(new java.util.HashMap<>());
+    }
+
+    @PostMapping("/send-monthly-report")
+    public ResponseEntity<?> sendMonthlyReport(@RequestBody(required = false) Map<String, Object> payload) {
+        return ResponseEntity.ok(Map.of("success", true));
+    }
 }

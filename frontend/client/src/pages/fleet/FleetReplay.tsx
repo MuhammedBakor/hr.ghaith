@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { toast } from 'react-hot-toast';
+import { toast } from 'sonner';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,7 +30,7 @@ export default function FleetReplay() {
   };
 
   const saveMutation = useMutation({
-    mutationFn: (data: any) => api.post('/api/fleet-smart', data).then(r => r.data),
+    mutationFn: (data: any) => api.post('/fleet-smart', data).then(r => r.data),
     onSuccess: () => {
       setFormData({ 'vehicleId': '', 'startDate': '', 'endDate': '',
       onError: (e: any) => toast.error(e?.message || 'حدث خطأ')});
@@ -51,7 +51,7 @@ export default function FleetReplay() {
 
   const { data: currentUser, isError, error} = useQuery({
     queryKey: ['auth', 'me'],
-    queryFn: () => api.get('/api/auth/me').then(r => r.data),
+    queryFn: () => api.get('/auth/me').then(r => r.data),
   });
   const userRole = currentUser?.role || 'user';
 
@@ -61,7 +61,7 @@ export default function FleetReplay() {
 
   const { data: vehiclesData, isLoading } = useQuery({
     queryKey: ['fleet', 'vehicles'],
-    queryFn: () => api.get('/api/fleet/vehicles').then(r => r.data),
+    queryFn: () => api.get('/fleet/vehicles').then(r => r.data),
   });
   const vehicles = (vehiclesData || []) as any[];
 
