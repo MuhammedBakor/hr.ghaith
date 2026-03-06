@@ -97,10 +97,9 @@ export default function RoleSettings() {
     active: roles.length, // All roles are active by default
   };
 
+  if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>;
+
   if (isLoading) {
-    if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>;
-
-
     return (
     <div className="flex items-center justify-center h-64" dir="rtl">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

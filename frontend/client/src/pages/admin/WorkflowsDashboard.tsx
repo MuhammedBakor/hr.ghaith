@@ -16,6 +16,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { ShoppingCart, Users, Car, Clock, CheckCircle, AlertTriangle, XCircle, Activity, RefreshCw, Eye, Loader2 } from "lucide-react";
 import { PrintButton } from "@/components/PrintButton";
+import { toast } from "sonner";
 
 export default function WorkflowsDashboard() {
   const saveMut = useMutation({
@@ -257,8 +258,6 @@ export default function WorkflowsDashboard() {
     overdue: acc.overdue + w.overdue,
   }), { total: 0, active: 0, pending: 0, completed: 0, overdue: 0 });
 
-  if (isLoading) {
-    
   if (isError) return (
     <div className="p-8 text-center">
       <p className="text-red-500 text-lg">حدث خطأ في تحميل البيانات</p>
@@ -266,7 +265,10 @@ export default function WorkflowsDashboard() {
     </div>
   );
 
-  return (
+
+
+  if (isLoading) {
+    return (
       <DashboardLayout>
         <div className="mb-4 flex items-center gap-2">
           <input

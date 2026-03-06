@@ -54,6 +54,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import DashboardLayout from "./components/layout/DashboardLayout";
 import { useAuth } from "./_core/hooks/useAuth";
+import { RoleProtectedRoute } from "./components/RoleProtectedRoute";
 
 // v56: Lazy loaded pages for performance
 const NotFound = lazy(() => import("@/pages/NotFound"));
@@ -325,15 +326,19 @@ function Router() {
 
       {/* HR Module Routes */}
       <Route path="/hr">
-        <DashboardLayout>
-          <EmployeeList />
-        </DashboardLayout>
+        <RoleProtectedRoute module="hr">
+          <DashboardLayout>
+            <EmployeeList />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/hr/attendance">
-        <DashboardLayout>
-          <Attendance />
-        </DashboardLayout>
+        <RoleProtectedRoute module="hr" hrSubPage="attendance">
+          <DashboardLayout>
+            <Attendance />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/hr/attendance-reports">
@@ -367,15 +372,19 @@ function Router() {
       </Route>
 
       <Route path="/hr/leaves">
-        <DashboardLayout>
-          <Leaves />
-        </DashboardLayout>
+        <RoleProtectedRoute module="hr" hrSubPage="leaves">
+          <DashboardLayout>
+            <Leaves />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/hr/payroll">
-        <DashboardLayout>
-          <Payroll />
-        </DashboardLayout>
+        <RoleProtectedRoute module="hr" hrSubPage="payroll">
+          <DashboardLayout>
+            <Payroll />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/hr/salary-components">
@@ -550,9 +559,11 @@ function Router() {
 
       {/* Finance Module Routes */}
       <Route path="/finance">
-        <DashboardLayout>
-          <InvoiceList />
-        </DashboardLayout>
+        <RoleProtectedRoute module="finance">
+          <DashboardLayout>
+            <InvoiceList />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/finance/invoices">
@@ -647,21 +658,27 @@ function Router() {
 
       {/* Fleet Module Routes */}
       <Route path="/fleet">
-        <DashboardLayout>
-          <FleetLive />
-        </DashboardLayout>
+        <RoleProtectedRoute module="fleet">
+          <DashboardLayout>
+            <FleetLive />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/fleet/vehicles">
-        <DashboardLayout>
-          <Vehicles />
-        </DashboardLayout>
+        <RoleProtectedRoute module="fleet">
+          <DashboardLayout>
+            <Vehicles />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/fleet/maintenance">
-        <DashboardLayout>
-          <Maintenance />
-        </DashboardLayout>
+        <RoleProtectedRoute module="fleet">
+          <DashboardLayout>
+            <Maintenance />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/fleet/fuel">
@@ -751,9 +768,11 @@ function Router() {
 
       {/* Governance Module Routes */}
       <Route path="/governance">
-        <DashboardLayout>
-          <GovernanceLayer />
-        </DashboardLayout>
+        <RoleProtectedRoute module="governance">
+          <DashboardLayout>
+            <GovernanceLayer />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/governance/policies">
@@ -818,9 +837,11 @@ function Router() {
 
       {/* BI Module Routes */}
       <Route path="/bi">
-        <DashboardLayout>
-          <BI />
-        </DashboardLayout>
+        <RoleProtectedRoute module="bi">
+          <DashboardLayout>
+            <BI />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/bi/dashboards">
@@ -879,9 +900,11 @@ function Router() {
       </Route>
 
       <Route path="/support/tickets">
-        <DashboardLayout>
-          <Tickets />
-        </DashboardLayout>
+        <RoleProtectedRoute module="support">
+          <DashboardLayout>
+            <Tickets />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/support/tickets/:id/comments">
@@ -892,9 +915,11 @@ function Router() {
 
       {/* Documents Module Routes */}
       <Route path="/documents">
-        <DashboardLayout>
-          <DocumentList />
-        </DashboardLayout>
+        <RoleProtectedRoute module="documents">
+          <DashboardLayout>
+            <DocumentList />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/documents/folders">
@@ -917,9 +942,11 @@ function Router() {
 
       {/* Reports Module Routes */}
       <Route path="/reports">
-        <DashboardLayout>
-          <ReportsDashboard />
-        </DashboardLayout>
+        <RoleProtectedRoute module="reports">
+          <DashboardLayout>
+            <ReportsDashboard />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/reports/custom">
@@ -935,9 +962,11 @@ function Router() {
       </Route>
 
       <Route path="/operations">
-        <DashboardLayout>
-          <Ops />
-        </DashboardLayout>
+        <RoleProtectedRoute module="projects">
+          <DashboardLayout>
+            <Ops />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/operations/projects">
@@ -978,9 +1007,11 @@ function Router() {
 
       {/* Admin Module Routes */}
       <Route path="/admin">
-        <DashboardLayout>
-          <SystemCatalog />
-        </DashboardLayout>
+        <RoleProtectedRoute module="admin">
+          <DashboardLayout>
+            <SystemCatalog />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/admin/users">
@@ -1112,6 +1143,66 @@ function Router() {
         </DashboardLayout>
       </Route>
 
+      <Route path="/admin/decisions">
+        <DashboardLayout>
+          <DecisionsDashboard />
+        </DashboardLayout>
+      </Route>
+
+      <Route path="/admin/delegations">
+        <DashboardLayout>
+          <Delegations />
+        </DashboardLayout>
+      </Route>
+
+      <Route path="/admin/approval-settings">
+        <DashboardLayout>
+          <ApprovalSettingsPage />
+        </DashboardLayout>
+      </Route>
+
+      <Route path="/admin/exceptions">
+        <DashboardLayout>
+          <ExceptionsDashboard />
+        </DashboardLayout>
+      </Route>
+
+      <Route path="/admin/state-history">
+        <DashboardLayout>
+          <StateHistoryPage />
+        </DashboardLayout>
+      </Route>
+
+      <Route path="/admin/workflows">
+        <DashboardLayout>
+          <WorkflowsDashboard />
+        </DashboardLayout>
+      </Route>
+
+      <Route path="/admin/scheduler">
+        <DashboardLayout>
+          <SchedulerDashboard />
+        </DashboardLayout>
+      </Route>
+
+      <Route path="/admin/jobs">
+        <DashboardLayout>
+          <JobsDashboard />
+        </DashboardLayout>
+      </Route>
+
+      <Route path="/admin/letterhead">
+        <DashboardLayout>
+          <LetterheadSettings />
+        </DashboardLayout>
+      </Route>
+
+      <Route path="/admin/governance-audit">
+        <DashboardLayout>
+          <GovernanceAuditLog />
+        </DashboardLayout>
+      </Route>
+
       <Route path="/settings/branding">
         <DashboardLayout>
           <LetterheadSettings />
@@ -1120,9 +1211,11 @@ function Router() {
 
       {/* Settings Module Routes */}
       <Route path="/settings">
-        <DashboardLayout>
-          <Settings />
-        </DashboardLayout>
+        <RoleProtectedRoute module="settings">
+          <DashboardLayout>
+            <Settings />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       {/* User Profile Route */}
@@ -1323,9 +1416,11 @@ function Router() {
 
       {/* Legal Module Routes */}
       <Route path="/legal">
-        <DashboardLayout>
-          <Legal />
-        </DashboardLayout>
+        <RoleProtectedRoute module="legal">
+          <DashboardLayout>
+            <Legal />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/legal/contracts">

@@ -5,12 +5,15 @@ const getBaseURL = () => {
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
   }
-  // In production, use the same host on port 8080
-  if (import.meta.env.PROD) {
-    return `${window.location.protocol}//${window.location.hostname}:8080/api/v1`;
+
+  // In development, if no env var is set, use localhost
+  if (import.meta.env.DEV) {
+    return "http://localhost:8080/api/v1";
   }
-  // In development, use localhost
-  return "http://localhost:8080/api/v1";
+
+  // In production, if no VITE_API_URL is provided, fallback to relative path /api/v1
+  // This helps when hosting front/back on the same domain
+  return "/api/v1";
 };
 
 const api = axios.create({

@@ -5,9 +5,14 @@ import org.springframework.web.bind.annotation.*;
 import java.util.*;
 
 @RestController
-@RequestMapping("/api/v1/projects")
+@RequestMapping("/api/v1/operations")
 @CrossOrigin(origins = "*")
 public class ProjectController {
+
+    @GetMapping("/stats")
+    public ResponseEntity<?> getStats() {
+        return ResponseEntity.ok(Collections.emptyList());
+    }
 
     @GetMapping("")
     public ResponseEntity<?> getProjects() {

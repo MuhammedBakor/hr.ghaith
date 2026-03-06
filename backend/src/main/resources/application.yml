@@ -7,7 +7,7 @@ spring:
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5434}/${DB_NAME:ghaith_erp}
     username: ${DB_USER:ghaith_admin}
-    password: ${DB_PASS:ghaith_pass}
+    password: ${DB_PASSWORD:ghaith_pass}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -20,8 +20,8 @@ spring:
   mail:
     host: ${SMTP_HOST:smtp.gmail.com}
     port: ${SMTP_PORT:587}
-    username: ${SMTP_USERNAME:assaa1122a@gmail.com}
-    password: ${SMTP_PASSWORD:tepc lqpl zpiy pkvz}
+    username: ${SMTP_USER:assaa1122a@gmail.com}
+    password: ${SMTP_PASS:tepc lqpl zpiy pkvz}
     properties:
       mail:
         smtp:

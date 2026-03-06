@@ -37,6 +37,16 @@ public class FleetController {
 
     @GetMapping("/maintenance")
     public ResponseEntity<?> getMaintenance() {
-        return ResponseEntity.ok(fleetService.getAllFuelLogs()); // Using fuel logs as a proxy for now or keep empty
+        return ResponseEntity.ok(fleetService.getAllFuelLogs());
+    }
+
+    @GetMapping("/fuel")
+    public ResponseEntity<List<FuelLog>> getFuelLogs() {
+        return ResponseEntity.ok(fleetService.getAllFuelLogs());
+    }
+
+    @PostMapping("/fuel")
+    public ResponseEntity<FuelLog> createFuelLog(@RequestBody FuelLog fuelLog) {
+        return ResponseEntity.ok(fleetService.createFuelLog(fuelLog));
     }
 }

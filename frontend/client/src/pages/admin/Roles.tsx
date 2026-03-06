@@ -106,10 +106,9 @@ export default function Roles() {
     setShowPermissionsDialog(true);
   };
 
+  if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ</div>;
+
   if (isLoading) {
-    if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ</div>;
-
-
     return (
       <div className="flex items-center justify-center h-64" dir="rtl">
         {/* نموذج متكامل مضمن */}

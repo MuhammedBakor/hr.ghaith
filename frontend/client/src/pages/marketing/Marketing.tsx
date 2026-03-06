@@ -240,10 +240,9 @@ export default function Marketing() {
     { label: "المصروف", value: `${(totalSpent / 1000).toFixed(0)}K`, icon: TrendingUp, color: "text-purple-600", bg: "bg-purple-50" },
   ];
 
-  if (isLoading) {
-    if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ</div>;
+  if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ</div>;
 
-    
+  if (isLoading) {
     return (
     <div className="flex items-center justify-center h-64" dir="rtl">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

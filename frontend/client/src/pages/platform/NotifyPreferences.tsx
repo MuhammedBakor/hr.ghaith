@@ -224,8 +224,6 @@ export default function NotifyPreferences() {
     resetMutation.mutate({});
   };
 
-  if (isLoading) {
-    
   if (isError) return (
     <div className="p-8 text-center">
       {/* نموذج متكامل مضمن */}
@@ -257,6 +255,11 @@ export default function NotifyPreferences() {
       <p className="text-gray-500 mt-2">{error?.message}</p>
     </div>
   );
+
+
+
+  if (isLoading) {
+
 
   return (
       <div className="flex items-center justify-center h-64" dir="rtl">

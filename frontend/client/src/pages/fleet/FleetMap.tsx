@@ -114,8 +114,6 @@ export default function FleetMap() {
   const lat = selectedVehicle?.lat;
   const lng = selectedVehicle?.lng;
 
-  if (isLoading) {
-
   if (isError) return (
     <div className="p-8 text-center">
         {/* إضافة جديد */}
@@ -137,6 +135,11 @@ export default function FleetMap() {
       <p className="text-gray-500 mt-2">{error?.message}</p>
     </div>
   );
+
+
+
+  if (isLoading) {
+
 
   return (
     <div className="flex items-center justify-center h-64" dir="rtl">

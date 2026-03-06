@@ -269,31 +269,15 @@ export default function RequestTypes() {
     </button>
   );
 
-  if (isLoading) {
-    
   if (isError) return (
     <div className="p-8 text-center">
-        {/* إضافة جديد */}
-        <div className="mb-4 flex justify-between items-center">
-          <button onClick={() => setShowCreateForm(!showCreateForm)} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
-            {showCreateForm ? 'إلغاء' : '+ إضافة جديد'}
-          </button>
-        </div>
-        {showCreateForm && (
-          <div className="mb-6 p-4 bg-gray-50 rounded-lg border">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <input placeholder="الاسم" value={createData.name || ''} onChange={e => setCreateData({...createData, name: e.target.value})} className="px-3 py-2 border rounded-lg" />
-              <input placeholder="الوصف" value={createData.description || ''} onChange={e => setCreateData({...createData, description: e.target.value})} className="px-3 py-2 border rounded-lg" />
-            </div>
-            <button onClick={() => createMutation.mutate(createData)} className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700">حفظ</button>
-          </div>
-        )}
       <p className="text-red-500 text-lg">حدث خطأ في تحميل البيانات</p>
       <p className="text-gray-500 mt-2">{error?.message}</p>
     </div>
   );
 
-  return (
+  if (isLoading) {
+    return (
       <div className="flex items-center justify-center h-64" dir="rtl">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
         <span className="me-2">جاري تحميل أنواع الطلبات...</span>

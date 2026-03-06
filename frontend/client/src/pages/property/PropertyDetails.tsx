@@ -87,14 +87,17 @@ export default function PropertyDetails() {
     });
   };
 
-  if (isLoading) {
-    
   if (isError) return (
     <div className="p-8 text-center">
       <p className="text-red-500 text-lg">حدث خطأ في تحميل البيانات</p>
       <p className="text-gray-500 mt-2">{error?.message}</p>
     </div>
   );
+
+
+
+  if (isLoading) {
+
 
   return (
     <div className="flex items-center justify-center h-64" dir="rtl">

@@ -12,10 +12,9 @@ export default function DecisionEngine() {
   const { data: vehiclesData, isLoading } = useQuery({ queryKey: ['fleet', 'vehicles'], queryFn: () => api.get('/fleet/vehicles').then(r => r.data) });
   const vehicles = (vehiclesData || []) as any[];
 
-  if (isLoading) {
-    if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>;
+  if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>;
 
-    
+  if (isLoading) {
     return (
     <div className="flex items-center justify-center h-64" dir="rtl">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
 
 // أنواع الصفات المتاحة
-export type UserRoleType = 'admin' | 'general_manager' | 'hr_manager' | 'finance_manager' | 'fleet_manager' | 'legal_manager' | 'projects_manager' | 'store_manager' | 'supervisor' | 'employee' | 'department_manager';
+export type UserRoleType = 'admin' | 'general_manager' | 'hr_manager' | 'finance_manager' | 'fleet_manager' | 'legal_manager' | 'projects_manager' | 'store_manager' | 'supervisor' | 'employee' | 'department_manager' | 'agent';
 
 export const roleLabels: Record<UserRoleType, string> = {
   admin: 'مدير النظام',
@@ -18,6 +18,7 @@ export const roleLabels: Record<UserRoleType, string> = {
   supervisor: 'مشرف',
   employee: 'موظف',
   department_manager: 'مدير قسم',
+  agent: 'مندوب / وكيل',
 };
 
 export const roleColors: Record<UserRoleType, string> = {
@@ -32,6 +33,7 @@ export const roleColors: Record<UserRoleType, string> = {
   supervisor: '#3498DB',
   employee: '#95A5A6',
   department_manager: '#16A085',
+  agent: '#E67E22',
 };
 
 // ربط الأقسام بأدوار مدير القسم
@@ -78,6 +80,7 @@ export const roleLevels: Record<UserRoleType, number> = {
   supervisor: 50,
   employee: 10,
   department_manager: 60,
+  agent: 15,
 };
 
 // الفروع المتاحة
@@ -97,20 +100,24 @@ export type ModuleType =
   | 'operations'
   | 'governance'
   | 'bi'
-  | 'integrations'
-  | 'requests'
+  | 'support'
+  | 'legal'
+  | 'projects'
   | 'documents'
   | 'reports'
   | 'admin'
-  | 'comms'
-  | 'legal'
+  | 'settings'
+  | 'system'
   | 'marketing'
   | 'store'
   | 'workflow'
+  | 'comm'
+  | 'integrations'
+  | 'requests'
+  | 'comms'
   | 'public_site'
   | 'inbox'
-  | 'platform'
-  | 'settings';
+  | 'platform';
 
 // صلاحيات الوحدات لكل صفة
 export const modulePermissions: Record<UserRoleType, ModuleType[]> = {
@@ -151,6 +158,9 @@ export const modulePermissions: Record<UserRoleType, ModuleType[]> = {
   department_manager: [
     'home', 'hr', 'property', 'requests', 'documents', 'comms'
   ],
+  agent: [
+    'home', 'fleet', 'requests', 'comms'
+  ],
 };
 
 // صلاحيات HR الفرعية لكل صفة
@@ -175,6 +185,7 @@ export const hrSubPermissions: Record<UserRoleType, string[]> = {
   supervisor: ['attendance', 'leaves', 'my_violations'],
   employee: ['attendance', 'leaves', 'my_violations'],
   department_manager: ['attendance', 'leaves', 'my_violations'],
+  agent: [],
 };
 
 // صلاحيات كل صفة
@@ -282,6 +293,14 @@ export const rolePermissions: Record<UserRoleType, {
     canViewAllBranches: false, canManageViolations: false, canConfirmViolations: true,
     canApproveViolations: false, canExecutePenalties: false, canManageEmployees: false,
     canApproveLeaves: true, canViewReports: false, canManageSettings: false,
+    canManageUsers: false, canManageRoles: false, canViewAuditLogs: false,
+    canManageFinance: false, canManageFleet: false, canManageProperty: false,
+    canManageGovernance: false, canManageBI: false, canManageLegal: false,
+  },
+  agent: {
+    canViewAllBranches: false, canManageViolations: false, canConfirmViolations: false,
+    canApproveViolations: false, canExecutePenalties: false, canManageEmployees: false,
+    canApproveLeaves: false, canViewReports: false, canManageSettings: false,
     canManageUsers: false, canManageRoles: false, canViewAuditLogs: false,
     canManageFinance: false, canManageFleet: false, canManageProperty: false,
     canManageGovernance: false, canManageBI: false, canManageLegal: false,

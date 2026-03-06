@@ -225,10 +225,9 @@ export default function Risks() {
     return CATEGORIES.find(c => c.value === category)?.label || category;
   };
 
+  if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ</div>;
+
   if (isLoading) {
-    if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ</div>;
-
-
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

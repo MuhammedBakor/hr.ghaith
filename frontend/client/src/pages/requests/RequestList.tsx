@@ -150,6 +150,10 @@ export default function RequestList() {
           <h2 className="text-2xl font-bold tracking-tight">الطلبات</h2>
           <p className="text-gray-500">مركز الطلبات والتذاكر الموحد</p>
         </div>
+        <Button onClick={() => setIsOpen(!isOpen)}>
+          {isOpen ? 'إلغاء' : '+ إنشاء طلب جديد'}
+        </Button>
+      </div>
         {isOpen && (<div className="mt-4 p-6 bg-white border rounded-xl shadow-sm animate-in fade-in">
           
           

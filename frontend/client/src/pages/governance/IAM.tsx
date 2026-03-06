@@ -109,8 +109,6 @@ export default function IAM() {
 
   const isLoading = usersLoading || rolesLoading;
 
-  if (isLoading) {
-
   if (isError) return (
     <div className="p-8 text-center">
         {/* إضافة جديد */}
@@ -132,6 +130,11 @@ export default function IAM() {
       <p className="text-gray-500 mt-2">{error?.message}</p>
     </div>
   );
+
+
+
+  if (isLoading) {
+
 
   return (
     <div className="flex items-center justify-center h-64" dir="rtl">

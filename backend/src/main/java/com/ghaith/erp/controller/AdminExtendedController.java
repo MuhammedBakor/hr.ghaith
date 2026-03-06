@@ -107,9 +107,29 @@ public class AdminExtendedController {
         return ResponseEntity.ok(Collections.emptyList());
     }
 
+    @PostMapping("/automation-rules")
+    public ResponseEntity<?> createAutomationRule(@RequestBody(required = false) Map<String, Object> body) {
+        return ResponseEntity.ok(body != null ? body : new HashMap<>());
+    }
+
     @GetMapping("/companies")
     public ResponseEntity<?> getCompanies() {
         return ResponseEntity.ok(Collections.emptyList());
+    }
+
+    @PostMapping("/companies")
+    public ResponseEntity<?> createCompany(@RequestBody(required = false) Map<String, Object> body) {
+        return ResponseEntity.ok(body != null ? body : new HashMap<>());
+    }
+
+    @PostMapping("/role-packs")
+    public ResponseEntity<?> createRolePack(@RequestBody(required = false) Map<String, Object> body) {
+        return ResponseEntity.ok(body != null ? body : new HashMap<>());
+    }
+
+    @PostMapping("/settings")
+    public ResponseEntity<?> createSettings(@RequestBody(required = false) Map<String, Object> body) {
+        return ResponseEntity.ok(body != null ? body : new HashMap<>());
     }
 
     @GetMapping("/exceptions/suspense-items")

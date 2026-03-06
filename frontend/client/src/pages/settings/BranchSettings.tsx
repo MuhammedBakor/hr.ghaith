@@ -112,10 +112,9 @@ export default function BranchSettings() {
     inactive: branches.filter(b => !b.isActive).length,
   };
 
+  if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>;
+
   if (isLoading) {
-    if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>;
-
-
     return (
     <div className="flex items-center justify-center h-64" dir="rtl">
         <div className="mb-4 flex items-center gap-2">

@@ -14,8 +14,10 @@ import java.time.LocalDateTime;
 public class FuelLog extends BaseEntity {
     private Long vehicleId;
     private Long driverId;
-    private Double liters;
+    private String fuelType;
+    private Double quantity;
     private BigDecimal cost;
     private LocalDateTime logDate;
     private Double odometer;
+    private String station;
 }

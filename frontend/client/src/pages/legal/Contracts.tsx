@@ -317,10 +317,9 @@ export default function Contracts() {
     toast.success('تم تصدير البيانات بنجاح');
   };
 
-  if (isLoading) {
-    if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ</div>;
+  if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ</div>;
 
-    
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64" dir="rtl">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

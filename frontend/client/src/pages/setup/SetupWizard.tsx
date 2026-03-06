@@ -193,14 +193,17 @@ export default function SetupWizard() {
     }
   }, [setupStatus?.isComplete, navigate]);
 
-  if (isLoading) {
-    
   if (isError) return (
     <div className="p-8 text-center">
       <p className="text-red-500 text-lg">حدث خطأ في تحميل البيانات</p>
       <p className="text-gray-500 mt-2">{error?.message}</p>
     </div>
   );
+
+
+
+  if (isLoading) {
+
   // Empty state
   const isEmpty = !currentUser || (Array.isArray(currentUser) && currentUser.length === 0);
 
