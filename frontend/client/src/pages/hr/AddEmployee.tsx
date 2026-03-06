@@ -48,7 +48,7 @@ export default function AddEmployee() {
   const roles = (rolesData || []).filter((r: string) => r && r.trim() !== "").map((r: string) => ({
     id: r,
     name: r,
-    nameAr: r === 'USER' ? 'موظف' : r === 'AGENT' ? 'مندوب' : r === 'MANAGER' ? 'مدير' : r === 'OPERATIONS' ? 'تشغيل' : r === 'ADMIN' ? 'مسؤول' : r === 'OWNER' ? 'مالك' : r
+    nameAr: r === 'OWNER' ? 'مالك' : r === 'GENERAL_MANAGER' ? 'مدير عام' : r === 'DEPARTEMENT_MANAGER' ? 'مدير قسم' : r === 'SUPERVISOR' ? 'مشرف' : r === 'EMPLOYEE' ? 'موظف' : r === 'AGENT' ? 'مندوب' : r
   }));
   const { data: positionsData, isLoading: isLoadingPositions } = usePositions();
   const positions = positionsData || [];
@@ -59,7 +59,7 @@ export default function AddEmployee() {
 
   const [formData, setFormData] = useState({
     firstName: '', lastName: '', email: '', phone: '',
-    departmentId: '', branchId: '', positionId: '', roleCode: 'USER',
+    departmentId: '', branchId: '', positionId: '', roleCode: 'EMPLOYEE',
     managerId: '', joinDate: new Date().toISOString().split('T')[0], workType: 'full_time',
     nationalId: '', nationality: '', dateOfBirth: '', gender: '', maritalStatus: '', address: '',
     emergencyName: '', emergencyRelation: '', emergencyPhone: '',
@@ -247,10 +247,12 @@ export default function AddEmployee() {
                           <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: '#6b7280' }} />{r.nameAr || r.name}</span>
                         </SelectItem>
                       )) : <>
-                        <SelectItem value="USER">موظف</SelectItem>
+                        <SelectItem value="OWNER">مالك</SelectItem>
+                        <SelectItem value="GENERAL_MANAGER">مدير عام</SelectItem>
+                        <SelectItem value="DEPARTEMENT_MANAGER">مدير قسم</SelectItem>
+                        <SelectItem value="SUPERVISOR">مشرف</SelectItem>
+                        <SelectItem value="EMPLOYEE">موظف</SelectItem>
                         <SelectItem value="AGENT">مندوب</SelectItem>
-                        <SelectItem value="MANAGER">مدير</SelectItem>
-                        <SelectItem value="OPERATIONS">تشغيل</SelectItem>
                       </>}
                     </SelectContent>
                   </Select>

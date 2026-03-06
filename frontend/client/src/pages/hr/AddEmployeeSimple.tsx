@@ -34,7 +34,7 @@ export default function AddEmployeeSimple() {
     email: '',
     phone: '',
     branchId: selectedBranchId?.toString() || '',
-    role: 'USER',
+    role: 'EMPLOYEE',
   });
 
   const updateField = (field: string, value: string) => {
@@ -49,7 +49,7 @@ export default function AddEmployeeSimple() {
   const roles = (rolesData || []).filter((r: string) => r && r.trim() !== "").map((r: string) => ({
     id: r,
     name: r,
-    nameAr: r === 'USER' ? 'موظف' : r === 'AGENT' ? 'مندوب' : r === 'MANAGER' ? 'مدير' : r === 'OPERATIONS' ? 'تشغيل' : r === 'ADMIN' ? 'مسؤول' : r === 'OWNER' ? 'مالك' : r
+    nameAr: r === 'OWNER' ? 'مالك' : r === 'GENERAL_MANAGER' ? 'مدير عام' : r === 'DEPARTEMENT_MANAGER' ? 'مدير قسم' : r === 'SUPERVISOR' ? 'مشرف' : r === 'EMPLOYEE' ? 'موظف' : r === 'AGENT' ? 'مندوب' : r
   }));
 
   const handleSubmit = async () => {
@@ -144,7 +144,7 @@ export default function AddEmployeeSimple() {
                   email: '',
                   phone: '',
                   branchId: selectedBranchId?.toString() || '',
-                  role: 'USER',
+                  role: 'EMPLOYEE',
                 });
               }}>
                 <UserPlus className="h-4 w-4 ms-2" />
@@ -277,10 +277,12 @@ export default function AddEmployeeSimple() {
                   </SelectItem>
                 )) : (
                   <>
-                    <SelectItem value="USER">موظف</SelectItem>
+                    <SelectItem value="OWNER">مالك</SelectItem>
+                    <SelectItem value="GENERAL_MANAGER">مدير عام</SelectItem>
+                    <SelectItem value="DEPARTEMENT_MANAGER">مدير قسم</SelectItem>
+                    <SelectItem value="SUPERVISOR">مشرف</SelectItem>
+                    <SelectItem value="EMPLOYEE">موظف</SelectItem>
                     <SelectItem value="AGENT">مندوب</SelectItem>
-                    <SelectItem value="MANAGER">مدير</SelectItem>
-                    <SelectItem value="OPERATIONS">تشغيل</SelectItem>
                   </>
                 )}
               </SelectContent>

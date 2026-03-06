@@ -51,7 +51,7 @@ public class EmployeeService {
         // Auto-create User if email is provided
         if (employee.getEmail() != null && !employee.getEmail().isEmpty()) {
             String verificationCode = String.valueOf(100000 + random.nextInt(900000));
-            Role role = Role.USER;
+            Role role = Role.EMPLOYEE;
             try {
                 if (employee.getRole() != null) {
                     role = Role.valueOf(employee.getRole().toUpperCase());
@@ -103,13 +103,13 @@ public class EmployeeService {
         // Create User Account
         String verificationCode = String.valueOf(100000 + random.nextInt(900000));
         System.out.println("Generated verification code: " + verificationCode);
-        Role role = Role.USER;
+        Role role = Role.EMPLOYEE;
         try {
             if (roleStr != null) {
                 role = Role.valueOf(roleStr.toUpperCase());
             }
         } catch (IllegalArgumentException e) {
-            System.out.println("Invalid role: " + roleStr + ", fallback to USER");
+            System.out.println("Invalid role: " + roleStr + ", fallback to EMPLOYEE");
         }
 
         System.out.println("Creating User object for role: " + role);

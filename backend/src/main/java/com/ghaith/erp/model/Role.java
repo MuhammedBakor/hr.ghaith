@@ -1,10 +1,10 @@
 package com.ghaith.erp.model;
 
 public enum Role {
-    USER,
-    ADMIN,
-    MANAGER,
-    AGENT,
-    OPERATIONS,
-    OWNER
+    OWNER,
+    GENERAL_MANAGER,
+    DEPARTEMENT_MANAGER,
+    SUPERVISOR,
+    EMPLOYEE,
+    AGENT
 }
