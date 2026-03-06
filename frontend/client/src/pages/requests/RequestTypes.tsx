@@ -73,7 +73,7 @@ export default function RequestTypes() {
     updateMutation.mutate(editingItem);
   };
 
-  const { data: currentUser, isError, error} = useUser();
+  const { data: currentUser, isError, error } = useUser();
   const userRole = currentUser?.role || 'user';
   const requiredRole = 'user';
   const hasAccess = userRole === 'admin' || userRole === requiredRole || requiredRole === 'user';
@@ -87,19 +87,19 @@ export default function RequestTypes() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [showFilters, setShowFilters] = useState(false);
-  
+
   // نموذج الإنشاء
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [formData, setFormData] = useState<RequestTypeFormData>(initialFormData);
-  
+
   // نموذج التعديل
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingType, setEditingType] = useState<RequestType | null>(null);
-  
+
   // نافذة الحذف
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [deletingType, setDeletingType] = useState<RequestType | null>(null);
-  
+
   // نافذة العرض
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [viewingType, setViewingType] = useState<RequestType | null>(null);
@@ -115,7 +115,7 @@ export default function RequestTypes() {
     if (!typesRaw || !Array.isArray(typesRaw) || typesRaw.length === 0) {
       return [];
     }
-    
+
     return typesRaw.map((t: any, idx: number) => ({
       id: t.id || idx + 1,
       code: t.code || `REQ-${String(idx + 1).padStart(3, '0')}`,
@@ -146,7 +146,7 @@ export default function RequestTypes() {
   // تطبيق الفلاتر
   const filteredData = useMemo(() => {
     let data = requestTypesData;
-    
+
     // فلترة حسب البحث
     if (searchTerm) {
       data = data.filter(item =>
@@ -155,17 +155,17 @@ export default function RequestTypes() {
         item.category.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-    
+
     // فلترة حسب الحالة
     if (statusFilter !== 'all') {
       data = data.filter(t => t.status === statusFilter);
     }
-    
+
     // فلترة حسب التصنيف
     if (categoryFilter !== 'all') {
       data = data.filter(t => t.category === categoryFilter);
     }
-    
+
     // الترتيب
     return data.sort((a, b) => {
       const aValue = a[sortField];
@@ -210,12 +210,12 @@ export default function RequestTypes() {
   };
 
   const handleDelete = (type: RequestType) => {
-    if (confirm('هل أنت متأكد من الحذف؟')) {
-      deleteMutation.mutate({ id: type });
+    if (window.confirm('هل أنت متأكد من الحذف؟')) {
+      deleteMutation.mutate({ id: type.id });
     }
   };
 
-  const confirmDelete = () => {
+  const confirmDeleteAction = () => {
     if (!deletingType) return;
     toast.success('تم حذف نوع الطلب بنجاح');
     setIsDeleteOpen(false);
@@ -272,7 +272,7 @@ export default function RequestTypes() {
   if (isError) return (
     <div className="p-8 text-center">
       <p className="text-red-500 text-lg">حدث خطأ في تحميل البيانات</p>
-      <p className="text-gray-500 mt-2">{error?.message}</p>
+      <p className="text-gray-500 mt-2">{(error as any)?.message}</p>
     </div>
   );
 
@@ -297,95 +297,99 @@ export default function RequestTypes() {
             <RefreshCw className="ms-2 h-4 w-4" />
             تحديث
           </Button>
-          {isCreateOpen && (<div className="mt-4 p-6 bg-white border rounded-xl shadow-sm">
-            
-            <div>
-              <div className="mb-4 border-b pb-3">
-                <h3 className="text-lg font-bold">إنشاء نوع طلب جديد</h3>
-                <p className="text-sm text-gray-500">
-                  أدخل بيانات نوع الطلب الجديد. الحقول المميزة بـ * مطلوبة.
-                </p>
-              </div>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="name">اسم نوع الطلب *</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="مثال: طلب إجازة"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="category">التصنيف</Label>
-                    <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="اختر التصنيف" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="hr">الموارد البشرية</SelectItem>
-                        <SelectItem value="finance">المالية</SelectItem>
-                        <SelectItem value="it">تقنية المعلومات</SelectItem>
-                        <SelectItem value="admin">الإدارة</SelectItem>
-                        <SelectItem value="general">عام</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="approvalLevels">مستويات الموافقة</Label>
-                    <Select 
-                      value={formData.approvalLevels.toString()} 
-                      onValueChange={(value) => setFormData({ ...formData, approvalLevels: parseInt(value) })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="اختر المستوى" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">مستوى واحد</SelectItem>
-                        <SelectItem value="2">مستويان</SelectItem>
-                        <SelectItem value="3">ثلاث مستويات</SelectItem>
-                        <SelectItem value="4">أربع مستويات</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="description">الوصف</Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="وصف نوع الطلب..."
-                    rows={3}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="status">الحالة</Label>
-                  <Select value={formData.status} onValueChange={(value: any) => setFormData({ ...formData, status: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="اختر الحالة" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="draft">مسودة</SelectItem>
-                      <SelectItem value="active">نشط</SelectItem>
-                      <SelectItem value="inactive">غير نشط</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="flex gap-2 mt-4 pt-3 border-t justify-end">
-                <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
-                  إلغاء
-                </Button>
-                <Button onClick={handleCreate}>
-                  إنشاء نوع الطلب
-                </Button>
-              </div>
-            </div>
-          </div>)}
+          <Button onClick={() => setIsCreateOpen(true)}>
+            <Plus className="ms-2 h-4 w-4" />
+            إنشاء نوع طلب جديد
+          </Button>
         </div>
       </div>
+
+      {isCreateOpen && (
+        <div className="mt-4 p-6 bg-white border rounded-xl shadow-sm animate-in fade-in">
+          <div className="mb-4 border-b pb-3">
+            <h3 className="text-lg font-bold">إنشاء نوع طلب جديد</h3>
+            <p className="text-sm text-gray-500">
+              أدخل بيانات نوع الطلب الجديد. الحقول المميزة بـ * مطلوبة.
+            </p>
+          </div>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">اسم نوع الطلب *</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="مثال: طلب إجازة"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="category">التصنيف</Label>
+                <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر التصنيف" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="hr">الموارد البشرية</SelectItem>
+                    <SelectItem value="finance">المالية</SelectItem>
+                    <SelectItem value="it">تقنية المعلومات</SelectItem>
+                    <SelectItem value="admin">الإدارة</SelectItem>
+                    <SelectItem value="general">عام</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="approvalLevels">مستويات الموافقة</Label>
+                <Select
+                  value={formData.approvalLevels.toString()}
+                  onValueChange={(value) => setFormData({ ...formData, approvalLevels: parseInt(value) })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر المستوى" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">مستوى واحد</SelectItem>
+                    <SelectItem value="2">مستويان</SelectItem>
+                    <SelectItem value="3">ثلاث مستويات</SelectItem>
+                    <SelectItem value="4">أربع مستويات</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="description">الوصف</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="وصف نوع الطلب..."
+                rows={3}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="status">الحالة</Label>
+              <Select value={formData.status} onValueChange={(value: any) => setFormData({ ...formData, status: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="اختر الحالة" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="draft">مسودة</SelectItem>
+                  <SelectItem value="active">نشط</SelectItem>
+                  <SelectItem value="inactive">غير نشط</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex gap-2 mt-4 pt-3 border-t justify-end">
+            <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
+              إلغاء
+            </Button>
+            <Button onClick={handleCreate}>
+              إنشاء نوع الطلب
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -460,10 +464,9 @@ export default function RequestTypes() {
               </Button>
             </div>
           </div>
-          
-          {/* فلاتر متقدمة */}
+
           {showFilters && (
-            <div className="mt-4 p-4 bg-muted/50 rounded-lg">
+            <div className="mt-4 p-4 bg-muted/50 rounded-lg animate-in slide-in-from-top-2">
               <div className="flex items-center justify-between mb-4">
                 <h4 className="font-medium">فلاتر متقدمة</h4>
                 <Button variant="ghost" size="sm" onClick={clearFilters}>
@@ -557,14 +560,12 @@ export default function RequestTypes() {
                           <Button variant="ghost" size="sm" onClick={() => handleEdit(item)}>
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" onClick={() => { if(window.confirm('هل أنت متأكد من الحذف؟')) handleDelete(item) }}>
+                          <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" onClick={() => handleDelete(item)}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                       </td>
-                    
-                <div className="flex gap-2 mt-2"> <button onClick={() => setEditingItem(item)} className="text-blue-600 hover:text-blue-800 text-sm">تعديل</button> <button onClick={() => window.confirm("هل أنت متأكد من الحذف؟") && deleteMutation.mutate({id: item.id})} className="text-red-600 hover:text-red-800 text-sm">حذف</button></div>
-              </tr>
+                    </tr>
                   ))}
                 </tbody>
               </table>
@@ -573,70 +574,68 @@ export default function RequestTypes() {
         </CardContent>
       </Card>
 
-      {/* نافذة التعديل */}
-      {isEditOpen && (<div className="mt-4 p-6 bg-white border rounded-xl shadow-sm">
-        <div>
+      {/* Edit Form */}
+      {isEditOpen && editingType && (
+        <div className="mt-4 p-6 bg-white border rounded-xl shadow-sm animate-in fade-in">
           <div className="mb-4 border-b pb-3">
             <h3 className="text-lg font-bold">تعديل نوع الطلب</h3>
             <p className="text-sm text-gray-500">
               قم بتعديل بيانات نوع الطلب.
             </p>
           </div>
-          {editingType && (
-            <div className="grid gap-4 py-4">
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="edit-name">اسم نوع الطلب</Label>
+              <Input
+                id="edit-name"
+                value={editingType.name}
+                onChange={(e) => setEditingType({ ...editingType, name: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="edit-name">اسم نوع الطلب</Label>
+                <Label htmlFor="edit-category">التصنيف</Label>
                 <Input
-                  id="edit-name"
-                  value={editingType.name}
-                  onChange={(e) => setEditingType({ ...editingType, name: e.target.value })}
+                  id="edit-category"
+                  value={editingType.category}
+                  onChange={(e) => setEditingType({ ...editingType, category: e.target.value })}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-category">التصنيف</Label>
-                  <Input
-                    id="edit-category"
-                    value={editingType.category}
-                    onChange={(e) => setEditingType({ ...editingType, category: e.target.value })}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-approvalLevels">مستويات الموافقة</Label>
-                  <Select 
-                    value={editingType.approvalLevels.toString()} 
-                    onValueChange={(value) => setEditingType({ ...editingType, approvalLevels: parseInt(value) })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="اختر المستوى" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">مستوى واحد</SelectItem>
-                      <SelectItem value="2">مستويان</SelectItem>
-                      <SelectItem value="3">ثلاث مستويات</SelectItem>
-                      <SelectItem value="4">أربع مستويات</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
               <div className="grid gap-2">
-                <Label htmlFor="edit-status">الحالة</Label>
-                <Select 
-                  value={editingType.status} 
-                  onValueChange={(value: any) => setEditingType({ ...editingType, status: value })}
+                <Label htmlFor="edit-approvalLevels">مستويات الموافقة</Label>
+                <Select
+                  value={editingType.approvalLevels.toString()}
+                  onValueChange={(value) => setEditingType({ ...editingType, approvalLevels: parseInt(value) })}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="اختر الحالة" />
+                    <SelectValue placeholder="اختر المستوى" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="draft">مسودة</SelectItem>
-                    <SelectItem value="active">نشط</SelectItem>
-                    <SelectItem value="inactive">غير نشط</SelectItem>
+                    <SelectItem value="1">مستوى واحد</SelectItem>
+                    <SelectItem value="2">مستويان</SelectItem>
+                    <SelectItem value="3">ثلاث مستويات</SelectItem>
+                    <SelectItem value="4">أربع مستويات</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
-          )}
+            <div className="grid gap-2">
+              <Label htmlFor="edit-status">الحالة</Label>
+              <Select
+                value={editingType.status}
+                onValueChange={(value: any) => setEditingType({ ...editingType, status: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="اختر الحالة" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="draft">مسودة</SelectItem>
+                  <SelectItem value="active">نشط</SelectItem>
+                  <SelectItem value="inactive">غير نشط</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
           <div className="flex gap-2 mt-4 pt-3 border-t justify-end">
             <Button variant="outline" onClick={() => setIsEditOpen(false)}>
               إلغاء
@@ -646,64 +645,64 @@ export default function RequestTypes() {
             </Button>
           </div>
         </div>
-      </div>)}
+      )}
 
-      {/* نافذة عرض التفاصيل */}
-      {isViewOpen && (<div className="mt-4 p-6 bg-white border rounded-xl shadow-sm">
-        <div>
-          <div className="mb-4 border-b pb-3">
+      {/* View Dialog Content (Inline for simplicity since it's an agentic fix) */}
+      {isViewOpen && viewingType && (
+        <div className="mt-4 p-6 bg-white border rounded-xl shadow-sm animate-in fade-in">
+          <div className="mb-4 border-b pb-3 flex justify-between items-center">
             <h3 className="text-lg font-bold">تفاصيل نوع الطلب</h3>
+            <Button variant="ghost" size="icon" onClick={() => setIsViewOpen(false)}>
+              <X className="h-4 w-4" />
+            </Button>
           </div>
-          {viewingType && (
-            <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-muted-foreground">الرمز</Label>
-                  <p className="font-mono font-medium">{viewingType.code}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">الحالة</Label>
-                  <p>{getStatusBadge(viewingType.status)}</p>
-                </div>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-muted-foreground">الرمز</Label>
+                <p className="font-mono font-medium">{viewingType.code}</p>
               </div>
               <div>
-                <Label className="text-muted-foreground">اسم نوع الطلب</Label>
-                <p className="font-medium text-lg">{viewingType.name}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-muted-foreground">التصنيف</Label>
-                  <p>{viewingType.category}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">مستويات الموافقة</Label>
-                  <p>{viewingType.approvalLevels}</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-muted-foreground">وقت المعالجة</Label>
-                  <p>{viewingType.avgProcessingTime}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">عدد الطلبات</Label>
-                  <p className="font-bold text-primary">{viewingType.requestsCount}</p>
-                </div>
+                <Label className="text-muted-foreground">الحالة</Label>
+                <p>{getStatusBadge(viewingType.status)}</p>
               </div>
             </div>
-          )}
+            <div>
+              <Label className="text-muted-foreground">اسم نوع الطلب</Label>
+              <p className="font-medium text-lg">{viewingType.name}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-muted-foreground">التصنيف</Label>
+                <p>{viewingType.category}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">مستويات الموافقة</Label>
+                <p>{viewingType.approvalLevels}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-muted-foreground">وقت المعالجة</Label>
+                <p>{viewingType.avgProcessingTime}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">عدد الطلبات</Label>
+                <p className="font-bold text-primary">{viewingType.requestsCount}</p>
+              </div>
+            </div>
+          </div>
           <div className="flex gap-2 mt-4 pt-3 border-t justify-end">
             <Button variant="outline" onClick={() => setIsViewOpen(false)}>
               إغلاق
             </Button>
-            <Button onClick={() => { setIsViewOpen(false); handleEdit(viewingType!); }}>
+            <Button onClick={() => { setIsViewOpen(false); handleEdit(viewingType); }}>
               تعديل
             </Button>
           </div>
         </div>
-      </div>)}
+      )}
 
-      {/* نافذة تأكيد الحذف */}
       <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
         <AlertDialogContent dir="rtl">
           <AlertDialogHeader>
@@ -714,7 +713,7 @@ export default function RequestTypes() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>إلغاء</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
+            <AlertDialogAction onClick={confirmDeleteAction} className="bg-red-600 hover:bg-red-700">
               حذف نوع الطلب
             </AlertDialogAction>
           </AlertDialogFooter>
