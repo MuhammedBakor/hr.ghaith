@@ -110,7 +110,7 @@ interface NavItem {
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => window.innerWidth >= 1024);
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const { logout, user, loading, isAuthenticated } = useAuth();
   const {
@@ -132,6 +132,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       setLocation('/login');
     }
   }, [loading, isAuthenticated, setLocation]);
+
+  // إغلاق الشريط الجانبي عند التنقل على الموبايل
+  useEffect(() => {
+    if (window.innerWidth < 1024) {
+      setIsSidebarOpen(false);
+    }
+  }, [location]);
 
   // عرض شاشة التحميل أثناء التحقق من المصادقة
   if (loading) {
@@ -522,16 +529,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   };
 
-  const isItemActive = (item: NavItem): boolean => {
-    if (location === item.path) return true;
-    if (item.children) {
+  const isItemActive = (item: NavItem, isChild = false): boolean => {
+    // For child items: only exact match
+    if (isChild) {
+      return location === item.path;
+    }
+    // For parent items with children: highlight only if a child is active (not the parent itself)
+    if (item.children && item.children.length > 0) {
       return item.children.some(child => location === child.path);
     }
-    return location.startsWith(`${item.path}/`);
+    // For top-level items without children: exact match or prefix match
+    if (location === item.path) return true;
+    if (item.path !== '/' && location.startsWith(`${item.path}/`)) return true;
+    return false;
   };
 
   const renderNavItem = (item: NavItem, isChild = false) => {
-    const isActive = isItemActive(item);
+    const isActive = isItemActive(item, isChild);
     const hasChildren = item.children && item.children.length > 0;
     const isExpanded = expandedItems.includes(item.path);
 
@@ -596,7 +610,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="min-h-screen bg-gray-50 flex" dir="rtl">
       {/* Sidebar */}
       <aside
-        className={`bg-white border-l border-gray-200 fixed inset-y-0 end-0 z-50 w-64 transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full'
+        className={`bg-white border-l border-gray-200 fixed inset-y-0 right-0 z-50 w-64 transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full'
           } lg:relative lg:translate-x-0`}
       >
         <div className="h-full flex flex-col">
@@ -646,14 +660,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-4 lg:px-8 sticky top-0 z-40">
           <div className="flex items-center gap-4">
             <Button
-              variant="ghost"
+              variant="outline"
               size="icon"
-              className="lg:hidden"
+              className="lg:hidden shrink-0"
               onClick={() => setIsSidebarOpen(true)}
             >
               <Menu className="h-5 w-5" />
             </Button>
-            <h1 className="text-lg font-semibold text-gray-800">
+            <h1 className="text-lg font-semibold text-gray-800 truncate">
               {navItems.find(i => location === i.path || location.startsWith(`${i.path}/`))?.label || 'الرئيسية'}
             </h1>
           </div>
@@ -750,7 +764,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Overlay for mobile sidebar */}
       {isSidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/20 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/40 z-40 lg:hidden"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
