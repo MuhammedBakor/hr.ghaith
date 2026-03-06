@@ -1,25 +1,31 @@
 import React, { useState } from "react";
-import { trpc } from "../../lib/trpc";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { useUser } from '@/services/authService';
 
 export default function Custodies() {
-  const { data: currentUser } = trpc.auth.me.useQuery();
+  const queryClient = useQueryClient();
+  const { data: currentUser } = useUser();
   const userRole = currentUser?.role || 'user';
   const hasAccess = userRole === 'admin' || userRole === 'finance_manager';
-  
-  const { data, refetch, isLoading, isError, error } = trpc.custodies.list.useQuery();
+
+  const { data, refetch, isLoading, isError, error } = useQuery({ queryKey: ['custodies'], queryFn: () => api.get('/finance/custodies').then(r => r.data) });
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState<any>({});
   const [editingId, setEditingId] = useState<number | null>(null);
-  
-  const createMut = trpc.custodies.create.useMutation({
-    onSuccess: () => { refetch(); setShowForm(false); setFormData({}); }
+
+  const createMut = useMutation({
+    mutationFn: (data: any) => api.post('/finance/custodies', data).then(r => r.data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['custodies'] }); setShowForm(false); setFormData({}); }
   });
-  const updateMut = trpc.custodies.update.useMutation({
-    onSuccess: () => { refetch(); setEditingId(null); setFormData({}); }
+  const updateMut = useMutation({
+    mutationFn: (data: any) => api.put(`/finance/custodies/${data.id}`, data).then(r => r.data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['custodies'] }); setEditingId(null); setFormData({}); }
   });
-  const deleteMut = trpc.custodies.delete.useMutation({
-    onSuccess: () => { refetch(); }
+  const deleteMut = useMutation({
+    mutationFn: (data: any) => api.delete(`/finance/custodies/${data.id}`).then(r => r.data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['custodies'] }); }
   });
 
   if (isLoading) return <div className="flex justify-center p-12"><div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full" /></div>;

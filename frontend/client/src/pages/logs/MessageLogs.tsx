@@ -19,7 +19,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { trpc } from "@/lib/trpc";
+import { useQuery } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { useUser } from '@/services/authService';
 import { 
   MessageSquare, 
   Mail, 
@@ -39,7 +41,7 @@ import {
 } from "@/components/ui/dialog";
 
 export default function MessageLogs() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useUser();
   const userRole = currentUser?.role || 'user';
 
   const [showInlineForm, setShowInlineForm] = useState(false);
@@ -49,7 +51,10 @@ export default function MessageLogs() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedLog, setSelectedLog] = useState<any>(null);
 
-  const { data: logs, isLoading, refetch } = trpc.notifications.list.useQuery();
+  const { data: logs, isLoading, refetch } = useQuery({
+    queryKey: ['logs-messages'],
+    queryFn: () => api.get('/logs/messages').then(r => r.data),
+  });
 
   const getChannelIcon = (channel: string) => {
     switch (channel) {

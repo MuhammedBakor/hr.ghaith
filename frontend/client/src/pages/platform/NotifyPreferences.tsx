@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { useUser } from '@/services/authService';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -108,7 +110,8 @@ export default function NotifyPreferences() {
     return Object.keys(errors).length === 0;
   };
 
-  const saveMutation = trpc.platform.create.useMutation({
+  const saveMutation = useMutation({
+    mutationFn: (data: any) => api.put('/platform/notify-preferences', data).then(r => r.data),
     onSuccess: () => {
       setFormData({ 'channel': '', 'enabled': '', 'frequency': '',
       onError: (e: any) => toast.error(e?.message || 'حدث خطأ')});
@@ -127,9 +130,9 @@ export default function NotifyPreferences() {
     saveMutation.mutate(formData);
   };
 
-  const deleteMutation = trpc.platform.notifications.delete.useMutation({ onSuccess: () => { refetch(); } });
+  const deleteMutation = useMutation({ mutationFn: (data: any) => api.delete(`/platform/notify-preferences/${data.id}`).then(r => r.data), onSuccess: () => { refetch(); } });
 
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useUser();
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -148,12 +151,13 @@ export default function NotifyPreferences() {
   });
 
   // جلب التفضيلات من API
-  const { data: savedPreferences, isLoading, refetch } = trpc.userNotificationPreferences.get.useQuery(undefined, {
+  const { data: savedPreferences, isLoading, refetch } = useQuery({ queryKey: ['notify-preferences'], queryFn: () => api.get('/platform/notify-preferences').then(r => r.data),
     enabled: isAuthenticated,
   });
 
   // mutation لحفظ جميع التفضيلات
-  const saveAllMutation = trpc.userNotificationPreferences.saveAll.useMutation({
+  const saveAllMutation = useMutation({
+    mutationFn: (data: any) => api.put('/platform/notify-preferences/all', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم حفظ التفضيلات بنجاح');
       refetch();
@@ -164,7 +168,8 @@ export default function NotifyPreferences() {
   });
 
   // mutation لإعادة التعيين
-  const resetMutation = trpc.userNotificationPreferences.reset.useMutation({
+  const resetMutation = useMutation({
+    mutationFn: () => api.post('/platform/notify-preferences/reset').then(r => r.data),
     onSuccess: () => {
       toast.success('تم إعادة التفضيلات إلى الإعدادات الافتراضية');
       setPreferences(defaultPreferences);

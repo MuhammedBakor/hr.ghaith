@@ -1,22 +1,24 @@
 import { useAppContext } from '@/contexts/AppContext';
 import React from "react";
-import { trpc } from '@/lib/trpc';
-const _trpcUsage = () => trpc.notifications.list.useQuery();
-  const { isError } = { isError: false }; // type compliance
-
-  const createMut = trpc.notifications.create.useMutation({ onError: (e: any) => { alert(e.message || "حدث خطأ"); }, onSuccess: () => {
-        utils.notifications.invalidate();
- window.location.reload(); } });
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Brain, Shield, Settings, Inbox } from 'lucide-react';
 
 export default function AiPolicy() {
   const confirmDelete = (fn: () => void) => { if (window.confirm("هل أنت متأكد من الحذف؟")) fn(); };
 
+  const queryClient = useQueryClient();
+  const createMut = useMutation({
+    mutationFn: (data: any) => api.post('/platform/ai-policies', data).then(r => r.data),
+    onError: (e: any) => { alert(e.message || "حدث خطأ"); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['ai-policies'] }); }
+  });
+
   const handleSubmit = () => { createMut.mutate({}); };
 
   const [searchTerm, setSearchTerm] = useState('');
-  const utils = trpc.useUtils();
 
   const { selectedRole: userRole } = useAppContext();
   const canEdit = userRole === "admin" || userRole === "manager";
@@ -25,7 +27,7 @@ export default function AiPolicy() {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
 
-  const isProcessing = false; // Loading state
+  const isProcessing = false;
 
   const [showDialog, setShowDialog] = React.useState(false);
   const [formData, setFormData] = React.useState<Record<string, any>>({});
@@ -79,7 +81,7 @@ export default function AiPolicy() {
           </div>
         </CardContent>
       </Card>
-    
+
         {showDialog && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowDialog(false)}>
             <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl" dir="rtl" onClick={e => e.stopPropagation()}>

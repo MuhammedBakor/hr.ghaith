@@ -1,7 +1,8 @@
 import React from "react";
 import { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { trpc } from '../../lib/trpc';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
@@ -19,12 +20,13 @@ export default function PaymentsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
 
-  const { data, isLoading, refetch, isError, error} = trpc.payments.list.useQuery({});
+  const queryClient = useQueryClient();
+  const { data, isLoading, refetch, isError, error} = useQuery({ queryKey: ['payments'], queryFn: () => api.get('/finance/payments').then(r => r.data) });
   const list = (data || []) as any[];
-  
-  const createMut = trpc.payments.create.useMutation({ onSuccess: () => { refetch(); setOpen(false); resetForm(); }, onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
-  const updateMut = trpc.payments.update.useMutation({ onSuccess: () => { refetch(); setOpen(false); resetForm(); }, onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
-  const deleteMut = trpc.payments.delete.useMutation({ onSuccess: () => refetch() , onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
+
+  const createMut = useMutation({ mutationFn: (data: any) => api.post('/finance/payments', data).then(r => r.data), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['payments'] }); setOpen(false); resetForm(); }, onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
+  const updateMut = useMutation({ mutationFn: (data: any) => api.put(`/finance/payments/${data.id}`, data).then(r => r.data), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['payments'] }); setOpen(false); resetForm(); }, onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
+  const deleteMut = useMutation({ mutationFn: (data: any) => api.delete(`/finance/payments/${data.id}`).then(r => r.data), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['payments'] }); }, onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
 
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);

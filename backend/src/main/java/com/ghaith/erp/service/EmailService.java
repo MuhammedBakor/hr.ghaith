@@ -85,4 +85,29 @@ public class EmailService {
             log.error("Failed to send verification code to {}: {}", to, e.getMessage());
         }
     }
+
+    public void sendPasswordResetCode(String to, String firstName, String code) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromEmail);
+            message.setTo(to);
+            message.setSubject("إعادة تعيين كلمة المرور - منصة غيث");
+
+            String content = String.format(
+                    "مرحباً %s،\n\n" +
+                            "لقد تلقينا طلباً لإعادة تعيين كلمة المرور الخاصة بحسابك.\n\n" +
+                            "رمز التحقق: %s\n\n" +
+                            "أدخل هذا الرمز في صفحة إعادة تعيين كلمة المرور لإكمال العملية.\n" +
+                            "إذا لم تطلب إعادة تعيين كلمة المرور، يرجى تجاهل هذا البريد.\n\n" +
+                            "مع تحيات،\nفريق منصة غيث",
+                    firstName, code);
+
+            message.setText(content);
+            mailSender.send(message);
+            log.info("Password reset code sent successfully to {}", to);
+        } catch (Exception e) {
+            log.error("Failed to send password reset code to {}: {}", to, e.getMessage());
+            throw new RuntimeException("فشل إرسال رمز التحقق إلى البريد الإلكتروني");
+        }
+    }
 }

@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { useUser } from '@/services/authService';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,24 +12,28 @@ import { toast } from 'sonner';
 export default function Folders() {
   const confirmDelete = (fn: () => void) => { if (window.confirm("هل أنت متأكد من الحذف؟")) fn(); };
 
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useUser();
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
   const [showNewFolder, setShowNewFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
-  
-  const { data: documents, isLoading, refetch } = trpc.documents?.list?.useQuery();
-  
+
+  const { data: documents, isLoading, refetch } = useQuery({
+    queryKey: ['documents'],
+    queryFn: () => api.get('/documents').then(r => r.data),
+  });
+
   // إنشاء مستند جديد (كمجلد)
-  const createDocumentMutation = trpc.documents?.create?.useMutation({
+  const createDocumentMutation = useMutation({
+    mutationFn: (data: any) => api.post('/documents', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إنشاء المجلد بنجاح');
       setShowNewFolder(false);
       setNewFolderName('');
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`فشل في إنشاء المجلد: ${error.message}`);
     },
   });

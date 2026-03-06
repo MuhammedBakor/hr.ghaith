@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { sanitizeHTML } from '@/lib/htmlSanitizer';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,14 +18,16 @@ export default function LetterTemplates() {
   const [createOpen, setCreateOpen] = useState(false);
   const [newTemplate, setNewTemplate] = useState({ name: '', nameAr: '', entityType: 'general', module: 'hr', headerHtml: '', bodyHtml: '', footerHtml: '' });
 
-  const utils = trpc.useUtils();
-  const { data: templates = [], isLoading } = trpc.printTemplates.list.useQuery({});
+  const queryClient = useQueryClient();
+  const { data: templates = [], isLoading } = useQuery({ queryKey: ['letter-templates'], queryFn: () => api.get('/settings/letter-templates').then(r => r.data) });
 
-  const createMut = trpc.printTemplates.create.useMutation({
-    onSuccess: () => { utils.printTemplates.invalidate(); setCreateOpen(false); },
+  const createMut = useMutation({
+    mutationFn: (data: any) => api.post('/settings/letter-templates', data).then(r => r.data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['letter-templates'] }); setCreateOpen(false); },
   });
 
-  const renderMut = trpc.printTemplates.render.useMutation({
+  const renderMut = useMutation({
+    mutationFn: (data: any) => api.post('/settings/letter-templates/render', data).then(r => r.data),
     onSuccess: (data: any) => { setPreviewHtml(data.html); setPreviewOpen(true); },
   });
 

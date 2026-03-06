@@ -1,41 +1,32 @@
 package com.ghaith.erp.controller;
 
+import com.ghaith.erp.model.*;
+import com.ghaith.erp.service.FleetService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import java.util.*;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/fleet-extended")
+@RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 public class FleetExtendedController {
 
-    @GetMapping("")
-    public ResponseEntity<?> getAll() {
-        return ResponseEntity.ok(Collections.emptyList());
-    }
+    private final FleetService fleetService;
 
     @GetMapping("/drivers")
-    public ResponseEntity<?> getDrivers() {
-        return ResponseEntity.ok(Collections.emptyList());
+    public ResponseEntity<List<Driver>> getDrivers() {
+        return ResponseEntity.ok(fleetService.getAllDrivers());
     }
 
     @GetMapping("/fuel-logs")
-    public ResponseEntity<?> getFuelLogs() {
-        return ResponseEntity.ok(Collections.emptyList());
+    public ResponseEntity<List<FuelLog>> getFuelLogs() {
+        return ResponseEntity.ok(fleetService.getAllFuelLogs());
     }
 
     @PostMapping("/fuel-logs")
-    public ResponseEntity<?> createFuelLog(@RequestBody(required = false) Map<String, Object> body) {
-        return ResponseEntity.ok(body != null ? body : new HashMap<>());
-    }
-
-    @GetMapping("/trips")
-    public ResponseEntity<?> getTrips() {
-        return ResponseEntity.ok(Collections.emptyList());
-    }
-
-    @GetMapping("/violations")
-    public ResponseEntity<?> getViolations() {
-        return ResponseEntity.ok(Collections.emptyList());
+    public ResponseEntity<FuelLog> createFuelLog(@RequestBody FuelLog fuelLog) {
+        return ResponseEntity.ok(fleetService.createFuelLog(fuelLog));
     }
 }

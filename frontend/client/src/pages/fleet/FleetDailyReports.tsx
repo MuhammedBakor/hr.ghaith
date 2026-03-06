@@ -5,7 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { trpc } from '@/lib/trpc';
+import { useQuery } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { useUser } from '@/services/authService';
 import { toast } from 'sonner';
 import { FileText, Download, Route, Clock, Fuel, Loader2, Inbox, Car } from 'lucide-react';
 
@@ -26,13 +28,13 @@ function today() {
 }
 
 export default function FleetDailyReports() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useUser();
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDate, setSelectedDate] = useState(today());
-  const { data: vehiclesData, isLoading: vehiclesLoading } = trpc.fleet.vehicles.list.useQuery();
-  const { data: tripsData, isLoading: tripsLoading } = trpc.fleetExtended.trips.list.useQuery();
+  const { data: vehiclesData, isLoading: vehiclesLoading } = useQuery({ queryKey: ['vehicles'], queryFn: () => api.get('/fleet/vehicles').then(r => r.data) });
+  const { data: tripsData, isLoading: tripsLoading } = useQuery({ queryKey: ['trips'], queryFn: () => api.get('/fleet/trips').then(r => r.data) });
   
   const vehicles = vehiclesData || [];
   const trips = tripsData || [];

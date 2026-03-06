@@ -194,7 +194,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       module: 'home' as ModuleType,
     }] : []),
     {
-      label: 'الموارد البشرية',
+      label: ['employee', 'supervisor'].includes(selectedRole) ? 'الحضور' : 'الموارد البشرية',
       path: '/hr',
       icon: Users,
       module: 'hr',
@@ -712,8 +712,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <span className="absolute top-2 end-2 h-2 w-2 bg-red-500 rounded-full"></span>
             </Button>
 
-            {/* خانة الصفة - فقط للمالك والمدير العام والأدمن */}
-            {(selectedRole === 'admin' || selectedRole === 'general_manager') && (
+            {/* خانة الصفة - فقط للمستخدمين الذين لديهم أكثر من دور */}
+            {allowedRoles.length > 1 && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button

@@ -2,7 +2,8 @@ import { formatDate, formatDateTime } from '@/lib/formatDate';
 import React from "react";
 import { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -34,8 +35,9 @@ export default function Alerts() {
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  const { data: notificationsData, isLoading, refetch, isError, error } = trpc.notifications.list.useQuery();
-  const markAsReadMutation = trpc.notifications.markRead.useMutation({
+  const { data: notificationsData, isLoading, refetch, isError, error } = useQuery({ queryKey: ['platform-alerts'], queryFn: () => api.get('/platform/alerts').then(r => r.data) });
+  const markAsReadMutation = useMutation({
+    mutationFn: (data: any) => api.put(`/platform/alerts/${data.id}/read`).then(r => r.data),
     onError: (error: any) => { toast.error(error.message || "حدث خطأ"); },
     onSuccess: () => {
       toast.success('تم تحديث حالة الإشعار');

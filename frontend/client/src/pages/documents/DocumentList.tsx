@@ -1,7 +1,8 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
 import { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,18 +47,21 @@ export default function DocumentList() {
     category: '',
   });
 
-  const { data: documentsData, isLoading, refetch, isError, error} = trpc.documents.list.useQuery();
-  
-  const createDocumentMutation = trpc.documents.create.useMutation({
+  const { data: documentsData, isLoading, refetch, isError, error} = useQuery({
+    queryKey: ['documents'],
+    queryFn: () => api.get('/documents').then(r => r.data),
+  });
+
+  const createDocumentMutation = useMutation({
+    mutationFn: (data: any) => api.post('/documents', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إنشاء المستند بنجاح');
       setIsOpen(false);
-      setNewDocument({ title: '', description: '', documentType: 'other', category: '',
-      onError: (e: any) => toast.error(e?.message || 'حدث خطأ')});
+      setNewDocument({ title: '', description: '', documentType: 'other', category: '' });
       refetch();
     },
     onError: (error: any) => {
-      toast.error(error.message || 'فشل في إنشاء المستند');
+      toast.error(error?.message || 'فشل في إنشاء المستند');
     },
   });
 

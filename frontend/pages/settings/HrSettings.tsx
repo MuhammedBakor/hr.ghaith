@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import api from '../../client/src/lib/api';
 type S = Record<string, string>;
 const DAYS = ['أحد','اثنين','ثلاثاء','أربعاء','خميس','جمعة','سبت'];
 
@@ -13,8 +14,8 @@ export default function HrSettings() {
   const [saving, setSaving] = useState(false); const [ok, setOk] = useState(false);
 
   useEffect(() => { load(); }, []);
-  const load = async () => { try { const r = await fetch('/api/trpc/settings.settings.list'); const d = await r.json(); if (d?.result?.data) { const m: S = {}; (d.result.data as any[]).forEach((x: any) => m[x.settingKey] = x.settingValue); setS(p => ({...p, ...m})); } } catch {} };
-  const save = async () => { setSaving(true); try { for (const [k,v] of Object.entries(s)) if(k.startsWith('hr.')) await fetch('/api/trpc/settings.settings.set',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({json:{key:k,value:v}})}); setOk(true); setTimeout(()=>setOk(false),2000); } catch {} setSaving(false); };
+  const load = async () => { try { const { data } = await api.get('/settings/hr'); if (data) { const m: S = {}; (data as any[]).forEach((x: any) => m[x.settingKey] = x.settingValue); setS(p => ({...p, ...m})); } } catch {} };
+  const save = async () => { setSaving(true); try { for (const [k,v] of Object.entries(s)) if(k.startsWith('hr.')) await api.post('/settings/hr',{key:k,value:v}); setOk(true); setTimeout(()=>setOk(false),2000); } catch {} setSaving(false); };
   const u = (k: string, v: string) => setS(p => ({...p, [k]: v}));
   const N = ({l,k,unit,desc}:{l:string;k:string;unit?:string;desc?:string}) => (
     <div><label className="block text-sm font-medium text-gray-700 mb-1">{l} {unit&&<span className="text-gray-400">({unit})</span>}</label>

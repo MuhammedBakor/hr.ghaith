@@ -1,6 +1,8 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
 import { useState, useEffect } from 'react';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { useUser } from '@/services/authService';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -339,7 +341,7 @@ function PreviewDialog({
 }
 
 export default function MessageTemplates() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useUser();
   const userRole = currentUser?.role || 'user';
 
   const [showInlineForm, setShowInlineForm] = useState(false);
@@ -365,11 +367,10 @@ export default function MessageTemplates() {
     isActive: true,
   });
 
-  const { data: templates, isLoading, refetch } = trpc.controlKernel.messageTemplates.list.useQuery({
-    type: filterType === 'all' ? undefined : filterType as 'email' | 'whatsapp' | 'sms',
-  });
+  const { data: templates, isLoading, refetch } = useQuery({ queryKey: ['message-templates', filterType], queryFn: () => api.get('/settings/message-templates', { params: { type: filterType === 'all' ? undefined : filterType } }).then(r => r.data) });
 
-  const createMutation = trpc.controlKernel.messageTemplates.create.useMutation({
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/settings/message-templates', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إنشاء القالب بنجاح');
       setIsDialogOpen(false);
@@ -381,7 +382,8 @@ export default function MessageTemplates() {
     },
   });
 
-  const updateMutation = trpc.controlKernel.messageTemplates.update.useMutation({
+  const updateMutation = useMutation({
+    mutationFn: (data: any) => api.put(`/settings/message-templates/${data.id}`, data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم تحديث القالب بنجاح');
       setIsDialogOpen(false);
@@ -393,7 +395,8 @@ export default function MessageTemplates() {
     },
   });
 
-  const deleteMutation = trpc.controlKernel.messageTemplates.delete.useMutation({
+  const deleteMutation = useMutation({
+    mutationFn: (data: any) => api.delete(`/settings/message-templates/${data.id}`).then(r => r.data),
     onSuccess: () => {
       toast.success('تم حذف القالب بنجاح');
       refetch();
@@ -403,7 +406,8 @@ export default function MessageTemplates() {
     },
   });
 
-  const toggleActiveMutation = trpc.controlKernel.messageTemplates.toggleActive.useMutation({
+  const toggleActiveMutation = useMutation({
+    mutationFn: (data: any) => api.put(`/settings/message-templates/${data.id}/toggle-active`, data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم تحديث حالة القالب');
       refetch();

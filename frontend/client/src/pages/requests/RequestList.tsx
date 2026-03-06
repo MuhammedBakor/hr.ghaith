@@ -16,7 +16,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Search, Clock, CheckCircle2, AlertCircle, User, Check, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { useUser } from '@/services/authService';
 import { toast } from 'sonner';
 
 interface Request {
@@ -35,7 +37,7 @@ interface Request {
 export default function RequestList() {
   const confirmDelete = (fn: () => void) => { if (window.confirm("هل أنت متأكد من الحذف؟")) fn(); };
 
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useUser();
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -46,34 +48,38 @@ export default function RequestList() {
     description: '',
     priority: 'medium'
   });
-  
-  const utils = trpc.useUtils();
-  
+
+  const queryClient = useQueryClient();
+
   // جلب الطلبات
-  const { data: requests, isLoading } = trpc.requests?.list?.useQuery();
-  
+  const { data: requests, isLoading } = useQuery({
+    queryKey: ['requests'],
+    queryFn: () => api.get('/requests').then(r => r.data),
+  });
+
   // إنشاء طلب جديد
-  const createRequestMutation = trpc.requests?.create?.useMutation({
+  const createRequestMutation = useMutation({
+    mutationFn: (data: any) => api.post('/requests', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إنشاء الطلب بنجاح');
-      utils.requests?.list?.invalidate();
+      queryClient.invalidateQueries({ queryKey: ['requests'] });
       setIsOpen(false);
-      setNewRequest({ type: '', subject: '', description: '', priority: 'medium',
-      onError: (e: any) => toast.error(e?.message || 'حدث خطأ')});
+      setNewRequest({ type: '', subject: '', description: '', priority: 'medium' });
     },
-    onError: (error: { message: string }) => {
-      toast.error('فشل في إنشاء الطلب: ' + error.message);
+    onError: (error: any) => {
+      toast.error('فشل في إنشاء الطلب: ' + (error?.message || 'حدث خطأ'));
     },
   });
-  
+
   // تحديث حالة الطلب
-  const updateRequestMutation = trpc.requests?.update?.useMutation({
+  const updateRequestMutation = useMutation({
+    mutationFn: (data: any) => api.put(`/requests/${data.id}`, data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم تحديث الطلب');
-      utils.requests?.list?.invalidate();
+      queryClient.invalidateQueries({ queryKey: ['requests'] });
     },
-    onError: (error: { message: string }) => {
-      toast.error('فشل في التحديث: ' + error.message);
+    onError: (error: any) => {
+      toast.error('فشل في التحديث: ' + (error?.message || 'حدث خطأ'));
     },
   });
   

@@ -4,7 +4,8 @@
  * ════════════════════════════════════════════════════════════════════════
  */
 import { useState } from 'react';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -118,27 +119,28 @@ export default function NotificationsCenter() {
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   const [tab, setTab] = useState('all');
 
-  const { data, isLoading, refetch } = trpc.userProfile.notifications.list.useQuery({
-    limit: 50,
-    unreadOnly: showUnreadOnly || tab === 'unread',
-    category: category || undefined,
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['notifications', showUnreadOnly, tab, category],
+    queryFn: () => api.get('/platform/notifications', { params: { limit: 50, unreadOnly: showUnreadOnly || tab === 'unread', category: category || undefined } }).then(r => r.data),
   });
 
-  const { data: unreadCount } = trpc.userProfile.notifications.unreadCount.useQuery();
+  const { data: unreadCount } = useQuery({ queryKey: ['notifications-unread-count'], queryFn: () => api.get('/platform/notifications/unread-count').then(r => r.data) });
 
-  const utils = trpc.useUtils();
+  const queryClient = useQueryClient();
 
-  const markRead = trpc.userProfile.notifications.markRead.useMutation({
+  const markRead = useMutation({
+    mutationFn: (data: any) => api.put(`/platform/notifications/${data.id}/read`).then(r => r.data),
     onSuccess: () => {
-      utils.userProfile.notifications.list.invalidate();
-      utils.userProfile.notifications.unreadCount.invalidate();
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications-unread-count'] });
     },
   });
 
-  const deleteNotif = trpc.userProfile.notifications.delete.useMutation({
+  const deleteNotif = useMutation({
+    mutationFn: (data: any) => api.delete(`/platform/notifications/${data.id}`).then(r => r.data),
     onSuccess: () => {
-      utils.userProfile.notifications.list.invalidate();
-      utils.userProfile.notifications.unreadCount.invalidate();
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications-unread-count'] });
       toast.success('تم حذف الإشعار');
     },
   });

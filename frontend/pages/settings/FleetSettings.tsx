@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import api from '../../client/src/lib/api';
 type S = Record<string, string>;
 
 export default function FleetSettings() {
@@ -10,8 +11,8 @@ export default function FleetSettings() {
     'fleet.licenseAlertDays': '30', 'fleet.inspectionAlertDays': '14',
   });
   const [saving, setSaving] = useState(false); const [ok, setOk] = useState(false);
-  useEffect(() => { (async () => { try { const r = await fetch('/api/trpc/settings.settings.list'); const d = await r.json(); if(d?.result?.data){const m:S={};(d.result.data as any[]).forEach((x:any)=>m[x.settingKey]=x.settingValue);setS(p=>({...p,...m}));} } catch {} })(); }, []);
-  const save = async () => { setSaving(true); try { for(const [k,v] of Object.entries(s)) if(k.startsWith('fleet.')) await fetch('/api/trpc/settings.settings.set',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({json:{key:k,value:v}})}); setOk(true);setTimeout(()=>setOk(false),2000); } catch {} setSaving(false); };
+  useEffect(() => { (async () => { try { const { data } = await api.get('/settings/fleet'); if(data){const m:S={};(data as any[]).forEach((x:any)=>m[x.settingKey]=x.settingValue);setS(p=>({...p,...m}));} } catch {} })(); }, []);
+  const save = async () => { setSaving(true); try { for(const [k,v] of Object.entries(s)) if(k.startsWith('fleet.')) await api.post('/settings/fleet',{key:k,value:v}); setOk(true);setTimeout(()=>setOk(false),2000); } catch {} setSaving(false); };
   const u=(k:string,v:string)=>setS(p=>({...p,[k]:v}));
   const N=({l,k,u:unit}:{l:string;k:string;u?:string})=>(<div><label className="text-sm font-medium">{l} {unit&&<span className="text-gray-400">({unit})</span>}</label><input type="number" className="w-full border rounded-lg px-3 py-2 mt-1" value={s[k]||''} onChange={e=>u(k,e.target.value)} min="0"/></div>);
   const Tog=({l,k}:{l:string;k:string})=>(<div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"><span className="font-medium text-sm">{l}</span><button onClick={()=>u(k,s[k]==='true'?'false':'true')} className={`px-3 py-1 rounded-full text-xs font-bold ${s[k]==='true'?'bg-green-100 text-green-700':'bg-gray-200 text-gray-500'}`}>{s[k]==='true'?'✅':'⬜'}</button></div>);

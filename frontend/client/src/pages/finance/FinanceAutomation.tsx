@@ -1,4 +1,5 @@
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import AutomationDashboard, { CategoryMeta } from '@/components/automation/AutomationDashboard';
 import {
   FileText, BarChart3, CreditCard, Receipt, BookOpen,
@@ -13,14 +14,16 @@ const CATEGORY_META: Record<string, CategoryMeta> = {
 };
 
 export default function FinanceAutomation() {
-  const { data: services = [], isLoading, refetch } = trpc.financeAutomation.list.useQuery();
-  const { data: logs    = [] }                      = trpc.financeAutomation.logs.useQuery({ limit: 200 });
-  const { data: stats }                             = trpc.financeAutomation.stats.useQuery();
+  const queryClient = useQueryClient();
+  const { data: services = [], isLoading, refetch } = useQuery({ queryKey: ['finance-automation-services'], queryFn: () => api.get('/finance/automation/services').then(r => r.data) });
+  const { data: logs    = [] }                      = useQuery({ queryKey: ['finance-automation-logs'], queryFn: () => api.get('/finance/automation/logs', { params: { limit: 200 } }).then(r => r.data) });
+  const { data: stats }                             = useQuery({ queryKey: ['finance-automation-stats'], queryFn: () => api.get('/finance/automation/stats').then(r => r.data) });
 
-  const toggleMut = trpc.financeAutomation.toggle.useMutation({ onSuccess: () => { utils.invalidateQueries(); } });
-  const runNowMut = trpc.financeAutomation.runNow.useMutation({ onSuccess: () => { utils.invalidateQueries(); } });
-  const updateMut = trpc.financeAutomation.update.useMutation({ onSuccess: () => { utils.invalidateQueries(); } });
-  const initMut   = trpc.financeAutomation.initialize.useMutation({ onSuccess: () => { utils.invalidateQueries(); } });
+  const invalidateAll = () => { queryClient.invalidateQueries({ queryKey: ['finance-automation-services'] }); queryClient.invalidateQueries({ queryKey: ['finance-automation-logs'] }); queryClient.invalidateQueries({ queryKey: ['finance-automation-stats'] }); };
+  const toggleMut = useMutation({ mutationFn: (data: any) => api.post('/finance/automation/toggle', data).then(r => r.data), onSuccess: () => { invalidateAll(); } });
+  const runNowMut = useMutation({ mutationFn: (data: any) => api.post('/finance/automation/run', data).then(r => r.data), onSuccess: () => { invalidateAll(); } });
+  const updateMut = useMutation({ mutationFn: (data: any) => api.put('/finance/automation/update', data).then(r => r.data), onSuccess: () => { invalidateAll(); } });
+  const initMut   = useMutation({ mutationFn: () => api.post('/finance/automation/initialize').then(r => r.data), onSuccess: () => { invalidateAll(); } });
 
   return (
     <AutomationDashboard

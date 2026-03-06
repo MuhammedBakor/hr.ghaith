@@ -76,9 +76,10 @@ export type AIChatBoxProps = {
  *     { role: "system", content: "You are a helpful assistant." }
  *   ]);
  *
- *   const chatMutation = trpc.ai.chat.useMutation({
+ *   const chatMutation = useMutation({
+ *     mutationFn: (data) => api.post('/ai/chat', data).then(r => r.data),
  *     onSuccess: (response) => {
- *       // Assuming your tRPC endpoint returns the AI response as a string
+ *       // Assuming your REST endpoint returns the AI response as a string
  *       setMessages(prev => [...prev, {
  *         role: "assistant",
  *         content: response

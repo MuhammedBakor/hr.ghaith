@@ -1,5 +1,6 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -67,10 +68,19 @@ export default function Tenants() {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
 
-  const utils = trpc.useUtils();
-  const { data: leasesData, isLoading, isError, error} = trpc.property.leases.list.useQuery();
-  const { data: units } = trpc.property.units?.list?.useQuery();
-  const { data: properties } = trpc.property.properties?.list?.useQuery();
+  const queryClient = useQueryClient();
+  const { data: leasesData, isLoading, isError, error} = useQuery({
+    queryKey: ['property-leases'],
+    queryFn: () => api.get('/property/leases').then(r => r.data),
+  });
+  const { data: units } = useQuery({
+    queryKey: ['property-units'],
+    queryFn: () => api.get('/property/units').then(r => r.data),
+  });
+  const { data: properties } = useQuery({
+    queryKey: ['properties'],
+    queryFn: () => api.get('/property/properties').then(r => r.data),
+  });
   
   const [isOpen, setIsOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
@@ -88,28 +98,30 @@ export default function Tenants() {
     paymentDay: '1',
   });
 
-  const createMutation = trpc.property.leases.create.useMutation({
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/property/leases', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إضافة المستأجر بنجاح');
-      utils.property.leases.list.invalidate();
+      queryClient.invalidateQueries({ queryKey: ['property-leases'] });
       setIsOpen(false);
       resetForm();
     },
-    onError: (error) => {
-      toast.error('فشل في إضافة المستأجر: ' + error.message);
+    onError: (error: any) => {
+      toast.error('فشل في إضافة المستأجر: ' + (error?.response?.data?.message || error.message));
     },
   });
 
-  const updateMutation = trpc.property.leases.update.useMutation({
+  const updateMutation = useMutation({
+    mutationFn: ({ id, ...data }: any) => api.put(`/property/leases/${id}`, data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم تحديث بيانات المستأجر بنجاح');
-      utils.property.leases.list.invalidate();
+      queryClient.invalidateQueries({ queryKey: ['property-leases'] });
       setIsOpen(false);
       setSelectedTenant(null);
       resetForm();
     },
-    onError: (error) => {
-      toast.error('فشل في تحديث البيانات: ' + error.message);
+    onError: (error: any) => {
+      toast.error('فشل في تحديث البيانات: ' + (error?.response?.data?.message || error.message));
     },
   });
 

@@ -1,7 +1,8 @@
 import React from "react";
 import { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { trpc } from '../../lib/trpc';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
@@ -19,12 +20,15 @@ export default function CampaignsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
 
-  const { data, isLoading, refetch, isError, error } = trpc.campaigns.list.useQuery({});
+  const { data, isLoading, refetch, isError, error } = useQuery({
+    queryKey: ['marketing-campaigns'],
+    queryFn: () => api.get('/marketing/campaigns').then(r => r.data),
+  });
   const list = (data || []) as any[];
 
-  const createMut = trpc.campaigns.create.useMutation({ onSuccess: () => { refetch(); setOpen(false); resetForm(); }, onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
-  const updateMut = trpc.campaigns.update.useMutation({ onSuccess: () => { refetch(); setOpen(false); resetForm(); }, onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
-  const deleteMut = trpc.campaigns.delete.useMutation({ onSuccess: () => refetch(), onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
+  const createMut = useMutation({ mutationFn: (data: any) => api.post('/marketing/campaigns', data).then(r => r.data), onSuccess: () => { refetch(); setOpen(false); resetForm(); }, onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
+  const updateMut = useMutation({ mutationFn: (data: any) => api.put('/marketing/campaigns', data).then(r => r.data), onSuccess: () => { refetch(); setOpen(false); resetForm(); }, onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
+  const deleteMut = useMutation({ mutationFn: (data: any) => api.delete('/marketing/campaigns', { data }).then(r => r.data), onSuccess: () => refetch(), onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
 
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);

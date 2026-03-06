@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { trpc } from "@/lib/trpc";
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { useUser } from '@/services/authService';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -52,7 +54,7 @@ const statusLabels: Record<string, string> = {
 };
 
 export default function LegalDocuments() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useUser();
   const userRole = currentUser?.role || 'user';
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -71,9 +73,13 @@ export default function LegalDocuments() {
     filePath: "",
   });
 
-  const { data: documents, isLoading, refetch } = trpc.legal.documents?.list?.useQuery();
+  const { data: documents, isLoading, refetch } = useQuery({
+    queryKey: ['legal-documents'],
+    queryFn: () => api.get('/legal/documents').then(r => r.data),
+  });
 
-  const createDocumentMutation = trpc.legal.documents?.create?.useMutation({
+  const createDocumentMutation = useMutation({
+    mutationFn: (data: any) => api.post('/legal/documents', data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم إنشاء المستند بنجاح");
       setIsCreateOpen(false);
@@ -86,21 +92,22 @@ export default function LegalDocuments() {
         expiryDate: "",
         status: "draft",
         filePath: "",
-      onError: (e: any) => toast.error(e?.message || 'حدث خطأ')});
+      });
       refetch();
     },
-    onError: (error) => {
-      toast.error(error.message);
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || error.message);
     },
   });
 
-  const deleteDocumentMutation = trpc.legal.documents?.delete?.useMutation({
+  const deleteDocumentMutation = useMutation({
+    mutationFn: ({ id }: any) => api.delete(`/legal/documents/${id}`).then(r => r.data),
     onSuccess: () => {
       toast.success("تم حذف المستند بنجاح");
       refetch();
     },
-    onError: (error) => {
-      toast.error(error.message);
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || error.message);
     },
   });
 

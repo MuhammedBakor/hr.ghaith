@@ -1,5 +1,7 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { useUser } from '@/services/authService';
 import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,18 +35,18 @@ interface Template {
 export default function Templates() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createData, setCreateData] = useState<any>({});
-  const createMutation = trpc.documents.create.useMutation({ onSuccess: () => { refetch(); setShowCreateForm(false); setCreateData({}); } });
+  const createMutation = useMutation({ mutationFn: (data: any) => api.post('/documents/templates', data).then(r => r.data), onSuccess: () => { refetch(); setShowCreateForm(false); setCreateData({}); } });
 
   const [editingItem, setEditingItem] = useState<any>(null);
-  const updateMutation = trpc.documents.update.useMutation({ onSuccess: () => { refetch(); setEditingItem(null); } });
+  const updateMutation = useMutation({ mutationFn: (data: any) => api.put(`/documents/templates/${data.id}`, data).then(r => r.data), onSuccess: () => { refetch(); setEditingItem(null); } });
 
-  const deleteMutation = trpc.documents.delete.useMutation({ onSuccess: () => { refetch(); } });
+  const deleteMutation = useMutation({ mutationFn: (data: any) => api.delete(`/documents/templates/${data.id}`).then(r => r.data), onSuccess: () => { refetch(); } });
 
   const handleSave = () => {
     updateMutation.mutate(editingItem);
   };
 
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useUser();
   const userRole = currentUser?.role || 'user';
   const requiredRole = 'user';
   const hasAccess = userRole === 'admin' || userRole === requiredRole || requiredRole === 'user';
@@ -59,7 +61,10 @@ export default function Templates() {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   // جلب القوالب من API
-  const { data: documentsData, isLoading, refetch } = trpc.documents.list.useQuery();
+  const { data: documentsData, isLoading, refetch } = useQuery({
+    queryKey: ['documents-templates'],
+    queryFn: () => api.get('/documents').then(r => r.data),
+  });
 
   // تحويل البيانات من API إلى الشكل المطلوب
   const templatesData: Template[] = useMemo(() => {

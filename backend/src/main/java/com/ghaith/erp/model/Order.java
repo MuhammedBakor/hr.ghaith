@@ -26,6 +26,23 @@ public class Order extends BaseEntity {
     @Column(name = "customer_id")
     private Long customerId;
 
+    @Column(name = "customer_name")
+    private String customerName;
+
+    @Column(name = "customer_phone")
+    private String customerPhone;
+
+    @Column(name = "customer_email")
+    private String customerEmail;
+
+    private BigDecimal subtotal;
+
+    @Column(name = "tax_amount")
+    private BigDecimal taxAmount;
+
+    @Column(name = "discount_amount")
+    private BigDecimal discountAmount;
+
     @Column(name = "total_amount")
     private BigDecimal totalAmount;
 
@@ -39,4 +56,6 @@ public class Order extends BaseEntity {
 
     @Column(name = "payment_method")
     private String paymentMethod;
+
+    private String notes;
 }

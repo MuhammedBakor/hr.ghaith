@@ -23,6 +23,8 @@ public class AuthenticationService {
         private final JwtService jwtService;
         private final AuthenticationManager authenticationManager;
         private final EmployeeRepository employeeRepository;
+        private final EmailService emailService;
+        private static final java.security.SecureRandom random = new java.security.SecureRandom();
 
         public AuthenticationResponse register(RegisterRequest request) {
                 var user = User.builder()
@@ -89,22 +91,33 @@ public class AuthenticationService {
         }
 
         public void sendResetCode(ResetCodeRequest request) {
-                // Mock sending logic
-                System.out.println("Sending reset code to " + request.getContact() + " via " + request.getMethod());
+                User user = repository.findByEmail(request.getEmail())
+                                .orElseThrow(() -> new RuntimeException("لا يوجد حساب مرتبط بهذا البريد الإلكتروني"));
+
+                String code = String.valueOf(100000 + random.nextInt(900000));
+                user.setVerificationCode(code);
+                repository.save(user);
+
+                String firstName = employeeRepository.findByUserId(user.getId())
+                                .map(Employee::getFirstName)
+                                .orElse(request.getEmail());
+
+                emailService.sendPasswordResetCode(request.getEmail(), firstName, code);
         }
 
         public void resetPassword(ResetPasswordRequest request) {
-                User user = repository.findByVerificationCode(request.getCode())
-                                .or(() -> repository.findByUsername(request.getCode()))
-                                .or(() -> repository.findByEmail(request.getCode()))
-                                .orElseThrow(() -> new RuntimeException("المستخدم غير موجود أو رمز التفعيل خاطئ"));
+                User user = repository.findByEmail(request.getEmail())
+                                .orElseThrow(() -> new RuntimeException("لا يوجد حساب مرتبط بهذا البريد الإلكتروني"));
+
+                if (user.getVerificationCode() == null || !user.getVerificationCode().equals(request.getVerificationCode())) {
+                        throw new RuntimeException("رمز التحقق غير صحيح");
+                }
 
                 user.setPassword(passwordEncoder.encode(request.getNewPassword()));
                 user.setEnabled(true);
                 user.setVerificationCode(null);
                 repository.save(user);
 
-                // If this is an employee, update their status to active
                 employeeRepository.findByUserId(user.getId()).ifPresent(employee -> {
                         employee.setStatus(Employee.EmployeeStatus.active);
                         employeeRepository.save(employee);

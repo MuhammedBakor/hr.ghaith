@@ -1,32 +1,55 @@
 package com.ghaith.erp.controller;
 
+import com.ghaith.erp.model.*;
+import com.ghaith.erp.service.FinanceExtendedService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.*;
 
 @RestController
 @RequestMapping("/api/v1/finance")
+@RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 public class FinanceExtendedController {
 
+    private final FinanceExtendedService financeService;
+
     @GetMapping("/accounts")
-    public ResponseEntity<?> getAccounts() {
+    public ResponseEntity<List<?>> getAccounts() {
+        // Still placeholder for specific accounts logic if needed, but returning empty
+        // for now
         return ResponseEntity.ok(Collections.emptyList());
     }
 
     @GetMapping("/budgets")
-    public ResponseEntity<?> getBudgets() {
-        return ResponseEntity.ok(Collections.emptyList());
+    public ResponseEntity<List<Budget>> getBudgets() {
+        return ResponseEntity.ok(financeService.getAllBudgets());
+    }
+
+    @PostMapping("/budgets")
+    public ResponseEntity<Budget> createBudget(@RequestBody Budget budget) {
+        return ResponseEntity.ok(financeService.createBudget(budget));
     }
 
     @GetMapping("/vendors")
-    public ResponseEntity<?> getVendors() {
-        return ResponseEntity.ok(Collections.emptyList());
+    public ResponseEntity<List<Vendor>> getVendors() {
+        return ResponseEntity.ok(financeService.getAllVendors());
+    }
+
+    @PostMapping("/vendors")
+    public ResponseEntity<Vendor> createVendor(@RequestBody Vendor vendor) {
+        return ResponseEntity.ok(financeService.createVendor(vendor));
     }
 
     @GetMapping("/warehouses")
-    public ResponseEntity<?> getWarehouses() {
-        return ResponseEntity.ok(Collections.emptyList());
+    public ResponseEntity<List<Warehouse>> getWarehouses() {
+        return ResponseEntity.ok(financeService.getAllWarehouses());
+    }
+
+    @PostMapping("/warehouses")
+    public ResponseEntity<Warehouse> createWarehouse(@RequestBody Warehouse warehouse) {
+        return ResponseEntity.ok(financeService.createWarehouse(warehouse));
     }
 
     @GetMapping("/vouchers")
@@ -45,23 +68,23 @@ public class FinanceExtendedController {
     }
 
     @GetMapping("/financial-requests")
-    public ResponseEntity<?> getFinancialRequests() {
-        return ResponseEntity.ok(Collections.emptyList());
+    public ResponseEntity<List<FinancialRequest>> getFinancialRequests() {
+        return ResponseEntity.ok(financeService.getAllFinancialRequests());
     }
 
     @PostMapping("/financial-requests")
-    public ResponseEntity<?> createFinancialRequest(@RequestBody(required = false) Map<String, Object> body) {
-        return ResponseEntity.ok(body != null ? body : new HashMap<>());
+    public ResponseEntity<FinancialRequest> createFinancialRequest(@RequestBody FinancialRequest body) {
+        return ResponseEntity.ok(financeService.createFinancialRequest(body));
     }
 
     @GetMapping("/journal-entries")
-    public ResponseEntity<?> getJournalEntries() {
-        return ResponseEntity.ok(Collections.emptyList());
+    public ResponseEntity<List<JournalEntry>> getJournalEntries() {
+        return ResponseEntity.ok(financeService.getAllJournalEntries());
     }
 
     @PostMapping("/journal-entries")
-    public ResponseEntity<?> createJournalEntry(@RequestBody(required = false) Map<String, Object> body) {
-        return ResponseEntity.ok(body != null ? body : new HashMap<>());
+    public ResponseEntity<JournalEntry> createJournalEntry(@RequestBody JournalEntry body) {
+        return ResponseEntity.ok(financeService.createJournalEntry(body));
     }
 
     @GetMapping("/reports/account-statement")

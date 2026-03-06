@@ -10,7 +10,5 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ResetCodeRequest {
-    private String code;
-    private String method;
-    private String contact;
+    private String email;
 }

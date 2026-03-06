@@ -13,7 +13,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { useUser } from '@/services/authService';
 import { toast } from 'sonner';
 import { Building2, Plus, Search, MapPin, DollarSign, Users, ArrowUpDown, Edit, Trash2, Home, Warehouse, Building, Loader2 } from 'lucide-react';
 import {
@@ -42,7 +44,7 @@ import { Label } from '@/components/ui/label';
 import { PrintButton } from "@/components/PrintButton";
 
 export default function Properties() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useUser();
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -61,13 +63,17 @@ export default function Properties() {
     currentValue: '',
   });
 
-  const utils = trpc.useUtils();
-  const { data: properties = [], isLoading } = trpc.property.properties.list.useQuery();
-  
-  const createMutation = trpc.property.properties.create.useMutation({
+  const queryClient = useQueryClient();
+  const { data: properties = [], isLoading } = useQuery({
+    queryKey: ['properties'],
+    queryFn: () => api.get('/property/properties').then(r => r.data),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/property/properties', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إضافة العقار بنجاح');
-      utils.property.properties.list.invalidate();
+      queryClient.invalidateQueries({ queryKey: ['properties'] });
       setIsCreateOpen(false);
       setNewProperty({
         name: '',
@@ -77,20 +83,21 @@ export default function Properties() {
         area: '',
         purchasePrice: '',
         currentValue: '',
-      onError: (e: any) => toast.error(e?.message || 'حدث خطأ')});
+      });
     },
-    onError: (error) => {
-      toast.error('حدث خطأ: ' + error.message);
+    onError: (error: any) => {
+      toast.error('حدث خطأ: ' + (error?.response?.data?.message || error.message));
     },
   });
 
-  const deleteMutation = trpc.property.properties.delete.useMutation({
+  const deleteMutation = useMutation({
+    mutationFn: ({ id }: any) => api.delete(`/property/properties/${id}`).then(r => r.data),
     onSuccess: () => {
       toast.success('تم حذف العقار بنجاح');
-      utils.property.properties.list.invalidate();
+      queryClient.invalidateQueries({ queryKey: ['properties'] });
     },
-    onError: (error) => {
-      toast.error('حدث خطأ: ' + error.message);
+    onError: (error: any) => {
+      toast.error('حدث خطأ: ' + (error?.response?.data?.message || error.message));
     },
   });
 

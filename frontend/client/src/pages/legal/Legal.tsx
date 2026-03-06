@@ -6,7 +6,8 @@ import { formatDate, formatDateTime } from '@/lib/formatDate';
  * ════════════════════════════════════════════════════════════════════════
  */
 import { useState } from 'react';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -80,25 +81,30 @@ function ContractsSection() {
   const [editData, setEditData] = useState<any>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
-  const { data, isLoading, refetch } = trpc.legal.contracts.list.useQuery({
-    page, pageSize: 15, status: (status === 'all' || !status) ? undefined : (status as any), search: search || undefined,
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['legal-contracts', page, status, search],
+    queryFn: () => api.get('/legal/contracts', { params: { page, pageSize: 15, status: (status === 'all' || !status) ? undefined : status, search: search || undefined } }).then(r => r.data),
   });
 
-  const createM = trpc.legal.contracts.create.useMutation({
+  const createM = useMutation({
+    mutationFn: (data: any) => api.post('/legal/contracts', data).then(r => r.data),
     onSuccess: () => { toast.success('تم إنشاء العقد'); setOpenCreate(false); refetch(); resetForm(); },
-    onError: (e) => toast.error(e.message),
+    onError: (e: any) => toast.error(e?.response?.data?.message || e.message),
   });
-  const updateM = trpc.legal.contracts.update.useMutation({
+  const updateM = useMutation({
+    mutationFn: ({ id, ...data }: any) => api.put(`/legal/contracts/${id}`, data).then(r => r.data),
     onSuccess: () => { toast.success('تم تحديث العقد'); setEditData(null); refetch(); },
-    onError: (e) => toast.error(e.message),
+    onError: (e: any) => toast.error(e?.response?.data?.message || e.message),
   });
-  const deleteM = trpc.legal.contracts.delete.useMutation({
+  const deleteM = useMutation({
+    mutationFn: ({ id }: any) => api.delete(`/legal/contracts/${id}`).then(r => r.data),
     onSuccess: () => { toast.success('تم حذف العقد'); setDeleteId(null); refetch(); },
-    onError: (e) => toast.error(e.message),
+    onError: (e: any) => toast.error(e?.response?.data?.message || e.message),
   });
-  const renewM = trpc.legal.contracts.renew.useMutation({
+  const renewM = useMutation({
+    mutationFn: ({ id, ...data }: any) => api.post(`/legal/contracts/${id}/renew`, data).then(r => r.data),
     onSuccess: () => { toast.success('تم تجديد العقد'); refetch(); },
-    onError: (e) => toast.error(e.message),
+    onError: (e: any) => toast.error(e?.response?.data?.message || e.message),
   });
 
   const [form, setForm] = useState({ title: '', partyA: '', partyB: '', contractType: '', startDate: '', endDate: '', value: '', status: 'draft', description: '' });
@@ -309,21 +315,25 @@ function CasesSection() {
   const [editData, setEditData] = useState<any>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
-  const { data, isLoading, refetch } = trpc.legal.cases.list.useQuery({
-    page, pageSize: 15, status: (status === 'all' || !status) ? undefined : (status as any), search: search || undefined,
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ['legal-cases', page, status, search],
+    queryFn: () => api.get('/legal/cases', { params: { page, pageSize: 15, status: (status === 'all' || !status) ? undefined : status, search: search || undefined } }).then(r => r.data),
   });
 
-  const createM = trpc.legal.cases.create.useMutation({
+  const createM = useMutation({
+    mutationFn: (data: any) => api.post('/legal/cases', data).then(r => r.data),
     onSuccess: () => { toast.success('تم إنشاء القضية'); setOpenCreate(false); refetch(); resetForm(); },
-    onError: (e) => toast.error(e.message),
+    onError: (e: any) => toast.error(e?.response?.data?.message || e.message),
   });
-  const updateM = trpc.legal.cases.update.useMutation({
+  const updateM = useMutation({
+    mutationFn: ({ id, ...data }: any) => api.put(`/legal/cases/${id}`, data).then(r => r.data),
     onSuccess: () => { toast.success('تم تحديث القضية'); setEditData(null); refetch(); },
-    onError: (e) => toast.error(e.message),
+    onError: (e: any) => toast.error(e?.response?.data?.message || e.message),
   });
-  const deleteM = trpc.legal.cases.delete.useMutation({
+  const deleteM = useMutation({
+    mutationFn: ({ id }: any) => api.delete(`/legal/cases/${id}`).then(r => r.data),
     onSuccess: () => { toast.success('تم حذف القضية'); setDeleteId(null); refetch(); },
-    onError: (e) => toast.error(e.message),
+    onError: (e: any) => toast.error(e?.response?.data?.message || e.message),
   });
 
   const [form, setForm] = useState({ title: '', caseNumber: '', caseType: '', description: '', status: 'open', hearingDate: '', court: '', claimAmount: '' });
@@ -483,8 +493,14 @@ function CasesSection() {
 // MAIN PAGE
 // ═══════════════════════════════════════════════
 export default function Legal() {
-  const { data: stats, isLoading: statsLoading, refetch: refetchStats } = trpc.legal.stats.useQuery();
-  const { data: expiring } = trpc.legal.contracts.expiring.useQuery({ days: 30 });
+  const { data: stats, isLoading: statsLoading, refetch: refetchStats } = useQuery({
+    queryKey: ['legal-stats'],
+    queryFn: () => api.get('/legal/stats').then(r => r.data),
+  });
+  const { data: expiring } = useQuery({
+    queryKey: ['legal-contracts-expiring'],
+    queryFn: () => api.get('/legal/contracts/expiring', { params: { days: 30 } }).then(r => r.data),
+  });
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">

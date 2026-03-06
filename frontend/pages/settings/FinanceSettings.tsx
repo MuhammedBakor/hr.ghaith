@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import api from '../../client/src/lib/api';
 type S = Record<string, string>;
 
 export default function FinanceSettings() {
@@ -10,8 +11,8 @@ export default function FinanceSettings() {
     'finance.taxNumber': '', 'finance.commercialRegister': '',
   });
   const [saving, setSaving] = useState(false); const [ok, setOk] = useState(false);
-  useEffect(() => { (async () => { try { const r = await fetch('/api/trpc/settings.settings.list'); const d = await r.json(); if(d?.result?.data){const m:S={};(d.result.data as any[]).forEach((x:any)=>m[x.settingKey]=x.settingValue);setS(p=>({...p,...m}));} } catch {} })(); }, []);
-  const save = async () => { setSaving(true); try { for(const [k,v] of Object.entries(s)) if(k.startsWith('finance.')) await fetch('/api/trpc/settings.settings.set',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({json:{key:k,value:v}})}); setOk(true);setTimeout(()=>setOk(false),2000); } catch {} setSaving(false); };
+  useEffect(() => { (async () => { try { const { data } = await api.get('/settings/finance'); if(data){const m:S={};(data as any[]).forEach((x:any)=>m[x.settingKey]=x.settingValue);setS(p=>({...p,...m}));} } catch {} })(); }, []);
+  const save = async () => { setSaving(true); try { for(const [k,v] of Object.entries(s)) if(k.startsWith('finance.')) await api.post('/settings/finance',{key:k,value:v}); setOk(true);setTimeout(()=>setOk(false),2000); } catch {} setSaving(false); };
   const u=(k:string,v:string)=>setS(p=>({...p,[k]:v}));
   const N=({l,k,unit}:{l:string;k:string;unit?:string})=>(<div><label className="text-sm font-medium">{l} {unit&&<span className="text-gray-400">({unit})</span>}</label><input type="number" className="w-full border rounded-lg px-3 py-2 mt-1" value={s[k]||''} onChange={e=>u(k,e.target.value)} min="0" step="0.01"/></div>);
   const T=({l,k,ph}:{l:string;k:string;ph?:string})=>(<div><label className="text-sm font-medium">{l}</label><input className="w-full border rounded-lg px-3 py-2 mt-1" value={s[k]||''} onChange={e=>u(k,e.target.value)} placeholder={ph}/></div>);

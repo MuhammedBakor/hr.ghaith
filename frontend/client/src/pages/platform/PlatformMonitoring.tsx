@@ -1,4 +1,6 @@
-import { trpc } from '@/lib/trpc';
+import { useQuery } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { useUser } from '@/services/authService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -38,17 +40,17 @@ interface ServiceStatus {
 }
 
 export default function PlatformMonitoring() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useUser();
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastRefresh, setLastRefresh] = useState(new Date());
 
-  const { data: healthData, isLoading: healthLoading, refetch: refetchHealth } = trpc.infra.health.useQuery();
-  const { data: readyData, isLoading: readyLoading, refetch: refetchReady } = trpc.infra.ready.useQuery();
-  const { data: metricsData, isLoading: metricsLoading, refetch: refetchMetrics } = trpc.infra.metrics.useQuery();
-  const { data: statusData, isLoading: statusLoading, refetch: refetchStatus } = trpc.infra.status.useQuery();
+  const { data: healthData, isLoading: healthLoading, refetch: refetchHealth } = useQuery({ queryKey: ['health'], queryFn: () => api.get('/health').then(r => r.data) });
+  const { data: readyData, isLoading: readyLoading, refetch: refetchReady } = useQuery({ queryKey: ['ready'], queryFn: () => api.get('/platform/monitoring/ready').then(r => r.data) });
+  const { data: metricsData, isLoading: metricsLoading, refetch: refetchMetrics } = useQuery<any>({ queryKey: ['metrics'], queryFn: () => api.get('/platform/monitoring/metrics').then(r => r.data) });
+  const { data: statusData, isLoading: statusLoading, refetch: refetchStatus } = useQuery<any>({ queryKey: ['status'], queryFn: () => api.get('/platform/monitoring/status').then(r => r.data) });
 
   const refetchAll = () => {
     refetchHealth();

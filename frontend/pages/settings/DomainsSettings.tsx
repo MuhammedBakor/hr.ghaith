@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import api from '../../client/src/lib/api';
 
 export default function DomainsSettings() {
   const [domains, setDomains] = useState('hr.door.sa,console.door.sa,api.door.sa,ghaith.door.sa');
   const [newDomain, setNewDomain] = useState('');
   const [saving, setSaving] = useState(false); const [ok, setOk] = useState(false);
 
-  useEffect(() => { (async () => { try { const r = await fetch('/api/trpc/settings.settings.list'); const d = await r.json(); if(d?.result?.data) { const found = (d.result.data as any[]).find((x:any)=>x.settingKey==='cors.allowedDomains'); if(found?.settingValue) setDomains(found.settingValue); } } catch {} })(); }, []);
-  const save = async () => { setSaving(true); try { await fetch('/api/trpc/settings.settings.set',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({json:{key:'cors.allowedDomains',value:domains}})}); setOk(true);setTimeout(()=>setOk(false),2000); } catch {} setSaving(false); };
+  useEffect(() => { (async () => { try { const { data } = await api.get('/settings/domains'); if(data) { const found = (data as any[]).find((x:any)=>x.settingKey==='cors.allowedDomains'); if(found?.settingValue) setDomains(found.settingValue); } } catch {} })(); }, []);
+  const save = async () => { setSaving(true); try { await api.post('/settings/domains',{key:'cors.allowedDomains',value:domains}); setOk(true);setTimeout(()=>setOk(false),2000); } catch {} setSaving(false); };
   const list = domains.split(',').map(d=>d.trim()).filter(Boolean);
   const add = () => { if(newDomain && !list.includes(newDomain)) { setDomains([...list, newDomain].join(',')); setNewDomain(''); } };
   const remove = (d: string) => setDomains(list.filter(x=>x!==d).join(','));

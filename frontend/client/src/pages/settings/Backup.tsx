@@ -1,5 +1,7 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { useUser } from '@/services/authService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -34,7 +36,7 @@ export default function Backup() {
   const [showInlineForm, setShowInlineForm] = useState(false);
   const [inlineData, setInlineData] = useState<any>({});
 
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useUser();
   const userRole = currentUser?.role || 'user';
   const requiredRole = 'admin';
   const hasAccess = userRole === 'admin' || userRole === requiredRole || requiredRole === 'user';
@@ -49,10 +51,11 @@ export default function Backup() {
     backupType: 'full' as 'full' | 'incremental' | 'differential' | 'manual',
   });
 
-  const { data: backups, isLoading, refetch } = trpc.backups?.list?.useQuery();
-  const { data: stats, isLoading: statsLoading } = trpc.backups?.stats?.useQuery();
+  const { data: backups, isLoading, refetch } = useQuery({ queryKey: ['backups'], queryFn: () => api.get('/settings/backups').then(r => r.data) });
+  const { data: stats, isLoading: statsLoading } = useQuery({ queryKey: ['backups-stats'], queryFn: () => api.get('/settings/backups/stats').then(r => r.data) });
 
-  const createMutation = trpc.backups?.create?.useMutation({
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/settings/backups', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إنشاء النسخة الاحتياطية بنجاح');
       setIsCreateOpen(false);
@@ -66,7 +69,8 @@ export default function Backup() {
   });
 
 
-  const deleteMutation = trpc.backups?.delete?.useMutation({
+  const deleteMutation = useMutation({
+    mutationFn: (data: any) => api.delete(`/settings/backups/${data.id}`).then(r => r.data),
     onSuccess: () => {
       toast.success('تم حذف النسخة الاحتياطية بنجاح');
       refetch();
@@ -76,7 +80,8 @@ export default function Backup() {
     },
   });
 
-  const downloadMutation = trpc.backups?.download?.useMutation({
+  const downloadMutation = useMutation({
+    mutationFn: (data: any) => api.post(`/settings/backups/${data.id}/download`).then(r => r.data),
     onSuccess: (data) => {
       toast.success(`تم تجهيز رابط التحميل: ${data.fileName}`);
       // في بيئة الإنتاج، سيتم فتح رابط التحميل الحقيقي

@@ -1,4 +1,5 @@
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { toast } from 'sonner';
 import AutomationDashboard, { CategoryMeta } from '@/components/automation/AutomationDashboard';
 import {
@@ -14,25 +15,32 @@ const CATEGORY_META: CategoryMeta = {
 };
 
 export default function LegalAutomation() {
-  const utils = trpc.useContext();
+  const queryClient = useQueryClient();
 
-  const { data: services, isLoading } = trpc.legalRouters.legalAutomation.list.useQuery();
+  const { data: services, isLoading } = useQuery({
+    queryKey: ['legal-automation-services'],
+    queryFn: () => api.get('/legal/automation/services').then(r => r.data),
+  });
 
-  const initMut   = trpc.legalRouters.legalAutomation.initialize.useMutation({
-    onSuccess: r => { toast.success(`تهيئة: ${r.initialized} جديد، ${r.existing} موجود`); utils.legalRouters.legalAutomation.list.invalidate(); },
-    onError:   e => toast.error(e.message),
+  const initMut = useMutation({
+    mutationFn: (data: any) => api.post('/legal/automation/services/initialize', data).then(r => r.data),
+    onSuccess: (r: any) => { toast.success(`تهيئة: ${r.initialized} جديد، ${r.existing} موجود`); queryClient.invalidateQueries({ queryKey: ['legal-automation-services'] }); },
+    onError: (e: any) => toast.error(e?.response?.data?.message || e.message),
   });
-  const toggleMut = trpc.legalRouters.legalAutomation.toggle.useMutation({
-    onSuccess: (_, v) => { toast.success(v.isEnabled ? 'تم التفعيل' : 'تم الإيقاف'); utils.legalRouters.legalAutomation.list.invalidate(); },
-    onError:   e => toast.error(e.message),
+  const toggleMut = useMutation({
+    mutationFn: (data: any) => api.post('/legal/automation/services/toggle', data).then(r => r.data),
+    onSuccess: (_: any, v: any) => { toast.success(v.isEnabled ? 'تم التفعيل' : 'تم الإيقاف'); queryClient.invalidateQueries({ queryKey: ['legal-automation-services'] }); },
+    onError: (e: any) => toast.error(e?.response?.data?.message || e.message),
   });
-  const runNowMut = trpc.legalRouters.legalAutomation.runNow.useMutation({
-    onSuccess: r => toast.success(`✅ ${r.message} — ${r.affected} سجل`),
-    onError:   e => toast.error(e.message),
+  const runNowMut = useMutation({
+    mutationFn: (data: any) => api.post('/legal/automation/services/run-now', data).then(r => r.data),
+    onSuccess: (r: any) => toast.success(`${r.message} — ${r.affected} سجل`),
+    onError: (e: any) => toast.error(e?.response?.data?.message || e.message),
   });
-  const updateMut = trpc.legalRouters.legalAutomation.update.useMutation({
-    onSuccess: () => { toast.success('تم حفظ الإعدادات'); utils.legalRouters.legalAutomation.list.invalidate(); },
-    onError:   e => toast.error(e.message),
+  const updateMut = useMutation({
+    mutationFn: ({ serviceKey, ...data }: any) => api.put(`/legal/automation/services/${serviceKey}`, data).then(r => r.data),
+    onSuccess: () => { toast.success('تم حفظ الإعدادات'); queryClient.invalidateQueries({ queryKey: ['legal-automation-services'] }); },
+    onError: (e: any) => toast.error(e?.response?.data?.message || e.message),
   });
 
   return (

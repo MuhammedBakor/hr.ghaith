@@ -1,6 +1,8 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
 import { useState, useEffect } from 'react';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { useUser } from '@/services/authService';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,9 +19,9 @@ const SMS_PROVIDERS = [
 ];
 
 export default function SmsSettings() {
-  const deleteMutation = trpc.settings?.settings?.delete.useMutation({ onSuccess: () => { refetch(); } });
+  const deleteMutation = useMutation({ mutationFn: (data: any) => api.delete(`/settings/sms/${data.id}`).then(r => r.data), onSuccess: () => { refetch(); } });
 
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useUser();
   const userRole = currentUser?.role || 'user';
   const requiredRole = 'admin';
   const hasAccess = userRole === 'admin' || userRole === requiredRole || requiredRole === 'user';
@@ -37,8 +39,9 @@ export default function SmsSettings() {
   const [testPhone, setTestPhone] = useState('');
   const [hasChanges, setHasChanges] = useState(false);
 
-  const { data: settings, isLoading, refetch } = trpc.controlKernel.sms.get.useQuery();
-  const updateMutation = trpc.controlKernel.sms.update.useMutation({
+  const { data: settings, isLoading, refetch } = useQuery({ queryKey: ['sms-settings'], queryFn: () => api.get('/settings/sms').then(r => r.data) });
+  const updateMutation = useMutation({
+    mutationFn: (data: any) => api.put('/settings/sms', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم حفظ إعدادات SMS بنجاح');
       setHasChanges(false);
@@ -48,7 +51,8 @@ export default function SmsSettings() {
       toast.error(`فشل حفظ الإعدادات: ${error.message}`);
     },
   });
-  const testMutation = trpc.controlKernel.sms.test.useMutation({
+  const testMutation = useMutation({
+    mutationFn: (data: any) => api.post('/settings/sms/test', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إرسال رسالة SMS الاختبارية بنجاح!');
       refetch();

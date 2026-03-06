@@ -6,10 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, CloudRain, User, Lock, AlertCircle, Eye, EyeOff, KeyRound, Mail, Phone, CheckCircle2, ArrowLeft, ArrowRight, Building2 } from 'lucide-react';
+import { Loader2, CloudRain, User, Lock, AlertCircle, Eye, EyeOff, KeyRound, Mail, CheckCircle2, ArrowLeft, ArrowRight } from 'lucide-react';
 import { useLogin, useSendPasswordResetCode, useResetPassword } from '@/services/authService';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 type ViewType = 'main' | 'login' | 'reset-request' | 'reset-verify' | 'reset-success';
 
@@ -26,9 +25,7 @@ export default function Login() {
   const [loginError, setLoginError] = useState('');
 
 
-  const [resetSubscriptionCode, setResetSubscriptionCode] = useState('');
-  const [resetMethod, setResetMethod] = useState<'email' | 'whatsapp'>('email');
-  const [resetContact, setResetContact] = useState('');
+  const [resetEmail, setResetEmail] = useState('');
   const [resetCode, setResetCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -72,16 +69,14 @@ export default function Login() {
 
   // Handle send reset code
   const handleSendResetCode = () => {
-    if (!resetSubscriptionCode.trim()) {
-      setResetError('يرجى إدخال كود الاشتراك');
+    if (!resetEmail.trim()) {
+      setResetError('يرجى إدخال البريد الإلكتروني');
       return;
     }
 
     setResetError('');
     sendResetCodeMutation.mutate({
-      code: resetSubscriptionCode.trim(),
-      method: resetMethod,
-      contact: resetContact
+      email: resetEmail.trim(),
     }, {
       onSuccess: () => {
         setCurrentView('reset-verify');
@@ -109,7 +104,7 @@ export default function Login() {
 
     setResetError('');
     verifyResetMutation.mutate({
-      code: resetSubscriptionCode.trim(),
+      email: resetEmail.trim(),
       verificationCode: resetCode.trim(),
       newPassword
     }, {
@@ -127,8 +122,7 @@ export default function Login() {
     setUsername('');
     setPassword('');
     setLoginError('');
-    setResetSubscriptionCode('');
-    setResetContact('');
+    setResetEmail('');
     setResetCode('');
     setNewPassword('');
     setConfirmPassword('');
@@ -219,7 +213,7 @@ export default function Login() {
                     </div>
                     <div className="flex-1">
                       <h3 className="font-semibold text-gray-900 mb-1">استعادة كلمة المرور</h3>
-                      <p className="text-sm text-gray-500">نسيت كلمة المرور؟ أدخل كود الاشتراك لإرسال رمز تحقق جديد</p>
+                      <p className="text-sm text-gray-500">نسيت كلمة المرور؟ أدخل بريدك الإلكتروني لإرسال رمز تحقق</p>
                     </div>
                     <ArrowLeft className="h-5 w-5 text-gray-400 group-hover:text-amber-600 transition-colors" />
                   </div>
@@ -326,7 +320,7 @@ export default function Login() {
                 <KeyRound className="h-8 w-8 text-amber-600" />
               </div>
               <CardTitle className="text-xl">استعادة كلمة المرور</CardTitle>
-              <CardDescription>أدخل كود الاشتراك لإرسال رمز التحقق</CardDescription>
+              <CardDescription>أدخل بريدك الإلكتروني لإرسال رمز التحقق</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -338,43 +332,19 @@ export default function Login() {
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="resetCode">كود الاشتراك</Label>
+                  <Label htmlFor="resetEmail">البريد الإلكتروني</Label>
                   <div className="relative">
-                    <Building2 className="absolute end-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Mail className="absolute end-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
-                      id="resetCode"
-                      type="text"
-                      placeholder="مثال: GH-202602-XXXX"
-                      value={resetSubscriptionCode}
-                      onChange={(e) => setResetSubscriptionCode(e.target.value)}
-                      className="pe-10 text-center font-mono tracking-wider"
+                      id="resetEmail"
+                      type="email"
+                      placeholder="أدخل بريدك الإلكتروني"
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      className="pe-10"
                       disabled={sendResetCodeMutation.isPending}
                     />
                   </div>
-                </div>
-
-                <div className="space-y-3">
-                  <Label>طريقة إرسال رمز التحقق</Label>
-                  <RadioGroup
-                    value={resetMethod}
-                    onValueChange={(v) => setResetMethod(v as 'email' | 'whatsapp')}
-                    className="flex gap-4"
-                  >
-                    <div className="flex items-center space-x-2 space-x-reverse flex-1">
-                      <RadioGroupItem value="email" id="email" />
-                      <Label htmlFor="email" className="flex items-center gap-2 cursor-pointer">
-                        <Mail className="h-4 w-4 text-gray-500" />
-                        البريد الإلكتروني
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2 space-x-reverse flex-1">
-                      <RadioGroupItem value="whatsapp" id="whatsapp" />
-                      <Label htmlFor="whatsapp" className="flex items-center gap-2 cursor-pointer">
-                        <Phone className="h-4 w-4 text-gray-500" />
-                        واتساب
-                      </Label>
-                    </div>
-                  </RadioGroup>
                 </div>
 
                 <Button
@@ -405,7 +375,7 @@ export default function Login() {
               </div>
               <CardTitle className="text-xl">إعادة تعيين كلمة المرور</CardTitle>
               <CardDescription>
-                تم إرسال رمز التحقق إلى {resetMethod === 'email' ? 'بريدك الإلكتروني' : 'رقم الواتساب'}
+                تم إرسال رمز التحقق إلى بريدك الإلكتروني
               </CardDescription>
             </CardHeader>
             <CardContent>

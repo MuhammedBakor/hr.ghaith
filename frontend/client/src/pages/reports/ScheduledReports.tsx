@@ -1,5 +1,7 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { useUser } from '@/services/authService';
 import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,7 +32,7 @@ interface ScheduledReport {
 }
 
 export default function ScheduledReportsPage() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useUser();
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -48,10 +50,16 @@ export default function ScheduledReportsPage() {
   });
 
   // جلب التقارير من API
-  const { data: reportsApiData, isLoading, refetch } = trpc.bi.reports.list.useQuery({});
-  
+  const { data: reportsApiData, isLoading, refetch } = useQuery({
+    queryKey: ['reports-scheduled'],
+    queryFn: () => api.get('/reports/scheduled').then(r => r.data),
+  });
+
   // جلب سجلات المهام المجدولة
-  const { data: schedulerLogs } = trpc.scheduler.getLogs.useQuery({ limit: 50 });
+  const { data: schedulerLogs } = useQuery({
+    queryKey: ['reports-scheduled-logs'],
+    queryFn: () => api.get('/reports/scheduled/logs', { params: { limit: 50 } }).then(r => r.data),
+  });
 
   // تحويل البيانات من API
   const scheduledData: ScheduledReport[] = useMemo(() => {
@@ -71,8 +79,9 @@ export default function ScheduledReportsPage() {
   }, [reportsApiData]);
 
   // تشغيل مهمة يدوياً
-  const runJobMutation = trpc.scheduler.runJob.useMutation({
-    onSuccess: (result) => {
+  const runJobMutation = useMutation({
+    mutationFn: (data: any) => api.post('/reports/scheduled/run', data).then(r => r.data),
+    onSuccess: (result: any) => {
       if (result.success) {
         toast.success(`تم تنفيذ التقرير بنجاح: ${result.message}`);
         refetch();
@@ -86,8 +95,9 @@ export default function ScheduledReportsPage() {
   });
 
   // تفعيل/تعطيل مهمة
-  const toggleJobMutation = trpc.scheduler.toggleJob.useMutation({
-    onSuccess: (_, variables) => {
+  const toggleJobMutation = useMutation({
+    mutationFn: (data: any) => api.post('/reports/scheduled/toggle', data).then(r => r.data),
+    onSuccess: (_: any, variables: any) => {
       toast.success(variables.enabled ? 'تم تفعيل التقرير' : 'تم إيقاف التقرير');
       refetch();
     },
@@ -138,7 +148,8 @@ export default function ScheduledReportsPage() {
   };
 
   // Mutation لإنشاء تقرير مجدول جديد
-  const createReportMutation = trpc.bi.reports.create.useMutation({
+  const createReportMutation = useMutation({
+    mutationFn: (data: any) => api.post('/reports/scheduled', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إنشاء التقرير المجدول بنجاح');
       setShowNewDialog(false);
@@ -146,7 +157,7 @@ export default function ScheduledReportsPage() {
       onError: (e: any) => toast.error(e?.message || 'حدث خطأ')});
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`فشل في إنشاء التقرير: ${error.message}`);
     },
   });

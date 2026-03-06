@@ -1,4 +1,6 @@
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { useUser } from '@/services/authService';
 import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -60,18 +62,18 @@ export default function RequestTypes() {
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createData, setCreateData] = useState<any>({});
-  const createMutation = trpc.requestTypes.create.useMutation({ onSuccess: () => { refetch(); setShowCreateForm(false); setCreateData({}); } });
+  const createMutation = useMutation({ mutationFn: (data: any) => api.post('/requests/types', data).then(r => r.data), onSuccess: () => { refetch(); setShowCreateForm(false); setCreateData({}); } });
 
   const [editingItem, setEditingItem] = useState<any>(null);
-  const updateMutation = trpc.requestTypes.update.useMutation({ onSuccess: () => { refetch(); setEditingItem(null); } });
+  const updateMutation = useMutation({ mutationFn: (data: any) => api.put(`/requests/types/${data.id}`, data).then(r => r.data), onSuccess: () => { refetch(); setEditingItem(null); } });
 
-  const deleteMutation = trpc.requestTypes.delete.useMutation({ onSuccess: () => { refetch(); } });
+  const deleteMutation = useMutation({ mutationFn: (data: any) => api.delete(`/requests/types/${data.id}`).then(r => r.data), onSuccess: () => { refetch(); } });
 
   const handleSave = () => {
     updateMutation.mutate(editingItem);
   };
 
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useUser();
   const userRole = currentUser?.role || 'user';
   const requiredRole = 'user';
   const hasAccess = userRole === 'admin' || userRole === requiredRole || requiredRole === 'user';
@@ -103,7 +105,10 @@ export default function RequestTypes() {
   const [viewingType, setViewingType] = useState<RequestType | null>(null);
 
   // جلب الطلبات من API لحساب الإحصائيات
-  const { data: typesRaw, isLoading, refetch } = trpc.requestTypes.list.useQuery({});
+  const { data: typesRaw, isLoading, refetch } = useQuery({
+    queryKey: ['request-types'],
+    queryFn: () => api.get('/requests/types').then(r => r.data),
+  });
 
   // تحويل البيانات من API إلى أنواع الطلبات
   const requestTypesData: RequestType[] = useMemo(() => {

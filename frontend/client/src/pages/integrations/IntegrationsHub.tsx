@@ -1,5 +1,7 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { useUser } from '@/services/authService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -20,7 +22,7 @@ import {
 export default function IntegrationsHub() {
   const confirmDelete = (fn: () => void) => { if (window.confirm("هل أنت متأكد من الحذف؟")) fn(); };
 
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useUser();
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -35,33 +37,42 @@ export default function IntegrationsHub() {
   });
 
   // جلب التكاملات من الـ API
-  const { data: integrations, isLoading, refetch } = trpc.integrations?.list?.useQuery();
-  const { data: stats } = trpc.integrations?.getStats?.useQuery();
-  
+  const { data: integrations, isLoading, refetch } = useQuery({
+    queryKey: ['integrations'],
+    queryFn: () => api.get('/integrations').then(r => r.data),
+  });
+  const { data: stats } = useQuery({
+    queryKey: ['integrations-stats'],
+    queryFn: () => api.get('/integrations/stats').then(r => r.data),
+  });
+
   // mutations
-  const createMutation = trpc.integrations?.create?.useMutation({
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/integrations', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إضافة التكامل بنجاح');
       setShowAddDialog(false);
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`فشل في إضافة التكامل: ${error.message}`);
     },
   });
 
-  const toggleStatusMutation = trpc.integrations?.toggleStatus?.useMutation({
+  const toggleStatusMutation = useMutation({
+    mutationFn: (data: any) => api.post('/integrations/toggle-status', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم تحديث حالة التكامل');
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`فشل في تحديث الحالة: ${error.message}`);
     },
   });
 
-  const testConnectionMutation = trpc.integrations?.testConnection?.useMutation({
-    onSuccess: (result) => {
+  const testConnectionMutation = useMutation({
+    mutationFn: (data: any) => api.post('/integrations/test-connection', data).then(r => r.data),
+    onSuccess: (result: any) => {
       if (result.success) {
         toast.success('الاتصال ناجح');
       } else {
@@ -69,7 +80,7 @@ export default function IntegrationsHub() {
       }
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`فشل في اختبار الاتصال: ${error.message}`);
     },
   });

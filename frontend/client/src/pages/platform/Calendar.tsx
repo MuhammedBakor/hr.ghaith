@@ -1,6 +1,8 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
 import { useState } from 'react';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { useUser } from '@/services/authService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,7 +42,7 @@ export default function Calendar() {
 
   const [showInlineForm, setShowInlineForm] = useState(false);
 
-  const { data: currentUser } = trpc.auth.me.useQuery();
+  const { data: currentUser } = useUser();
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -61,29 +63,31 @@ export default function Calendar() {
     color: '#3B82F6',
   });
 
-  const utils = trpc.useUtils();
-  const { data: events, isLoading } = trpc.calendar.list.useQuery();
-  const { data: notifications } = trpc.notifications?.list?.useQuery();
+  const queryClient = useQueryClient();
+  const { data: events, isLoading } = useQuery({ queryKey: ['calendar-events'], queryFn: () => api.get('/platform/calendar').then(r => r.data) });
+  const { data: notifications } = useQuery({ queryKey: ['notifications'], queryFn: () => api.get('/platform/notifications').then(r => r.data) });
 
-  const createMutation = trpc.calendar.create.useMutation({
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/platform/calendar', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إنشاء الحدث بنجاح');
-      utils.calendar.list.invalidate();
+      queryClient.invalidateQueries({ queryKey: ['calendar-events'] });
       setIsDialogOpen(false);
       resetForm();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error('فشل في إنشاء الحدث: ' + error.message);
     },
   });
 
-  const deleteMutation = trpc.calendar.delete.useMutation({
+  const deleteMutation = useMutation({
+    mutationFn: (data: any) => api.delete(`/platform/calendar/${data.id}`).then(r => r.data),
     onSuccess: () => {
       toast.success('تم حذف الحدث بنجاح');
-      utils.calendar.list.invalidate();
+      queryClient.invalidateQueries({ queryKey: ['calendar-events'] });
       setViewingEvent(null);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error('فشل في حذف الحدث: ' + error.message);
     },
   });

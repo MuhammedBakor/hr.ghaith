@@ -1,7 +1,8 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
 import { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -64,11 +65,12 @@ export default function FuelConsumption() {
   });
 
   // البيانات من API
-  const { data: fuelData, isLoading, refetch, isError, error} = trpc.fleetExtended.fuelLogs.list.useQuery({});
-  const { data: vehiclesData } = trpc.fleet.vehicles.list.useQuery();
-  const { data: driversData } = trpc.fleetExtended.drivers.list.useQuery();
+  const { data: fuelData, isLoading, refetch, isError, error} = useQuery({ queryKey: ['fuel-logs'], queryFn: () => api.get('/fleet/fuel').then(r => r.data) });
+  const { data: vehiclesData } = useQuery({ queryKey: ['vehicles'], queryFn: () => api.get('/fleet/vehicles').then(r => r.data) });
+  const { data: driversData } = useQuery({ queryKey: ['drivers'], queryFn: () => api.get('/fleet/drivers').then(r => r.data) });
 
-  const createFuelMutation = trpc.fleetExtended.fuelLogs.create.useMutation({
+  const createFuelMutation = useMutation({
+    mutationFn: (data: any) => api.post('/fleet/fuel', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم تسجيل التعبئة بنجاح');
       setViewMode('list');

@@ -1,4 +1,6 @@
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { useUser } from '@/services/authService';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,7 +63,7 @@ const initialFormData: ContractFormData = {
 };
 
 export default function Contracts() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useUser();
   const userRole = currentUser?.role || 'user';
 
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -87,31 +89,36 @@ export default function Contracts() {
   const [viewingContract, setViewingContract] = useState<Contract | null>(null);
 
   // جلب العقود من API
-  const { data: contractsApiData, isLoading, refetch } = trpc.legal.contracts.list.useQuery();
-  
+  const { data: contractsApiData, isLoading, refetch } = useQuery({
+    queryKey: ['legal-contracts'],
+    queryFn: () => api.get('/legal/contracts').then(r => r.data),
+  });
+
   // إنشاء عقد جديد
-  const createMutation = trpc.legal.contracts.create.useMutation({
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/legal/contracts', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إنشاء العقد بنجاح');
       setIsCreateOpen(false);
       setFormData(initialFormData);
       refetch();
     },
-    onError: (error) => {
-      toast.error(`فشل في إنشاء العقد: ${error.message}`);
+    onError: (error: any) => {
+      toast.error(`فشل في إنشاء العقد: ${error?.response?.data?.message || error.message}`);
     },
   });
-  
+
   // تعديل عقد
-  const updateMutation = trpc.legal.contracts.update.useMutation({
+  const updateMutation = useMutation({
+    mutationFn: ({ id, ...data }: any) => api.put(`/legal/contracts/${id}`, data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم تعديل العقد بنجاح');
       setIsEditOpen(false);
       setEditingContract(null);
       refetch();
     },
-    onError: (error) => {
-      toast.error(`فشل في تعديل العقد: ${error.message}`);
+    onError: (error: any) => {
+      toast.error(`فشل في تعديل العقد: ${error?.response?.data?.message || error.message}`);
     },
   });
 

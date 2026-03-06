@@ -1,20 +1,22 @@
 import { useState } from 'react';
-import { trpc } from '@/lib/trpc';
+import { useQuery } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { useUser } from '@/services/authService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search as SearchIcon, FileText, Users, Car } from 'lucide-react';
 
 export default function Search() {
-  const { data: currentUser, isError, error, isLoading} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error, isLoading} = useUser();
   const userRole = currentUser?.role || 'user';
 
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<any[]>([]);
-  
-  const { data: employees } = trpc.hr.employees?.list?.useQuery({});
-  const { data: vehicles } = trpc.fleet.vehicles?.list?.useQuery();
-  const { data: documents } = trpc.documents?.list?.useQuery();
+
+  const { data: employees } = useQuery({ queryKey: ['employees'], queryFn: () => api.get('/hr/employees').then(r => r.data) });
+  const { data: vehicles } = useQuery({ queryKey: ['vehicles'], queryFn: () => api.get('/fleet/vehicles').then(r => r.data) });
+  const { data: documents } = useQuery({ queryKey: ['documents'], queryFn: () => api.get('/documents').then(r => r.data) });
 
   const handleSearch = () => {
     const allResults: any[] = [];

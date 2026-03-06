@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import api from '../../client/src/lib/api';
 
 /**
  * Business Rules Builder — محرك قواعد العمل
@@ -52,8 +53,8 @@ export default function BusinessRulesBuilder() {
 
   const loadRules = async () => {
     try {
-      const res = await fetch('/api/trpc/admin.businessRules.list');
-      if (res.ok) { const data = await res.json(); if (data?.result?.data) setRules(data.result.data); }
+      const { data } = await api.get('/governance/business-rules');
+      if (data) setRules(data);
     } catch { /* empty */ }
   };
 
@@ -65,7 +66,7 @@ export default function BusinessRulesBuilder() {
       priority: form.priority || 100, isActive: true,
     };
     try {
-      await fetch('/api/trpc/admin.businessRules.create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ json: rule }) });
+      await api.post('/governance/business-rules', rule);
       setRules(prev => [...prev, { ...rule, id: Date.now() }]);
       setShowForm(false);
       setForm({ module: 'finance', triggerEvent: 'create', conditionOperator: 'gt', actionType: 'require_approval', priority: 100, isActive: true });
@@ -78,7 +79,7 @@ export default function BusinessRulesBuilder() {
 
   const deleteRule = async (idx: number) => {
     const rule = rules[idx];
-    if (rule.id) { try { await fetch('/api/trpc/admin.businessRules.delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ json: { id: rule.id } }) }); } catch { /* */ } }
+    if (rule.id) { try { await api.delete(`/governance/business-rules/${rule.id}`); } catch { /* */ } }
     setRules(prev => prev.filter((_, i) => i !== idx));
   };
 

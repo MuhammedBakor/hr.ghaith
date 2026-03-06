@@ -1,5 +1,6 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -64,10 +65,19 @@ export default function PropertyMaintenance() {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
 
-  const utils = trpc.useUtils();
-  const { data: maintenanceData, isLoading, isError, error} = trpc.property.maintenance.list.useQuery();
-  const { data: properties } = trpc.property.properties?.list?.useQuery();
-  const { data: units } = trpc.property.units?.list?.useQuery();
+  const queryClient = useQueryClient();
+  const { data: maintenanceData, isLoading, isError, error} = useQuery({
+    queryKey: ['property-maintenance'],
+    queryFn: () => api.get('/property/maintenance').then(r => r.data),
+  });
+  const { data: properties } = useQuery({
+    queryKey: ['properties'],
+    queryFn: () => api.get('/property/properties').then(r => r.data),
+  });
+  const { data: units } = useQuery({
+    queryKey: ['property-units'],
+    queryFn: () => api.get('/property/units').then(r => r.data),
+  });
   
   const [isOpen, setIsOpen] = useState(false);
   const [editingRequest, setEditingRequest] = useState<MaintenanceRequest | null>(null);
@@ -87,28 +97,30 @@ export default function PropertyMaintenance() {
     estimatedCost: '',
   });
 
-  const createMutation = trpc.property.maintenance.create.useMutation({
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/property/maintenance', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إنشاء طلب الصيانة بنجاح');
-      utils.property.maintenance.list.invalidate();
+      queryClient.invalidateQueries({ queryKey: ['property-maintenance'] });
       setIsOpen(false);
       resetForm();
     },
-    onError: (error) => {
-      toast.error('فشل في إنشاء الطلب: ' + error.message);
+    onError: (error: any) => {
+      toast.error('فشل في إنشاء الطلب: ' + (error?.response?.data?.message || error.message));
     },
   });
 
-  const updateMutation = trpc.property.maintenance.update.useMutation({
+  const updateMutation = useMutation({
+    mutationFn: ({ id, ...data }: any) => api.put(`/property/maintenance/${id}`, data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم تحديث طلب الصيانة بنجاح');
-      utils.property.maintenance.list.invalidate();
+      queryClient.invalidateQueries({ queryKey: ['property-maintenance'] });
       setIsOpen(false);
       setEditingRequest(null);
       resetForm();
     },
-    onError: (error) => {
-      toast.error('فشل في تحديث الطلب: ' + error.message);
+    onError: (error: any) => {
+      toast.error('فشل في تحديث الطلب: ' + (error?.response?.data?.message || error.message));
     },
   });
 

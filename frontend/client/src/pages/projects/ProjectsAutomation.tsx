@@ -1,4 +1,5 @@
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { toast } from 'sonner';
 import AutomationDashboard, { CategoryMeta } from '@/components/automation/AutomationDashboard';
 import {
@@ -15,25 +16,32 @@ const CATEGORY_META: CategoryMeta = {
 };
 
 export default function ProjectsAutomation() {
-  const utils = trpc.useContext();
+  const queryClient = useQueryClient();
 
-  const { data: services, isLoading } = trpc.projectsRouters.projectsAutomation.list.useQuery();
+  const { data: services, isLoading } = useQuery({
+    queryKey: ['operations-automation'],
+    queryFn: () => api.get('/operations/automation').then(r => r.data),
+  });
 
-  const initMut    = trpc.projectsRouters.projectsAutomation.initialize.useMutation({
-    onSuccess: r => { toast.success(`تهيئة: ${r.initialized} جديد، ${r.existing} موجود`); utils.projectsRouters.projectsAutomation.list.invalidate(); },
-    onError:   e => toast.error(e.message),
+  const initMut = useMutation({
+    mutationFn: (data: any) => api.post('/operations/automation/initialize', data).then(r => r.data),
+    onSuccess: (r: any) => { toast.success(`تهيئة: ${r.initialized} جديد، ${r.existing} موجود`); queryClient.invalidateQueries({ queryKey: ['operations-automation'] }); },
+    onError: (e: any) => toast.error(e.message),
   });
-  const toggleMut  = trpc.projectsRouters.projectsAutomation.toggle.useMutation({
-    onSuccess: (_, vars) => { toast.success(vars.isEnabled ? 'تم التفعيل' : 'تم الإيقاف'); utils.projectsRouters.projectsAutomation.list.invalidate(); },
-    onError:   e => toast.error(e.message),
+  const toggleMut = useMutation({
+    mutationFn: (data: any) => api.post('/operations/automation/toggle', data).then(r => r.data),
+    onSuccess: (_: any, vars: any) => { toast.success(vars.isEnabled ? 'تم التفعيل' : 'تم الإيقاف'); queryClient.invalidateQueries({ queryKey: ['operations-automation'] }); },
+    onError: (e: any) => toast.error(e.message),
   });
-  const runNowMut  = trpc.projectsRouters.projectsAutomation.runNow.useMutation({
-    onSuccess: r => toast.success(`✅ ${r.message} — ${r.affected} سجل`),
-    onError:   e => toast.error(e.message),
+  const runNowMut = useMutation({
+    mutationFn: (data: any) => api.post('/operations/automation/run', data).then(r => r.data),
+    onSuccess: (r: any) => toast.success(`${r.message} — ${r.affected} سجل`),
+    onError: (e: any) => toast.error(e.message),
   });
-  const updateMut  = trpc.projectsRouters.projectsAutomation.update.useMutation({
-    onSuccess: () => { toast.success('تم حفظ الإعدادات'); utils.projectsRouters.projectsAutomation.list.invalidate(); },
-    onError:   e => toast.error(e.message),
+  const updateMut = useMutation({
+    mutationFn: (data: any) => api.put('/operations/automation', data).then(r => r.data),
+    onSuccess: () => { toast.success('تم حفظ الإعدادات'); queryClient.invalidateQueries({ queryKey: ['operations-automation'] }); },
+    onError: (e: any) => toast.error(e.message),
   });
 
   return (

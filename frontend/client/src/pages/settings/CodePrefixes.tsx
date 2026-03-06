@@ -1,7 +1,8 @@
 import React from "react";
 import { useState, useEffect } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -82,10 +83,11 @@ export default function CodePrefixes() {
   const [hasChanges, setHasChanges] = useState(false);
 
   // جلب البادئات من قاعدة البيانات
-  const { data: dbPrefixes, isLoading, refetch, isError, error } = trpc.codePrefixes.list.useQuery();
+  const { data: dbPrefixes, isLoading, refetch, isError, error } = useQuery({ queryKey: ['code-prefixes'], queryFn: () => api.get('/settings/code-prefixes').then(r => r.data) });
 
   // Mutation لتحديث البادئة
-  const upsertMutation = trpc.codePrefixes.upsert.useMutation({
+  const upsertMutation = useMutation({
+    mutationFn: (data: any) => api.put('/settings/code-prefixes', data).then(r => r.data),
     onSuccess: () => {
       refetch();
     },
@@ -95,7 +97,8 @@ export default function CodePrefixes() {
   });
 
   // Mutation لإعادة التعيين
-  const resetMutation = trpc.codePrefixes.resetToDefaults.useMutation({
+  const resetMutation = useMutation({
+    mutationFn: (data: any) => api.post('/settings/code-prefixes/reset', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إعادة تعيين البادئات للقيم الافتراضية');
       refetch();

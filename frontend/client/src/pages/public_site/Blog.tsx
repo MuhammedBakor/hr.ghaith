@@ -1,5 +1,6 @@
 import { useAppContext } from '@/contexts/AppContext';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,7 +52,8 @@ export default function Blog() {
     return Object.keys(errors).length === 0;
   };
 
-  const saveMutation = trpc.publicSite.create.useMutation({
+  const saveMutation = useMutation({
+    mutationFn: (data: any) => api.post('/blog/posts', data).then(r => r.data),
     onSuccess: () => {
       setFormData({ 'title': '', 'content': '', 'category': '',
       onError: (e: any) => toast.error(e?.message || 'حدث خطأ')});
@@ -87,15 +89,19 @@ export default function Blog() {
   const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);
 
   // جلب المقالات من API
-  const { data: postsApiData, isLoading, refetch, isError, error} = trpc.publicSite.posts.list.useQuery({});
-  
+  const { data: postsApiData, isLoading, refetch, isError, error} = useQuery({
+    queryKey: ['blog-posts'],
+    queryFn: () => api.get('/blog/posts').then(r => r.data),
+  });
+
   // حذف مقال
-  const deleteMutation = trpc.publicSite.posts.delete.useMutation({
+  const deleteMutation = useMutation({
+    mutationFn: (data: any) => api.delete('/blog/posts', { data }).then(r => r.data),
     onSuccess: () => {
       toast.success('تم حذف المقال بنجاح');
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`خطأ في حذف المقال: ${error.message}`);
     },
   });

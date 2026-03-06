@@ -1,4 +1,5 @@
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import AutomationDashboard, { CategoryMeta } from '@/components/automation/AutomationDashboard';
 import {
   FileText, DollarSign, Wrench, Building2, Shield, BarChart3,
@@ -14,14 +15,31 @@ const CATEGORY_META: Record<string, CategoryMeta> = {
 };
 
 export default function PropertyAutomation() {
-  const { data: services = [], isLoading, refetch } = trpc.propertyAutomation.list.useQuery();
-  const { data: logs    = [] }                      = trpc.propertyAutomation.logs.useQuery({ limit: 200 });
-  const { data: stats }                             = trpc.propertyAutomation.stats.useQuery();
+  const queryClient = useQueryClient();
 
-  const toggleMut = trpc.propertyAutomation.toggle.useMutation({ onSuccess: () => { utils.invalidateQueries(); } });
-  const runNowMut = trpc.propertyAutomation.runNow.useMutation({ onSuccess: () => { utils.invalidateQueries(); } });
-  const updateMut = trpc.propertyAutomation.update.useMutation({ onSuccess: () => { utils.invalidateQueries(); } });
-  const initMut   = trpc.propertyAutomation.initialize.useMutation({ onSuccess: () => { utils.invalidateQueries(); } });
+  const { data: services = [], isLoading, refetch } = useQuery({
+    queryKey: ['property-automation-services'],
+    queryFn: () => api.get('/property/automation').then(r => r.data),
+  });
+  const { data: logs = [] } = useQuery({
+    queryKey: ['property-automation-logs'],
+    queryFn: () => api.get('/property/automation/logs', { params: { limit: 200 } }).then(r => r.data),
+  });
+  const { data: stats } = useQuery({
+    queryKey: ['property-automation-stats'],
+    queryFn: () => api.get('/property/automation/stats').then(r => r.data),
+  });
+
+  const invalidateAll = () => {
+    queryClient.invalidateQueries({ queryKey: ['property-automation-services'] });
+    queryClient.invalidateQueries({ queryKey: ['property-automation-logs'] });
+    queryClient.invalidateQueries({ queryKey: ['property-automation-stats'] });
+  };
+
+  const toggleMut = useMutation({ mutationFn: (data: any) => api.post('/property/automation/toggle', data).then(r => r.data), onSuccess: () => { invalidateAll(); } });
+  const runNowMut = useMutation({ mutationFn: (data: any) => api.post('/property/automation/run-now', data).then(r => r.data), onSuccess: () => { invalidateAll(); } });
+  const updateMut = useMutation({ mutationFn: ({ serviceKey, ...data }: any) => api.put(`/property/automation/${serviceKey}`, data).then(r => r.data), onSuccess: () => { invalidateAll(); } });
+  const initMut   = useMutation({ mutationFn: (data?: any) => api.post('/property/automation/initialize', data).then(r => r.data), onSuccess: () => { invalidateAll(); } });
 
   return (
     <AutomationDashboard

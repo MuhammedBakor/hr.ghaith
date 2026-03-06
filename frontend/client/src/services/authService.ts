@@ -32,7 +32,7 @@ export const authService = {
         const response = await api.get(`/auth/verify-code?code=${code}`);
         return response.data;
     },
-    sendResetCode: async (data: { code: string; method: string; contact: string }) => {
+    sendResetCode: async (data: { email: string }) => {
         const response = await api.post("/auth/send-reset-code", data);
         return response.data;
     },

@@ -1,7 +1,8 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
 import { useAppContext } from '@/contexts/AppContext';
 import React from "react";
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,10 +25,13 @@ export default function Approvals() {
   const [showDialog, setShowDialog] = React.useState(false);
   const [formData, setFormData] = React.useState<Record<string, any>>({});
 
-  const { data: requests, isLoading, isError, error} = trpc.requests?.list?.useQuery();
+  const queryClient = useQueryClient();
+  const { data: requests, isLoading, isError, error} = useQuery({
+    queryKey: ['requests'],
+    queryFn: () => api.get('/requests').then(r => r.data),
+  });
 
-  const utils = trpc.useUtils();
-  const approveMutation = trpc.requests?.update?.useMutation({ onSuccess: () => { utils.requests?.list?.invalidate(); toast.success('تم تحديث الحالة'); }, onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
+  const approveMutation = useMutation({ mutationFn: (data: any) => api.put(`/requests/${data.id}`, data).then(r => r.data), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['requests'] }); toast.success('تم تحديث الحالة'); }, onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
 
   const pendingRequests = (requests || []).filter((r: any) => r.status === 'pending');
 

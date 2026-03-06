@@ -18,7 +18,8 @@ import {
   Target,
   ArrowRight,
 } from 'lucide-react';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { toast } from 'sonner';
 import { Dialog } from "@/components/ui/dialog";
 
@@ -74,21 +75,22 @@ export default function Budget() {
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editItem, setEditItem] = React.useState<any>(null);
 
-  const utils = trpc.useUtils();
+  const queryClient = useQueryClient();
 
   // جلب الميزانيات
-  const { data: budgetsData, isLoading, isError, error } = trpc.finance.budgets.list.useQuery();
+  const { data: budgetsData, isLoading, isError, error } = useQuery({ queryKey: ['budgets'], queryFn: () => api.get('/finance/budgets').then(r => r.data) });
   const budgets: BudgetItem[] = budgetsData || [];
 
   // إنشاء ميزانية جديدة
-  const createBudgetMutation = trpc.finance.budgets.create.useMutation({
+  const createBudgetMutation = useMutation({
+    mutationFn: (data: any) => api.post('/finance/budgets', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إنشاء الميزانية بنجاح');
-      utils.finance.budgets.list.invalidate();
+      queryClient.invalidateQueries({ queryKey: ['budgets'] });
       setViewMode('list');
       resetForm();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error('فشل في إنشاء الميزانية: ' + error.message);
     },
   });

@@ -1,6 +1,8 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
 import { useState } from 'react';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { useUser } from '@/services/authService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,7 +46,7 @@ import { toast } from 'sonner';
 import { PrintButton } from "@/components/PrintButton";
 
 export default function DmsAdvanced() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useUser();
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -63,36 +65,39 @@ export default function DmsAdvanced() {
     filePath: '',
   });
 
-  const { data: documents, isLoading, refetch } = trpc.documents?.list?.useQuery();
-  const { data: documentVersions } = trpc.documents?.versions?.list.useQuery(
-    { documentId: selectedDocument?.id || 0 },
-    { enabled: !!selectedDocument && isVersionsDialogOpen }
-  );
-  
-  const createMutation = trpc.documents?.create?.useMutation({
+  const { data: documents, isLoading, refetch } = useQuery({ queryKey: ['dms-documents'], queryFn: () => api.get('/platform/dms').then(r => r.data) });
+  const { data: documentVersions } = useQuery({
+    queryKey: ['dms-versions', selectedDocument?.id],
+    queryFn: () => api.get(`/platform/dms/${selectedDocument?.id}/versions`).then(r => r.data),
+    enabled: !!selectedDocument && isVersionsDialogOpen
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/platform/dms', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إنشاء المستند بنجاح');
       setIsAddDialogOpen(false);
-      setNewDocument({ title: '', description: '', documentType: 'other', category: '', filePath: '',
-      onError: (e: any) => toast.error(e?.message || 'حدث خطأ')});
+      setNewDocument({ title: '', description: '', documentType: 'other', category: '', filePath: '' });
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`فشل في إنشاء المستند: ${error.message}`);
     },
   });
 
-  const updateMutation = trpc.documents?.update?.useMutation({
+  const updateMutation = useMutation({
+    mutationFn: ({ id, ...data }: any) => api.put(`/platform/dms/${id}`, data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم تحديث المستند بنجاح');
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`فشل في تحديث المستند: ${error.message}`);
     },
   });
 
-  const deleteMutation = trpc.documents?.delete?.useMutation({
+  const deleteMutation = useMutation({
+    mutationFn: (data: any) => api.delete(`/platform/dms/${data.id}`).then(r => r.data),
     onSuccess: () => {
       toast.success('تم حذف المستند بنجاح');
       setIsDeleteDialogOpen(false);

@@ -1,7 +1,8 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
 import { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -26,7 +27,10 @@ export default function UpgradeManager() {
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createData, setCreateData] = useState<any>({});
-  const createMutation = trpc.infra.create.useMutation({ onSuccess: () => { refetch(); setShowCreateForm(false); setCreateData({}); } });
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/platform/upgrades', data).then(r => r.data),
+    onSuccess: () => { refetch(); setShowCreateForm(false); setCreateData({}); },
+  });
 
   const [searchTerm, setSearchTerm] = useState('');
   const { selectedRole: userRole } = useAppContext();
@@ -40,12 +44,13 @@ export default function UpgradeManager() {
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
   const [localUpdates, setLocalUpdates] = useState<SystemUpdate[]>([]);
 
-  const { data: healthData, isLoading: healthLoading, isError, error} = trpc.infra.health.useQuery();
-  const { data: updatesData, isLoading: updatesLoading, refetch } = trpc.systemUpgrades.list.useQuery();
-  const { data: historyData } = trpc.systemUpgrades.history.useQuery();
+  const { data: healthData, isLoading: healthLoading, isError, error } = useQuery({ queryKey: ['infra-health'], queryFn: () => api.get('/platform/upgrades/health').then(r => r.data) });
+  const { data: updatesData, isLoading: updatesLoading, refetch } = useQuery({ queryKey: ['system-upgrades'], queryFn: () => api.get('/platform/upgrades').then(r => r.data) });
+  const { data: historyData } = useQuery({ queryKey: ['system-upgrades-history'], queryFn: () => api.get('/platform/upgrades/history').then(r => r.data) });
 
-  const checkUpdatesMutation = trpc.systemUpgrades.checkForUpdates.useMutation({
-    onSuccess: (data) => {
+  const checkUpdatesMutation = useMutation({
+    mutationFn: (data: any) => api.post('/platform/upgrades/check').then(r => r.data),
+    onSuccess: (data: any) => {
       if (data.hasUpdates) {
         toast.success(`يوجد ${data.count} تحديث متاح`);
       } else {
@@ -58,7 +63,8 @@ export default function UpgradeManager() {
     },
   });
 
-  const downloadMutation = trpc.systemUpgrades.download.useMutation({
+  const downloadMutation = useMutation({
+    mutationFn: (data: any) => api.post(`/platform/upgrades/${data.updateId}/download`).then(r => r.data),
     onSuccess: () => {
       toast.success('تم تحميل التحديث بنجاح');
       setDownloadingId(null);
@@ -80,7 +86,8 @@ export default function UpgradeManager() {
     },
   });
 
-  const installMutation = trpc.systemUpgrades.install.useMutation({
+  const installMutation = useMutation({
+    mutationFn: (data: any) => api.post(`/platform/upgrades/${data.updateId}/install`).then(r => r.data),
     onSuccess: () => {
       toast.success('تم تثبيت التحديث بنجاح');
       refetch();

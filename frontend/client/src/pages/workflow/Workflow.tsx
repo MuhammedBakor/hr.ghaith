@@ -1,5 +1,7 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { useUser } from '@/services/authService';
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,14 +22,20 @@ import { toast } from 'sonner';
 export default function Workflow() {
   const confirmDelete = (fn: () => void) => { if (window.confirm("هل أنت متأكد من الحذف؟")) fn(); };
 
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useUser();
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
-  const utils = trpc.useUtils();
-  const { data: requests, isLoading } = trpc.requests?.list?.useQuery();
-  const { data: workflows } = trpc.workflow.templates.list.useQuery();
-  
+  const queryClient = useQueryClient();
+  const { data: requests, isLoading } = useQuery({
+    queryKey: ['requests'],
+    queryFn: () => api.get('/requests').then(r => r.data),
+  });
+  const { data: workflows } = useQuery({
+    queryKey: ['workflow-templates'],
+    queryFn: () => api.get('/workflow/templates').then(r => r.data),
+  });
+
   const [isOpen, setIsOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -37,14 +45,15 @@ export default function Workflow() {
     isActive: true,
   });
 
-  const createMutation = trpc.workflow.templates.create.useMutation({
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/workflow/templates', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إنشاء مسار العمل بنجاح');
-      utils.workflow.templates.list.invalidate();
+      queryClient.invalidateQueries({ queryKey: ['workflow-templates'] });
       setIsOpen(false);
       resetForm();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error('فشل في إنشاء مسار العمل: ' + error.message);
     },
   });

@@ -1,7 +1,8 @@
 import React from "react";
 import { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { trpc } from '../../lib/trpc';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
@@ -19,12 +20,15 @@ export default function CorrespondencesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
 
-  const { data, isLoading, refetch, isError, error} = trpc.correspondences.list.useQuery({});
+  const { data, isLoading, refetch, isError, error} = useQuery({
+    queryKey: ['correspondences'],
+    queryFn: () => api.get('/comms/correspondences').then(r => r.data),
+  });
   const list = (data || []) as any[];
-  
-  const createMut = trpc.correspondences.create.useMutation({ onSuccess: () => { refetch(); setOpen(false); resetForm(); }, onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
-  const updateMut = trpc.correspondences.update.useMutation({ onSuccess: () => { refetch(); setOpen(false); resetForm(); }, onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
-  const deleteMut = trpc.correspondences.delete.useMutation({ onSuccess: () => refetch() , onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
+
+  const createMut = useMutation({ mutationFn: (data: any) => api.post('/comms/correspondences', data).then(r => r.data), onSuccess: () => { refetch(); setOpen(false); resetForm(); }, onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
+  const updateMut = useMutation({ mutationFn: (data: any) => api.put(`/comms/correspondences/${data.id}`, data).then(r => r.data), onSuccess: () => { refetch(); setOpen(false); resetForm(); }, onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
+  const deleteMut = useMutation({ mutationFn: (data: any) => api.delete(`/comms/correspondences/${data.id}`).then(r => r.data), onSuccess: () => refetch() , onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
 
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);

@@ -1,4 +1,6 @@
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { useUser } from '@/services/authService';
 import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -44,7 +46,7 @@ interface Contract {
 export default function Contracts() {
   const confirmDelete = (fn: () => void) => { if (window.confirm("هل أنت متأكد من الحذف؟")) fn(); };
 
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useUser();
   const userRole = currentUser?.role || 'user';
 
   const [showInlineForm, setShowInlineForm] = useState(false);
@@ -65,36 +67,41 @@ export default function Contracts() {
     status: 'draft' as const,
   });
 
-  const utils = trpc.useUtils();
+  const queryClient = useQueryClient();
 
   // استخدام API الحقيقي
-  const { data: contractsData, isLoading } = trpc.legal.contracts.list.useQuery();
+  const { data: contractsData, isLoading } = useQuery({
+    queryKey: ['property-contracts'],
+    queryFn: () => api.get('/property/contracts').then(r => r.data),
+  });
   const contracts = (contractsData || []) as Contract[];
 
   // إنشاء عقد
-  const createMutation = trpc.legal.contracts.create.useMutation({
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/property/contracts', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إنشاء العقد بنجاح');
-      utils.legal.contracts.list.invalidate();
+      queryClient.invalidateQueries({ queryKey: ['property-contracts'] });
       setIsDialogOpen(false);
       resetForm();
     },
-    onError: (error) => {
-      toast.error('فشل في إنشاء العقد: ' + error.message);
+    onError: (error: any) => {
+      toast.error('فشل في إنشاء العقد: ' + (error?.response?.data?.message || error.message));
     },
   });
 
   // تحديث عقد
-  const updateMutation = trpc.legal.contracts.update.useMutation({
+  const updateMutation = useMutation({
+    mutationFn: ({ id, ...data }: any) => api.put(`/property/contracts/${id}`, data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم تحديث العقد بنجاح');
-      utils.legal.contracts.list.invalidate();
+      queryClient.invalidateQueries({ queryKey: ['property-contracts'] });
       setIsDialogOpen(false);
       setEditingContract(null);
       resetForm();
     },
-    onError: (error) => {
-      toast.error('فشل في تحديث العقد: ' + error.message);
+    onError: (error: any) => {
+      toast.error('فشل في تحديث العقد: ' + (error?.response?.data?.message || error.message));
     },
   });
 

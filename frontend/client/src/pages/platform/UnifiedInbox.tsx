@@ -1,7 +1,8 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
 import { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { trpc } from '../../lib/trpc';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { toast } from 'sonner';
 
 export default function UnifiedInbox() {
@@ -19,9 +20,10 @@ export default function UnifiedInbox() {
   const [formData, setFormData] = React.useState<Record<string, any>>({});
 
   const [filter, setFilter] = useState<string>('pending');
-  const { data: items = [], isLoading, refetch, isError, error} = trpc.inbox.myItems.useQuery({ status: filter || undefined });
-  const { data: stats } = trpc.inbox.stats.useQuery();
-  const completeMut = trpc.inbox.complete.useMutation({
+  const { data: items = [], isLoading, refetch, isError, error} = useQuery({ queryKey: ['inbox-items', filter], queryFn: () => api.get('/platform/inbox', { params: { status: filter || undefined } }).then(r => r.data) });
+  const { data: stats } = useQuery({ queryKey: ['inbox-stats'], queryFn: () => api.get('/platform/inbox/stats').then(r => r.data) });
+  const completeMut = useMutation({
+    mutationFn: (data: any) => api.post(`/platform/inbox/${data.id}/complete`).then(r => r.data),
     onSuccess: () => { toast.success('تم الإنجاز'); refetch(); },
     onError: (e: any) => toast.error(e.message),
   });

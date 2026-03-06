@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { useUser } from '@/services/authService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -38,7 +40,8 @@ export default function Session() {
     return Object.keys(errors).length === 0;
   };
 
-  const saveMutation = trpc.platform.create.useMutation({
+  const saveMutation = useMutation({
+    mutationFn: (data: any) => api.post('/auth/sessions', data).then(r => r.data),
     onSuccess: () => {
       setFormData({ 'userId': '', 'duration': '',
       onError: (e: any) => toast.error(e?.message || 'حدث خطأ')});
@@ -57,19 +60,18 @@ export default function Session() {
     saveMutation.mutate(formData);
   };
 
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useUser();
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
   const { user, isAuthenticated } = useAuth();
 
   // جلب الجلسات من API
-  const { data: sessions, isLoading, refetch } = trpc.userSessions.list.useQuery(undefined, {
-    enabled: isAuthenticated,
-  });
+  const { data: sessions, isLoading, refetch } = useQuery({ queryKey: ['sessions'], queryFn: () => api.get('/auth/sessions').then(r => r.data), enabled: isAuthenticated });
 
   // mutation لإنهاء جلسة
-  const terminateMutation = trpc.userSessions.terminate.useMutation({
+  const terminateMutation = useMutation({
+    mutationFn: (data: any) => api.post('/auth/sessions/terminate', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إنهاء الجلسة بنجاح');
       refetch();
@@ -80,7 +82,8 @@ export default function Session() {
   });
 
   // mutation لإنهاء جميع الجلسات الأخرى
-  const terminateOthersMutation = trpc.userSessions.terminateOthers.useMutation({
+  const terminateOthersMutation = useMutation({
+    mutationFn: (data: any) => api.post('/auth/sessions/terminate-others', data).then(r => r.data),
     onSuccess: (result) => {
       toast.success(`تم إنهاء ${result.count || 0} جلسة`);
       refetch();

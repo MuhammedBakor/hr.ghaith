@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import api from '../../client/src/lib/api';
 
 type RType = 'ip_whitelist' | 'ip_blacklist' | 'device_limit' | 'session_limit';
 const TYPES: { key: RType; label: string; icon: string; placeholder: string }[] = [
@@ -16,12 +17,11 @@ export default function AccessRestrictions() {
   const [form, setForm] = useState({ restrictionType: 'ip_whitelist' as RType, value: '', userId: '', roleId: '' });
 
   useEffect(() => { load(); }, []);
-  const load = async () => { try { const r = await fetch('/api/trpc/admin.accessRestrictions.list'); const d = await r.json(); if (d?.result?.data) setItems(d.result.data); } catch {} };
+  const load = async () => { try { const { data } = await api.get('/governance/access-restrictions'); if (data) setItems(data); } catch {} };
 
   const save = async () => {
     try {
-      await fetch('/api/trpc/admin.accessRestrictions.create', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ json: { ...form, userId: form.userId ? Number(form.userId) : null, roleId: form.roleId ? Number(form.roleId) : null, isActive: true } }) });
+      await api.post('/governance/access-restrictions', { ...form, userId: form.userId ? Number(form.userId) : null, roleId: form.roleId ? Number(form.roleId) : null, isActive: true });
       await load(); setShow(false); setForm({ restrictionType: 'ip_whitelist', value: '', userId: '', roleId: '' });
     } catch (e) { console.error(e); }
   };

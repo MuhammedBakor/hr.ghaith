@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { useUser } from '@/services/authService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -27,19 +29,17 @@ import { PrintButton } from "@/components/PrintButton";
 export default function FleetDispatchRecs() {
   const confirmDelete = (fn: () => void) => { if (window.confirm("هل أنت متأكد من الحذف؟")) fn(); };
 
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useUser();
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>('all');
 
-  const { data: vehiclesData } = trpc.fleet.vehicles.list.useQuery();
-  const { data: driversData } = trpc.fleetExtended.drivers.list.useQuery();
-  const { data: recommendationsData, isLoading, refetch } = trpc.fleet.dispatchRecs.list.useQuery(
-    filterStatus !== 'all' ? { status: filterStatus } : undefined
-  );
-  const { data: statsData } = trpc.fleet.dispatchRecs.stats.useQuery();
+  const { data: vehiclesData } = useQuery({ queryKey: ['vehicles'], queryFn: () => api.get('/fleet/vehicles').then(r => r.data) });
+  const { data: driversData } = useQuery({ queryKey: ['drivers'], queryFn: () => api.get('/fleet/drivers').then(r => r.data) });
+  const { data: recommendationsData, isLoading, refetch } = useQuery({ queryKey: ['dispatch-recs', filterStatus], queryFn: () => api.get('/fleet/dispatch', { params: filterStatus !== 'all' ? { status: filterStatus } : undefined }).then(r => r.data) });
+  const { data: statsData } = useQuery({ queryKey: ['dispatch-recs-stats'], queryFn: () => api.get('/fleet/dispatch/stats').then(r => r.data) });
 
   const vehicles = vehiclesData || [];
   const drivers = driversData || [];
@@ -58,44 +58,48 @@ export default function FleetDispatchRecs() {
     reason: '',
   });
 
-  const createMutation = trpc.fleet.dispatchRecs.create.useMutation({
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/fleet/dispatch', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إنشاء التوصية بنجاح');
       setIsCreateOpen(false);
       resetForm();
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error('حدث خطأ: ' + error.message);
     },
   });
 
-  const acceptMutation = trpc.fleet.dispatchRecs.accept.useMutation({
+  const acceptMutation = useMutation({
+    mutationFn: (data: any) => api.post(`/fleet/dispatch/${data.id}/accept`).then(r => r.data),
     onSuccess: () => {
       toast.success('تم قبول التوصية بنجاح');
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error('حدث خطأ: ' + error.message);
     },
   });
 
-  const rejectMutation = trpc.fleet.dispatchRecs.reject.useMutation({
+  const rejectMutation = useMutation({
+    mutationFn: (data: any) => api.post(`/fleet/dispatch/${data.id}/reject`).then(r => r.data),
     onSuccess: () => {
       toast.success('تم رفض التوصية');
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error('حدث خطأ: ' + error.message);
     },
   });
 
-  const completeMutation = trpc.fleet.dispatchRecs.complete.useMutation({
+  const completeMutation = useMutation({
+    mutationFn: (data: any) => api.post(`/fleet/dispatch/${data.id}/complete`).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إكمال التوصية بنجاح');
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error('حدث خطأ: ' + error.message);
     },
   });

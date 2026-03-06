@@ -1,7 +1,8 @@
 import React from "react";
 import { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
-import { trpc } from '../../lib/trpc';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Dialog } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
@@ -19,12 +20,15 @@ export default function CasesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
 
-  const { data, isLoading, refetch, isError, error } = trpc.cases.list.useQuery({});
+  const { data, isLoading, refetch, isError, error } = useQuery({
+    queryKey: ['cases'],
+    queryFn: () => api.get('/cases').then(r => r.data),
+  });
   const list = (data || []) as any[];
 
-  const createMut = trpc.cases.create.useMutation({ onSuccess: () => { refetch(); setOpen(false); resetForm(); }, onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
-  const updateMut = trpc.cases.update.useMutation({ onSuccess: () => { refetch(); setOpen(false); resetForm(); }, onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
-  const deleteMut = trpc.cases.delete.useMutation({ onSuccess: () => refetch(), onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
+  const createMut = useMutation({ mutationFn: (data: any) => api.post('/cases', data).then(r => r.data), onSuccess: () => { refetch(); setOpen(false); resetForm(); }, onError: (e: any) => { alert(e?.response?.data?.message || e.message || "حدث خطأ"); } });
+  const updateMut = useMutation({ mutationFn: ({ id, ...data }: any) => api.put(`/cases/${id}`, data).then(r => r.data), onSuccess: () => { refetch(); setOpen(false); resetForm(); }, onError: (e: any) => { alert(e?.response?.data?.message || e.message || "حدث خطأ"); } });
+  const deleteMut = useMutation({ mutationFn: ({ id, ...data }: any) => api.delete(`/cases/${id}`, { data }).then(r => r.data), onSuccess: () => refetch(), onError: (e: any) => { alert(e?.response?.data?.message || e.message || "حدث خطأ"); } });
 
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);

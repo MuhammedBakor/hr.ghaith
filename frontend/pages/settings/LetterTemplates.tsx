@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import api from '../../client/src/lib/api';
 
 interface Template { id: number; code: string; nameAr: string; body: string; }
 
@@ -19,11 +20,10 @@ export default function LetterTemplates() {
 
   useEffect(() => {
     (async () => { try {
-      for (const t of DEFAULTS) {
-        const r = await fetch('/api/trpc/settings.settings.list');
-        const d = await r.json();
-        if (d?.result?.data) {
-          const found = (d.result.data as any[]).find((x:any)=>x.settingKey===`template.${t.code}`);
+      const { data } = await api.get('/settings/letter-templates');
+      if (data) {
+        for (const t of DEFAULTS) {
+          const found = (data as any[]).find((x:any)=>x.settingKey===`template.${t.code}`);
           if (found?.settingValue) t.body = found.settingValue;
         }
       }
@@ -35,8 +35,7 @@ export default function LetterTemplates() {
   const save = async (t: Template) => {
     setSaving(true);
     try {
-      await fetch('/api/trpc/settings.settings.set',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({json:{key:`template.${t.code}`,value:editBody}})});
+      await api.post('/settings/letter-templates',{key:`template.${t.code}`,value:editBody});
       t.body = editBody; setTemplates([...templates]); setEditId(null);
     } catch {} setSaving(false);
   };

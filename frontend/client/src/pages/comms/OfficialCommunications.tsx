@@ -1,24 +1,32 @@
 import React, { useState } from "react";
-import { trpc } from "../../lib/trpc";
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { useUser } from '@/services/authService';
 
 export default function OfficialCommunications() {
-  const { data: currentUser } = trpc.auth.me.useQuery();
+  const { data: currentUser } = useUser();
   const userRole = currentUser?.role || 'user';
   const hasAccess = userRole === 'admin' || userRole === 'admin';
-  
-  const { data, refetch, isLoading, isError, error } = trpc.officialCommunications.list.useQuery();
+
+  const { data, refetch, isLoading, isError, error } = useQuery({
+    queryKey: ['official-communications'],
+    queryFn: () => api.get('/comms/official').then(r => r.data),
+  });
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState<any>({});
   const [editingId, setEditingId] = useState<number | null>(null);
-  
-  const createMut = trpc.officialCommunications.create.useMutation({
+
+  const createMut = useMutation({
+    mutationFn: (data: any) => api.post('/comms/official', data).then(r => r.data),
     onSuccess: () => { refetch(); setShowForm(false); setFormData({}); }
   });
-  const updateMut = trpc.officialCommunications.update.useMutation({
+  const updateMut = useMutation({
+    mutationFn: (data: any) => api.put(`/comms/official/${data.id}`, data).then(r => r.data),
     onSuccess: () => { refetch(); setEditingId(null); setFormData({}); }
   });
-  const deleteMut = trpc.officialCommunications.delete.useMutation({
+  const deleteMut = useMutation({
+    mutationFn: (data: any) => api.delete(`/comms/official/${data.id}`).then(r => r.data),
     onSuccess: () => { refetch(); }
   });
 

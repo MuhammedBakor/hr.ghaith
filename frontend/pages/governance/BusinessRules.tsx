@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import api from '../../client/src/lib/api';
 
 const OPERATORS = [
   { key: 'gt', label: '>', labelAr: 'أكبر من' },
@@ -38,18 +39,14 @@ export default function BusinessRules() {
 
   const loadRules = async () => {
     try {
-      const r = await fetch('/api/trpc/admin.businessRules.list');
-      const data = await r.json();
-      if (data?.result?.data) setRules(data.result.data);
+      const { data } = await api.get('/governance/business-rules');
+      if (data) setRules(data);
     } catch {}
   };
 
   const save = async () => {
     try {
-      await fetch('/api/trpc/admin.businessRules.create', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ json: { ...form, name: form.nameAr, isActive: true } }),
-      });
+      await api.post('/governance/business-rules', { ...form, name: form.nameAr, isActive: true });
       await loadRules();
       setShowForm(false);
       setForm({ nameAr: '', module: 'finance', entityType: 'invoice', triggerEvent: 'create', conditionField: 'amount', conditionOperator: 'gt', conditionValue: '', actionType: 'require_approval', priority: 100 });
@@ -58,10 +55,7 @@ export default function BusinessRules() {
 
   const toggleActive = async (id: number, isActive: boolean) => {
     try {
-      await fetch('/api/trpc/admin.businessRules.update', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ json: { id, isActive: !isActive } }),
-      });
+      await api.put(`/governance/business-rules/${id}`, { isActive: !isActive });
       await loadRules();
     } catch {}
   };

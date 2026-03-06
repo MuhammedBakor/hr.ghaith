@@ -8,46 +8,35 @@ const { createInventoryReserve } = require('./inventory_reserve.adapter');
 const { createApprovalRequest } = require('./workflow.adapter');
 
 let emitter = null;
-try { emitter = require('../../../kernel/events/emitter'); } catch(e) { emitter = null; }
+try { emitter = require('../../../kernel/events/emitter'); } catch (e) { emitter = null; }
 
-function nowIso(){ return new Date().toISOString(); }
+function nowIso() { return new Date().toISOString(); }
+
+const api = require('../../../lib/api').default;
 
 /**
- * يحفظ الطلب في DB الحقيقي عبر tRPC endpoint
+ * يحفظ الطلب في DB الحقيقي عبر REST endpoint
  */
 async function persistOrderToDB(payload) {
   try {
-    const res = await fetch('/api/trpc/store.createOrder', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({
-        json: {
-          orderType: payload.orderType || 'sale',
-          customerName: payload.customerName || payload.meta?.customerName || null,
-          customerPhone: payload.customerPhone || payload.meta?.customerPhone || null,
-          customerEmail: payload.customerEmail || payload.meta?.customerEmail || null,
-          subtotal: String(payload.subtotal || payload.amount || 0),
-          taxAmount: String(payload.taxAmount || 0),
-          discountAmount: String(payload.discountAmount || 0),
-          totalAmount: String(payload.totalAmount || payload.subtotal || payload.amount || 0),
-          notes: payload.notes || null,
-        }
-      }),
+    const response = await api.post('/store/orders', {
+      orderNumber: payload.orderNumber || ('ORD-' + Date.now()),
+      customerName: payload.customerName || payload.meta?.customerName || null,
+      customerPhone: payload.customerPhone || payload.meta?.customerPhone || null,
+      customerEmail: payload.customerEmail || payload.meta?.customerEmail || null,
+      subtotal: payload.subtotal || payload.amount || 0,
+      taxAmount: payload.taxAmount || 0,
+      discountAmount: payload.discountAmount || 0,
+      totalAmount: payload.totalAmount || payload.subtotal || payload.amount || 0,
+      notes: payload.notes || null,
+      status: 'pending'
     });
-    if (res.ok) {
-      const data = await res.json();
-      const result = data?.result?.data?.json;
-      if (result?.id) return result;
+
+    if (response.data) {
+      return response.data;
     }
   } catch (err) {
-    if (process.env.NODE_ENV === 'production') {
-      process.stderr.write(JSON.stringify({
-        level: 'ERROR', module: 'store',
-        msg: `createDraftOrder DB persist failed: ${err?.message}`,
-        timestamp: nowIso()
-      }) + '\n');
-    }
+    console.error('persistOrderToDB failed:', err);
   }
   return null;
 }

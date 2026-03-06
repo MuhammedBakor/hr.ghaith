@@ -1,4 +1,6 @@
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { useUser } from '@/services/authService';
 import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,7 +31,7 @@ interface WorkflowTemplate {
 export default function Workflows() {
   const confirmDelete = (fn: () => void) => { if (window.confirm("هل أنت متأكد من الحذف؟")) fn(); };
 
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useUser();
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -46,21 +48,27 @@ export default function Workflows() {
   });
 
   // جلب قوالب سير العمل من API
-  const { data: workflowsData, isLoading, refetch } = trpc.workflow.templates.list.useQuery();
+  const { data: workflowsData, isLoading, refetch } = useQuery({
+    queryKey: ['workflow-templates'],
+    queryFn: () => api.get('/workflow/templates').then(r => r.data),
+  });
 
   // جلب الطلبات لحساب الإحصائيات
-  const { data: requestsData } = trpc.requests.list.useQuery();
+  const { data: requestsData } = useQuery({
+    queryKey: ['requests'],
+    queryFn: () => api.get('/requests').then(r => r.data),
+  });
 
   // إنشاء سير عمل جديد
-  const createMutation = trpc.workflow.templates.create.useMutation({
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/workflow/templates', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إنشاء سير العمل بنجاح');
       setShowNewDialog(false);
-      setNewWorkflow({ name: '', description: '', triggerEvent: '', isActive: true,
-      onError: (e: any) => toast.error(e?.message || 'حدث خطأ')});
+      setNewWorkflow({ name: '', description: '', triggerEvent: '', isActive: true });
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`فشل في إنشاء سير العمل: ${error.message}`);
     },
   });

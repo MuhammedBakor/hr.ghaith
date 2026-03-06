@@ -1,6 +1,8 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
 import { useState, useEffect } from 'react';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { useUser } from '@/services/authService';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +12,7 @@ import { Loader2, Mail, Server, Lock, User, AtSign, Send, CheckCircle2, XCircle,
 import { toast } from 'sonner';
 
 export default function EmailSettings() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useUser();
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -26,8 +28,9 @@ export default function EmailSettings() {
   const [testEmail, setTestEmail] = useState('');
   const [hasChanges, setHasChanges] = useState(false);
 
-  const { data: settings, isLoading, refetch } = trpc.controlKernel.smtp.get.useQuery();
-  const updateMutation = trpc.controlKernel.smtp.update.useMutation({
+  const { data: settings, isLoading, refetch } = useQuery({ queryKey: ['smtp-settings'], queryFn: () => api.get('/settings/smtp').then(r => r.data) });
+  const updateMutation = useMutation({
+    mutationFn: (data: any) => api.put('/settings/smtp', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم حفظ إعدادات البريد بنجاح');
       setHasChanges(false);
@@ -37,7 +40,8 @@ export default function EmailSettings() {
       toast.error(`فشل حفظ الإعدادات: ${error.message}`);
     },
   });
-  const testMutation = trpc.controlKernel.smtp.test.useMutation({
+  const testMutation = useMutation({
+    mutationFn: (data: any) => api.post('/settings/smtp/test', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إرسال البريد الاختباري بنجاح! تحقق من صندوق الوارد.');
       refetch();

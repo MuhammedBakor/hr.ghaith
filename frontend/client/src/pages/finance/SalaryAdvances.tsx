@@ -1,25 +1,31 @@
 import React, { useState } from "react";
-import { trpc } from "../../lib/trpc";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { useUser } from '@/services/authService';
 
 export default function SalaryAdvances() {
-  const { data: currentUser } = trpc.auth.me.useQuery();
+  const queryClient = useQueryClient();
+  const { data: currentUser } = useUser();
   const userRole = currentUser?.role || 'user';
   const hasAccess = userRole === 'admin' || userRole === 'finance_manager';
-  
-  const { data, refetch, isLoading, isError, error } = trpc.salaryAdvances.list.useQuery();
+
+  const { data, refetch, isLoading, isError, error } = useQuery({ queryKey: ['salary-advances'], queryFn: () => api.get('/finance/salary-advances').then(r => r.data) });
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState<any>({});
   const [editingId, setEditingId] = useState<number | null>(null);
-  
-  const createMut = trpc.salaryAdvances.create.useMutation({
-    onSuccess: () => { refetch(); setShowForm(false); setFormData({}); }
+
+  const createMut = useMutation({
+    mutationFn: (data: any) => api.post('/finance/salary-advances', data).then(r => r.data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['salary-advances'] }); setShowForm(false); setFormData({}); }
   });
-  const updateMut = trpc.salaryAdvances.update.useMutation({
-    onSuccess: () => { refetch(); setEditingId(null); setFormData({}); }
+  const updateMut = useMutation({
+    mutationFn: (data: any) => api.put(`/finance/salary-advances/${data.id}`, data).then(r => r.data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['salary-advances'] }); setEditingId(null); setFormData({}); }
   });
-  const deleteMut = trpc.salaryAdvances.delete.useMutation({
-    onSuccess: () => { refetch(); }
+  const deleteMut = useMutation({
+    mutationFn: (data: any) => api.delete(`/finance/salary-advances/${data.id}`).then(r => r.data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['salary-advances'] }); }
   });
 
   if (isLoading) return <div className="flex justify-center p-12"><div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full" /></div>;

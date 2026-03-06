@@ -1,5 +1,7 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { useUser } from '@/services/authService';
 import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -56,7 +58,7 @@ const initialFormData: ReportFormData = {
 };
 
 export default function CustomReportsPage() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useUser();
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -79,54 +81,61 @@ export default function CustomReportsPage() {
   const [deletingReport, setDeletingReport] = useState<CustomReport | null>(null);
 
   // جلب التقارير من API
-  const { data: reportsApiData, isLoading, refetch } = trpc.bi.reports.list.useQuery({});
+  const { data: reportsApiData, isLoading, refetch } = useQuery({
+    queryKey: ['reports-custom'],
+    queryFn: () => api.get('/reports/custom').then(r => r.data),
+  });
   
   // إنشاء تقرير جديد
-  const createMutation = trpc.bi.reports.create.useMutation({
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/reports/custom', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إنشاء التقرير بنجاح');
       setIsCreateOpen(false);
       setFormData(initialFormData);
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`فشل في إنشاء التقرير: ${error.message}`);
     },
   });
   
   // تعديل تقرير
-  const updateMutation = trpc.bi.reports.update.useMutation({
+  const updateMutation = useMutation({
+    mutationFn: (data: any) => api.put('/reports/custom', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم تعديل التقرير بنجاح');
       setIsEditOpen(false);
       setEditingReport(null);
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`فشل في تعديل التقرير: ${error.message}`);
     },
   });
   
   // حذف تقرير
-  const deleteMutation = trpc.bi.reports.delete.useMutation({
+  const deleteMutation = useMutation({
+    mutationFn: (data: any) => api.delete('/reports/custom', { data }).then(r => r.data),
     onSuccess: () => {
       toast.success('تم حذف التقرير بنجاح');
       setIsDeleteOpen(false);
       setDeletingReport(null);
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`فشل في حذف التقرير: ${error.message}`);
     },
   });
   
   // تشغيل تقرير
-  const runMutation = trpc.bi.reports.run.useMutation({
-    onSuccess: (result) => {
+  const runMutation = useMutation({
+    mutationFn: (data: any) => api.post('/reports/custom/run', data).then(r => r.data),
+    onSuccess: (result: any) => {
       toast.success(result.message);
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`فشل في تشغيل التقرير: ${error.message}`);
     },
   });

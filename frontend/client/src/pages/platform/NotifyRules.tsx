@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { useUser } from '@/services/authService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -41,7 +43,7 @@ export default function NotifyRules() {
   const [showInlineForm, setShowInlineForm] = useState(false);
   const [inlineData, setInlineData] = useState<any>({});
 
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useUser();
   const userRole = currentUser?.role || 'user';
   const requiredRole = 'user';
   const hasAccess = userRole === 'admin' || userRole === requiredRole || requiredRole === 'user';
@@ -65,9 +67,10 @@ export default function NotifyRules() {
     priority: 'medium' as 'low' | 'medium' | 'high' | 'critical',
   });
 
-  const { data: rules, isLoading, refetch } = trpc.notificationRules.list.useQuery();
+  const { data: rules, isLoading, refetch } = useQuery({ queryKey: ['notify-rules'], queryFn: () => api.get('/platform/notify-rules').then(r => r.data) });
 
-  const createMutation = trpc.notificationRules.create.useMutation({
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/platform/notify-rules', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إنشاء القاعدة بنجاح');
       setIsCreateOpen(false);
@@ -87,34 +90,37 @@ export default function NotifyRules() {
     },
   });
 
-  const toggleMutation = trpc.notificationRules.toggleActive.useMutation({
+  const toggleMutation = useMutation({
+    mutationFn: (data: any) => api.put(`/platform/notify-rules/${data.id}/toggle`, data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم تحديث حالة القاعدة');
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`فشل في تحديث الحالة: ${error.message}`);
     },
   });
 
-  const deleteMutation = trpc.notificationRules.delete.useMutation({
+  const deleteMutation = useMutation({
+    mutationFn: (data: any) => api.delete(`/platform/notify-rules/${data.id}`).then(r => r.data),
     onSuccess: () => {
       toast.success('تم حذف القاعدة بنجاح');
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`فشل في حذف القاعدة: ${error.message}`);
     },
   });
 
-  const updateMutation = trpc.notificationRules.update.useMutation({
+  const updateMutation = useMutation({
+    mutationFn: (data: any) => api.put(`/platform/notify-rules/${data.id}`, data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم تحديث القاعدة بنجاح');
       setIsEditOpen(false);
       setEditingRule(null);
       refetch();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`فشل في تحديث القاعدة: ${error.message}`);
     },
   });

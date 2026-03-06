@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { useUser } from '@/services/authService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -62,7 +64,7 @@ const statusColors: Record<ProjectStatus, string> = {
 };
 
 export default function Projects() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useUser();
   const userRole = currentUser?.role || 'user';
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -80,43 +82,49 @@ export default function Projects() {
     budget: '',
   });
 
-  const utils = trpc.useUtils();
-  
-  const { data: projects, isLoading } = trpc.projects?.list?.useQuery();
-  
-  const createMutation = trpc.projects?.create?.useMutation({
+  const queryClient = useQueryClient();
+
+  const { data: projects, isLoading } = useQuery({
+    queryKey: ['operations-projects'],
+    queryFn: () => api.get('/operations/projects').then(r => r.data),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.post('/operations/projects', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إنشاء المشروع بنجاح');
       setIsAddOpen(false);
       resetForm();
-      utils.projects?.list?.invalidate();
+      queryClient.invalidateQueries({ queryKey: ['operations-projects'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`خطأ في إنشاء المشروع: ${error.message}`);
     },
   });
 
-  const updateMutation = trpc.projects?.update?.useMutation({
+  const updateMutation = useMutation({
+    mutationFn: (data: any) => api.put('/operations/projects', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم تحديث المشروع بنجاح');
       setIsEditOpen(false);
       setSelectedProject(null);
       resetForm();
-      utils.projects?.list?.invalidate();
+      queryClient.invalidateQueries({ queryKey: ['operations-projects'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`خطأ في تحديث المشروع: ${error.message}`);
     },
   });
 
-  const deleteMutation = trpc.projects?.delete?.useMutation({
+  const deleteMutation = useMutation({
+    mutationFn: (data: any) => api.delete('/operations/projects', { data }).then(r => r.data),
     onSuccess: () => {
       toast.success('تم حذف المشروع بنجاح');
       setIsDeleteOpen(false);
       setSelectedProject(null);
-      utils.projects?.list?.invalidate();
+      queryClient.invalidateQueries({ queryKey: ['operations-projects'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`خطأ في حذف المشروع: ${error.message}`);
     },
   });

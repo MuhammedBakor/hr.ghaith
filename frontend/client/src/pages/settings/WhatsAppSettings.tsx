@@ -1,6 +1,8 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
 import { useState, useEffect } from 'react';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { useUser } from '@/services/authService';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +11,7 @@ import { Loader2, MessageCircle, Key, Phone, Send, CheckCircle2, XCircle, AlertC
 import { toast } from 'sonner';
 
 export default function WhatsAppSettings() {
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useUser();
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -23,8 +25,9 @@ export default function WhatsAppSettings() {
   const [testPhone, setTestPhone] = useState('');
   const [hasChanges, setHasChanges] = useState(false);
 
-  const { data: settings, isLoading, refetch } = trpc.controlKernel.whatsapp.get.useQuery();
-  const updateMutation = trpc.controlKernel.whatsapp.update.useMutation({
+  const { data: settings, isLoading, refetch } = useQuery({ queryKey: ['whatsapp-settings'], queryFn: () => api.get('/settings/whatsapp').then(r => r.data) });
+  const updateMutation = useMutation({
+    mutationFn: (data: any) => api.put('/settings/whatsapp', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم حفظ إعدادات WhatsApp بنجاح');
       setHasChanges(false);
@@ -34,7 +37,8 @@ export default function WhatsAppSettings() {
       toast.error(`فشل حفظ الإعدادات: ${error.message}`);
     },
   });
-  const testMutation = trpc.controlKernel.whatsapp.test.useMutation({
+  const testMutation = useMutation({
+    mutationFn: (data: any) => api.post('/settings/whatsapp/test', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم إرسال رسالة WhatsApp الاختبارية بنجاح!');
       refetch();

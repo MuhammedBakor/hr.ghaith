@@ -1,6 +1,7 @@
 import { useAppContext } from '@/contexts/AppContext';
-import React from "react";
-import { trpc } from '@/lib/trpc';
+import React, { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import api from '@/lib/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Activity, Truck, Clock, Loader2 } from 'lucide-react';
 import { Link } from 'wouter';
@@ -11,7 +12,7 @@ export default function Ops() {
   const handleSubmit = () => { createMut.mutate({}); };
 
   const [searchTerm, setSearchTerm] = useState('');
-  const utils = trpc.useUtils();
+  const queryClient = useQueryClient();
 
   const { selectedRole: userRole } = useAppContext();
   const canEdit = userRole === "admin" || userRole === "manager";
@@ -23,10 +24,13 @@ export default function Ops() {
   const [showDialog, setShowDialog] = React.useState(false);
   const [formData, setFormData] = React.useState<Record<string, any>>({});
 
-  const { data: vehiclesData, isLoading, isError, error } = trpc.fleet.vehicles.list.useQuery();
+  const { data: vehiclesData, isLoading, isError, error } = useQuery({
+    queryKey: ['operations-stats'],
+    queryFn: () => api.get('/operations/stats').then(r => r.data),
+  });
 
-  const createMut = trpc.fleet.create.useMutation({ onError: (e: any) => { alert(e.message || "حدث خطأ"); }, onSuccess: () => {
-        utils.fleet.invalidate();
+  const createMut = useMutation({ mutationFn: (data: any) => api.post('/operations/stats', data).then(r => r.data), onError: (e: any) => { alert(e.message || "حدث خطأ"); }, onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['operations-stats'] });
  window.location.reload(); } });
   const vehicles = (vehiclesData || []) as any[];
 

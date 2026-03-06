@@ -1,5 +1,7 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
-import { trpc } from '@/lib/trpc';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { useUser } from '@/services/authService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,7 +23,7 @@ import {
 export default function FleetIncidentAssist() {
   const confirmDelete = (fn: () => void) => { if (window.confirm("هل أنت متأكد من الحذف؟")) fn(); };
 
-  const { data: currentUser, isError, error} = trpc.auth.me.useQuery();
+  const { data: currentUser, isError, error} = useUser();
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -41,17 +43,18 @@ export default function FleetIncidentAssist() {
     notes: '',
   });
 
-  const { data: incidentsData, isLoading, refetch } = trpc.fleet.incidents.list.useQuery();
-  const { data: statsData } = trpc.fleet.incidents.stats.useQuery();
-  const { data: vehiclesData } = trpc.fleet.vehicles.list.useQuery();
-  const { data: driversData } = trpc.fleetExtended.drivers.list.useQuery();
+  const { data: incidentsData, isLoading, refetch } = useQuery({ queryKey: ['incidents'], queryFn: () => api.get('/fleet/incidents').then(r => r.data) });
+  const { data: statsData } = useQuery({ queryKey: ['incidents-stats'], queryFn: () => api.get('/fleet/incidents/stats').then(r => r.data) });
+  const { data: vehiclesData } = useQuery({ queryKey: ['vehicles'], queryFn: () => api.get('/fleet/vehicles').then(r => r.data) });
+  const { data: driversData } = useQuery({ queryKey: ['drivers'], queryFn: () => api.get('/fleet/drivers').then(r => r.data) });
 
   const incidents = (incidentsData || []) as any[];
   const vehicles = (vehiclesData || []) as any[];
   const drivers = (driversData || []) as any[];
   const stats = statsData || { total: 0, active: 0, processing: 0, resolved: 0 };
 
-  const createIncidentMutation = trpc.fleet.incidents.create.useMutation({
+  const createIncidentMutation = useMutation({
+    mutationFn: (data: any) => api.post('/fleet/incidents', data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم تسجيل الحادث بنجاح');
       setShowAddDialog(false);
@@ -74,7 +77,8 @@ export default function FleetIncidentAssist() {
     },
   });
 
-  const updateIncidentMutation = trpc.fleet.incidents.update.useMutation({
+  const updateIncidentMutation = useMutation({
+    mutationFn: (data: any) => api.put(`/fleet/incidents/${data.id}`, data).then(r => r.data),
     onSuccess: () => {
       toast.success('تم تحديث حالة الحادث');
       refetch();
