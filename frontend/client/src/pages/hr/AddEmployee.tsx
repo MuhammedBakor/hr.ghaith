@@ -228,11 +228,11 @@ export default function AddEmployee() {
               </div>
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label>المسمى الوظيفي</Label>
+                  <Label>المنصب</Label>
                   <Select value={formData.positionId} onValueChange={(v) => updateField('positionId', v)}>
-                    <SelectTrigger><SelectValue placeholder="اختر المسمى الوظيفي" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="اختر المنصب" /></SelectTrigger>
                     <SelectContent>
-                      {positions.length === 0 ? <div className="p-2 text-sm text-gray-500 text-center">لا توجد مسميات — أضف من الإعدادات</div> :
+                      {positions.length === 0 ? <div className="p-2 text-sm text-gray-500 text-center">لا توجد مناصب — أضف من الإعدادات</div> :
                         positions.map((p: any) => <SelectItem key={p.id} value={String(p.id)}>{p.title}</SelectItem>)}
                     </SelectContent>
                   </Select>

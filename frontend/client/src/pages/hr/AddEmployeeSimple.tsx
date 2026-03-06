@@ -5,10 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowRight, Send, UserPlus, Mail, Phone, Building2, CheckCircle2, Shield, Users } from 'lucide-react';
+import { ArrowRight, Send, UserPlus, Mail, Phone, Building2, CheckCircle2, Shield, Users, Briefcase } from 'lucide-react';
 import {
   useBranches,
   useDepartments,
+  usePositions,
   useCreateSimpleEmployee,
   useRoles
 } from '@/services/hrService';
@@ -36,6 +37,7 @@ export default function AddEmployeeSimple() {
     phone: '',
     branchId: selectedBranchId?.toString() || '',
     departmentId: '',
+    positionId: '',
     role: 'EMPLOYEE',
   });
 
@@ -47,9 +49,11 @@ export default function AddEmployeeSimple() {
   const createSimpleEmployeeMutation = useCreateSimpleEmployee();
   const { data: branchesData, isLoading } = useBranches();
   const { data: departmentsData } = useDepartments();
+  const { data: positionsData } = usePositions();
   const { data: rolesData } = useRoles();
   const branches = (branchesData || []).filter((b: any) => b.id);
   const departments = departmentsData || [];
+  const positions = positionsData || [];
   const roles = (rolesData || []).filter((r: string) => r && r.trim() !== "").map((r: string) => ({
     id: r,
     name: r,
@@ -80,6 +84,7 @@ export default function AddEmployeeSimple() {
         phone: formData.phone,
         branchId: formData.branchId ? parseInt(formData.branchId) : undefined,
         departmentId: formData.departmentId ? parseInt(formData.departmentId) : undefined,
+        positionId: formData.positionId ? parseInt(formData.positionId) : undefined,
         role: formData.role,
       }, {
         onSuccess: (data: any) => {
@@ -150,6 +155,7 @@ export default function AddEmployeeSimple() {
                   phone: '',
                   branchId: selectedBranchId?.toString() || '',
                   departmentId: '',
+                  positionId: '',
                   role: 'EMPLOYEE',
                 });
               }}>
@@ -283,6 +289,30 @@ export default function AddEmployeeSimple() {
                   departments.map((d: any) => (
                     <SelectItem key={d.id} value={String(d.id)}>
                       {d.nameAr || d.name}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* المنصب */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Briefcase className="h-4 w-4 text-gray-500" />
+              المنصب
+            </Label>
+            <Select value={formData.positionId} onValueChange={(v) => updateField('positionId', v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="اختر المنصب" />
+              </SelectTrigger>
+              <SelectContent>
+                {positions.length === 0 ? (
+                  <div className="p-2 text-sm text-gray-500 text-center">لا توجد مناصب</div>
+                ) : (
+                  positions.map((p: any) => (
+                    <SelectItem key={p.id} value={String(p.id)}>
+                      {p.title}
                     </SelectItem>
                   ))
                 )}
