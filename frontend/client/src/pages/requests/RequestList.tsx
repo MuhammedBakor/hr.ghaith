@@ -1,4 +1,4 @@
-import { formatDate, formatDateTime } from '@/lib/formatDate';
+import { formatDate } from '@/lib/formatDate';
 import { useState } from 'react';
 import {
   Table,
@@ -31,15 +31,11 @@ interface Request {
   status: string;
   requesterId: number;
   assignedTo?: number | null;
-  createdAt: Date;
+  createdAt: string;
 }
 
 export default function RequestList() {
-  const confirmDelete = (fn: () => void) => { if (window.confirm("هل أنت متأكد من الحذف؟")) fn(); };
-
-  const { data: currentUser, isError, error } = useUser();
-  const userRole = currentUser?.role || 'user';
-
+  const { data: currentUser, isError } = useUser();
   const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [newRequest, setNewRequest] = useState({
@@ -51,13 +47,11 @@ export default function RequestList() {
 
   const queryClient = useQueryClient();
 
-  // جلب الطلبات
   const { data: requests, isLoading } = useQuery({
     queryKey: ['requests'],
     queryFn: () => api.get('/requests').then(r => r.data),
   });
 
-  // إنشاء طلب جديد
   const createRequestMutation = useMutation({
     mutationFn: (data: any) => api.post('/requests', data).then(r => r.data),
     onSuccess: () => {
@@ -71,7 +65,6 @@ export default function RequestList() {
     },
   });
 
-  // تحديث حالة الطلب
   const updateRequestMutation = useMutation({
     mutationFn: (data: any) => api.put(`/requests/${data.id}`, data).then(r => r.data),
     onSuccess: () => {
@@ -83,7 +76,6 @@ export default function RequestList() {
     },
   });
 
-  // فلترة الطلبات
   const filteredRequests = (requests || []).filter((req: Request) =>
     req.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     req.requestNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -141,7 +133,6 @@ export default function RequestList() {
   };
 
   if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>;
-
 
   return (
     <div className="space-y-6" dir="rtl">
@@ -208,10 +199,10 @@ export default function RequestList() {
             <Button
               onClick={() => createRequestMutation.mutate({
                 requestNumber: `REQ-${Date.now()}`,
-                requestType: newRequest.type as "purchase" | "leave" | "travel" | "expense" | "it_support" | "maintenance" | "other",
+                requestType: newRequest.type,
                 title: newRequest.subject,
                 description: newRequest.description,
-                priority: newRequest.priority as "low" | "medium" | "high" | "urgent"
+                priority: newRequest.priority
               })}
               className="w-full"
               disabled={!newRequest.type || !newRequest.subject || createRequestMutation.isPending}
