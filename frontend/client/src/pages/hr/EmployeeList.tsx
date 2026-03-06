@@ -128,7 +128,7 @@ export default function EmployeeList() {
     lastName: emp.lastName || '',
     email: emp.email || '',
     position: (typeof emp.position === 'object' ? emp.position?.title : emp.position) || '',
-    department: (typeof emp.department === 'object' ? emp.department?.name : emp.department) || '',
+    department: (typeof emp.department === 'object' ? (emp.department?.nameAr || emp.department?.name) : emp.department) || '',
     status: emp.status || 'active',
     joinDate: emp.hireDate ? new Date(emp.hireDate).toISOString() : new Date().toISOString(),
     branchId: emp.branchId,
@@ -470,18 +470,15 @@ export default function EmployeeList() {
                 <div className="space-y-2">
                   {departmentsData.map((dept: any) => (
                     <div key={dept.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div>
-                        <p className="font-medium">{dept.name}</p>
-                        <p className="text-sm text-gray-500">{dept.description || 'لا يوجد وصف'}</p>
-                      </div>
                       <div className="flex items-center gap-2">
-                        <Badge variant={dept.status === 'active' ? 'default' : 'secondary'}>
-                          {dept.status === 'active' ? 'نشط' : 'غير نشط'}
-                        </Badge>
                         <Button variant="ghost" size="icon" onClick={() => handleDeleteDept(dept.id)}>
                           <Trash2 className="h-4 w-4 text-red-500" />
                         </Button>
+                        <Badge variant={dept.status === 'active' ? 'default' : 'secondary'}>
+                          {dept.status === 'active' ? 'نشط' : 'غير نشط'}
+                        </Badge>
                       </div>
+                      <p className="font-medium">{dept.nameAr || dept.name}</p>
                     </div>
                   ))}
                 </div>

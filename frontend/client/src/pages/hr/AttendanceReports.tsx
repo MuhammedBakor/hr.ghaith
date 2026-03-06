@@ -66,7 +66,7 @@ export default function AttendanceReports() {
     if (!employeesData) return [];
     const depts = new Set<string>();
     employeesData.forEach((emp: any) => {
-      const deptName = typeof emp.department === 'object' ? emp.department?.name : emp.department;
+      const deptName = typeof emp.department === 'object' ? (emp.department?.nameAr || emp.department?.name) : emp.department;
       if (deptName) depts.add(deptName);
     });
     return Array.from(depts).map((d, i) => ({ id: i + 1, name: d }));
@@ -86,7 +86,7 @@ export default function AttendanceReports() {
     const workDaysInMonth = endDate.getDate(); // عدد أيام الشهر
 
     for (const employee of employeesData) {
-      const deptName = typeof employee.department === 'object' ? employee.department?.name : employee.department;
+      const deptName = typeof employee.department === 'object' ? (employee.department?.nameAr || employee.department?.name) : employee.department;
 
       // فلترة حسب الموظف المحدد
       if (selectedEmployee !== 'all' && employee.id !== parseInt(selectedEmployee)) continue;

@@ -140,8 +140,7 @@ export default function DepartmentSettings() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>الكود</TableHead>
-                      <TableHead>الاسم (عربي)</TableHead>
-                      <TableHead>الاسم (إنجليزي)</TableHead>
+                      <TableHead>اسم القسم</TableHead>
                       <TableHead>الفرع</TableHead>
                       <TableHead>الحالة</TableHead>
                       <TableHead>الإجراءات</TableHead>
@@ -151,8 +150,7 @@ export default function DepartmentSettings() {
                     {departments.map((dept) => (
                       <TableRow key={dept.id}>
                         <TableCell className="font-mono">{dept.code}</TableCell>
-                        <TableCell className="font-medium">{dept.nameAr}</TableCell>
-                        <TableCell>{dept.name}</TableCell>
+                        <TableCell className="font-medium">{dept.nameAr || dept.name}</TableCell>
                         <TableCell>{getBranchName(dept.branchId)}</TableCell>
                         <TableCell>
                           <Badge variant={dept.isActive ? 'default' : 'secondary'}>
@@ -180,7 +178,7 @@ export default function DepartmentSettings() {
                     ))}
                     {departments.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center text-gray-500 py-8">
+                        <TableCell colSpan={5} className="text-center text-gray-500 py-8">
                           لا توجد أقسام - أضف قسماً جديداً
                         </TableCell>
                       </TableRow>

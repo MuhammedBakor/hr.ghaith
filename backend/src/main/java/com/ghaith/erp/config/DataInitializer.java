@@ -1,7 +1,9 @@
 package com.ghaith.erp.config;
 
+import com.ghaith.erp.model.Department;
 import com.ghaith.erp.model.Role;
 import com.ghaith.erp.model.User;
+import com.ghaith.erp.repository.DepartmentRepository;
 import com.ghaith.erp.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
@@ -13,10 +15,12 @@ import org.springframework.stereotype.Component;
 public class DataInitializer implements CommandLineRunner {
 
     private final UserRepository userRepository;
+    private final DepartmentRepository departmentRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
     public void run(String... args) throws Exception {
+        // Seed default users
         if (userRepository.findByEmail("admin").isEmpty()) {
             User admin = User.builder()
                     .username("admin")
@@ -39,6 +43,29 @@ public class DataInitializer implements CommandLineRunner {
                     .build();
             userRepository.save(admin2);
             System.out.println("Default admin2 user created: admin2 / Admin2@2026");
+        }
+
+        // Seed default departments
+        seedDepartment("HR", "الموارد البشرية", "Human Resources");
+        seedDepartment("FIN", "المالية", "Finance");
+        seedDepartment("FLEET", "الاسطول", "Fleet");
+        seedDepartment("PROP", "الاملاك", "Properties");
+        seedDepartment("LEGAL", "القانون", "Legal");
+        seedDepartment("PROJ", "المشاريع", "Projects");
+        seedDepartment("WH", "المخازن", "Warehouses");
+        seedDepartment("UMRAH", "العمرة", "Umrah");
+    }
+
+    private void seedDepartment(String code, String nameAr, String name) {
+        if (departmentRepository.findByCode(code).isEmpty()) {
+            Department dept = Department.builder()
+                    .code(code)
+                    .name(name)
+                    .nameAr(nameAr)
+                    .status("active")
+                    .build();
+            departmentRepository.save(dept);
+            System.out.println("Default department created: " + nameAr + " (" + code + ")");
         }
     }
 }

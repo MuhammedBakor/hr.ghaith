@@ -177,7 +177,7 @@ export default function Organization() {
           </div>
 
           <div className="flex-1">
-            <p className="font-medium">{dept.name}</p>
+            <p className="font-medium">{dept.nameAr || dept.name}</p>
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <span className="flex items-center gap-1">
                 <User className="h-3 w-3" />

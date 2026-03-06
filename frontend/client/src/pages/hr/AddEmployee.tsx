@@ -268,7 +268,7 @@ export default function AddEmployee() {
                       <SelectItem value="none">بدون مدير مباشر</SelectItem>
                       {managers.map((m: any) => (
                         <SelectItem key={m.id} value={String(m.id)}>
-                          {m.firstName} {m.lastName} — {(typeof m.position === 'object' ? m.position?.title : m.position) || (typeof m.department === 'object' ? m.department?.name : m.department) || "موظف"}
+                          {m.firstName} {m.lastName} — {(typeof m.position === 'object' ? m.position?.title : m.position) || (typeof m.department === 'object' ? (m.department?.nameAr || m.department?.name) : m.department) || "موظف"}
                         </SelectItem>
                       ))}
                     </SelectContent>

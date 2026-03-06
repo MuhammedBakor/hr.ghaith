@@ -5,9 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowRight, Send, UserPlus, Mail, Phone, Building2, CheckCircle2, Shield } from 'lucide-react';
+import { ArrowRight, Send, UserPlus, Mail, Phone, Building2, CheckCircle2, Shield, Users } from 'lucide-react';
 import {
   useBranches,
+  useDepartments,
   useCreateSimpleEmployee,
   useRoles
 } from '@/services/hrService';
@@ -34,6 +35,7 @@ export default function AddEmployeeSimple() {
     email: '',
     phone: '',
     branchId: selectedBranchId?.toString() || '',
+    departmentId: '',
     role: 'EMPLOYEE',
   });
 
@@ -44,8 +46,10 @@ export default function AddEmployeeSimple() {
   // Mutation لإضافة موظف مبسط
   const createSimpleEmployeeMutation = useCreateSimpleEmployee();
   const { data: branchesData, isLoading } = useBranches();
+  const { data: departmentsData } = useDepartments();
   const { data: rolesData } = useRoles();
   const branches = (branchesData || []).filter((b: any) => b.id);
+  const departments = departmentsData || [];
   const roles = (rolesData || []).filter((r: string) => r && r.trim() !== "").map((r: string) => ({
     id: r,
     name: r,
@@ -75,6 +79,7 @@ export default function AddEmployeeSimple() {
         email: formData.email,
         phone: formData.phone,
         branchId: formData.branchId ? parseInt(formData.branchId) : undefined,
+        departmentId: formData.departmentId ? parseInt(formData.departmentId) : undefined,
         role: formData.role,
       }, {
         onSuccess: (data: any) => {
@@ -144,6 +149,7 @@ export default function AddEmployeeSimple() {
                   email: '',
                   phone: '',
                   branchId: selectedBranchId?.toString() || '',
+                  departmentId: '',
                   role: 'EMPLOYEE',
                 });
               }}>
@@ -256,6 +262,30 @@ export default function AddEmployeeSimple() {
                     {(branch as any).nameAr || branch.name}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* القسم */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-gray-500" />
+              القسم
+            </Label>
+            <Select value={formData.departmentId} onValueChange={(v) => updateField('departmentId', v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="اختر القسم" />
+              </SelectTrigger>
+              <SelectContent>
+                {departments.length === 0 ? (
+                  <div className="p-2 text-sm text-gray-500 text-center">لا توجد أقسام</div>
+                ) : (
+                  departments.map((d: any) => (
+                    <SelectItem key={d.id} value={String(d.id)}>
+                      {d.nameAr || d.name}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>

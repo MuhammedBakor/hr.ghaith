@@ -75,7 +75,7 @@ export default function Payroll() {
   const records: PayrollRecord[] = (payrollData || []).map((p: any) => ({
     ...p,
     employeeName: p.employee ? `${p.employee.firstName} ${p.employee.lastName}` : `موظف #${p.employeeId}`,
-    department: p.employee?.department?.name || '-'
+    department: p.employee?.department?.nameAr || p.employee?.department?.name || '-'
   }));
 
   // إنشاء كشف راتب جديد

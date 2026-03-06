@@ -163,7 +163,7 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
         email: employeeData.email || '',
         phone: employeeData.phone || '',
         position: (typeof employeeData.position === 'object' ? employeeData.position?.title : employeeData.position) || '',
-        department: (typeof employeeData.department === 'object' ? employeeData.department?.name : employeeData.department) || '',
+        department: (typeof employeeData.department === 'object' ? (employeeData.department?.nameAr || employeeData.department?.name) : employeeData.department) || '',
         branch: employeeData.branch?.name || employeeData.branch || '',
         manager: employeeData.manager ? `${employeeData.manager.firstName} ${employeeData.manager.lastName}` : '',
         basicSalary: employeeData.salary || 0,
@@ -176,7 +176,7 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
         lastName: employeeData.lastName || '',
         email: employeeData.email || '',
         phone: employeeData.phone || '',
-        department: (typeof employeeData.department === 'object' ? employeeData.department?.name : employeeData.department) || '',
+        department: (typeof employeeData.department === 'object' ? (employeeData.department?.nameAr || employeeData.department?.name) : employeeData.department) || '',
         position: (typeof employeeData.position === 'object' ? employeeData.position?.title : employeeData.position) || '',
       });
     }

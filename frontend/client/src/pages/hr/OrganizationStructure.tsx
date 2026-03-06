@@ -331,7 +331,7 @@ export default function OrganizationStructure() {
 
     if (activeTab === 'departments') {
       headers = ['الرقم', 'الاسم', 'الرمز', 'القسم الأب'];
-      csvData = flatDepartments.map((d: any) => [d.id, d.name || d.nameAr, d.code, d.parentId || '-']);
+      csvData = flatDepartments.map((d: any) => [d.id, d.nameAr || d.name, d.code, d.parentId || '-']);
     } else {
       headers = ['الرقم', 'المسمى', 'القسم', 'المستوى'];
       csvData = positions.map((p: any) => [p.id, p.title || p.titleAr, p.departmentId, p.level]);
@@ -422,45 +422,35 @@ export default function OrganizationStructure() {
 
     return (
       <div key={dept.id}>
-        <div className="mb-4 flex items-center gap-2">
-          <input
-            type="text"
-            placeholder="بحث..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full md:w-64 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
-          {searchTerm && <button onClick={() => setSearchTerm('')} className="text-gray-400 hover:text-gray-600">✕</button>}
-        </div>
         <div
           className={`flex items-center justify-between p-3 border rounded-lg mb-2 hover:bg-gray-50 cursor-pointer`}
           style={{ marginRight: `${level * 24}px` }}
           onClick={() => hasChildren && toggleDepartment(dept.id)}
         >
+          <div className="flex items-center gap-4">
+            <div className="flex gap-1">
+              <Button variant="ghost" size="icon" className="text-red-500" onClick={(e) => { e.stopPropagation(); handleDeleteDept(dept); }}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleEditDept(dept); }}>
+                <Edit className="h-4 w-4" />
+              </Button>
+            </div>
+            <Badge variant="outline">{dept.employeeCount || 0} موظف</Badge>
+          </div>
           <div className="flex items-center gap-3">
+            <div>
+              <h4 className="font-medium">{dept.nameAr || dept.name}</h4>
+              <p className="text-sm text-gray-500">{dept.code}</p>
+            </div>
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <Building2 className="h-5 w-5 text-primary" />
+            </div>
             {hasChildren ? (
               isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />
             ) : (
               <div className="w-4" />
             )}
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <Building2 className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <h4 className="font-medium">{dept.name || dept.nameAr}</h4>
-              <p className="text-sm text-gray-500">{dept.code}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <Badge variant="outline">{dept.employeeCount || 0} موظف</Badge>
-            <div className="flex gap-1">
-              <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleEditDept(dept); }}>
-                <Edit className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" className="text-red-500" onClick={(e) => { e.stopPropagation(); handleDeleteDept(dept); }}>
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
           </div>
         </div>
         {hasChildren && isExpanded && (
@@ -641,10 +631,10 @@ export default function OrganizationStructure() {
                   <TableBody>
                     {flatDepartments.map((dept: any) => (
                       <TableRow key={dept.id}>
-                        <TableCell className="font-medium">{dept.name || dept.nameAr}</TableCell>
+                        <TableCell className="font-medium">{dept.nameAr || dept.name}</TableCell>
                         <TableCell><Badge variant="outline">{dept.code}</Badge></TableCell>
                         <TableCell>{dept.employeeCount || 0}</TableCell>
-                        <TableCell>{dept.parentId ? flatDepartments.find((d: any) => d.id === dept.parentId)?.name || '-' : '-'}</TableCell>
+                        <TableCell>{dept.parentId ? flatDepartments.find((d: any) => d.id === dept.parentId)?.nameAr || flatDepartments.find((d: any) => d.id === dept.parentId)?.name || '-' : '-'}</TableCell>
                         <TableCell>
                           <div className="flex gap-1">
                             <Button variant="ghost" size="icon" onClick={() => handleEditDept(dept)}>
@@ -698,7 +688,7 @@ export default function OrganizationStructure() {
                     {positions.map((position: any) => (
                       <TableRow key={position.id}>
                         <TableCell className="font-medium">{position.title || position.titleAr}</TableCell>
-                        <TableCell>{flatDepartments.find((d: any) => d.id === position.departmentId)?.name || '-'}</TableCell>
+                        <TableCell>{flatDepartments.find((d: any) => d.id === position.departmentId)?.nameAr || flatDepartments.find((d: any) => d.id === position.departmentId)?.name || '-'}</TableCell>
                         <TableCell><Badge variant="outline">{position.level || 'C1'}</Badge></TableCell>
                         <TableCell>
                           <Badge className={position.isActive !== false ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}>
@@ -761,7 +751,7 @@ export default function OrganizationStructure() {
                 <SelectContent>
                   <SelectItem value="none">بدون (قسم رئيسي)</SelectItem>
                   {flatDepartments.map((dept: any) => (
-                    <SelectItem key={dept.id} value={dept.id.toString()}>{dept.name || dept.nameAr}</SelectItem>
+                    <SelectItem key={dept.id} value={dept.id.toString()}>{dept.nameAr || dept.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -789,7 +779,7 @@ export default function OrganizationStructure() {
               <div className="space-y-2">
                 <Label>اسم القسم</Label>
                 <Input
-                  value={editingDept.name || editingDept.nameAr || ''}
+                  value={editingDept.nameAr || editingDept.name || ''}
                   onChange={(e) => setEditingDept({ ...editingDept, name: e.target.value, nameAr: e.target.value })}
                 />
               </div>
@@ -818,7 +808,7 @@ export default function OrganizationStructure() {
           <AlertDialogHeader>
             <AlertDialogTitle>هل أنت متأكد من حذف هذا القسم؟</AlertDialogTitle>
             <AlertDialogDescription>
-              سيتم حذف القسم "{deletingDept?.name || deletingDept?.nameAr}" نهائياً. هذا الإجراء لا يمكن التراجع عنه.
+              سيتم حذف القسم "{deletingDept?.nameAr || deletingDept?.name}" نهائياً. هذا الإجراء لا يمكن التراجع عنه.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -857,7 +847,7 @@ export default function OrganizationStructure() {
                 </SelectTrigger>
                 <SelectContent>
                   {flatDepartments.map((dept: any) => (
-                    <SelectItem key={dept.id} value={dept.id.toString()}>{dept.name || dept.nameAr}</SelectItem>
+                    <SelectItem key={dept.id} value={dept.id.toString()}>{dept.nameAr || dept.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
