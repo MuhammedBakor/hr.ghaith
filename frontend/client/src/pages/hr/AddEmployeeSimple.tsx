@@ -31,15 +31,20 @@ export default function AddEmployeeSimple() {
 
   const { selectedBranchId } = useAppContext();
 
+  // قراءة معاملات URL لتعبئة القسم والدور تلقائياً
+  const urlParams = new URLSearchParams(window.location.search);
+  const preRole = urlParams.get('role') || 'EMPLOYEE';
+  const preDeptId = urlParams.get('departmentId') || '';
+
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
     phone: '',
     branchId: selectedBranchId?.toString() || '',
-    departmentId: '',
+    departmentId: preDeptId,
     positionId: '',
-    role: 'EMPLOYEE',
+    role: preRole,
     managerId: '',
   });
 

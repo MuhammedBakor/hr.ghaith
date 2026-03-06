@@ -54,7 +54,19 @@ import {
   Printer,
   Download,
   Upload,
+  UserPlus,
+  Zap,
+  ClipboardList,
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Link } from 'wouter';
 import { toast } from 'sonner';
 import { PrintButton } from "@/components/PrintButton";
 
@@ -441,7 +453,7 @@ export default function OrganizationStructure() {
           style={{ marginRight: `${level * 24}px` }}
           onClick={() => hasChildren && toggleDepartment(dept.id)}
         >
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             <div className="flex gap-1">
               <Button variant="ghost" size="icon" className="text-red-500" onClick={(e) => { e.stopPropagation(); handleDeleteDept(dept); }}>
                 <Trash2 className="h-4 w-4" />
@@ -451,6 +463,48 @@ export default function OrganizationStructure() {
               </Button>
             </div>
             <Badge variant="outline">{getEmployeeCount(dept.id)} موظف</Badge>
+            {/* زر إضافة موظف للقسم */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                <Button variant="outline" size="sm" className="gap-1">
+                  <UserPlus className="h-4 w-4" />
+                  إضافة
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56" onClick={(e) => e.stopPropagation()}>
+                <DropdownMenuLabel>إضافة موظف - {dept.nameAr || dept.name}</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {[
+                  { label: 'مدير قسم', role: 'DEPARTEMENT_MANAGER' },
+                  { label: 'مشرف', role: 'SUPERVISOR' },
+                  { label: 'موظف', role: 'EMPLOYEE' },
+                  { label: 'مندوب', role: 'AGENT' },
+                ].map((item) => (
+                  <DropdownMenu key={item.role}>
+                    <DropdownMenuTrigger asChild>
+                      <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="justify-between cursor-pointer">
+                        {item.label}
+                        <ChevronDown className="h-3 w-3 rotate-[-90deg]" />
+                      </DropdownMenuItem>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent side="left" className="w-44">
+                      <DropdownMenuItem asChild>
+                        <Link href={`/hr/employees/add?role=${item.role}&departmentId=${dept.id}`}>
+                          <Zap className="h-4 w-4 ms-2" />
+                          إضافة سريعة
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href={`/hr/employees/add-full?role=${item.role}&departmentId=${dept.id}`}>
+                          <ClipboardList className="h-4 w-4 ms-2" />
+                          إضافة شاملة
+                        </Link>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
           <div className="flex items-center gap-3">
             <div>
@@ -782,12 +836,12 @@ export default function OrganizationStructure() {
       </div>)}
 
       {/* Edit Department Dialog */}
-      {isEditDeptOpen && (<div className="mt-4 p-6 bg-white border rounded-xl shadow-sm">
-        <div>
-          <div className="mb-4 border-b pb-3">
-            <h3 className="text-lg font-bold">تعديل القسم</h3>
-            <p className="text-sm text-gray-500">تعديل بيانات القسم</p>
-          </div>
+      <Dialog open={isEditDeptOpen} onOpenChange={setIsEditDeptOpen}>
+        <DialogContent dir="rtl">
+          <DialogHeader>
+            <DialogTitle>تعديل القسم</DialogTitle>
+            <DialogDescription>تعديل بيانات القسم</DialogDescription>
+          </DialogHeader>
           {editingDept && (
             <div className="space-y-4">
               <div className="space-y-2">
@@ -806,15 +860,15 @@ export default function OrganizationStructure() {
               </div>
             </div>
           )}
-          <div className="flex gap-2 mt-4 pt-3 border-t justify-end">
+          <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setIsEditDeptOpen(false)}>إلغاء</Button>
             <Button onClick={handleUpdateDept} disabled={updateDeptMutation.isPending}>
               {updateDeptMutation.isPending && <Loader2 className="h-4 w-4 animate-spin ms-2" />}
               حفظ
             </Button>
-          </div>
-        </div>
-      </div>)}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Department Dialog */}
       <AlertDialog open={isDeleteDeptOpen} onOpenChange={setIsDeleteDeptOpen}>
@@ -917,12 +971,12 @@ export default function OrganizationStructure() {
       </div>)}
 
       {/* Edit Position Dialog */}
-      {isEditPositionOpen && (<div className="mt-4 p-6 bg-white border rounded-xl shadow-sm">
-        <div>
-          <div className="mb-4 border-b pb-3">
-            <h3 className="text-lg font-bold">تعديل المسمى الوظيفي</h3>
-            <p className="text-sm text-gray-500">تعديل بيانات المسمى الوظيفي</p>
-          </div>
+      <Dialog open={isEditPositionOpen} onOpenChange={setIsEditPositionOpen}>
+        <DialogContent dir="rtl">
+          <DialogHeader>
+            <DialogTitle>تعديل المسمى الوظيفي</DialogTitle>
+            <DialogDescription>تعديل بيانات المسمى الوظيفي</DialogDescription>
+          </DialogHeader>
           {editingPosition && (
             <div className="space-y-4">
               <div className="space-y-2">
@@ -934,15 +988,15 @@ export default function OrganizationStructure() {
               </div>
             </div>
           )}
-          <div className="flex gap-2 mt-4 pt-3 border-t justify-end">
+          <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setIsEditPositionOpen(false)}>إلغاء</Button>
             <Button onClick={handleUpdatePosition} disabled={updatePositionMutation.isPending}>
               {updatePositionMutation.isPending && <Loader2 className="h-4 w-4 animate-spin ms-2" />}
               حفظ
             </Button>
-          </div>
-        </div>
-      </div>)}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Position Dialog */}
       <AlertDialog open={isDeletePositionOpen} onOpenChange={setIsDeletePositionOpen}>

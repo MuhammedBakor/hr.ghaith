@@ -59,9 +59,14 @@ export default function AddEmployee() {
 
   const isLoading = isLoadingDepts || isLoadingBranches || isLoadingRoles || isLoadingPositions;
 
+  // قراءة معاملات URL لتعبئة القسم والدور تلقائياً
+  const urlParams = new URLSearchParams(window.location.search);
+  const preRole = urlParams.get('role') || 'EMPLOYEE';
+  const preDeptId = urlParams.get('departmentId') || '';
+
   const [formData, setFormData] = useState({
     firstName: '', lastName: '', email: '', phone: '',
-    departmentId: '', branchId: '', positionId: '', roleCode: 'EMPLOYEE',
+    departmentId: preDeptId, branchId: '', positionId: '', roleCode: preRole,
     managerId: '', joinDate: new Date().toISOString().split('T')[0], workType: 'full_time',
     nationalId: '', nationality: '', dateOfBirth: '', gender: '', maritalStatus: '', address: '',
     emergencyName: '', emergencyRelation: '', emergencyPhone: '',

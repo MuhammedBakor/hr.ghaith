@@ -8,7 +8,7 @@ import { AlertTriangle, FileDown, Trash2, Edit, PauseCircle, Loader2 } from 'luc
 import { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/ui/data-table';
 import { Button } from '@/components/ui/button';
-import { Plus, MoreHorizontal, FileText, Calendar, Clock, DollarSign, Award, GraduationCap, Building2, Filter } from 'lucide-react';
+import { Plus, MoreHorizontal, FileText, Calendar, Clock, DollarSign, Award, GraduationCap, Building2, Filter, UserPlus, Zap, ClipboardList, ChevronDown } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -477,6 +477,48 @@ export default function EmployeeList() {
                         <Badge variant={dept.status === 'active' ? 'default' : 'secondary'}>
                           {dept.status === 'active' ? 'نشط' : 'غير نشط'}
                         </Badge>
+                        {/* زر إضافة موظف للقسم */}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm" className="gap-1">
+                              <UserPlus className="h-4 w-4" />
+                              إضافة
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-56">
+                            <DropdownMenuLabel>إضافة موظف - {dept.nameAr || dept.name}</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            {[
+                              { label: 'مدير قسم', role: 'DEPARTEMENT_MANAGER' },
+                              { label: 'مشرف', role: 'SUPERVISOR' },
+                              { label: 'موظف', role: 'EMPLOYEE' },
+                              { label: 'مندوب', role: 'AGENT' },
+                            ].map((item) => (
+                              <DropdownMenu key={item.role}>
+                                <DropdownMenuTrigger asChild>
+                                  <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="justify-between cursor-pointer">
+                                    {item.label}
+                                    <ChevronDown className="h-3 w-3 rotate-[-90deg]" />
+                                  </DropdownMenuItem>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent side="left" className="w-44">
+                                  <DropdownMenuItem asChild>
+                                    <Link href={`/hr/employees/add?role=${item.role}&departmentId=${dept.id}`}>
+                                      <Zap className="h-4 w-4 ms-2" />
+                                      إضافة سريعة
+                                    </Link>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem asChild>
+                                    <Link href={`/hr/employees/add-full?role=${item.role}&departmentId=${dept.id}`}>
+                                      <ClipboardList className="h-4 w-4 ms-2" />
+                                      إضافة شاملة
+                                    </Link>
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                       <p className="font-medium">{dept.nameAr || dept.name}</p>
                     </div>
