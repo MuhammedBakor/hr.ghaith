@@ -53,7 +53,9 @@ export default function AddEmployee() {
   const { data: positionsData, isLoading: isLoadingPositions } = usePositions();
   const positions = positionsData || [];
   const { data: employeesData } = useEmployees();
-  const managers = (employeesData || []).filter((e: any) => e.status === 'active');
+  const managers = (employeesData || []).filter((e: any) =>
+    e.user?.role === 'GENERAL_MANAGER' || e.user?.role === 'DEPARTEMENT_MANAGER'
+  );
 
   const isLoading = isLoadingDepts || isLoadingBranches || isLoadingRoles || isLoadingPositions;
 

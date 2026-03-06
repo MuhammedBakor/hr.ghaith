@@ -5,13 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowRight, Send, UserPlus, Mail, Phone, Building2, CheckCircle2, Shield, Users, Briefcase } from 'lucide-react';
+import { ArrowRight, Send, UserPlus, Mail, Phone, Building2, CheckCircle2, Shield, Users, Briefcase, UserCheck } from 'lucide-react';
 import {
   useBranches,
   useDepartments,
   usePositions,
   useCreateSimpleEmployee,
-  useRoles
+  useRoles,
+  useEmployees
 } from '@/services/hrService';
 import { toast } from 'sonner';
 import { useAppContext } from '@/contexts/AppContext';
@@ -39,6 +40,7 @@ export default function AddEmployeeSimple() {
     departmentId: '',
     positionId: '',
     role: 'EMPLOYEE',
+    managerId: '',
   });
 
   const updateField = (field: string, value: string) => {
@@ -51,6 +53,10 @@ export default function AddEmployeeSimple() {
   const { data: departmentsData } = useDepartments();
   const { data: positionsData } = usePositions();
   const { data: rolesData } = useRoles();
+  const { data: employeesData } = useEmployees();
+  const managers = (employeesData || []).filter((e: any) =>
+    e.user?.role === 'GENERAL_MANAGER' || e.user?.role === 'DEPARTEMENT_MANAGER'
+  );
   const branches = (branchesData || []).filter((b: any) => b.id);
   const departments = departmentsData || [];
   const positions = positionsData || [];
@@ -86,6 +92,7 @@ export default function AddEmployeeSimple() {
         departmentId: formData.departmentId ? parseInt(formData.departmentId) : undefined,
         positionId: formData.positionId ? parseInt(formData.positionId) : undefined,
         role: formData.role,
+        managerId: formData.managerId && formData.managerId !== 'none' ? parseInt(formData.managerId) : undefined,
       }, {
         onSuccess: (data: any) => {
           setCreatedEmployee({
@@ -157,6 +164,7 @@ export default function AddEmployeeSimple() {
                   departmentId: '',
                   positionId: '',
                   role: 'EMPLOYEE',
+                  managerId: '',
                 });
               }}>
                 <UserPlus className="h-4 w-4 ms-2" />
@@ -348,6 +356,27 @@ export default function AddEmployeeSimple() {
               </SelectContent>
             </Select>
             <p className="text-xs text-gray-500">يحدد الدور صلاحيات الموظف في النظام</p>
+          </div>
+
+          {/* المدير المباشر */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <UserCheck className="h-4 w-4 text-gray-500" />
+              المدير المباشر
+            </Label>
+            <Select value={formData.managerId} onValueChange={(v) => updateField('managerId', v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="اختر المدير المباشر (اختياري)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">بدون مدير مباشر</SelectItem>
+                {managers.map((m: any) => (
+                  <SelectItem key={m.id} value={String(m.id)}>
+                    {m.firstName} {m.lastName} — {m.user?.role === 'GENERAL_MANAGER' ? 'مدير عام' : 'مدير قسم'}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* معلومات */}

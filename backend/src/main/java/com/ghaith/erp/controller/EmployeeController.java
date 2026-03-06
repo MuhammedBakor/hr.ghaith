@@ -65,8 +65,16 @@ public class EmployeeController {
                 positionId = Long.parseLong((String) posIdObj);
             }
 
+            Long managerId = null;
+            Object mgrIdObj = payload.get("managerId");
+            if (mgrIdObj instanceof Number) {
+                managerId = ((Number) mgrIdObj).longValue();
+            } else if (mgrIdObj instanceof String && !((String) mgrIdObj).isEmpty()) {
+                managerId = Long.parseLong((String) mgrIdObj);
+            }
+
             return ResponseEntity
-                    .ok(employeeService.createSimpleEmployee(firstName, lastName, email, phone, branchId, departmentId, positionId, role));
+                    .ok(employeeService.createSimpleEmployee(firstName, lastName, email, phone, branchId, departmentId, positionId, role, managerId));
         } catch (Exception e) {
             e.printStackTrace(); // This will show in the console
             return ResponseEntity.internalServerError().body("Error: " + e.getMessage());

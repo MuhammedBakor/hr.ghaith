@@ -80,7 +80,7 @@ public class EmployeeService {
     }
 
     public java.util.Map<String, String> createSimpleEmployee(String firstName, String lastName, String email,
-            String phone, Long branchId, Long departmentId, Long positionId, String roleStr) {
+            String phone, Long branchId, Long departmentId, Long positionId, String roleStr, Long managerId) {
         System.out.println("Starting createSimpleEmployee for email: " + email);
 
         // Validate: check if this email is already used by an existing employee
@@ -104,6 +104,9 @@ public class EmployeeService {
         }
         if (positionId != null) {
             employee.setPosition(positionRepository.findById(positionId).orElse(null));
+        }
+        if (managerId != null) {
+            employee.setManager(employeeRepository.findById(managerId).orElse(null));
         }
 
         // Create User Account
