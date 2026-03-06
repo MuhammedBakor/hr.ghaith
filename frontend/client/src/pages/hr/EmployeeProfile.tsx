@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ArrowRight, Edit, Printer, Download, Mail, Phone, MapPin, Building2, Briefcase, CreditCard, FileText, AlertTriangle, CheckCircle2, XCircle, User, Plus, Upload, X } from 'lucide-react';
+import { ArrowRight, Edit, Printer, Download, Mail, Phone, MapPin, Building2, Briefcase, CreditCard, FileText, AlertTriangle, CheckCircle2, XCircle, User, Plus, Upload, X, Shield, UserCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/_core/hooks/useAuth';
 import {
@@ -164,8 +164,9 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
         phone: employeeData.phone || '',
         position: (typeof employeeData.position === 'object' ? employeeData.position?.title : employeeData.position) || '',
         department: (typeof employeeData.department === 'object' ? (employeeData.department?.nameAr || employeeData.department?.name) : employeeData.department) || '',
-        branch: employeeData.branch?.name || employeeData.branch || '',
+        branch: employeeData.branch?.nameAr || employeeData.branch?.name || employeeData.branch || '',
         manager: employeeData.manager ? `${employeeData.manager.firstName} ${employeeData.manager.lastName}` : '',
+        userRole: employeeData.userRole || employeeData.user?.role || employeeData.role || '',
         basicSalary: employeeData.salary || 0,
         housingAllowance: (employeeData.salary || 0) * 0.25,
         transportAllowance: 500,
@@ -290,6 +291,18 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
       paidDate: r.status === 'paid' ? r.updatedAt : undefined
     }));
   }, [payrollData]);
+
+  const getRoleArabic = (role: string) => {
+    switch (role) {
+      case 'OWNER': return 'مالك';
+      case 'GENERAL_MANAGER': return 'مدير عام';
+      case 'DEPARTEMENT_MANAGER': return 'مدير قسم';
+      case 'SUPERVISOR': return 'مشرف';
+      case 'EMPLOYEE': return 'موظف';
+      case 'AGENT': return 'مندوب';
+      default: return role || '-';
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -542,28 +555,18 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
               </AvatarFallback>
             </Avatar>
             <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
+              <div className="flex flex-wrap items-center gap-3 mb-4">
                 <h3 className="text-2xl font-bold">{employee.firstName} {employee.lastName}</h3>
                 {getStatusBadge(employee.status)}
               </div>
-              <p className="text-lg text-gray-600 mb-4">{employee.position}</p>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div className="flex items-center gap-2">
-                  <Building2 className="h-4 w-4 text-gray-400" />
-                  <span>{employee.department}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-gray-400" />
-                  <span>{employee.branch}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-gray-400" />
-                  <span dir="ltr">{employee.email}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-gray-400" />
-                  <span dir="ltr">{employee.phone}</span>
-                </div>
+              <div className="grid grid-cols-2 gap-x-10 gap-y-2 text-sm">
+                <p><span className="text-gray-500"><Shield className="h-4 w-4 inline-block me-1 align-middle text-gray-400" />الدور في النظام: </span><Badge className="bg-primary/10 text-primary">{getRoleArabic(employee.userRole)}</Badge></p>
+                <p><span className="text-gray-500"><Briefcase className="h-4 w-4 inline-block me-1 align-middle text-gray-400" />المنصب: </span><span className="font-medium">{employee.position || '-'}</span></p>
+                <p><span className="text-gray-500"><Building2 className="h-4 w-4 inline-block me-1 align-middle text-gray-400" />القسم: </span><span className="font-medium">{employee.department || '-'}</span></p>
+                <p><span className="text-gray-500"><MapPin className="h-4 w-4 inline-block me-1 align-middle text-gray-400" />الفرع: </span><span className="font-medium">{employee.branch || '-'}</span></p>
+                <p><span className="text-gray-500"><Mail className="h-4 w-4 inline-block me-1 align-middle text-gray-400" />البريد: </span><span className="font-medium" dir="ltr">{employee.email || '-'}</span></p>
+                <p><span className="text-gray-500"><Phone className="h-4 w-4 inline-block me-1 align-middle text-gray-400" />الجوال: </span><span className="font-medium" dir="ltr">{employee.phone || '-'}</span></p>
+                <p><span className="text-gray-500"><UserCheck className="h-4 w-4 inline-block me-1 align-middle text-gray-400" />المدير المباشر: </span><span className="font-medium">{employee.manager || '-'}</span></p>
               </div>
             </div>
           </div>
@@ -630,6 +633,26 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex justify-between">
+                  <span className="text-gray-500">الدور في النظام</span>
+                  <Badge className="bg-primary/10 text-primary">{getRoleArabic(employee.userRole)}</Badge>
+                </div>
+                <Separator />
+                <div className="flex justify-between">
+                  <span className="text-gray-500">القسم</span>
+                  <span className="font-medium">{employee.department || '-'}</span>
+                </div>
+                <Separator />
+                <div className="flex justify-between">
+                  <span className="text-gray-500">المنصب</span>
+                  <span className="font-medium">{employee.position || '-'}</span>
+                </div>
+                <Separator />
+                <div className="flex justify-between">
+                  <span className="text-gray-500">الفرع</span>
+                  <span className="font-medium">{employee.branch || '-'}</span>
+                </div>
+                <Separator />
+                <div className="flex justify-between">
                   <span className="text-gray-500">تاريخ الالتحاق</span>
                   <span className="font-medium">{employee.joinDate ? formatDate(employee.joinDate) : '-'}</span>
                 </div>
@@ -642,6 +665,11 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
                 <div className="flex justify-between">
                   <span className="text-gray-500">المدير المباشر</span>
                   <span className="font-medium">{employee.manager || '-'}</span>
+                </div>
+                <Separator />
+                <div className="flex justify-between">
+                  <span className="text-gray-500">رقم الموظف</span>
+                  <span className="font-medium font-mono">{employee.employeeNumber || '-'}</span>
                 </div>
               </CardContent>
             </Card>

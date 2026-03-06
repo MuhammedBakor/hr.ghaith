@@ -82,32 +82,32 @@ export default function AddEmployeeSimple() {
     }
 
     setIsSubmitting(true);
-    try {
-      createSimpleEmployeeMutation.mutate({
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        phone: formData.phone,
-        branchId: formData.branchId ? parseInt(formData.branchId) : undefined,
-        departmentId: formData.departmentId ? parseInt(formData.departmentId) : undefined,
-        positionId: formData.positionId ? parseInt(formData.positionId) : undefined,
-        role: formData.role,
-        managerId: formData.managerId && formData.managerId !== 'none' ? parseInt(formData.managerId) : undefined,
-      }, {
-        onSuccess: (data: any) => {
-          setCreatedEmployee({
-            employeeNumber: data.employeeNumber,
-            verificationCode: data.verificationCode,
-            requestNumber: data.requestNumber,
-          });
-          setShowSuccess(true);
-          toast.success('تم إضافة الموظف بنجاح وإرسال رسالة التفعيل');
-        },
-        onError: (err: any) => toast.error(`فشل الإضافة: ${err.message}`)
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+    createSimpleEmployeeMutation.mutate({
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      email: formData.email,
+      phone: formData.phone,
+      branchId: formData.branchId ? parseInt(formData.branchId) : undefined,
+      departmentId: formData.departmentId ? parseInt(formData.departmentId) : undefined,
+      positionId: formData.positionId ? parseInt(formData.positionId) : undefined,
+      role: formData.role,
+      managerId: formData.managerId && formData.managerId !== 'none' ? parseInt(formData.managerId) : undefined,
+    }, {
+      onSuccess: (data: any) => {
+        setCreatedEmployee({
+          employeeNumber: data.employeeNumber,
+          verificationCode: data.verificationCode,
+          requestNumber: data.requestNumber,
+        });
+        setShowSuccess(true);
+        setIsSubmitting(false);
+        toast.success('تم إضافة الموظف بنجاح وإرسال رسالة التفعيل');
+      },
+      onError: (err: any) => {
+        setIsSubmitting(false);
+        toast.error(`فشل الإضافة: ${err.message}`);
+      }
+    });
   };
 
   if (showSuccess && createdEmployee) {
@@ -260,102 +260,105 @@ export default function AddEmployeeSimple() {
             <p className="text-xs text-gray-500">سيتم إرسال رسالة نصية بكود التفعيل</p>
           </div>
 
-          {/* الفرع */}
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-gray-500" />
-              الفرع
-            </Label>
-            <Select value={formData.branchId} onValueChange={(v) => updateField('branchId', v)}>
-              <SelectTrigger>
-                <SelectValue placeholder="اختر الفرع" />
-              </SelectTrigger>
-              <SelectContent>
-                {branches.map((branch: any) => (
-                  <SelectItem key={branch.id} value={branch.id.toString()}>
-                    {(branch as any).nameAr || branch.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* القسم */}
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-gray-500" />
-              القسم
-            </Label>
-            <Select value={formData.departmentId} onValueChange={(v) => updateField('departmentId', v)}>
-              <SelectTrigger>
-                <SelectValue placeholder="اختر القسم" />
-              </SelectTrigger>
-              <SelectContent>
-                {departments.length === 0 ? (
-                  <div className="p-2 text-sm text-gray-500 text-center">لا توجد أقسام</div>
-                ) : (
-                  departments.map((d: any) => (
-                    <SelectItem key={d.id} value={String(d.id)}>
-                      {d.nameAr || d.name}
+          <div className="grid md:grid-cols-2 gap-4">
+            {/* الفرع */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-gray-500" />
+                الفرع
+              </Label>
+              <Select value={formData.branchId} onValueChange={(v) => updateField('branchId', v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="اختر الفرع" />
+                </SelectTrigger>
+                <SelectContent>
+                  {branches.map((branch: any) => (
+                    <SelectItem key={branch.id} value={branch.id.toString()}>
+                      {(branch as any).nameAr || branch.name}
                     </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* القسم */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-gray-500" />
+                القسم
+              </Label>
+              <Select value={formData.departmentId} onValueChange={(v) => updateField('departmentId', v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="اختر القسم" />
+                </SelectTrigger>
+                <SelectContent>
+                  {departments.length === 0 ? (
+                    <div className="p-2 text-sm text-gray-500 text-center">لا توجد أقسام</div>
+                  ) : (
+                    departments.map((d: any) => (
+                      <SelectItem key={d.id} value={String(d.id)}>
+                        {d.nameAr || d.name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
-          {/* المنصب */}
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <Briefcase className="h-4 w-4 text-gray-500" />
-              المنصب
-            </Label>
-            <Select value={formData.positionId} onValueChange={(v) => updateField('positionId', v)}>
-              <SelectTrigger>
-                <SelectValue placeholder="اختر المنصب" />
-              </SelectTrigger>
-              <SelectContent>
-                {positions.length === 0 ? (
-                  <div className="p-2 text-sm text-gray-500 text-center">لا توجد مناصب</div>
-                ) : (
-                  positions.map((p: any) => (
-                    <SelectItem key={p.id} value={String(p.id)}>
-                      {p.title}
+          <div className="grid md:grid-cols-2 gap-4">
+            {/* المنصب */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Briefcase className="h-4 w-4 text-gray-500" />
+                المنصب
+              </Label>
+              <Select value={formData.positionId} onValueChange={(v) => updateField('positionId', v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="اختر المنصب" />
+                </SelectTrigger>
+                <SelectContent>
+                  {positions.length === 0 ? (
+                    <div className="p-2 text-sm text-gray-500 text-center">لا توجد مناصب</div>
+                  ) : (
+                    positions.map((p: any) => (
+                      <SelectItem key={p.id} value={String(p.id)}>
+                        {p.title}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* الدور */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Shield className="h-4 w-4 text-gray-400" />
+                الدور في النظام
+              </Label>
+              <Select value={formData.role} onValueChange={(v) => updateField('role', v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="اختر الدور" />
+                </SelectTrigger>
+                <SelectContent>
+                  {roles.length > 0 ? roles.map((r: any) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.nameAr || r.name}
                     </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* الدور */}
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <Shield className="h-4 w-4 text-gray-400" />
-              الدور في النظام
-            </Label>
-            <Select value={formData.role} onValueChange={(v) => updateField('role', v)}>
-              <SelectTrigger>
-                <SelectValue placeholder="اختر الدور" />
-              </SelectTrigger>
-              <SelectContent>
-                {roles.length > 0 ? roles.map((r: any) => (
-                  <SelectItem key={r.id} value={r.id}>
-                    {r.nameAr || r.name}
-                  </SelectItem>
-                )) : (
-                  <>
-                    <SelectItem value="OWNER">مالك</SelectItem>
-                    <SelectItem value="GENERAL_MANAGER">مدير عام</SelectItem>
-                    <SelectItem value="DEPARTEMENT_MANAGER">مدير قسم</SelectItem>
-                    <SelectItem value="SUPERVISOR">مشرف</SelectItem>
-                    <SelectItem value="EMPLOYEE">موظف</SelectItem>
-                    <SelectItem value="AGENT">مندوب</SelectItem>
-                  </>
-                )}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-gray-500">يحدد الدور صلاحيات الموظف في النظام</p>
+                  )) : (
+                    <>
+                      <SelectItem value="OWNER">مالك</SelectItem>
+                      <SelectItem value="GENERAL_MANAGER">مدير عام</SelectItem>
+                      <SelectItem value="DEPARTEMENT_MANAGER">مدير قسم</SelectItem>
+                      <SelectItem value="SUPERVISOR">مشرف</SelectItem>
+                      <SelectItem value="EMPLOYEE">موظف</SelectItem>
+                      <SelectItem value="AGENT">مندوب</SelectItem>
+                    </>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* المدير المباشر */}
@@ -396,7 +399,14 @@ export default function AddEmployeeSimple() {
               <Button variant="outline">إلغاء</Button>
             </Link>
             <Button onClick={handleSubmit} disabled={isSubmitting}>
-              <Send className="h-4 w-4 ms-2" />
+              {isSubmitting ? (
+                <svg className="h-4 w-4 ms-2 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              ) : (
+                <Send className="h-4 w-4 ms-2" />
+              )}
               {isSubmitting ? 'جاري الإرسال...' : 'إضافة وإرسال التفعيل'}
             </Button>
           </div>

@@ -59,6 +59,13 @@ public class Employee extends BaseEntity {
     @Column(precision = 15, scale = 2)
     private BigDecimal salary;
 
+    public String getUserRole() {
+        if (user != null && user.getRole() != null) {
+            return user.getRole().name();
+        }
+        return role;
+    }
+
     public enum EmployeeStatus {
         active, inactive, terminated, on_leave, suspended
     }
