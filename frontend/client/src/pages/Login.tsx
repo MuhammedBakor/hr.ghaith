@@ -70,7 +70,7 @@ export default function Login() {
           window.location.href = '/';
         },
         onError: (err: any) => {
-          setLoginError(err.response?.data?.message || err.message || 'فشل تسجيل الدخول');
+          setLoginError(err.response?.data?.error || err.response?.data?.message || err.message || 'فشل تسجيل الدخول');
         }
       }
     );

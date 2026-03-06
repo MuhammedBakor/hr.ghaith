@@ -13,7 +13,12 @@
       "Bash(javac:*)",
       "Bash(npx vite:*)",
       "Bash(read f:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(cmd.exe:*)",
+      "Bash(PGPASSWORD=ghaith_pass psql:*)",
+      "Bash(python3:*)",
+      "Bash(pip install:*)",
+      "Bash(java:*)"
     ]
   }
 }

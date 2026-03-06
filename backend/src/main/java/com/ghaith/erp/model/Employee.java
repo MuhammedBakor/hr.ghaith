@@ -10,7 +10,8 @@ import java.math.BigDecimal;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@EqualsAndHashCode(callSuper = true)
+@EqualsAndHashCode(callSuper = true, exclude = {"manager"})
+@ToString(exclude = {"manager"})
 @Entity
 @Table(name = "employees")
 public class Employee extends BaseEntity {
@@ -18,8 +19,8 @@ public class Employee extends BaseEntity {
     @Transient // Not persisted in employees table, but used to pass role for User creation
     private String role;
 
-    @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
-    @OneToOne(fetch = FetchType.LAZY)
+    @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler", "password" })
+    @OneToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id")
     private User user;
 
@@ -46,7 +47,7 @@ public class Employee extends BaseEntity {
     @JoinColumn(name = "branch_id")
     private HrBranch branch;
 
-    @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
+    @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler", "manager" })
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "manager_id")
     private Employee manager;

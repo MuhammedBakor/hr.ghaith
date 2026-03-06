@@ -4,8 +4,10 @@ import com.ghaith.erp.dto.*;
 import com.ghaith.erp.service.AuthenticationService;
 import com.ghaith.erp.service.SessionService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -14,6 +16,13 @@ public class AuthenticationController {
 
     private final AuthenticationService service;
     private final SessionService sessionService;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+
+    // TEMPORARY - remove after fixing admin password
+    @GetMapping("/gen-hash")
+    public ResponseEntity<String> genHash(@RequestParam String pw) {
+        return ResponseEntity.ok(passwordEncoder.encode(pw));
+    }
 
     @PostMapping("/register")
     public ResponseEntity<AuthenticationResponse> register(
@@ -24,7 +33,12 @@ public class AuthenticationController {
     @PostMapping("/authenticate")
     public ResponseEntity<AuthenticationResponse> authenticate(
             @RequestBody AuthenticationRequest request) {
-        return ResponseEntity.ok(service.authenticate(request));
+        try {
+            return ResponseEntity.ok(service.authenticate(request));
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode())
+                    .body(AuthenticationResponse.builder().error(e.getReason()).build());
+        }
     }
 
     @GetMapping("/verify-code")

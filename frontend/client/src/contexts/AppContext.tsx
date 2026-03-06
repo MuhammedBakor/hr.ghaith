@@ -465,22 +465,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (serverRole === 'general_manager') {
       return allRoles;
     }
-    // مدير القسم يرى فقط دوره المرتبط بقسمه
+    // مدير القسم يرى فقط دوره المرتبط بقسمه (بدون تغيير الصفة)
     if (serverRole === 'departement_manager' && currentEmployee) {
       const dept = currentEmployee.department;
       const deptCode = typeof dept === 'object' ? (dept?.code || dept?.nameAr || dept?.name) : dept;
       const mappedRole = departmentToRoleMap[deptCode] || 'department_manager';
-      // يسمح له بالتبديل بين دور مدير القسم ودور الموظف
-      const roles: UserRoleType[] = [mappedRole];
-      if (mappedRole !== 'department_manager') roles.push('department_manager');
-      if (!roles.includes('employee')) roles.push('employee');
-      return roles;
+      return [mappedRole];
+    }
+    if (serverRole === 'departement_manager') {
+      return ['department_manager'];
     }
     // المشرف
     if (serverRole === 'supervisor') {
-      return ['supervisor', 'employee'];
+      return ['supervisor'];
     }
-    // الموظف العادي
+    // الموظف العادي والمندوب
     return ['employee'];
   })();
 

@@ -680,39 +680,41 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <span className="absolute top-2 end-2 h-2 w-2 bg-red-500 rounded-full"></span>
             </Button>
 
-            {/* خانة الصفة */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="gap-2 border border-purple-200 bg-purple-50 hover:bg-purple-100"
-                  style={{ borderColor: `${roleColors[selectedRole]}40`, backgroundColor: `${roleColors[selectedRole]}10` }}
-                >
-                  <Shield className="h-4 w-4" style={{ color: roleColors[selectedRole] }} />
-                  <span className="hidden sm:inline-block text-sm font-medium" style={{ color: roleColors[selectedRole] }}>
-                    {roleLabels[selectedRole]}
-                  </span>
-                  <ChevronDown className="h-3 w-3" style={{ color: roleColors[selectedRole] }} />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuLabel>تغيير الصفة</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {allowedRoles.map((role) => (
-                  <DropdownMenuItem
-                    key={role}
-                    onClick={() => setSelectedRole(role)}
-                    className={selectedRole === role ? 'bg-purple-50 text-purple-700' : ''}
+            {/* خانة الصفة - فقط للمالك والمدير العام والأدمن */}
+            {(selectedRole === 'admin' || selectedRole === 'general_manager') && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="gap-2 border border-purple-200 bg-purple-50 hover:bg-purple-100"
+                    style={{ borderColor: `${roleColors[selectedRole]}40`, backgroundColor: `${roleColors[selectedRole]}10` }}
                   >
-                    <Shield
-                      className={`h-4 w-4 ms-2`}
-                      style={{ color: selectedRole === role ? roleColors[role] : '#9ca3af' }}
-                    />
-                    {roleLabels[role]}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                    <Shield className="h-4 w-4" style={{ color: roleColors[selectedRole] }} />
+                    <span className="hidden sm:inline-block text-sm font-medium" style={{ color: roleColors[selectedRole] }}>
+                      {roleLabels[selectedRole]}
+                    </span>
+                    <ChevronDown className="h-3 w-3" style={{ color: roleColors[selectedRole] }} />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuLabel>تغيير الصفة</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {allowedRoles.map((role) => (
+                    <DropdownMenuItem
+                      key={role}
+                      onClick={() => setSelectedRole(role)}
+                      className={selectedRole === role ? 'bg-purple-50 text-purple-700' : ''}
+                    >
+                      <Shield
+                        className={`h-4 w-4 ms-2`}
+                        style={{ color: selectedRole === role ? roleColors[role] : '#9ca3af' }}
+                      />
+                      {roleLabels[role]}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
 
             {/* خانة الفرع - فقط إذا كان للمستخدم صلاحية رؤية جميع الفروع */}
             {permissions.canViewAllBranches && (

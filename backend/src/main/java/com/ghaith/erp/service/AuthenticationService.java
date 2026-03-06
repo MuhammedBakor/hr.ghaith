@@ -7,11 +7,13 @@ import com.ghaith.erp.repository.UserRepository;
 import com.ghaith.erp.repository.EmployeeRepository;
 import com.ghaith.erp.security.JwtService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @RequiredArgsConstructor
@@ -37,16 +39,31 @@ public class AuthenticationService {
         }
 
         public AuthenticationResponse authenticate(AuthenticationRequest request) {
+                System.out.println("=== AUTH DEBUG ===");
+                System.out.println("Email: [" + request.getEmail() + "]");
+                System.out.println("Password length: " + (request.getPassword() != null ? request.getPassword().length() : "null"));
+                var userOpt = repository.findByEmail(request.getEmail());
+                System.out.println("User found: " + userOpt.isPresent());
+                if (userOpt.isPresent()) {
+                        var u = userOpt.get();
+                        System.out.println("User enabled: " + u.isEnabled());
+                        System.out.println("User role: " + u.getRole());
+                        System.out.println("Stored hash: " + u.getPassword().substring(0, 10) + "...");
+                        System.out.println("Password matches: " + passwordEncoder.matches(request.getPassword(), u.getPassword()));
+                }
                 try {
                         authenticationManager.authenticate(
                                         new UsernamePasswordAuthenticationToken(
                                                         request.getEmail(),
                                                         request.getPassword()));
                 } catch (org.springframework.security.authentication.DisabledException e) {
-                        throw new RuntimeException(
+                        System.out.println("AUTH FAILED: DisabledException");
+                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                                         "الحساب غير مفعل، يرجى تفعيل الحساب أولاً باستخدام كود التفعيل المرسل لإيميلك");
                 } catch (org.springframework.security.core.AuthenticationException e) {
-                        throw new RuntimeException("خطأ في اسم المستخدم أو كلمة المرور");
+                        System.out.println("AUTH FAILED: " + e.getClass().getSimpleName() + " - " + e.getMessage());
+                        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                                        "خطأ في اسم المستخدم أو كلمة المرور");
                 }
                 var user = repository.findByEmail(request.getEmail())
                                 .orElseThrow();
