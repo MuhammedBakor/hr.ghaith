@@ -124,6 +124,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     permissions,
     canAccessModule,
     canAccessHrSubPage,
+    allowedRoles,
   } = useAppContext();
 
   // حماية الصفحات - توجيه المستخدم غير المصادق لصفحة الدخول
@@ -697,17 +698,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuLabel>تغيير الصفة</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {Object.entries(roleLabels).map(([role, label]) => (
+                {allowedRoles.map((role) => (
                   <DropdownMenuItem
                     key={role}
-                    onClick={() => setSelectedRole(role as UserRoleType)}
+                    onClick={() => setSelectedRole(role)}
                     className={selectedRole === role ? 'bg-purple-50 text-purple-700' : ''}
                   >
                     <Shield
                       className={`h-4 w-4 ms-2`}
-                      style={{ color: selectedRole === role ? roleColors[role as UserRoleType] : '#9ca3af' }}
+                      style={{ color: selectedRole === role ? roleColors[role] : '#9ca3af' }}
                     />
-                    {label}
+                    {roleLabels[role]}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>

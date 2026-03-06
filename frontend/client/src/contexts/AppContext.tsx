@@ -34,6 +34,37 @@ export const roleColors: Record<UserRoleType, string> = {
   department_manager: '#16A085',
 };
 
+// ربط الأقسام بأدوار مدير القسم
+export const departmentToRoleMap: Record<string, UserRoleType> = {
+  // by code
+  'HR': 'hr_manager',
+  'FIN': 'finance_manager',
+  'FLEET': 'fleet_manager',
+  'LEGAL': 'legal_manager',
+  'PROJ': 'projects_manager',
+  'WH': 'store_manager',
+  'PROP': 'department_manager',
+  'UMRAH': 'department_manager',
+  // by Arabic name
+  'الموارد البشرية': 'hr_manager',
+  'المالية': 'finance_manager',
+  'الاسطول': 'fleet_manager',
+  'القانون': 'legal_manager',
+  'المشاريع': 'projects_manager',
+  'المخازن': 'store_manager',
+  'الاملاك': 'department_manager',
+  'العمرة': 'department_manager',
+  // by English name
+  'Human Resources': 'hr_manager',
+  'Finance': 'finance_manager',
+  'Fleet': 'fleet_manager',
+  'Legal': 'legal_manager',
+  'Projects': 'projects_manager',
+  'Warehouses': 'store_manager',
+  'Properties': 'department_manager',
+  'Umrah': 'department_manager',
+};
+
 // مستويات الأدوار (الأعلى = صلاحيات أكثر)
 export const roleLevels: Record<UserRoleType, number> = {
   admin: 100,
@@ -118,7 +149,7 @@ export const modulePermissions: Record<UserRoleType, ModuleType[]> = {
     'home', 'requests', 'documents', 'comms'
   ],
   department_manager: [
-    'home', 'hr', 'requests', 'documents', 'comms'
+    'home', 'hr', 'property', 'requests', 'documents', 'comms'
   ],
 };
 
@@ -289,6 +320,9 @@ interface AppContextType {
   isDepartmentManager: boolean;
   currentUserId: number | null;
   currentEmployeeId: number | null;
+
+  // الأدوار المتاحة للمستخدم الحالي
+  allowedRoles: UserRoleType[];
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -320,14 +354,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const { data: authData } = useUser();
   const currentUserId = authData?.id || null;
 
+  // جلب معلومات الموظف المرتبط بالمستخدم
+  const { data: employeeData } = useQuery<any[]>({
+    queryKey: ['employees'],
+    queryFn: () => api.get('/hr/employees').then(r => r.data).catch(() => []),
+    enabled: !!currentUserId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // البحث عن الموظف المرتبط بالمستخدم الحالي
+  const currentEmployee = employeeData?.find((emp: any) =>
+    emp.userId === currentUserId || emp.user?.id === currentUserId
+  );
+  const currentEmployeeId = currentEmployee?.id || null;
+
   // v60: ربط الدور من السيرفر — فقط إذا لم يكن هناك دور مختار مسبقاً
   useEffect(() => {
     if (authData?.role) {
-      // التحقق مما إذا كان المستخدم قد اختار دوراً يدوياً بالفعل في هذه الجلسة
       const hasPreference = !!localStorage.getItem('selectedRole');
 
       if (!hasPreference) {
-        const serverRole = authData.role as UserRoleType;
+        const serverRole = (authData.role as string).toLowerCase();
         // Map DB role to frontend role
         const roleMap: Record<string, UserRoleType> = {
           'admin': 'admin',
@@ -342,25 +389,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
           'store_manager': 'store_manager',
           'supervisor': 'supervisor',
           'employee': 'employee',
+          'agent': 'employee',
           'user': 'employee',
         };
-        const mappedRole = roleMap[serverRole] || 'employee';
+
+        let mappedRole = roleMap[serverRole] || 'employee';
+
+        // إذا كان مدير قسم، حدد الدور بناءً على القسم
+        if (serverRole === 'departement_manager' && currentEmployee) {
+          const dept = currentEmployee.department;
+          const deptCode = typeof dept === 'object' ? (dept?.code || dept?.nameAr || dept?.name) : dept;
+          mappedRole = departmentToRoleMap[deptCode] || 'department_manager';
+        } else if (serverRole === 'departement_manager') {
+          mappedRole = 'department_manager';
+        }
+
         setSelectedRole(mappedRole);
       }
     }
-  }, [authData?.role]);
-
-  // جلب معلومات الموظف المرتبط بالمستخدم
-  const { data: employeeData } = useQuery<any[]>({
-    queryKey: ['employees'],
-    queryFn: () => api.get('/hr/employees').then(r => r.data).catch(() => []),
-    enabled: !!currentUserId,
-    staleTime: 5 * 60 * 1000,
-  });
-
-  // البحث عن الموظف المرتبط بالمستخدم الحالي
-  const currentEmployee = employeeData?.find((emp: any) => emp.userId === currentUserId);
-  const currentEmployeeId = currentEmployee?.id || null;
+  }, [authData?.role, currentEmployee]);
 
   // تحديث السياق في السيرفر
   // const updateContextMutation = trpc.controlKernel.context.update.useMutation();
@@ -405,6 +452,38 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // هل المستخدم مدير قسم؟
   const isDepartmentManager = selectedRole === 'department_manager';
 
+  // تحديد الأدوار المتاحة للمستخدم بناءً على دوره الفعلي من السيرفر
+  const allowedRoles: UserRoleType[] = (() => {
+    const serverRole = ((authData?.role as string) || '').toLowerCase();
+    const allRoles = Object.keys(roleLabels) as UserRoleType[];
+
+    // OWNER و admin يرون كل الأدوار
+    if (serverRole === 'owner' || serverRole === 'admin' || serverRole === 'system_admin') {
+      return allRoles;
+    }
+    // المدير العام يرى كل الأدوار
+    if (serverRole === 'general_manager') {
+      return allRoles;
+    }
+    // مدير القسم يرى فقط دوره المرتبط بقسمه
+    if (serverRole === 'departement_manager' && currentEmployee) {
+      const dept = currentEmployee.department;
+      const deptCode = typeof dept === 'object' ? (dept?.code || dept?.nameAr || dept?.name) : dept;
+      const mappedRole = departmentToRoleMap[deptCode] || 'department_manager';
+      // يسمح له بالتبديل بين دور مدير القسم ودور الموظف
+      const roles: UserRoleType[] = [mappedRole];
+      if (mappedRole !== 'department_manager') roles.push('department_manager');
+      if (!roles.includes('employee')) roles.push('employee');
+      return roles;
+    }
+    // المشرف
+    if (serverRole === 'supervisor') {
+      return ['supervisor', 'employee'];
+    }
+    // الموظف العادي
+    return ['employee'];
+  })();
+
   const hasPermission = (permission: keyof typeof rolePermissions[UserRoleType]) => {
     return permissions[permission];
   };
@@ -441,6 +520,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       isDepartmentManager,
       currentUserId,
       currentEmployeeId,
+      allowedRoles,
     }}>
       {children}
     </AppContext.Provider>

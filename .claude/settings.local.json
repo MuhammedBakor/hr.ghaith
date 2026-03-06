@@ -12,7 +12,8 @@
       "Bash(chmod +x:*)",
       "Bash(javac:*)",
       "Bash(npx vite:*)",
-      "Bash(read f:*)"
+      "Bash(read f:*)",
+      "Bash(npx tsc:*)"
     ]
   }
 }
