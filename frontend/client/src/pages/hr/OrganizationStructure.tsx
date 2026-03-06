@@ -170,6 +170,20 @@ export default function OrganizationStructure() {
   const flatDepartments = departmentsData || [];
   const positions = positionsData || [];
 
+  // حساب عدد الموظفين لكل قسم
+  const employeeCountByDept = useMemo(() => {
+    const countMap: Record<number, number> = {};
+    (employeesData || []).forEach((emp: any) => {
+      const deptId = typeof emp.department === 'object' ? emp.department?.id : emp.departmentId;
+      if (deptId) {
+        countMap[deptId] = (countMap[deptId] || 0) + 1;
+      }
+    });
+    return countMap;
+  }, [employeesData]);
+
+  const getEmployeeCount = (deptId: number) => employeeCountByDept[deptId] || 0;
+
   // إحصائيات
   const totalEmployees = employeesData?.length || 0;
   const totalDepartments = flatDepartments.length;
@@ -436,7 +450,7 @@ export default function OrganizationStructure() {
                 <Edit className="h-4 w-4" />
               </Button>
             </div>
-            <Badge variant="outline">{dept.employeeCount || 0} موظف</Badge>
+            <Badge variant="outline">{getEmployeeCount(dept.id)} موظف</Badge>
           </div>
           <div className="flex items-center gap-3">
             <div>
@@ -618,24 +632,24 @@ export default function OrganizationStructure() {
                   <p>لا توجد أقسام</p>
                 </div>
               ) : (
-                <Table>
+                <Table dir="rtl">
                   <TableHeader>
                     <TableRow>
-                      <TableHead>القسم</TableHead>
-                      <TableHead>الرمز</TableHead>
-                      <TableHead>عدد الموظفين</TableHead>
-                      <TableHead>القسم الأب</TableHead>
-                      <TableHead>الإجراءات</TableHead>
+                      <TableHead className="text-right">القسم</TableHead>
+                      <TableHead className="text-right">الرمز</TableHead>
+                      <TableHead className="text-right">عدد الموظفين</TableHead>
+                      <TableHead className="text-right">القسم الأب</TableHead>
+                      <TableHead className="text-right">الإجراءات</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {flatDepartments.map((dept: any) => (
                       <TableRow key={dept.id}>
-                        <TableCell className="font-medium">{dept.nameAr || dept.name}</TableCell>
-                        <TableCell><Badge variant="outline">{dept.code}</Badge></TableCell>
-                        <TableCell>{dept.employeeCount || 0}</TableCell>
-                        <TableCell>{dept.parentId ? flatDepartments.find((d: any) => d.id === dept.parentId)?.nameAr || flatDepartments.find((d: any) => d.id === dept.parentId)?.name || '-' : '-'}</TableCell>
-                        <TableCell>
+                        <TableCell className="text-right font-medium">{dept.nameAr || dept.name}</TableCell>
+                        <TableCell className="text-right"><Badge variant="outline">{dept.code}</Badge></TableCell>
+                        <TableCell className="text-right">{getEmployeeCount(dept.id)}</TableCell>
+                        <TableCell className="text-right">{dept.parentId ? flatDepartments.find((d: any) => d.id === dept.parentId)?.nameAr || flatDepartments.find((d: any) => d.id === dept.parentId)?.name || '-' : '-'}</TableCell>
+                        <TableCell className="text-right">
                           <div className="flex gap-1">
                             <Button variant="ghost" size="icon" onClick={() => handleEditDept(dept)}>
                               <Edit className="h-4 w-4" />
@@ -674,28 +688,28 @@ export default function OrganizationStructure() {
                   <p>لا توجد مسميات وظيفية</p>
                 </div>
               ) : (
-                <Table>
+                <Table dir="rtl">
                   <TableHeader>
                     <TableRow>
-                      <TableHead>المسمى الوظيفي</TableHead>
-                      <TableHead>القسم</TableHead>
-                      <TableHead>المستوى</TableHead>
-                      <TableHead>الحالة</TableHead>
-                      <TableHead>الإجراءات</TableHead>
+                      <TableHead className="text-right">المسمى الوظيفي</TableHead>
+                      <TableHead className="text-right">القسم</TableHead>
+                      <TableHead className="text-right">المستوى</TableHead>
+                      <TableHead className="text-right">الحالة</TableHead>
+                      <TableHead className="text-right">الإجراءات</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {positions.map((position: any) => (
                       <TableRow key={position.id}>
-                        <TableCell className="font-medium">{position.title || position.titleAr}</TableCell>
-                        <TableCell>{flatDepartments.find((d: any) => d.id === position.departmentId)?.nameAr || flatDepartments.find((d: any) => d.id === position.departmentId)?.name || '-'}</TableCell>
-                        <TableCell><Badge variant="outline">{position.level || 'C1'}</Badge></TableCell>
-                        <TableCell>
+                        <TableCell className="text-right font-medium">{position.title || position.titleAr}</TableCell>
+                        <TableCell className="text-right">{flatDepartments.find((d: any) => d.id === position.departmentId)?.nameAr || flatDepartments.find((d: any) => d.id === position.departmentId)?.name || '-'}</TableCell>
+                        <TableCell className="text-right"><Badge variant="outline">{position.level || 'C1'}</Badge></TableCell>
+                        <TableCell className="text-right">
                           <Badge className={position.isActive !== false ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}>
                             {position.isActive !== false ? 'نشط' : 'غير نشط'}
                           </Badge>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-right">
                           <div className="flex gap-1">
                             <Button variant="ghost" size="icon" onClick={() => handleEditPosition(position)}>
                               <Edit className="h-4 w-4" />
