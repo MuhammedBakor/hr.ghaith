@@ -37,6 +37,7 @@ server:
 
 app:
   upload-dir: uploads
+  frontend-url: ${APP_FRONTEND_URL:http://localhost:5173}
   jwt:
     secret: ${APP_JWT_SECRET:VmFsaWRCYXNlNjRTZWNyZXRLZXlGb3JKV1RBdXRoZW50aWNhdGlvbjMyQnl0ZXM=}
     expiration: ${APP_JWT_EXPIRATION:86400000}

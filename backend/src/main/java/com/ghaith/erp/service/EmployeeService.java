@@ -73,7 +73,7 @@ public class EmployeeService {
             employee.setUser(user);
 
             // Send verification code instead of credentials
-            emailService.sendVerificationCode(employee.getEmail(), employee.getFirstName(), verificationCode);
+            emailService.sendVerificationCode(employee.getEmail(), employee.getFirstName(), verificationCode, employee.getEmployeeNumber());
         }
 
         return employeeRepository.save(employee);
@@ -155,7 +155,7 @@ public class EmployeeService {
 
         // Send verification code
         System.out.println("Triggering verification code email...");
-        emailService.sendVerificationCode(email, firstName, verificationCode);
+        emailService.sendVerificationCode(email, firstName, verificationCode, employee.getEmployeeNumber());
         System.out.println("Verification email trigger completed.");
 
         java.util.Map<String, String> result = new java.util.HashMap<>();

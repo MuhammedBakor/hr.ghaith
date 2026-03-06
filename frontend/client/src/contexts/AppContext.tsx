@@ -146,7 +146,7 @@ export const modulePermissions: Record<UserRoleType, ModuleType[]> = {
     'home', 'hr', 'requests', 'documents', 'comms'
   ],
   employee: [
-    'home', 'requests', 'documents', 'comms'
+    'home', 'hr', 'requests', 'documents', 'comms'
   ],
   department_manager: [
     'home', 'hr', 'property', 'requests', 'documents', 'comms'
@@ -173,7 +173,7 @@ export const hrSubPermissions: Record<UserRoleType, string[]> = {
   projects_manager: ['attendance'],
   store_manager: ['attendance'],
   supervisor: ['attendance', 'leaves', 'my_violations'],
-  employee: ['my_violations'],
+  employee: ['attendance', 'leaves', 'my_violations'],
   department_manager: ['attendance', 'leaves', 'my_violations'],
 };
 

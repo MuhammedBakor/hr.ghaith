@@ -35,6 +35,7 @@ export default function Activate() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [employeeName, setEmployeeName] = useState('');
+  const [employeeEmail, setEmployeeEmail] = useState('');
 
   // Mutation للتحقق من الكود
   const verifyMutation = useMutation({
@@ -43,6 +44,7 @@ export default function Activate() {
     onSuccess: (result) => {
       if (result.valid) {
         setEmployeeName(result.employeeName || '');
+        setEmployeeEmail(result.email || '');
         setStep('password');
         toast.success('تم التحقق من الكود بنجاح');
       } else {
@@ -228,10 +230,17 @@ export default function Activate() {
 
           {step === 'success' && (
             <div className="text-center space-y-4">
-              <div className="p-4 bg-green-50 rounded-lg">
-                <p className="text-green-700">
-                  تم تفعيل حسابك بنجاح. يمكنك الآن تسجيل الدخول باستخدام بريدك الإلكتروني وكلمة المرور الجديدة.
+              <div className="p-4 bg-green-50 rounded-lg space-y-2">
+                <p className="text-green-700 font-medium">
+                  تم تفعيل حسابك بنجاح!
                 </p>
+                <p className="text-green-700 text-sm">
+                  يمكنك الآن تسجيل الدخول باستخدام:
+                </p>
+                <div className="bg-white rounded-md p-3 text-sm space-y-1">
+                  <p className="text-gray-700">البريد الإلكتروني: <span className="font-mono font-medium">{employeeEmail}</span></p>
+                  <p className="text-gray-700">كلمة المرور: <span className="font-medium">التي قمت بإنشائها للتو</span></p>
+                </div>
               </div>
 
               <Button className="w-full" onClick={() => navigate('/')}>

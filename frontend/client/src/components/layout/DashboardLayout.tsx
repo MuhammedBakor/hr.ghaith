@@ -98,6 +98,8 @@ import {
 import { cn } from '@/lib/utils';
 import { useAppContext, roleLabels, UserRoleType, ModuleType, roleColors } from '@/contexts/AppContext';
 import { useAuth } from '@/_core/hooks/useAuth';
+import { useQuery } from '@tanstack/react-query';
+import api from '@/lib/api';
 
 interface NavItem {
   label: string;
@@ -126,6 +128,29 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     canAccessHrSubPage,
     allowedRoles,
   } = useAppContext();
+
+  // جلب بيانات الموظفين لمدير القسم
+  const isDeptManager = ['hr_manager', 'finance_manager', 'fleet_manager', 'legal_manager', 'projects_manager', 'store_manager', 'department_manager'].includes(selectedRole);
+  const { data: allEmployees } = useQuery<any[]>({
+    queryKey: ['employees'],
+    queryFn: () => api.get('/hr/employees').then(r => r.data).catch(() => []),
+    enabled: isDeptManager && !!user,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // حساب عدد موظفي القسم
+  const currentEmployee = allEmployees?.find((emp: any) =>
+    emp.userId === user?.id || emp.user?.id === user?.id
+  );
+  const currentDeptId = typeof currentEmployee?.department === 'object'
+    ? currentEmployee?.department?.id
+    : currentEmployee?.departmentId;
+  const deptEmployeeCount = isDeptManager && currentDeptId
+    ? allEmployees?.filter((emp: any) => {
+        const empDeptId = typeof emp.department === 'object' ? emp.department?.id : emp.departmentId;
+        return empDeptId === currentDeptId;
+      }).length || 0
+    : 0;
 
   // حماية الصفحات - توجيه المستخدم غير المصادق لصفحة الدخول
   useEffect(() => {
@@ -161,6 +186,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // جميع عناصر القائمة مع تحديد الوحدة لكل عنصر
   const allNavItems: NavItem[] = [
     { label: 'الرئيسية', path: '/', icon: LayoutDashboard, module: 'home' },
+    // عنصر موظفي القسم - يظهر فقط لمدراء الأقسام
+    ...(isDeptManager ? [{
+      label: `موظفي القسم (${deptEmployeeCount})`,
+      path: '/hr/department-employees',
+      icon: Users2,
+      module: 'home' as ModuleType,
+    }] : []),
     {
       label: 'الموارد البشرية',
       path: '/hr',

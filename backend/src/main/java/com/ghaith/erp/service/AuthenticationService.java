@@ -39,29 +39,15 @@ public class AuthenticationService {
         }
 
         public AuthenticationResponse authenticate(AuthenticationRequest request) {
-                System.out.println("=== AUTH DEBUG ===");
-                System.out.println("Email: [" + request.getEmail() + "]");
-                System.out.println("Password length: " + (request.getPassword() != null ? request.getPassword().length() : "null"));
-                var userOpt = repository.findByEmail(request.getEmail());
-                System.out.println("User found: " + userOpt.isPresent());
-                if (userOpt.isPresent()) {
-                        var u = userOpt.get();
-                        System.out.println("User enabled: " + u.isEnabled());
-                        System.out.println("User role: " + u.getRole());
-                        System.out.println("Stored hash: " + u.getPassword().substring(0, 10) + "...");
-                        System.out.println("Password matches: " + passwordEncoder.matches(request.getPassword(), u.getPassword()));
-                }
                 try {
                         authenticationManager.authenticate(
                                         new UsernamePasswordAuthenticationToken(
                                                         request.getEmail(),
                                                         request.getPassword()));
                 } catch (org.springframework.security.authentication.DisabledException e) {
-                        System.out.println("AUTH FAILED: DisabledException");
                         throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                                         "الحساب غير مفعل، يرجى تفعيل الحساب أولاً باستخدام كود التفعيل المرسل لإيميلك");
                 } catch (org.springframework.security.core.AuthenticationException e) {
-                        System.out.println("AUTH FAILED: " + e.getClass().getSimpleName() + " - " + e.getMessage());
                         throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
                                         "خطأ في اسم المستخدم أو كلمة المرور");
                 }
@@ -123,6 +109,60 @@ public class AuthenticationService {
                         employee.setStatus(Employee.EmployeeStatus.active);
                         employeeRepository.save(employee);
                 });
+        }
+
+        public java.util.Map<String, Object> verifyEmployeeInvitation(String employeeNumber, String activationCode) {
+                java.util.Map<String, Object> response = new java.util.HashMap<>();
+
+                var employeeOpt = employeeRepository.findByEmployeeNumber(employeeNumber);
+                if (employeeOpt.isEmpty()) {
+                        response.put("valid", false);
+                        response.put("error", "الرقم الوظيفي غير صحيح");
+                        return response;
+                }
+
+                Employee employee = employeeOpt.get();
+                User user = employee.getUser();
+                if (user == null || !activationCode.equals(user.getVerificationCode())) {
+                        response.put("valid", false);
+                        response.put("error", "كود التفعيل غير صحيح");
+                        return response;
+                }
+
+                response.put("valid", true);
+                response.put("employeeName", employee.getFirstName() + " " + employee.getLastName());
+                response.put("email", employee.getEmail());
+                return response;
+        }
+
+        public java.util.Map<String, Object> completeEmployeeInvitation(String employeeNumber, String activationCode, String password) {
+                java.util.Map<String, Object> response = new java.util.HashMap<>();
+
+                var employeeOpt = employeeRepository.findByEmployeeNumber(employeeNumber);
+                if (employeeOpt.isEmpty()) {
+                        response.put("success", false);
+                        response.put("error", "الرقم الوظيفي غير صحيح");
+                        return response;
+                }
+
+                Employee employee = employeeOpt.get();
+                User user = employee.getUser();
+                if (user == null || !activationCode.equals(user.getVerificationCode())) {
+                        response.put("success", false);
+                        response.put("error", "كود التفعيل غير صحيح");
+                        return response;
+                }
+
+                user.setPassword(passwordEncoder.encode(password));
+                user.setEnabled(true);
+                user.setVerificationCode(null);
+                repository.save(user);
+
+                employee.setStatus(Employee.EmployeeStatus.active);
+                employeeRepository.save(employee);
+
+                response.put("success", true);
+                return response;
         }
 
         public UserResponse getMe() {

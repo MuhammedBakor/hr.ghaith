@@ -16,6 +16,9 @@ public class EmailService {
     @org.springframework.beans.factory.annotation.Value("${spring.mail.username:}")
     private String fromEmail;
 
+    @org.springframework.beans.factory.annotation.Value("${app.frontend-url:http://localhost:5173}")
+    private String frontendUrl;
+
     public void sendCredentials(String to, String firstName, String temporaryPassword) {
         try {
             SimpleMailMessage message = new SimpleMailMessage();
@@ -30,7 +33,7 @@ public class EmailService {
                             "البريد الإلكتروني: %s\n" +
                             "كلمة المرور المؤقتة: %s\n\n" +
                             "يرجى تسجيل الدخول وتغيير كلمة المرور الخاصة بك في أقرب وقت.\n" +
-                            "رابط النظام: http://localhost:5173/login\n\n" +
+                            "رابط النظام: " + frontendUrl + "/login\n\n" +
                             "مع تحيات إدارة النظام.",
                     firstName, to, temporaryPassword);
 
@@ -49,20 +52,27 @@ public class EmailService {
         }
     }
 
-    public void sendVerificationCode(String to, String firstName, String code) {
+    public void sendVerificationCode(String to, String firstName, String code, String employeeNumber) {
         try {
             SimpleMailMessage message = new SimpleMailMessage();
             message.setFrom(fromEmail);
             message.setTo(to);
             message.setSubject("كود تفعيل حسابك في منصة غيث");
 
+            String activationUrl = String.format("%s/activate?emp=%s&code=%s", frontendUrl, employeeNumber, code);
+
             String content = String.format(
                     "مرحباً %s،\n\n" +
-                            "شكراً لانضمامك إلى منصة غيث. لإكمال تفعيل حسابك، يرجى استخدام كود التفعيل التالي:\n\n" +
+                            "شكراً لانضمامك إلى منصة غيث. لإكمال تفعيل حسابك، اضغط على الرابط التالي:\n\n" +
+                            "رابط التفعيل: %s\n\n" +
+                            "أو استخدم البيانات التالية في صفحة التفعيل:\n" +
+                            "الرقم الوظيفي: %s\n" +
                             "كود التفعيل: %s\n\n" +
-                            "يرجى إدخال هذا الكود في صفحة 'تفعيل حساب جديد' في النظام.\n\n" +
+                            "بعد التفعيل وإنشاء كلمة المرور، يمكنك تسجيل الدخول باستخدام:\n" +
+                            "البريد الإلكتروني: %s\n" +
+                            "كلمة المرور: التي ستقوم بإنشائها أثناء التفعيل\n\n" +
                             "مع تحيات،\nفريق منصة غيث",
-                    firstName, code);
+                    firstName, activationUrl, employeeNumber, code, to);
 
             message.setText(content);
             System.out.println("Attempting to send verification email... From: " + fromEmail + " To: " + to);

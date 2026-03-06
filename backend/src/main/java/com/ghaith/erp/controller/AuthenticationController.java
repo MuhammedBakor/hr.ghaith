@@ -16,14 +16,6 @@ public class AuthenticationController {
 
     private final AuthenticationService service;
     private final SessionService sessionService;
-    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
-
-    // TEMPORARY - remove after fixing admin password
-    @GetMapping("/gen-hash")
-    public ResponseEntity<String> genHash(@RequestParam String pw) {
-        return ResponseEntity.ok(passwordEncoder.encode(pw));
-    }
-
     @PostMapping("/register")
     public ResponseEntity<AuthenticationResponse> register(
             @RequestBody RegisterRequest request) {
@@ -75,18 +67,17 @@ public class AuthenticationController {
     }
 
     @PostMapping("/employee-invitation/verify")
-    public ResponseEntity<?> verifyEmployeeInvitation(@RequestBody(required = false) java.util.Map<String, Object> body) {
-        java.util.Map<String, Object> response = new java.util.HashMap<>();
-        response.put("valid", true);
-        response.put("employeeName", "");
-        response.put("email", "");
-        return ResponseEntity.ok(response);
+    public ResponseEntity<?> verifyEmployeeInvitation(@RequestBody java.util.Map<String, Object> body) {
+        return ResponseEntity.ok(service.verifyEmployeeInvitation(
+                (String) body.get("employeeNumber"),
+                (String) body.get("activationCode")));
     }
 
     @PostMapping("/employee-invitation/complete")
-    public ResponseEntity<?> completeEmployeeInvitation(@RequestBody(required = false) java.util.Map<String, Object> body) {
-        java.util.Map<String, Object> response = new java.util.HashMap<>();
-        response.put("success", true);
-        return ResponseEntity.ok(response);
+    public ResponseEntity<?> completeEmployeeInvitation(@RequestBody java.util.Map<String, Object> body) {
+        return ResponseEntity.ok(service.completeEmployeeInvitation(
+                (String) body.get("employeeNumber"),
+                (String) body.get("activationCode"),
+                (String) body.get("password")));
     }
 }

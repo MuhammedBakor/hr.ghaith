@@ -91,6 +91,7 @@ const SupportAutomation = lazy(() => import("@/pages/support/SupportAutomation")
 const LegalAutomation = lazy(() => import("@/pages/legal/LegalAutomation"));
 const RecruitmentAdvanced = lazy(() => import("@/pages/hr/RecruitmentAdvanced"));
 const OrganizationStructure = lazy(() => import("@/pages/hr/OrganizationStructure"));
+const DepartmentEmployees = lazy(() => import("@/pages/hr/DepartmentEmployees"));
 const ViolationsManagement = lazy(() => import("@/pages/hr/ViolationsManagement"));
 const PenaltyEscalation = lazy(() => import("@/pages/hr/PenaltyEscalation"));
 const MyViolations = lazy(() => import("@/pages/hr/MyViolations"));
@@ -520,6 +521,12 @@ function Router() {
       <Route path="/hr/organization-structure" /* MERGED: chart tab in /hr/organization */>
         <DashboardLayout>
           <OrganizationStructure />
+        </DashboardLayout>
+      </Route>
+
+      <Route path="/hr/department-employees">
+        <DashboardLayout>
+          <DepartmentEmployees />
         </DashboardLayout>
       </Route>
 
