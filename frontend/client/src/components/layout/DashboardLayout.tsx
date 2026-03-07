@@ -19,6 +19,7 @@ import {
   Link as LinkIcon,
   Home,
   Shield,
+  Grid3X3,
   ChevronDown,
   ChevronLeft,
   Clock,
@@ -183,6 +184,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return null;
   }
 
+  // الأقسام التي يتم استبدالها بصفحة "الأقسام" للمدير العام ومدير النظام
+  const isTopAdmin = selectedRole === 'admin' || selectedRole === 'general_manager';
+  const departmentModules: ModuleType[] = ['hr', 'finance', 'fleet', 'property', 'operations', 'governance', 'bi', 'legal', 'marketing', 'store'];
+
   // جميع عناصر القائمة مع تحديد الوحدة لكل عنصر
   const allNavItems: NavItem[] = [
     { label: 'الرئيسية', path: '/', icon: LayoutDashboard, module: 'home' },
@@ -191,6 +196,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       label: `موظفي القسم (${deptEmployeeCount})`,
       path: '/hr/department-employees',
       icon: Users2,
+      module: 'home' as ModuleType,
+    }] : []),
+    // عنصر الأقسام - يظهر فقط لمدير النظام والمدير العام
+    ...(isTopAdmin ? [{
+      label: 'الأقسام',
+      path: '/departments',
+      icon: Grid3X3,
       module: 'home' as ModuleType,
     }] : []),
     {
@@ -525,6 +537,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const filterNavItems = (items: NavItem[]): NavItem[] => {
     return items
       .filter(item => {
+        // إخفاء عناصر الأقسام من الشريط الجانبي للمدير العام ومدير النظام
+        if (isTopAdmin && item.module && departmentModules.includes(item.module)) {
+          return false;
+        }
         // إذا كان للعنصر وحدة محددة، تحقق من الصلاحية
         if (item.module && !canAccessModule(item.module)) {
           return false;

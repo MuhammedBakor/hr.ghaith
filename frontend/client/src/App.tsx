@@ -285,6 +285,7 @@ const Leads = lazy(() => import("@/pages/marketing/Leads"));
 const Payments = lazy(() => import("@/pages/finance/Payments"));
 const Positions = lazy(() => import("@/pages/hr/Positions"));
 const Programs = lazy(() => import("@/pages/training/Programs"));
+const DepartmentsHub = lazy(() => import("@/pages/DepartmentsHub"));
 
 
 // Platform Modules
@@ -321,6 +322,13 @@ function Router() {
       <Route path="/">
         <DashboardLayout>
           <Home />
+        </DashboardLayout>
+      </Route>
+
+      {/* Departments Hub - for admin and general_manager */}
+      <Route path="/departments">
+        <DashboardLayout>
+          <DepartmentsHub />
         </DashboardLayout>
       </Route>
 
