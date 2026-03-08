@@ -23,7 +23,12 @@
       "Bash(for f in frontend/client/src/pages/admin/StateHistory.tsx frontend/client/src/pages/comms/OfficialCommunications.tsx frontend/client/src/pages/finance/Budgets.tsx frontend/client/src/pages/finance/Custodies.tsx frontend/client/src/pages/finance/FiscalPeriods.tsx)",
       "Read(//c/Users/mb70n/OneDrive/Documents/new g/**)",
       "Bash(done)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(grep -oP \"api\\\\.\\\\w+\\\\\\([''\"\"\\\\`]\\\\K[^''\"\"]+\\(?=[''\"\"\\\\`]\\)\")",
+      "Read(//tmp/**)",
+      "Bash(where:*)",
+      "Bash(./mvnw.cmd compile:*)",
+      "Bash(cmd:*)"
     ]
   }
 }

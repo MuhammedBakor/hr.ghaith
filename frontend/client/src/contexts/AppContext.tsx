@@ -124,12 +124,14 @@ export const modulePermissions: Record<UserRoleType, ModuleType[]> = {
   admin: [
     'home', 'hr', 'finance', 'fleet', 'property', 'operations', 'governance',
     'bi', 'integrations', 'requests', 'documents', 'reports', 'admin',
-    'comms', 'legal', 'marketing', 'store', 'workflow', 'public_site', 'settings'
+    'comms', 'legal', 'marketing', 'store', 'workflow', 'public_site', 'settings',
+    'support', 'projects', 'platform', 'inbox', 'comm', 'system'
   ],
   general_manager: [
     'home', 'hr', 'finance', 'fleet', 'property', 'operations', 'governance',
     'bi', 'integrations', 'requests', 'documents', 'reports', 'admin',
-    'comms', 'legal', 'marketing', 'store', 'workflow', 'public_site', 'settings'
+    'comms', 'legal', 'marketing', 'store', 'workflow', 'public_site', 'settings',
+    'support', 'projects', 'platform', 'inbox'
   ],
   hr_manager: [
     'home', 'hr', 'requests', 'documents', 'reports', 'comms', 'settings'
@@ -150,13 +152,13 @@ export const modulePermissions: Record<UserRoleType, ModuleType[]> = {
     'home', 'store', 'requests', 'documents', 'reports', 'comms', 'settings'
   ],
   supervisor: [
-    'home', 'hr', 'requests', 'documents', 'comms'
+    'home', 'hr', 'requests', 'documents', 'comms', 'support'
   ],
   employee: [
-    'home', 'hr', 'requests', 'documents', 'comms'
+    'home', 'hr', 'requests', 'documents', 'comms', 'support'
   ],
   department_manager: [
-    'home', 'hr', 'property', 'requests', 'documents', 'comms'
+    'home', 'hr', 'property', 'requests', 'documents', 'comms', 'support'
   ],
   agent: [
     'home', 'fleet', 'requests', 'comms'

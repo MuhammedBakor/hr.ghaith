@@ -41,6 +41,24 @@ public class AuthenticationService {
         }
 
         public AuthenticationResponse authenticate(AuthenticationRequest request) {
+                // Check employee status before authentication
+                var userOpt = repository.findByEmail(request.getEmail());
+                if (userOpt.isPresent()) {
+                        var user = userOpt.get();
+                        var empOpt = employeeRepository.findByUserId(user.getId());
+                        if (empOpt.isPresent()) {
+                                var emp = empOpt.get();
+                                if (emp.getStatus() == Employee.EmployeeStatus.suspended) {
+                                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                                        "تم إيقاف حسابك مؤقتاً من قبل الإدارة. لا يمكنك تسجيل الدخول حالياً. يرجى التواصل مع المدير العام.");
+                                }
+                                if (emp.getStatus() == Employee.EmployeeStatus.terminated) {
+                                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                                        "تم إنهاء خدمتك. لا يمكنك الوصول إلى النظام. يرجى التواصل مع قسم الموارد البشرية.");
+                                }
+                        }
+                }
+
                 try {
                         authenticationManager.authenticate(
                                         new UsernamePasswordAuthenticationToken(

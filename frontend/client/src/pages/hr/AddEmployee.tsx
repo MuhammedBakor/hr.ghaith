@@ -217,8 +217,8 @@ export default function AddEmployee() {
                   <Select value={formData.branchId} onValueChange={(v) => updateField('branchId', v)}>
                     <SelectTrigger><SelectValue placeholder="اختر الفرع" /></SelectTrigger>
                     <SelectContent>
-                      {branches.length === 0 ? <div className="p-2 text-sm text-gray-500 text-center">لا توجد فروع — أضف من الإعدادات</div> :
-                        branches.map((b: any) => <SelectItem key={b.id} value={String(b.id)}>{b.nameAr || b.name}</SelectItem>)}
+                      {branches.length === 0 ? <div className="p-2 text-sm text-gray-500 text-center">لا توجد فروع — أضف من إدارة النظام</div> :
+                        branches.map((b: any) => <SelectItem key={b.id} value={String(b.id)}>{b.nameAr || b.name}{b.city ? ` — ${b.city}` : ''}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>

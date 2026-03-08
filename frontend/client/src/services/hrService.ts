@@ -116,6 +116,15 @@ export const useDeleteEmployee = () => {
     });
 };
 
+export const useUpdateEmployeeStatus = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, status }: { id: number; status: string }) =>
+            api.patch(`/hr/employees/${id}/status`, { status }),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['employees'] }),
+    });
+};
+
 export const useEmployee = (id: number) => useQuery({
     queryKey: ['employees', id],
     queryFn: () => api.get(`/hr/employees/${id}`).then(res => res.data),

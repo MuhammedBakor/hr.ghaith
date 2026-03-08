@@ -62,4 +62,10 @@ public class TicketService {
         comment.setTicketId(ticketId);
         return ticketCommentRepository.save(comment);
     }
+
+    @Transactional
+    public void deleteTicket(Long id) {
+        ticketCommentRepository.deleteByTicketId(id);
+        ticketRepository.deleteById(id);
+    }
 }

@@ -4,7 +4,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AlertTriangle, FileDown, Trash2, Edit, PauseCircle, Loader2 } from 'lucide-react';
+import { AlertTriangle, FileDown, Trash2, Edit, PauseCircle, Loader2, Archive, XCircle, PlayCircle } from 'lucide-react';
 import { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@/components/ui/data-table';
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,7 @@ import {
   useEmployees,
   useUpdateEmployee,
   useDeleteEmployee,
+  useUpdateEmployeeStatus,
   useDepartments,
   usePositions,
   useCreateDepartment,
@@ -45,8 +46,11 @@ interface Employee {
   firstName: string;
   lastName: string;
   email: string;
+  phone: string;
   position: string;
+  positionId: number | null;
   department: string;
+  departmentId: number | null;
   status: string;
   joinDate: string;
   branchId: number | null;
@@ -58,6 +62,8 @@ const getStatusBadge = (status: string) => {
       return <Badge className="bg-green-100 text-green-800 hover:bg-green-200">نشط</Badge>;
     case 'inactive':
       return <Badge className="bg-red-100 text-red-800 hover:bg-red-200">غير نشط</Badge>;
+    case 'suspended':
+      return <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-200">موقوف مؤقتاً</Badge>;
     case 'on_leave':
       return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-200">في إجازة</Badge>;
     case 'terminated':
@@ -91,6 +97,7 @@ export default function EmployeeList() {
   const [terminationOpen, setTerminationOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [suspendOpen, setSuspendOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [terminationReason, setTerminationReason] = useState('');
   const [terminationType, setTerminationType] = useState<string>('');
@@ -100,8 +107,9 @@ export default function EmployeeList() {
   const [editFirstName, setEditFirstName] = useState('');
   const [editLastName, setEditLastName] = useState('');
   const [editEmail, setEditEmail] = useState('');
-  const [editPosition, setEditPosition] = useState('');
-  const [editDepartment, setEditDepartment] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editPositionId, setEditPositionId] = useState<string>('');
+  const [editDepartmentId, setEditDepartmentId] = useState<string>('');
 
   // Get branch from AppContext
   const { selectedBranchId, currentBranch } = useAppContext();
@@ -114,6 +122,7 @@ export default function EmployeeList() {
   // Mutations
   const updateEmployeeMutation = useUpdateEmployee();
   const deleteEmployeeMutation = useDeleteEmployee();
+  const statusMutation = useUpdateEmployeeStatus();
 
   const createDeptMutation = useCreateDepartment();
   const updateDeptMutation = useUpdateDepartment();
@@ -127,11 +136,14 @@ export default function EmployeeList() {
     firstName: emp.firstName || '',
     lastName: emp.lastName || '',
     email: emp.email || '',
+    phone: emp.phone || '',
     position: (typeof emp.position === 'object' ? emp.position?.title : emp.position) || '',
+    positionId: (typeof emp.position === 'object' ? emp.position?.id : null),
     department: (typeof emp.department === 'object' ? (emp.department?.nameAr || emp.department?.name) : emp.department) || '',
+    departmentId: (typeof emp.department === 'object' ? emp.department?.id : null),
     status: emp.status || 'active',
     joinDate: emp.hireDate ? new Date(emp.hireDate).toISOString() : new Date().toISOString(),
-    branchId: emp.branchId,
+    branchId: typeof emp.branch === 'object' ? emp.branch?.id : emp.branchId,
   }));
 
   // الحصول على اسم الفرع المختار
@@ -143,8 +155,9 @@ export default function EmployeeList() {
     setEditFirstName('');
     setEditLastName('');
     setEditEmail('');
-    setEditPosition('');
-    setEditDepartment('');
+    setEditPhone('');
+    setEditPositionId('');
+    setEditDepartmentId('');
   };
 
   const resetTerminationForm = () => {
@@ -159,8 +172,9 @@ export default function EmployeeList() {
     setEditFirstName(emp.firstName);
     setEditLastName(emp.lastName);
     setEditEmail(emp.email);
-    setEditPosition(emp.position);
-    setEditDepartment(emp.department);
+    setEditPhone(emp.phone || '');
+    setEditPositionId(emp.positionId ? String(emp.positionId) : '');
+    setEditDepartmentId(emp.departmentId ? String(emp.departmentId) : '');
     setEditOpen(true);
   };
 
@@ -174,17 +188,29 @@ export default function EmployeeList() {
     setTerminationOpen(true);
   };
 
+  const openDelete = (emp: Employee) => {
+    setSelectedEmployee(emp);
+    setDeleteOpen(true);
+  };
+
   const handleUpdateEmployee = () => {
     if (!selectedEmployee) return;
 
-    updateEmployeeMutation.mutate({
+    const updateData: any = {
       id: parseInt(selectedEmployee.id),
       firstName: editFirstName,
       lastName: editLastName,
       email: editEmail,
-      position: editPosition,
-      department: editDepartment,
-    }, {
+      phone: editPhone,
+    };
+    if (editDepartmentId) {
+      updateData.department = { id: parseInt(editDepartmentId) };
+    }
+    if (editPositionId) {
+      updateData.position = { id: parseInt(editPositionId) };
+    }
+
+    updateEmployeeMutation.mutate(updateData, {
       onSuccess: () => {
         toast.success('تم تحديث بيانات الموظف بنجاح');
         setEditOpen(false);
@@ -197,22 +223,33 @@ export default function EmployeeList() {
   const handleSuspendEmployee = () => {
     if (!selectedEmployee) return;
 
-    updateEmployeeMutation.mutate({
+    statusMutation.mutate({
       id: parseInt(selectedEmployee.id),
-      status: 'inactive',
+      status: 'suspended',
     }, {
       onSuccess: () => {
         toast.success('تم إيقاف الموظف مؤقتاً');
         setSuspendOpen(false);
+        setSelectedEmployee(null);
       },
       onError: (err: any) => toast.error(`فشل في الإيقاف: ${err.message}`)
+    });
+  };
+
+  const handleReactivateEmployee = (emp: Employee) => {
+    statusMutation.mutate({
+      id: parseInt(emp.id),
+      status: 'active',
+    }, {
+      onSuccess: () => toast.success('تم إعادة تنشيط الموظف بنجاح'),
+      onError: (err: any) => toast.error(`فشل في إعادة التنشيط: ${err.message}`)
     });
   };
 
   const handleTerminateEmployee = () => {
     if (!selectedEmployee || !terminationType || !terminationReason) return;
 
-    updateEmployeeMutation.mutate({
+    statusMutation.mutate({
       id: parseInt(selectedEmployee.id),
       status: 'terminated',
     }, {
@@ -222,6 +259,29 @@ export default function EmployeeList() {
         resetTerminationForm();
       },
       onError: (err: any) => toast.error(`فشل في إنهاء الخدمة: ${err.message}`)
+    });
+  };
+
+  const handleDeleteEmployee = () => {
+    if (!selectedEmployee) return;
+
+    deleteEmployeeMutation.mutate(parseInt(selectedEmployee.id), {
+      onSuccess: () => {
+        toast.success('تم حذف الموظف بنجاح');
+        setDeleteOpen(false);
+        setSelectedEmployee(null);
+      },
+      onError: (err: any) => toast.error(`فشل في حذف الموظف: ${err.message}`)
+    });
+  };
+
+  const handleArchiveEmployee = (emp: Employee) => {
+    statusMutation.mutate({
+      id: parseInt(emp.id),
+      status: 'inactive',
+    }, {
+      onSuccess: () => toast.success('تم أرشفة الموظف بنجاح'),
+      onError: (err: any) => toast.error(`فشل في الأرشفة: ${err.message}`)
     });
   };
 
@@ -264,24 +324,32 @@ export default function EmployeeList() {
       accessorKey: 'firstName',
       header: 'الاسم',
       cell: ({ row }) => (
-        <div>
-          <p className="font-medium">{row.original.firstName} {row.original.lastName}</p>
-          <p className="text-sm text-gray-500">{row.original.email}</p>
+        <div className="min-w-[140px]">
+          <p className="font-medium whitespace-nowrap">{row.original.firstName} {row.original.lastName}</p>
+          <p className="text-sm text-gray-500 truncate max-w-[200px]">{row.original.email}</p>
         </div>
+      ),
+    },
+    {
+      accessorKey: 'department',
+      header: 'القسم',
+      cell: ({ row }) => (
+        <span className="whitespace-nowrap">{row.original.department || '-'}</span>
       ),
     },
     {
       accessorKey: 'position',
       header: 'المنصب',
-    },
-    {
-      accessorKey: 'department',
-      header: 'القسم',
+      cell: ({ row }) => (
+        <span className="whitespace-nowrap">{row.original.position || '-'}</span>
+      ),
     },
     {
       accessorKey: 'joinDate',
       header: 'تاريخ الانضمام',
-      cell: ({ row }) => formatDate(row.original.joinDate),
+      cell: ({ row }) => (
+        <span className="whitespace-nowrap">{formatDate(row.original.joinDate)}</span>
+      ),
     },
     {
       accessorKey: 'status',
@@ -292,45 +360,87 @@ export default function EmployeeList() {
       id: 'actions',
       header: '',
       enableSorting: false,
-      cell: ({ row }) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" aria-label="تعديل">
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>إجراءات</DropdownMenuLabel>
-            <DropdownMenuItem asChild>
-              <Link href={`/hr/employees/${row.original.id}`}>
-                <FileText className="ms-2 h-4 w-4" />
-                عرض الملف
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => openEdit(row.original)}>
-              <Edit className="ms-2 h-4 w-4" />
-              تعديل البيانات
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="text-amber-600"
-              onClick={() => openSuspend(row.original)}
-              disabled={row.original.status === 'inactive'}
-            >
-              <PauseCircle className="ms-2 h-4 w-4" />
-              إيقاف مؤقت
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              className="text-red-600"
-              onClick={() => openTermination(row.original)}
-              disabled={row.original.status === 'terminated'}
-            >
-              <Trash2 className="ms-2 h-4 w-4" />
-              إنهاء الخدمة
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ),
+      cell: ({ row }) => {
+        const emp = row.original;
+        const isSuspended = emp.status === 'suspended';
+        const isTerminated = emp.status === 'terminated';
+        const isInactive = emp.status === 'inactive';
+        const isActive = emp.status === 'active';
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" aria-label="إجراءات">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>إجراءات</DropdownMenuLabel>
+              <DropdownMenuItem asChild>
+                <Link href={`/hr/employees/${emp.id}`}>
+                  <FileText className="ms-2 h-4 w-4" />
+                  عرض الملف
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => openEdit(emp)}>
+                <Edit className="ms-2 h-4 w-4" />
+                تعديل البيانات
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              {/* Reactivate - show when suspended, terminated, or inactive */}
+              {(isSuspended || isTerminated || isInactive) && (
+                <DropdownMenuItem
+                  className="text-green-600"
+                  onClick={() => handleReactivateEmployee(emp)}
+                >
+                  <PlayCircle className="ms-2 h-4 w-4" />
+                  إعادة تنشيط
+                </DropdownMenuItem>
+              )}
+              {/* Suspend - show when active */}
+              {isActive && (
+                <DropdownMenuItem
+                  className="text-amber-600"
+                  onClick={() => openSuspend(emp)}
+                >
+                  <PauseCircle className="ms-2 h-4 w-4" />
+                  إيقاف مؤقت
+                </DropdownMenuItem>
+              )}
+              {/* Archive */}
+              {isActive && (
+                <DropdownMenuItem
+                  className="text-blue-600"
+                  onClick={() => handleArchiveEmployee(emp)}
+                >
+                  <Archive className="ms-2 h-4 w-4" />
+                  أرشفة
+                </DropdownMenuItem>
+              )}
+              {/* Terminate - show when not already terminated */}
+              {!isTerminated && (
+                <DropdownMenuItem
+                  className="text-red-600"
+                  onClick={() => openTermination(emp)}
+                >
+                  <XCircle className="ms-2 h-4 w-4" />
+                  إنهاء الخدمة
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              {/* Delete */}
+              {canDelete && (
+                <DropdownMenuItem
+                  className="text-red-600"
+                  onClick={() => openDelete(emp)}
+                >
+                  <Trash2 className="ms-2 h-4 w-4" />
+                  حذف الموظف
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      },
     },
   ];
 
@@ -389,10 +499,25 @@ export default function EmployeeList() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="employees">قائمة الموظفين</TabsTrigger>
-          <TabsTrigger value="departments">الأقسام</TabsTrigger>
-          <TabsTrigger value="positions">المناصب</TabsTrigger>
+        <TabsList className="flex w-full overflow-x-auto">
+          <TabsTrigger value="employees" className="flex-shrink-0">
+            قائمة الموظفين
+            <Badge className="ms-2 bg-green-100 text-green-800 text-xs">{employees.filter(e => e.status === 'active').length}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="suspended" className="flex-shrink-0">
+            موقوفون مؤقتاً
+            <Badge className="ms-2 bg-amber-100 text-amber-800 text-xs">{employees.filter(e => e.status === 'suspended').length}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="archived" className="flex-shrink-0">
+            مؤرشفون
+            <Badge className="ms-2 bg-blue-100 text-blue-800 text-xs">{employees.filter(e => e.status === 'inactive').length}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="terminated" className="flex-shrink-0">
+            منتهية خدماتهم
+            <Badge className="ms-2 bg-gray-100 text-gray-800 text-xs">{employees.filter(e => e.status === 'terminated').length}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="departments" className="flex-shrink-0">الأقسام</TabsTrigger>
+          <TabsTrigger value="positions" className="flex-shrink-0">المناصب</TabsTrigger>
         </TabsList>
 
         <TabsContent value="employees" className="mt-4">
@@ -405,22 +530,22 @@ export default function EmployeeList() {
                     موظفو {branchName}
                   </>
                 ) : (
-                  'جميع الموظفين'
+                  'الموظفون النشطون'
                 )}
               </CardTitle>
               <CardDescription>
-                {loading ? 'جاري التحميل...' : `${employees.length} موظف`}
+                {loading ? 'جاري التحميل...' : `${employees.filter(e => e.status === 'active').length} موظف نشط`}
               </CardDescription>
-              <div className="flex gap-2 mt-2">
+              <div className="flex flex-wrap gap-2 mt-2">
                 <PrintButton title="قائمة الموظفين" />
                 <ExportButtons
-                  data={employees.map(emp => ({
+                  data={employees.filter(e => e.status === 'active').map(emp => ({
                     name: `${emp.firstName} ${emp.lastName}`,
                     email: emp.email,
                     position: emp.position,
                     department: emp.department,
                     joinDate: emp.joinDate,
-                    status: emp.status === 'active' ? 'نشط' : emp.status === 'inactive' ? 'غير نشط' : emp.status === 'terminated' ? 'منتهي الخدمة' : 'في إجازة'
+                    status: 'نشط'
                   }))}
                   columns={[
                     { key: 'name', label: 'الاسم' },
@@ -441,12 +566,84 @@ export default function EmployeeList() {
               ) : (
                 <DataTable
                   columns={columns}
-                  data={employees}
+                  data={employees.filter(e => e.status === 'active')}
                   searchKey="firstName"
                   searchPlaceholder="بحث بالاسم..."
-                  emptyMessage={selectedBranchId ? `لا يوجد موظفين في ${branchName}` : "لا يوجد موظفين"}
+                  emptyMessage={selectedBranchId ? `لا يوجد موظفين نشطين في ${branchName}` : "لا يوجد موظفين نشطين"}
                 />
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* الموقوفون مؤقتاً */}
+        <TabsContent value="suspended" className="mt-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <PauseCircle className="h-5 w-5 text-amber-600" />
+                الموظفون الموقوفون مؤقتاً
+              </CardTitle>
+              <CardDescription>
+                {employees.filter(e => e.status === 'suspended').length} موظف موقوف
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <DataTable
+                columns={columns}
+                data={employees.filter(e => e.status === 'suspended')}
+                searchKey="firstName"
+                searchPlaceholder="بحث بالاسم..."
+                emptyMessage="لا يوجد موظفون موقوفون حالياً"
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* المؤرشفون */}
+        <TabsContent value="archived" className="mt-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Archive className="h-5 w-5 text-blue-600" />
+                الموظفون المؤرشفون
+              </CardTitle>
+              <CardDescription>
+                {employees.filter(e => e.status === 'inactive').length} موظف مؤرشف
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <DataTable
+                columns={columns}
+                data={employees.filter(e => e.status === 'inactive')}
+                searchKey="firstName"
+                searchPlaceholder="بحث بالاسم..."
+                emptyMessage="لا يوجد موظفون مؤرشفون"
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* منتهية خدماتهم */}
+        <TabsContent value="terminated" className="mt-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <XCircle className="h-5 w-5 text-gray-600" />
+                الموظفون المنتهية خدماتهم
+              </CardTitle>
+              <CardDescription>
+                {employees.filter(e => e.status === 'terminated').length} موظف منتهي الخدمة
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <DataTable
+                columns={columns}
+                data={employees.filter(e => e.status === 'terminated')}
+                searchKey="firstName"
+                searchPlaceholder="بحث بالاسم..."
+                emptyMessage="لا يوجد موظفون منتهية خدماتهم"
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -577,7 +774,7 @@ export default function EmployeeList() {
       {editOpen && (<div className="mt-4 p-6 bg-white border rounded-xl shadow-sm animate-in fade-in">
 
         <div className="mb-4 border-b pb-3">
-          <h3 className="text-lg font-bold">
+          <h3 className="text-lg font-bold flex items-center gap-2">
             <Edit className="h-5 w-5 text-primary" />
             تعديل بيانات الموظف
           </h3>
@@ -606,37 +803,62 @@ export default function EmployeeList() {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>البريد الإلكتروني *</Label>
-            <Input
-              type="email"
-              value={editEmail}
-              onChange={(e) => setEditEmail(e.target.value)}
-              placeholder="البريد الإلكتروني"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>البريد الإلكتروني *</Label>
+              <Input
+                type="email"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+                placeholder="البريد الإلكتروني"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>رقم الهاتف</Label>
+              <Input
+                value={editPhone}
+                onChange={(e) => setEditPhone(e.target.value)}
+                placeholder="رقم الهاتف"
+              />
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>المنصب</Label>
-            <Input
-              value={editPosition}
-              onChange={(e) => setEditPosition(e.target.value)}
-              placeholder="المنصب الوظيفي"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>القسم</Label>
-            <Input
-              value={editDepartment}
-              onChange={(e) => setEditDepartment(e.target.value)}
-              placeholder="القسم"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>القسم</Label>
+              <Select value={editDepartmentId} onValueChange={setEditDepartmentId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="اختر القسم" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(departmentsData || []).map((dept: any) => (
+                    <SelectItem key={dept.id} value={String(dept.id)}>
+                      {dept.nameAr || dept.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>المنصب</Label>
+              <Select value={editPositionId} onValueChange={setEditPositionId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="اختر المنصب" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(positionsData || []).map((pos: any) => (
+                    <SelectItem key={pos.id} value={String(pos.id)}>
+                      {pos.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
 
         <div className="flex gap-2 mt-4 pt-3 border-t justify-end">
-          <Button variant="outline" onClick={() => setEditOpen(false)}>
+          <Button variant="outline" onClick={() => { setEditOpen(false); resetEditForm(); }}>
             إلغاء
           </Button>
           <Button
@@ -655,8 +877,8 @@ export default function EmployeeList() {
       {suspendOpen && (<div className="mt-4 p-6 bg-white border rounded-xl shadow-sm animate-in fade-in">
 
         <div className="mb-4 border-b pb-3">
-          <h3 className="text-lg font-bold">
-            <PauseCircle className="h-5 w-5" />
+          <h3 className="text-lg font-bold flex items-center gap-2">
+            <PauseCircle className="h-5 w-5 text-amber-600" />
             إيقاف الموظف مؤقتاً
           </h3>
           <p className="text-sm text-gray-500">
@@ -666,21 +888,21 @@ export default function EmployeeList() {
 
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 my-4">
           <p className="text-sm text-amber-800">
-            <strong>تنبيه:</strong> سيتم إيقاف حساب الموظف مؤقتاً ولن يتمكن من الوصول إلى النظام.
+            <strong>تنبيه:</strong> سيتم إيقاف حساب الموظف مؤقتاً ولن يتمكن من الوصول إلى النظام حتى يتم إعادة تنشيطه.
           </p>
         </div>
 
         <div className="flex gap-2 mt-4 pt-3 border-t justify-end">
-          <Button variant="outline" onClick={() => setSuspendOpen(false)}>
+          <Button variant="outline" onClick={() => { setSuspendOpen(false); setSelectedEmployee(null); }}>
             إلغاء
           </Button>
           <Button
             variant="default"
             className="bg-amber-600 hover:bg-amber-700"
             onClick={handleSuspendEmployee}
-            disabled={updateEmployeeMutation.isPending}
+            disabled={statusMutation.isPending}
           >
-            {updateEmployeeMutation.isPending && <Loader2 className="ms-2 h-4 w-4 animate-spin" />}
+            {statusMutation.isPending && <Loader2 className="ms-2 h-4 w-4 animate-spin" />}
             تأكيد الإيقاف
           </Button>
         </div>
@@ -692,12 +914,12 @@ export default function EmployeeList() {
       {terminationOpen && (<div className="mt-4 p-6 bg-white border rounded-xl shadow-sm animate-in fade-in">
 
         <div className="mb-4 border-b pb-3">
-          <h3 className="text-lg font-bold">
-            <AlertTriangle className="h-5 w-5" />
+          <h3 className="text-lg font-bold flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-red-600" />
             إنهاء خدمة الموظف
           </h3>
           <p className="text-sm text-gray-500">
-            سيتم إنهاء خدمة الموظف <strong>{selectedEmployee?.firstName} {selectedEmployee?.lastName}</strong> وإصدار خطاب إنهاء خدمة رسمي.
+            سيتم إنهاء خدمة الموظف <strong>{selectedEmployee?.firstName} {selectedEmployee?.lastName}</strong> وتعطيل حسابه في النظام.
           </p>
         </div>
 
@@ -746,25 +968,61 @@ export default function EmployeeList() {
             />
           </div>
 
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-            <p className="text-sm text-amber-800">
-              <strong>تنبيه:</strong> سيتم إصدار خطاب إنهاء خدمة رسمي وتسجيله في نظام الطلبات.
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+            <p className="text-sm text-red-800">
+              <strong>تنبيه:</strong> سيتم تعطيل حساب الموظف في النظام ولن يتمكن من تسجيل الدخول.
             </p>
           </div>
         </div>
 
         <div className="flex gap-2 mt-4 pt-3 border-t justify-end">
-          <Button variant="outline" onClick={() => setTerminationOpen(false)}>
+          <Button variant="outline" onClick={() => { setTerminationOpen(false); resetTerminationForm(); }}>
             إلغاء
           </Button>
           <Button
             variant="destructive"
             onClick={handleTerminateEmployee}
-            disabled={!terminationType || !terminationReason || updateEmployeeMutation.isPending}
+            disabled={!terminationType || !terminationReason || statusMutation.isPending}
           >
-            {updateEmployeeMutation.isPending && <Loader2 className="ms-2 h-4 w-4 animate-spin" />}
+            {statusMutation.isPending && <Loader2 className="ms-2 h-4 w-4 animate-spin" />}
             <FileDown className="ms-2 h-4 w-4" />
             تأكيد إنهاء الخدمة
+          </Button>
+        </div>
+
+      </div>)}
+
+      {/* نافذة حذف الموظف */}
+      {deleteOpen && (<div className="mt-4 p-6 bg-white border rounded-xl shadow-sm animate-in fade-in">
+
+        <div className="mb-4 border-b pb-3">
+          <h3 className="text-lg font-bold flex items-center gap-2">
+            <Trash2 className="h-5 w-5 text-red-600" />
+            حذف الموظف
+          </h3>
+          <p className="text-sm text-gray-500">
+            هل أنت متأكد من حذف الموظف <strong>{selectedEmployee?.firstName} {selectedEmployee?.lastName}</strong>؟
+          </p>
+        </div>
+
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3 my-4">
+          <p className="text-sm text-red-800">
+            <strong>تحذير:</strong> سيتم حذف الموظف نهائياً من النظام. هذا الإجراء لا يمكن التراجع عنه. إذا كنت تريد فقط تعطيل الحساب، استخدم "إيقاف مؤقت" أو "أرشفة" بدلاً من ذلك.
+          </p>
+        </div>
+
+        <div className="flex gap-2 mt-4 pt-3 border-t justify-end">
+          <Button variant="outline" onClick={() => { setDeleteOpen(false); setSelectedEmployee(null); }}>
+            إلغاء
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={handleDeleteEmployee}
+            disabled={deleteEmployeeMutation.isPending}
+          >
+            {deleteEmployeeMutation.isPending && <Loader2 className="ms-2 h-4 w-4 animate-spin" />}
+            <Trash2 className="ms-2 h-4 w-4" />
+            تأكيد الحذف
           </Button>
         </div>
 

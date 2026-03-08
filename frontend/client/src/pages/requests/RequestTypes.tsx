@@ -26,7 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { FileText, Search, Clock, CheckCircle, AlertCircle, ArrowUpDown, Loader2, RefreshCw, Eye, Edit, Trash2, Filter, X, Download } from "lucide-react";
+import { FileText, Search, Clock, CheckCircle, AlertCircle, ArrowUpDown, Loader2, RefreshCw, Eye, Edit, Trash2, Filter, X, Download, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 interface RequestType {
@@ -38,6 +38,7 @@ interface RequestType {
   avgProcessingTime: string;
   status: "active" | "inactive" | "draft";
   requestsCount: number;
+  description?: string;
 }
 
 interface RequestTypeFormData {
@@ -65,12 +66,12 @@ export default function RequestTypes() {
   const createMutation = useMutation({ mutationFn: (data: any) => api.post('/requests/types', data).then(r => r.data), onSuccess: () => { refetch(); setShowCreateForm(false); setCreateData({}); } });
 
   const [editingItem, setEditingItem] = useState<any>(null);
-  const updateMutation = useMutation({ mutationFn: (data: any) => api.put(`/requests/types/${data.id}`, data).then(r => r.data), onSuccess: () => { refetch(); setEditingItem(null); } });
+  const updateMutation = useMutation({ mutationFn: (data: any) => api.put(`/requests/types/${data.id}`, data).then(r => r.data), onSuccess: () => { refetch(); setEditingType(null); setIsEditOpen(false); toast.success('تم حفظ التغييرات'); } });
 
   const deleteMutation = useMutation({ mutationFn: (data: any) => api.delete(`/requests/types/${data.id}`).then(r => r.data), onSuccess: () => { refetch(); } });
 
   const handleSave = () => {
-    updateMutation.mutate(editingItem);
+    updateMutation.mutate(editingType);
   };
 
   const { data: currentUser, isError, error } = useUser();
@@ -121,10 +122,11 @@ export default function RequestTypes() {
       code: t.code || `REQ-${String(idx + 1).padStart(3, '0')}`,
       name: t.nameAr || t.name || 'غير معروف',
       category: t.category || 'عام',
-      approvalLevels: t.requiresApproval ? 2 : 0,
+      approvalLevels: t.approvalLevels || (t.requiresApproval ? 2 : 0),
       avgProcessingTime: '1-2 يوم',
-      status: t.isActive ? 'active' : 'inactive',
+      status: t.status || (t.isActive ? 'active' : 'inactive'),
       requestsCount: 0,
+      description: t.description || '',
     }));
   }, [typesRaw]);
 
@@ -188,11 +190,19 @@ export default function RequestTypes() {
       toast.error('يرجى إدخال اسم نوع الطلب');
       return;
     }
-    // إضافة نوع طلب جديد (في الواقع يتم حفظه في قاعدة البيانات)
+    createMutation.mutate({
+      name: formData.name,
+      nameAr: formData.name,
+      category: formData.category,
+      approvalLevels: formData.approvalLevels,
+      requiresApproval: formData.approvalLevels > 0,
+      isActive: formData.status === 'active',
+      status: formData.status,
+      description: formData.description,
+    });
     toast.success('تم إنشاء نوع الطلب بنجاح');
     setIsCreateOpen(false);
     setFormData(initialFormData);
-    refetch();
   };
 
   const handleEdit = (type: RequestType) => {
@@ -201,7 +211,7 @@ export default function RequestTypes() {
   };
 
   const handleUpdate = () => {
-    updateMutation.mutate(editingItem);
+    updateMutation.mutate(editingType);
   };
 
   const handleView = (type: RequestType) => {
@@ -635,6 +645,16 @@ export default function RequestTypes() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-description">الوصف</Label>
+              <Textarea
+                id="edit-description"
+                value={editingType.description || ''}
+                onChange={(e) => setEditingType({ ...editingType, description: e.target.value })}
+                placeholder="وصف نوع الطلب..."
+                rows={3}
+              />
+            </div>
           </div>
           <div className="flex gap-2 mt-4 pt-3 border-t justify-end">
             <Button variant="outline" onClick={() => setIsEditOpen(false)}>
@@ -690,6 +710,10 @@ export default function RequestTypes() {
                 <Label className="text-muted-foreground">عدد الطلبات</Label>
                 <p className="font-bold text-primary">{viewingType.requestsCount}</p>
               </div>
+            </div>
+            <div>
+              <Label className="text-muted-foreground">الوصف</Label>
+              <p className="mt-1 whitespace-pre-wrap">{viewingType.description || 'لا يوجد وصف'}</p>
             </div>
           </div>
           <div className="flex gap-2 mt-4 pt-3 border-t justify-end">

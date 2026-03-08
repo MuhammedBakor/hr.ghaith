@@ -181,30 +181,88 @@ public class EmployeeService {
     }
 
     public Employee updateEmployee(Long id, Employee employeeDetails) {
-        Employee employee = employeeRepository.findById(id).orElse(null);
-        if (employee != null) {
+        Employee employee = employeeRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Employee not found with id: " + id));
+
+        // Partial update: only update non-null fields
+        if (employeeDetails.getFirstName() != null) {
             employee.setFirstName(employeeDetails.getFirstName());
-            employee.setLastName(employeeDetails.getLastName());
-            employee.setEmail(employeeDetails.getEmail());
-            employee.setPhone(employeeDetails.getPhone());
-            employee.setSalary(employeeDetails.getSalary());
-            employee.setStatus(employeeDetails.getStatus());
-
-            if (employeeDetails.getDepartment() != null && employeeDetails.getDepartment().getId() != null) {
-                employee.setDepartment(
-                        departmentRepository.findById(employeeDetails.getDepartment().getId()).orElse(null));
-            }
-            if (employeeDetails.getPosition() != null && employeeDetails.getPosition().getId() != null) {
-                employee.setPosition(positionRepository.findById(employeeDetails.getPosition().getId()).orElse(null));
-            }
-
-            return employeeRepository.save(employee);
         }
-        return null;
+        if (employeeDetails.getLastName() != null) {
+            employee.setLastName(employeeDetails.getLastName());
+        }
+        if (employeeDetails.getEmail() != null) {
+            employee.setEmail(employeeDetails.getEmail());
+        }
+        if (employeeDetails.getPhone() != null) {
+            employee.setPhone(employeeDetails.getPhone());
+        }
+        if (employeeDetails.getSalary() != null) {
+            employee.setSalary(employeeDetails.getSalary());
+        }
+        if (employeeDetails.getStatus() != null) {
+            employee.setStatus(employeeDetails.getStatus());
+            // Disable user account when suspended or terminated
+            if (employee.getUser() != null &&
+                (employeeDetails.getStatus() == Employee.EmployeeStatus.suspended ||
+                 employeeDetails.getStatus() == Employee.EmployeeStatus.terminated)) {
+                employee.getUser().setEnabled(false);
+                userRepository.save(employee.getUser());
+            }
+            // Re-enable user account when reactivated
+            if (employee.getUser() != null &&
+                employeeDetails.getStatus() == Employee.EmployeeStatus.active) {
+                employee.getUser().setEnabled(true);
+                userRepository.save(employee.getUser());
+            }
+        }
+
+        if (employeeDetails.getDepartment() != null && employeeDetails.getDepartment().getId() != null) {
+            employee.setDepartment(
+                    departmentRepository.findById(employeeDetails.getDepartment().getId()).orElse(null));
+        }
+        if (employeeDetails.getPosition() != null && employeeDetails.getPosition().getId() != null) {
+            employee.setPosition(positionRepository.findById(employeeDetails.getPosition().getId()).orElse(null));
+        }
+        if (employeeDetails.getBranch() != null && employeeDetails.getBranch().getId() != null) {
+            employee.setBranch(hrBranchRepository.findById(employeeDetails.getBranch().getId()).orElse(null));
+        }
+
+        return employeeRepository.save(employee);
     }
 
     public void deleteEmployee(Long id) {
-        employeeRepository.deleteById(id);
+        Employee employee = employeeRepository.findById(id).orElse(null);
+        if (employee != null) {
+            User user = employee.getUser();
+            employeeRepository.delete(employee);
+            if (user != null) {
+                userRepository.delete(user);
+            }
+        }
+    }
+
+    public Employee changeEmployeeStatus(Long id, String statusStr) {
+        Employee employee = employeeRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Employee not found with id: " + id));
+
+        Employee.EmployeeStatus newStatus = Employee.EmployeeStatus.valueOf(statusStr);
+        employee.setStatus(newStatus);
+
+        // Disable user account when suspended or terminated
+        if (employee.getUser() != null &&
+            (newStatus == Employee.EmployeeStatus.suspended ||
+             newStatus == Employee.EmployeeStatus.terminated)) {
+            employee.getUser().setEnabled(false);
+            userRepository.save(employee.getUser());
+        }
+        // Re-enable user account when reactivated
+        if (employee.getUser() != null && newStatus == Employee.EmployeeStatus.active) {
+            employee.getUser().setEnabled(true);
+            userRepository.save(employee.getUser());
+        }
+
+        return employeeRepository.save(employee);
     }
 
     public Optional<Employee> getEmployeeByUserId(Long userId) {

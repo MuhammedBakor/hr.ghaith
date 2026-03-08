@@ -77,6 +77,9 @@ public class AutomationCenterController {
     public ResponseEntity<?> initAll(@RequestBody(required = false) Map<String, Object> body) {
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
+        response.put("initialized", 0);
+        response.put("existing", 0);
+        response.put("created", 0);
         return ResponseEntity.ok(response);
     }
 
@@ -84,6 +87,8 @@ public class AutomationCenterController {
     public ResponseEntity<?> runAll(@RequestBody(required = false) Map<String, Object> body) {
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
+        response.put("message", "تم التنفيذ بنجاح");
+        response.put("affected", 0);
         return ResponseEntity.ok(response);
     }
 

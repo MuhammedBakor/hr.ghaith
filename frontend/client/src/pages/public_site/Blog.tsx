@@ -35,7 +35,7 @@ interface BlogPost {
 export default function Blog() {
   // حالة النموذج المتكامل
   const [formData, setFormData] = useState<Record<string, any>>({ 'title': '', 'content': '', 'category': '' });
-  const [formErrors, setFormErrors] = useState<Record<string, string>({});
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleFieldChange = (field: string, value: any) => {
@@ -55,10 +55,9 @@ export default function Blog() {
   const saveMutation = useMutation({
     mutationFn: (data: any) => api.post('/blog/posts', data).then(r => r.data),
     onSuccess: () => {
-      setFormData({ 'title': '', 'content': '', 'category': '',
-      onError: (e: any) => toast.error(e?.message || 'حدث خطأ')});
+      setFormData({ 'title': '', 'content': '', 'category': '' });
       setIsSubmitting(false);
-      alert('تم الحفظ بنجاح');
+      toast.success('تم الحفظ بنجاح');
     },
     onError: (err: any) => {
       setIsSubmitting(false);

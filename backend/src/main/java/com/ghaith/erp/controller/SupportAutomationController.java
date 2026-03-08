@@ -18,6 +18,8 @@ public class SupportAutomationController {
     public ResponseEntity<?> initialize(@RequestBody(required = false) Map<String, Object> body) {
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
+        response.put("initialized", 0);
+        response.put("existing", 0);
         return ResponseEntity.ok(response);
     }
 
@@ -25,6 +27,8 @@ public class SupportAutomationController {
     public ResponseEntity<?> runNow(@RequestBody(required = false) Map<String, Object> body) {
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
+        response.put("message", "تم التنفيذ بنجاح");
+        response.put("affected", 0);
         return ResponseEntity.ok(response);
     }
 

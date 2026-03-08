@@ -27,18 +27,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Ticket, Clock, CheckCircle2, AlertCircle, MessageSquare, User } from "lucide-react";
+import { Plus, Search, Ticket, Clock, CheckCircle2, AlertCircle, Edit, Trash2, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 import { toast } from "sonner";
-import { useAuth } from "@/_core/hooks/useAuth";
 import {
   useTickets,
   useCreateTicket,
   useUpdateTicket,
-  useAddTicketComment,
+  useDeleteTicket,
   useTicket,
-  useTicketComments
 } from "@/services/supportService";
 
 const priorityColors: Record<string, string> = {
@@ -77,13 +75,6 @@ const statusIcons: Record<string, React.ReactNode> = {
 };
 
 export default function Tickets() {
-  const confirmDelete = (fn: () => void) => { if (window.confirm("هل أنت متأكد من الحذف؟")) fn(); };
-
-  const { user: currentUser, error: authError } = useAuth();
-  const userRole = currentUser?.role || 'user';
-
-  const [showInlineForm, setShowInlineForm] = useState(false);
-
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -104,17 +95,48 @@ export default function Tickets() {
     category: "general",
   });
 
-  const [newComment, setNewComment] = useState("");
-
   const { data: tickets, isLoading, refetch } = useTickets();
   const { data: ticketDetails } = useTicket(selectedTicket!);
-  const { data: comments } = useTicketComments(selectedTicket!);
 
   const createTicketMutation = useCreateTicket();
 
   const updateTicketMutation = useUpdateTicket();
 
-  const addCommentMutation = useAddTicketComment();
+  const deleteTicketMutation = useDeleteTicket();
+
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editingTicket, setEditingTicket] = useState<any>(null);
+
+  const handleEditTicket = (ticket: any) => {
+    setEditingTicket({ ...ticket });
+    setIsEditOpen(true);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingTicket) return;
+    updateTicketMutation.mutate(editingTicket, {
+      onSuccess: () => {
+        toast.success("تم تحديث التذكرة بنجاح");
+        setIsEditOpen(false);
+        setEditingTicket(null);
+      },
+      onError: (error: any) => {
+        toast.error("فشل في التحديث: " + (error?.message || "حدث خطأ"));
+      },
+    });
+  };
+
+  const handleDeleteTicket = (ticketId: number) => {
+    if (!window.confirm("هل أنت متأكد من حذف هذه التذكرة؟")) return;
+    deleteTicketMutation.mutate(ticketId, {
+      onSuccess: () => {
+        toast.success("تم حذف التذكرة");
+      },
+      onError: () => {
+        toast.error("فشل في حذف التذكرة");
+      },
+    });
+  };
 
   const handleCreateTicket = () => {
     if (!newTicket.subject.trim()) {
@@ -127,14 +149,21 @@ export default function Tickets() {
       description: newTicket.description,
       priority: newTicket.priority,
       category: newTicket.category,
-    });
-  };
-
-  const handleAddComment = () => {
-    if (!newComment.trim() || !selectedTicket) return;
-    addCommentMutation.mutate({
-      ticketId: selectedTicket,
-      content: newComment,
+    }, {
+      onSuccess: () => {
+        toast.success("تم إنشاء التذكرة بنجاح");
+        setIsCreateOpen(false);
+        setNewTicket({
+          ticketNumber: `TKT-${Date.now()}`,
+          subject: "",
+          description: "",
+          priority: "medium",
+          category: "general",
+        });
+      },
+      onError: (error: any) => {
+        toast.error("فشل في إنشاء التذكرة: " + (error?.message || "حدث خطأ"));
+      },
     });
   };
 
@@ -172,10 +201,11 @@ export default function Tickets() {
               تذكرة جديدة
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-md" aria-describedby="create-ticket-desc">
             <DialogHeader>
               <DialogTitle>إنشاء تذكرة جديدة</DialogTitle>
             </DialogHeader>
+            <p id="create-ticket-desc" className="sr-only">نموذج إنشاء تذكرة جديدة</p>
             <div className="space-y-4">
               <div>
                 <Label>العنوان</Label>
@@ -348,32 +378,27 @@ export default function Tickets() {
               <p>لا توجد تذاكر</p>
             </div>
           ) : (
-            <Table>
+            <Table dir="rtl">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-end">رقم التذكرة</TableHead>
-                  <TableHead className="text-end">العنوان</TableHead>
-                  <TableHead className="text-end">الأولوية</TableHead>
-                  <TableHead className="text-end">الحالة</TableHead>
-                  <TableHead className="text-end">التاريخ</TableHead>
-                  <TableHead className="text-end">الإجراءات</TableHead>
+                  <TableHead>رقم التذكرة</TableHead>
+                  <TableHead>العنوان</TableHead>
+                  <TableHead>الأولوية</TableHead>
+                  <TableHead>الحالة</TableHead>
+                  <TableHead>التاريخ</TableHead>
+                  <TableHead>تغيير الحالة</TableHead>
+                  <TableHead>الإجراءات</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredTickets.map((ticket: any) => (
-                  <TableRow
-                    key={ticket.id}
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => setSelectedTicket(ticket.id)}
-                  >
+                  <TableRow key={ticket.id} className="hover:bg-muted/50">
                     <TableCell className="font-mono">#{ticket.id}</TableCell>
                     <TableCell>
-                      <div>
-                        <p className="font-medium">{ticket.subject}</p>
-                        <p className="text-sm text-muted-foreground line-clamp-1">
-                          {ticket.description}
-                        </p>
-                      </div>
+                      <p className="font-medium">{ticket.subject}</p>
+                      <p className="text-sm text-muted-foreground line-clamp-1 max-w-[200px]">
+                        {ticket.description}
+                      </p>
                     </TableCell>
                     <TableCell>
                       <Badge className={priorityColors[ticket.priority] || priorityColors.medium}>
@@ -392,11 +417,9 @@ export default function Tickets() {
                     <TableCell>
                       <Select
                         value={ticket.status}
-                        onValueChange={(value) => {
-                          handleStatusChange(ticket.id, value);
-                        }}
+                        onValueChange={(value) => handleStatusChange(ticket.id, value)}
                       >
-                        <SelectTrigger className="w-32" onClick={(e) => e.stopPropagation()}>
+                        <SelectTrigger className="w-32">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -406,6 +429,25 @@ export default function Tickets() {
                           <SelectItem value="closed">مغلقة</SelectItem>
                         </SelectContent>
                       </Select>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => setSelectedTicket(ticket.id)} title="عرض">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleEditTicket(ticket)} title="تعديل">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => handleDeleteTicket(ticket.id)}
+                          title="حذف"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -417,72 +459,135 @@ export default function Tickets() {
 
       {/* Ticket Details Dialog */}
       <Dialog open={!!selectedTicket} onOpenChange={() => setSelectedTicket(null)}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-lg" aria-describedby="ticket-details-desc">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Ticket className="h-5 w-5" />
               تذكرة #{selectedTicket}
             </DialogTitle>
           </DialogHeader>
+          <p id="ticket-details-desc" className="sr-only">تفاصيل التذكرة</p>
           {ticketDetails && (
-            <div className="space-y-6">
+            <div className="space-y-4" dir="rtl">
               <div>
-                <h3 className="font-semibold text-lg">{ticketDetails.subject}</h3>
-                <p className="text-muted-foreground mt-2">{ticketDetails.description}</p>
+                <Label className="text-muted-foreground text-sm">العنوان</Label>
+                <p className="font-semibold text-lg">{ticketDetails.subject}</p>
               </div>
-
-              <div className="flex gap-4 px-2 md:px-0">
-                <Badge className={priorityColors[ticketDetails.priority] || priorityColors.medium}>
-                  {priorityLabels[ticketDetails.priority] || ticketDetails.priority}
-                </Badge>
-                <Badge className={statusColors[ticketDetails.status] || statusColors.open}>
-                  {statusLabels[ticketDetails.status] || ticketDetails.status}
-                </Badge>
+              <div>
+                <Label className="text-muted-foreground text-sm">الوصف</Label>
+                <p className="mt-1 whitespace-pre-wrap">{ticketDetails.description || "لا يوجد وصف"}</p>
               </div>
-
-              <div className="border-t pt-4">
-                <h4 className="font-medium mb-4 flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4" />
-                  التعليقات
-                </h4>
-                <div className="space-y-4">
-                  {comments?.map((comment: any) => (
-                    <div key={comment.id} className="bg-muted/50 rounded-lg p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <User className="h-4 w-4" />
-                        <span className="font-medium">مستخدم #{comment.authorId}</span>
-                        <span className="text-sm text-muted-foreground">
-                          {comment.createdAt && format(new Date(comment.createdAt), "dd MMM yyyy HH:mm", { locale: ar })}
-                        </span>
-                      </div>
-                      <p>{comment.content}</p>
-                    </div>
-                  ))}
-                  {(!comments || comments.length === 0) && (
-                    <p className="text-muted-foreground text-center py-4">لا توجد تعليقات</p>
-                  )}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground text-sm">الأولوية</Label>
+                  <div className="mt-1">
+                    <Badge className={priorityColors[ticketDetails.priority] || priorityColors.medium}>
+                      {priorityLabels[ticketDetails.priority] || ticketDetails.priority}
+                    </Badge>
+                  </div>
                 </div>
-
-                <div className="mt-4 flex gap-2">
-                  <Textarea
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    placeholder="أضف تعليقاً..."
-                    rows={2}
-                    className="flex-1"
-                  />
-                  <Button
-                    onClick={handleAddComment}
-                    disabled={addCommentMutation.isPending || !newComment.trim()}
-                  >
-                    إرسال
-                  </Button>
+                <div>
+                  <Label className="text-muted-foreground text-sm">الحالة</Label>
+                  <div className="mt-1">
+                    <Badge className={`flex items-center gap-1 w-fit ${statusColors[ticketDetails.status] || statusColors.open}`}>
+                      {statusIcons[ticketDetails.status]}
+                      {statusLabels[ticketDetails.status] || ticketDetails.status}
+                    </Badge>
+                  </div>
                 </div>
               </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground text-sm">التصنيف</Label>
+                  <p className="mt-1">{ticketDetails.category || "عام"}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-sm">التاريخ</Label>
+                  <p className="mt-1">
+                    {ticketDetails.createdAt && format(new Date(ticketDetails.createdAt), "dd MMM yyyy HH:mm", { locale: ar })}
+                  </p>
+                </div>
+              </div>
+              {ticketDetails.ticketNumber && (
+                <div>
+                  <Label className="text-muted-foreground text-sm">رقم التذكرة</Label>
+                  <p className="mt-1 font-mono">{ticketDetails.ticketNumber}</p>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Edit Ticket Dialog */}
+      {isEditOpen && editingTicket && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setIsEditOpen(false)}>
+          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md mx-4" dir="rtl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold mb-4 border-b pb-3">تعديل التذكرة #{editingTicket.id}</h3>
+            <div className="space-y-4">
+              <div>
+                <Label>العنوان</Label>
+                <Input
+                  value={editingTicket.subject || ''}
+                  onChange={(e) => setEditingTicket({ ...editingTicket, subject: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>الوصف</Label>
+                <Textarea
+                  value={editingTicket.description || ''}
+                  onChange={(e) => setEditingTicket({ ...editingTicket, description: e.target.value })}
+                  rows={4}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>الأولوية</Label>
+                  <Select
+                    value={editingTicket.priority}
+                    onValueChange={(value) => setEditingTicket({ ...editingTicket, priority: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">منخفضة</SelectItem>
+                      <SelectItem value="medium">متوسطة</SelectItem>
+                      <SelectItem value="high">عالية</SelectItem>
+                      <SelectItem value="urgent">عاجلة</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>الحالة</Label>
+                  <Select
+                    value={editingTicket.status}
+                    onValueChange={(value) => setEditingTicket({ ...editingTicket, status: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="open">مفتوحة</SelectItem>
+                      <SelectItem value="in_progress">قيد المعالجة</SelectItem>
+                      <SelectItem value="resolved">تم الحل</SelectItem>
+                      <SelectItem value="closed">مغلقة</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex gap-2 pt-3 border-t justify-end">
+                <Button variant="outline" onClick={() => { setIsEditOpen(false); setEditingTicket(null); }}>
+                  إلغاء
+                </Button>
+                <Button onClick={handleSaveEdit} disabled={updateTicketMutation.isPending}>
+                  {updateTicketMutation.isPending ? "جاري الحفظ..." : "حفظ التغييرات"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

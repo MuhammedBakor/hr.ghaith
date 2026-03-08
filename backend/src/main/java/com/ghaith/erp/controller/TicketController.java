@@ -7,7 +7,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/support/tickets")
@@ -39,6 +41,14 @@ public class TicketController {
     @GetMapping("/{id}/comments")
     public ResponseEntity<List<TicketComment>> getComments(@PathVariable Long id) {
         return ResponseEntity.ok(ticketService.getComments(id));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteTicket(@PathVariable Long id) {
+        ticketService.deleteTicket(id);
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/{id}/comments")

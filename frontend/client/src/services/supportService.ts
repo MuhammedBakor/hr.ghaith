@@ -54,6 +54,14 @@ export const useUpdateTicket = () => {
     });
 };
 
+export const useDeleteTicket = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (id: number) => api.delete(`/support/tickets/${id}`).then(res => res.data),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tickets'] }),
+    });
+};
+
 export const useTicketComments = (ticketId: number) => useQuery<TicketComment[]>({
     queryKey: ['tickets', ticketId, 'comments'],
     queryFn: () => api.get(`/support/tickets/${ticketId}/comments`).then(res => res.data),

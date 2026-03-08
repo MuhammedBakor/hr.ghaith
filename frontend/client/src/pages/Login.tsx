@@ -504,15 +504,6 @@ export default function Login() {
         </div>
       </div>
 
-      {true && (<div className="mt-4 p-6 bg-white border rounded-xl shadow-sm">
-
-        <div className="mb-4 border-b pb-3">
-          <h3 className="text-lg font-bold">تفاصيل</h3>
-        </div>
-        <div className="py-4 text-sm text-muted-foreground">محتوى</div>
-
-      </div>)}
-
     </div>
   );
 }

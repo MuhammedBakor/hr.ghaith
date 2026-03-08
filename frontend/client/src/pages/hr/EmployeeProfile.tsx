@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
-import { Progress } from '@/components/ui/progress';
+
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -27,7 +27,9 @@ import {
   useLeavesByEmployee,
   usePayrollByEmployee,
   useDeleteEmployee,
-  useUpdateEmployee
+  useUpdateEmployee,
+  useDepartments,
+  usePositions
 } from '@/services/hrService';
 
 interface EmployeeDocument {
@@ -126,6 +128,9 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
   // جلب سجلات الرواتب من قاعدة البيانات
   const { data: payrollData } = usePayrollByEmployee(employeeId);
 
+  const { data: departmentsData } = useDepartments();
+  const { data: positionsData } = usePositions();
+
   const deleteMutation = useDeleteEmployee();
   const updateMutation = useUpdateEmployee();
 
@@ -156,6 +161,7 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
   // تحديث حالة الموظف عند اكتمال التحميل
   useEffect(() => {
     if (employeeData) {
+      const salary = employeeData.salary || 0;
       setEmployee({
         ...employeeData,
         firstName: employeeData.firstName || '',
@@ -163,22 +169,21 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
         email: employeeData.email || '',
         phone: employeeData.phone || '',
         position: (typeof employeeData.position === 'object' ? employeeData.position?.title : employeeData.position) || '',
+        positionId: (typeof employeeData.position === 'object' ? employeeData.position?.id : null),
         department: (typeof employeeData.department === 'object' ? (employeeData.department?.nameAr || employeeData.department?.name) : employeeData.department) || '',
+        departmentId: (typeof employeeData.department === 'object' ? employeeData.department?.id : null),
         branch: employeeData.branch?.nameAr || employeeData.branch?.name || employeeData.branch || '',
         manager: employeeData.manager ? `${employeeData.manager.firstName} ${employeeData.manager.lastName}` : '',
         userRole: employeeData.userRole || employeeData.user?.role || employeeData.role || '',
-        basicSalary: employeeData.salary || 0,
-        housingAllowance: (employeeData.salary || 0) * 0.25,
-        transportAllowance: 500,
-        totalSalary: (employeeData.salary || 0) * 1.25 + 500
+        basicSalary: salary,
       });
       setEditForm({
         firstName: employeeData.firstName || '',
         lastName: employeeData.lastName || '',
         email: employeeData.email || '',
         phone: employeeData.phone || '',
-        department: (typeof employeeData.department === 'object' ? (employeeData.department?.nameAr || employeeData.department?.name) : employeeData.department) || '',
-        position: (typeof employeeData.position === 'object' ? employeeData.position?.title : employeeData.position) || '',
+        departmentId: (typeof employeeData.department === 'object' ? String(employeeData.department?.id || '') : ''),
+        positionId: (typeof employeeData.position === 'object' ? String(employeeData.position?.id || '') : ''),
       });
     }
   }, [employeeData]);
@@ -189,15 +194,26 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
     lastName: '',
     email: '',
     phone: '',
-    department: '',
-    position: '',
+    departmentId: '',
+    positionId: '',
   });
 
   const handleSaveEdit = () => {
-    updateMutation.mutate({
+    const updateData: any = {
       id: employeeId,
-      ...editForm
-    }, {
+      firstName: editForm.firstName,
+      lastName: editForm.lastName,
+      email: editForm.email,
+      phone: editForm.phone,
+    };
+    if (editForm.departmentId) {
+      updateData.department = { id: parseInt(editForm.departmentId) };
+    }
+    if (editForm.positionId) {
+      updateData.position = { id: parseInt(editForm.positionId) };
+    }
+
+    updateMutation.mutate(updateData, {
       onSuccess: () => {
         toast.success('تم حفظ التعديلات بنجاح');
         setViewMode("profile");
@@ -215,34 +231,37 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
     expiryDate: '',
   });
 
-  const [documents, setDocuments] = useState<EmployeeDocument[]>([
-    { id: '1', name: 'الهوية الوطنية', type: 'national_id', expiryDate: '2027-05-15', status: 'valid' },
-    { id: '2', name: 'جواز السفر', type: 'passport', expiryDate: '2025-03-20', status: 'expiring' },
-  ]);
+  const [documents, setDocuments] = useState<EmployeeDocument[]>([]);
 
-  const [contracts, setContracts] = useState<EmployeeContract[]>([
-    { id: '1', type: 'عقد دائم', startDate: '2023-01-15', salary: 19500, status: 'active' },
-  ]);
+  const [contracts, setContracts] = useState<EmployeeContract[]>([]);
 
-  const [leaveBalances, setLeaveBalances] = useState<LeaveBalance[]>([
-    { type: 'سنوية', total: 21, used: 5, remaining: 16 },
-    { type: 'مرضية', total: 30, used: 2, remaining: 28 },
-  ]);
+  // حساب أرصدة الإجازات من البيانات الفعلية
+  const leaveBalances: LeaveBalance[] = useMemo(() => {
+    if (!leavesData || (leavesData as any[]).length === 0) return [];
+    const records = leavesData as any[];
+    const typeMap: Record<string, { used: number }> = {};
+    records.forEach(r => {
+      const type = r.leaveType || 'أخرى';
+      if (!typeMap[type]) typeMap[type] = { used: 0 };
+      if (r.status === 'approved') {
+        const days = Math.ceil((new Date(r.endDate).getTime() - new Date(r.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1;
+        typeMap[type].used += days;
+      }
+    });
+    return Object.entries(typeMap).map(([type, data]) => ({
+      type,
+      total: 0,
+      used: data.used,
+      remaining: 0,
+    }));
+  }, [leavesData]);
 
   const attendanceSummary = useMemo(() => {
-    if (!attendanceData) return {
-      month: 'يناير 2026',
-      workDays: 22,
-      presentDays: 0,
-      absentDays: 0,
-      lateDays: 0,
-      overtimeHours: 0
-    };
-
-    const records = attendanceData as any[];
+    const records = (attendanceData as any[]) || [];
+    const totalRecords = records.length;
     return {
       month: new Date().toLocaleDateString('ar-SA', { month: 'long', year: 'numeric' }),
-      workDays: 22,
+      workDays: totalRecords,
       presentDays: records.filter(r => r.status === 'present').length,
       absentDays: records.filter(r => r.status === 'absent').length,
       lateDays: records.filter(r => r.status === 'late').length,
@@ -310,8 +329,12 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
         return <Badge className="bg-green-100 text-green-800">نشط</Badge>;
       case 'inactive':
         return <Badge className="bg-red-100 text-red-800">غير نشط</Badge>;
+      case 'suspended':
+        return <Badge className="bg-amber-100 text-amber-800">موقوف مؤقتاً</Badge>;
       case 'on_leave':
         return <Badge className="bg-yellow-100 text-yellow-800">في إجازة</Badge>;
+      case 'terminated':
+        return <Badge className="bg-gray-100 text-gray-800">منتهي الخدمة</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -360,13 +383,13 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
   // Render Edit Form
   const renderEditForm = () => (
     <div className="space-y-6" dir="rtl">
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
         <Button variant="outline" onClick={() => setViewMode("profile")}>
           <ArrowRight className="h-4 w-4 ms-2" />
           العودة للملف
         </Button>
         <div>
-          <h2 className="text-2xl font-bold">تعديل بيانات الموظف</h2>
+          <h2 className="text-xl sm:text-2xl font-bold">تعديل بيانات الموظف</h2>
           <p className="text-muted-foreground">قم بتعديل بيانات الموظف ثم اضغط حفظ</p>
         </div>
       </div>
@@ -413,20 +436,42 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>القسم</Label>
-                <Input
-                  value={editForm.department}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, department: e.target.value }))}
-                />
+                <Select
+                  value={editForm.departmentId}
+                  onValueChange={(value) => setEditForm(prev => ({ ...prev, departmentId: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر القسم" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(departmentsData || []).map((dept: any) => (
+                      <SelectItem key={dept.id} value={String(dept.id)}>
+                        {dept.nameAr || dept.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label>المسمى الوظيفي</Label>
-                <Input
-                  value={editForm.position}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, position: e.target.value }))}
-                />
+                <Select
+                  value={editForm.positionId}
+                  onValueChange={(value) => setEditForm(prev => ({ ...prev, positionId: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر المنصب" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(positionsData || []).map((pos: any) => (
+                      <SelectItem key={pos.id} value={String(pos.id)}>
+                        {pos.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-            <div className="flex gap-3 pt-4">
+            <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4">
               <Button variant="outline" onClick={() => setViewMode("profile")}>إلغاء</Button>
               <Button disabled={updateMutation.isPending} onClick={handleSaveEdit}>
                 {updateMutation.isPending ? 'جاري الحفظ...' : 'حفظ التعديلات'}
@@ -441,7 +486,7 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
   // Render Add Document Form
   const renderAddDocumentForm = () => (
     <div className="space-y-6" dir="rtl">
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
         <Button variant="outline" onClick={() => setViewMode("profile")}>
           <ArrowRight className="h-4 w-4 ms-2" />
           العودة للملف
@@ -515,7 +560,7 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
   const renderProfileView = () => (
     <div className="space-y-6" dir="rtl">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <Link href="/hr/employees">
             <Button variant="ghost" size="icon" aria-label="العودة">
@@ -523,50 +568,50 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
             </Button>
           </Link>
           <div>
-            <h2 className="text-2xl font-bold tracking-tight">ملف الموظف</h2>
-            <p className="text-gray-500">رقم الموظف: {employee.employeeNumber || '-'}</p>
+            <h2 className="text-xl sm:text-2xl font-bold tracking-tight">ملف الموظف</h2>
+            <p className="text-gray-500 text-sm">رقم الموظف: {employee.employeeNumber || '-'}</p>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handlePrint}>
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+          <Button variant="outline" size="sm" onClick={handlePrint} className="flex-1 sm:flex-none">
             <Printer className="h-4 w-4 ms-2" />
-            طباعة
+            <span className="hidden sm:inline">طباعة</span>
           </Button>
-          <Button variant="outline" onClick={handleExport}>
+          <Button variant="outline" size="sm" onClick={handleExport} className="flex-1 sm:flex-none">
             <Download className="h-4 w-4 ms-2" />
-            تصدير PDF
+            <span className="hidden sm:inline">تصدير PDF</span>
           </Button>
-          <Button onClick={() => setViewMode("edit")}>
+          <Button size="sm" onClick={() => setViewMode("edit")} className="flex-1 sm:flex-none">
             <Edit className="h-4 w-4 ms-2" />
-            تعديل البيانات
+            تعديل
           </Button>
         </div>
       </div>
 
       {/* Employee Card */}
       <Card>
-        <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row gap-6">
-            <Avatar className="h-24 w-24">
+        <CardContent className="p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
+            <Avatar className="h-16 w-16 sm:h-24 sm:w-24 mx-auto sm:mx-0">
               <AvatarImage src={employee.avatar || undefined} />
-              <AvatarFallback className="text-2xl bg-primary/10 text-primary">
+              <AvatarFallback className="text-xl sm:text-2xl bg-primary/10 text-primary">
                 {employee.firstName ? employee.firstName.charAt(0) : 'E'}
                 {employee.lastName ? employee.lastName.charAt(0) : 'P'}
               </AvatarFallback>
             </Avatar>
-            <div className="flex-1">
-              <div className="flex flex-wrap items-center gap-3 mb-4">
-                <h3 className="text-2xl font-bold">{employee.firstName} {employee.lastName}</h3>
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mb-4">
+                <h3 className="text-xl sm:text-2xl font-bold">{employee.firstName} {employee.lastName}</h3>
                 {getStatusBadge(employee.status)}
               </div>
-              <div className="grid grid-cols-2 gap-x-10 gap-y-2 text-sm">
-                <p><span className="text-gray-500"><Shield className="h-4 w-4 inline-block me-1 align-middle text-gray-400" />الدور في النظام: </span><Badge className="bg-primary/10 text-primary">{getRoleArabic(employee.userRole)}</Badge></p>
-                <p><span className="text-gray-500"><Briefcase className="h-4 w-4 inline-block me-1 align-middle text-gray-400" />المنصب: </span><span className="font-medium">{employee.position || '-'}</span></p>
-                <p><span className="text-gray-500"><Building2 className="h-4 w-4 inline-block me-1 align-middle text-gray-400" />القسم: </span><span className="font-medium">{employee.department || '-'}</span></p>
-                <p><span className="text-gray-500"><MapPin className="h-4 w-4 inline-block me-1 align-middle text-gray-400" />الفرع: </span><span className="font-medium">{employee.branch || '-'}</span></p>
-                <p><span className="text-gray-500"><Mail className="h-4 w-4 inline-block me-1 align-middle text-gray-400" />البريد: </span><span className="font-medium" dir="ltr">{employee.email || '-'}</span></p>
-                <p><span className="text-gray-500"><Phone className="h-4 w-4 inline-block me-1 align-middle text-gray-400" />الجوال: </span><span className="font-medium" dir="ltr">{employee.phone || '-'}</span></p>
-                <p><span className="text-gray-500"><UserCheck className="h-4 w-4 inline-block me-1 align-middle text-gray-400" />المدير المباشر: </span><span className="font-medium">{employee.manager || '-'}</span></p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-2 text-sm">
+                <p className="flex items-center gap-1 flex-wrap"><span className="text-gray-500"><Shield className="h-4 w-4 inline-block me-1 align-middle text-gray-400" />الدور: </span><Badge className="bg-primary/10 text-primary">{getRoleArabic(employee.userRole)}</Badge></p>
+                <p className="truncate"><span className="text-gray-500"><Briefcase className="h-4 w-4 inline-block me-1 align-middle text-gray-400" />المنصب: </span><span className="font-medium">{employee.position || '-'}</span></p>
+                <p className="truncate"><span className="text-gray-500"><Building2 className="h-4 w-4 inline-block me-1 align-middle text-gray-400" />القسم: </span><span className="font-medium">{employee.department || '-'}</span></p>
+                <p className="truncate"><span className="text-gray-500"><MapPin className="h-4 w-4 inline-block me-1 align-middle text-gray-400" />الفرع: </span><span className="font-medium">{employee.branch || '-'}</span></p>
+                <p className="truncate"><span className="text-gray-500"><Mail className="h-4 w-4 inline-block me-1 align-middle text-gray-400" />البريد: </span><span className="font-medium" dir="ltr">{employee.email || '-'}</span></p>
+                <p className="truncate"><span className="text-gray-500"><Phone className="h-4 w-4 inline-block me-1 align-middle text-gray-400" />الجوال: </span><span className="font-medium" dir="ltr">{employee.phone || '-'}</span></p>
+                <p className="truncate"><span className="text-gray-500"><UserCheck className="h-4 w-4 inline-block me-1 align-middle text-gray-400" />المدير المباشر: </span><span className="font-medium">{employee.manager || '-'}</span></p>
               </div>
             </div>
           </div>
@@ -575,18 +620,18 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-6">
-          <TabsTrigger value="overview">نظرة عامة</TabsTrigger>
-          <TabsTrigger value="documents">الوثائق</TabsTrigger>
-          <TabsTrigger value="contracts">العقود</TabsTrigger>
-          <TabsTrigger value="leaves">الإجازات</TabsTrigger>
-          <TabsTrigger value="attendance">الحضور</TabsTrigger>
-          <TabsTrigger value="salary">الراتب</TabsTrigger>
+        <TabsList className="flex w-full overflow-x-auto">
+          <TabsTrigger value="overview" className="flex-shrink-0">نظرة عامة</TabsTrigger>
+          <TabsTrigger value="documents" className="flex-shrink-0">الوثائق</TabsTrigger>
+          <TabsTrigger value="contracts" className="flex-shrink-0">العقود</TabsTrigger>
+          <TabsTrigger value="leaves" className="flex-shrink-0">الإجازات</TabsTrigger>
+          <TabsTrigger value="attendance" className="flex-shrink-0">الحضور</TabsTrigger>
+          <TabsTrigger value="salary" className="flex-shrink-0">الراتب</TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-4">
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Personal Info */}
             <Card>
               <CardHeader>
@@ -679,7 +724,7 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
         {/* Documents Tab */}
         <TabsContent value="documents" className="space-y-4">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
               <CardTitle className="text-lg">الوثائق والمستندات</CardTitle>
               <Button size="sm" onClick={() => setViewMode("add-document")}>
                 <Plus className="h-4 w-4 ms-2" />
@@ -687,29 +732,33 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
               </Button>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {documents.map((doc) => (
-                  <div key={doc.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <FileText className="h-5 w-5 text-gray-400" />
-                      <div>
-                        <p className="font-medium">{doc.name}</p>
-                        {doc.expiryDate && (
-                          <p className="text-sm text-gray-500">
-                            ينتهي في: {formatDate(doc.expiryDate)}
-                          </p>
-                        )}
+              {documents.length === 0 ? (
+                <p className="text-center text-gray-500 py-8">لا توجد وثائق مسجلة لهذا الموظف</p>
+              ) : (
+                <div className="space-y-3">
+                  {documents.map((doc) => (
+                    <div key={doc.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border rounded-lg gap-2">
+                      <div className="flex items-center gap-3">
+                        <FileText className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                        <div>
+                          <p className="font-medium">{doc.name}</p>
+                          {doc.expiryDate && (
+                            <p className="text-sm text-gray-500">
+                              ينتهي في: {formatDate(doc.expiryDate)}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {getDocumentStatusBadge(doc.status)}
+                        <Button variant="ghost" size="icon" aria-label="تحميل">
+                          <Download className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      {getDocumentStatusBadge(doc.status)}
-                      <Button variant="ghost" size="icon" aria-label="تحميل">
-                        <Download className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -717,7 +766,7 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
         {/* Contracts Tab */}
         <TabsContent value="contracts" className="space-y-4">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
               <CardTitle className="text-lg">العقود</CardTitle>
               <Button size="sm">
                 <Plus className="h-4 w-4 ms-2" />
@@ -725,53 +774,58 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
               </Button>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {contracts.map((contract) => (
-                  <div key={contract.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <FileText className="h-5 w-5 text-gray-400" />
-                      <div>
-                        <p className="font-medium">{contract.type}</p>
-                        <p className="text-sm text-gray-500">
-                          من {formatDate(contract.startDate)}
-                          {contract.endDate && ` إلى ${formatDate(contract.endDate)}`}
-                        </p>
+              {contracts.length === 0 ? (
+                <p className="text-center text-gray-500 py-8">لا توجد عقود مسجلة لهذا الموظف</p>
+              ) : (
+                <div className="space-y-3">
+                  {contracts.map((contract) => (
+                    <div key={contract.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border rounded-lg gap-2">
+                      <div className="flex items-center gap-3">
+                        <FileText className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                        <div>
+                          <p className="font-medium">{contract.type}</p>
+                          <p className="text-sm text-gray-500">
+                            من {formatDate(contract.startDate)}
+                            {contract.endDate && ` إلى ${formatDate(contract.endDate)}`}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="font-medium">{contract.salary.toLocaleString()} ر.س</span>
+                        <Badge className={contract.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                          {contract.status === 'active' ? 'ساري' : 'منتهي'}
+                        </Badge>
+                        <Button variant="ghost" size="icon" aria-label="تحميل">
+                          <Download className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="font-medium">{contract.salary.toLocaleString()} ر.س</span>
-                      <Badge className={contract.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
-                        {contract.status === 'active' ? 'ساري' : 'منتهي'}
-                      </Badge>
-                      <Button variant="ghost" size="icon" aria-label="تحميل">
-                        <Download className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
 
         {/* Leaves Tab */}
         <TabsContent value="leaves" className="space-y-4">
-          <div className="grid md:grid-cols-4 gap-4">
-            {leaveBalances.map((balance) => (
-              <Card key={balance.type}>
-                <CardContent className="p-4">
-                  <p className="text-sm text-gray-500 mb-2">{balance.type}</p>
-                  <div className="flex items-end justify-between mb-2">
-                    <span className="text-2xl font-bold">{balance.remaining}</span>
-                    <span className="text-sm text-gray-500">من {balance.total?.toLocaleString()}</span>
-                  </div>
-                  <Progress value={(balance.remaining / balance.total) * 100} className="h-2" />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          {leaveBalances.length > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {leaveBalances.map((balance) => (
+                <Card key={balance.type}>
+                  <CardContent className="p-4">
+                    <p className="text-sm text-gray-500 mb-2">{balance.type}</p>
+                    <div className="flex items-end justify-between">
+                      <span className="text-2xl font-bold">{balance.used}</span>
+                      <span className="text-sm text-gray-500">يوم مستخدم</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
               <CardTitle className="text-lg">سجل الإجازات</CardTitle>
               <Button size="sm">
                 <Plus className="h-4 w-4 ms-2" />
@@ -783,7 +837,7 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
                 <p className="text-center text-gray-500 py-8">لا توجد إجازات مسجلة</p>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full">
+                  <table className="w-full min-w-[600px]">
                     <thead>
                       <tr className="border-b">
                         <th className="text-end py-3 px-4 font-medium">النوع</th>
@@ -825,10 +879,10 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
 
         {/* Attendance Tab */}
         <TabsContent value="attendance" className="space-y-4">
-          <div className="grid md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
             <Card>
               <CardContent className="p-4 text-center">
-                <p className="text-sm text-gray-500">أيام العمل</p>
+                <p className="text-sm text-gray-500">إجمالي السجلات</p>
                 <p className="text-2xl font-bold text-blue-600">{attendanceSummary.workDays}</p>
               </CardContent>
             </Card>
@@ -862,8 +916,11 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
               <CardTitle className="text-lg">سجل الحضور - {attendanceSummary.month}</CardTitle>
             </CardHeader>
             <CardContent>
+              {attendanceRecords.length === 0 ? (
+                <p className="text-center text-gray-500 py-8">لا توجد سجلات حضور</p>
+              ) : (
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full min-w-[600px]">
                   <thead>
                     <tr className="border-b">
                       <th className="text-end py-3 px-4 font-medium">التاريخ</th>
@@ -904,40 +961,31 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
                   </tbody>
                 </table>
               </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
 
         {/* Salary Tab */}
         <TabsContent value="salary" className="space-y-4">
-          <div className="grid md:grid-cols-4 gap-4">
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-sm text-gray-500">الراتب الأساسي</p>
-                <p className="text-2xl font-bold">{employee.basicSalary.toLocaleString()} ر.س</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-sm text-gray-500">بدل السكن</p>
-                <p className="text-2xl font-bold text-green-600">+{employee.housingAllowance.toLocaleString()} ر.س</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-sm text-gray-500">بدل النقل</p>
-                <p className="text-2xl font-bold text-green-600">+{employee.transportAllowance.toLocaleString()} ر.س</p>
-              </CardContent>
-            </Card>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Card className="bg-primary/5">
               <CardContent className="p-4">
-                <p className="text-sm text-gray-500">إجمالي الراتب</p>
-                <p className="text-2xl font-bold text-primary">{employee.totalSalary.toLocaleString()} ر.س</p>
+                <p className="text-sm text-gray-500">الراتب الأساسي</p>
+                <p className="text-2xl font-bold text-primary">
+                  {employee.basicSalary ? `${Number(employee.basicSalary).toLocaleString()} ر.س` : 'لم يتم تحديده'}
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-sm text-gray-500">عدد كشوف الرواتب</p>
+                <p className="text-2xl font-bold">{salaryRecords.length}</p>
               </CardContent>
             </Card>
           </div>
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
               <CardTitle className="text-lg">سجل الرواتب</CardTitle>
               <Button variant="outline" size="sm">
                 <Download className="h-4 w-4 ms-2" />
@@ -945,8 +993,11 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
               </Button>
             </CardHeader>
             <CardContent>
+              {salaryRecords.length === 0 ? (
+                <p className="text-center text-gray-500 py-8">لا توجد سجلات رواتب لهذا الموظف</p>
+              ) : (
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full min-w-[600px]">
                   <thead>
                     <tr className="border-b">
                       <th className="text-end py-3 px-4 font-medium">الشهر</th>
@@ -962,10 +1013,10 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
                     {salaryRecords.map((record) => (
                       <tr key={record.id} className="border-b hover:bg-gray-50">
                         <td className="py-3 px-4 font-medium">{record.month}</td>
-                        <td className="py-3 px-4">{record.basicSalary.toLocaleString()} ر.س</td>
-                        <td className="py-3 px-4 text-green-600">+{record.allowances.toLocaleString()} ر.س</td>
+                        <td className="py-3 px-4">{record.basicSalary?.toLocaleString() || 0} ر.س</td>
+                        <td className="py-3 px-4 text-green-600">+{record.allowances?.toLocaleString() || 0} ر.س</td>
                         <td className="py-3 px-4 text-red-600">{record.deductions > 0 ? `-${record.deductions.toLocaleString()}` : '0'} ر.س</td>
-                        <td className="py-3 px-4 font-bold">{record.netSalary.toLocaleString()} ر.س</td>
+                        <td className="py-3 px-4 font-bold">{record.netSalary?.toLocaleString() || 0} ر.س</td>
                         <td className="py-3 px-4">
                           <Badge className={record.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
                             {record.status === 'paid' ? 'مصروف' : 'قيد الانتظار'}
@@ -977,6 +1028,7 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
                   </tbody>
                 </table>
               </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

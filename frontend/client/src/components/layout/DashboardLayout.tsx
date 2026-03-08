@@ -139,6 +139,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     staleTime: 5 * 60 * 1000,
   });
 
+  const { data: adminCompanies } = useQuery<any[]>({
+    queryKey: ['admin', 'companies'],
+    queryFn: () => api.get('/admin/companies').then(r => Array.isArray(r.data) ? r.data : []).catch(() => []),
+    staleTime: 2 * 60 * 1000,
+  });
+
   // حساب عدد موظفي القسم
   const currentEmployee = allEmployees?.find((emp: any) =>
     emp.userId === user?.id || emp.user?.id === user?.id
@@ -798,6 +804,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       {branch.name}
                     </DropdownMenuItem>
                   ))}
+                  {adminCompanies && adminCompanies.length > 0 && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuLabel className="text-xs text-gray-400">الشركات</DropdownMenuLabel>
+                      {adminCompanies.map((comp: any) => (
+                        <DropdownMenuItem key={`comp-${comp.id}`} className="flex items-center gap-2">
+                          <Building2 className="h-4 w-4 ms-2 text-gray-400" />
+                          <span>{comp.nameAr || comp.name}</span>
+                          {comp.city && <span className="mr-auto text-xs text-gray-400">{comp.city}</span>}
+                        </DropdownMenuItem>
+                      ))}
+                    </>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             )}

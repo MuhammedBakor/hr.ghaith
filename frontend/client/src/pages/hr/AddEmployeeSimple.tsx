@@ -277,11 +277,15 @@ export default function AddEmployeeSimple() {
                   <SelectValue placeholder="اختر الفرع" />
                 </SelectTrigger>
                 <SelectContent>
-                  {branches.map((branch: any) => (
-                    <SelectItem key={branch.id} value={branch.id.toString()}>
-                      {(branch as any).nameAr || branch.name}
-                    </SelectItem>
-                  ))}
+                  {branches.length === 0 ? (
+                    <div className="p-2 text-sm text-gray-500 text-center">لا توجد فروع — أضف من إدارة النظام</div>
+                  ) : (
+                    branches.map((branch: any) => (
+                      <SelectItem key={branch.id} value={branch.id.toString()}>
+                        {(branch as any).nameAr || branch.name}{branch.city ? ` — ${branch.city}` : ''}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>

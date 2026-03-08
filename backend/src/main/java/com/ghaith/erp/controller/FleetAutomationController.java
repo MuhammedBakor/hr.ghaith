@@ -28,6 +28,9 @@ public class FleetAutomationController {
     public ResponseEntity<?> initialize(@RequestBody(required = false) Map<String, Object> body) {
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
+        response.put("created", 0);
+        response.put("existing", 0);
+        response.put("initialized", 0);
         return ResponseEntity.ok(response);
     }
 
@@ -42,6 +45,8 @@ public class FleetAutomationController {
     public ResponseEntity<?> runNow(@RequestBody(required = false) Map<String, Object> body) {
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
+        response.put("message", "تم التنفيذ بنجاح");
+        response.put("affected", 0);
         return ResponseEntity.ok(response);
     }
 }

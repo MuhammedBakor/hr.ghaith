@@ -98,6 +98,34 @@ public class EmployeeController {
         }
     }
 
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<?> updateEmployeeStatus(@PathVariable Long id,
+            @RequestBody java.util.Map<String, String> payload) {
+        try {
+            String status = payload.get("status");
+            System.out.println("[STATUS] Received PATCH /employees/" + id + "/status with status=" + status);
+            if (status == null) {
+                return ResponseEntity.badRequest().body(java.util.Map.of("error", "Status is required"));
+            }
+            Employee updated = employeeService.changeEmployeeStatus(id, status);
+            System.out.println("[STATUS] changeEmployeeStatus returned. Employee id=" + updated.getId() + ", status=" + updated.getStatus());
+            java.util.Map<String, Object> response = new java.util.HashMap<>();
+            response.put("id", updated.getId());
+            response.put("status", updated.getStatus().name());
+            response.put("firstName", updated.getFirstName());
+            response.put("lastName", updated.getLastName());
+            System.out.println("[STATUS] Returning response: " + response);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            System.out.println("[STATUS] IllegalArgumentException: " + e.getMessage());
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", "Invalid status value"));
+        } catch (Exception e) {
+            System.out.println("[STATUS] Exception: " + e.getClass().getName() + " - " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
+        }
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteEmployee(@PathVariable Long id) {
         employeeService.deleteEmployee(id);

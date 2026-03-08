@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { GitBranch, Plus, Search, Play, Pause, Settings, ArrowUpDown, Users, Clock, Loader2, RefreshCw, Eye } from "lucide-react";
+import { GitBranch, Plus, Search, Play, Pause, Settings, ArrowUpDown, Users, Clock, Loader2, RefreshCw, Eye, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface WorkflowTemplate {
@@ -73,6 +73,46 @@ export default function Workflows() {
     },
   });
 
+  // تعديل سير عمل
+  const updateMutation = useMutation({
+    mutationFn: (data: any) => api.put(`/workflow/templates/${data.id}`, data).then(r => r.data),
+    onSuccess: () => {
+      toast.success('تم حفظ التغييرات بنجاح');
+      setShowNewDialog(false);
+      setSelectedWorkflow(null);
+      setNewWorkflow({ name: '', description: '', triggerEvent: '', isActive: true });
+      refetch();
+    },
+    onError: (error: any) => {
+      toast.error(`فشل في حفظ التغييرات: ${error.message}`);
+    },
+  });
+
+  // تبديل حالة سير العمل (تشغيل / إيقاف)
+  const toggleMutation = useMutation({
+    mutationFn: (data: { id: number; isActive: boolean }) =>
+      api.put(`/workflow/templates/${data.id}`, data).then(r => r.data),
+    onSuccess: (_: any, variables: any) => {
+      toast.success(variables.isActive ? 'تم تشغيل سير العمل' : 'تم إيقاف سير العمل');
+      refetch();
+    },
+    onError: (error: any) => {
+      toast.error(`فشل في تحديث الحالة: ${error.message}`);
+    },
+  });
+
+  // حذف سير عمل
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => api.delete(`/workflow/templates/${id}`).then(r => r.data),
+    onSuccess: () => {
+      toast.success('تم حذف سير العمل بنجاح');
+      refetch();
+    },
+    onError: (error: any) => {
+      toast.error(`فشل في حذف سير العمل: ${error.message}`);
+    },
+  });
+
   // حساب الإحصائيات
   const stats = useMemo(() => {
     const workflows = workflowsData || [];
@@ -120,7 +160,11 @@ export default function Workflows() {
       toast.error('يرجى إدخال اسم سير العمل');
       return;
     }
-    createMutation.mutate(newWorkflow);
+    if (selectedWorkflow) {
+      updateMutation.mutate({ id: selectedWorkflow.id, ...newWorkflow });
+    } else {
+      createMutation.mutate(newWorkflow);
+    }
   };
 
   const handleViewWorkflow = (workflow: WorkflowTemplate) => {
@@ -279,12 +323,35 @@ export default function Workflows() {
                   {filteredData.map((item: any) => (
                     <tr key={item.id} className="border-b hover:bg-muted/50">
                       <td className="p-3 font-medium">{item.name}</td>
-                      <td className="p-3 text-muted-foreground">{item.description || '-'}</td>
+                      <td className="p-3 text-muted-foreground max-w-[200px] truncate">{item.description || '-'}</td>
                       <td className="p-3">{getTriggerLabel(item.triggerEvent)}</td>
                       <td className="p-3">{getStatusBadge(item.isActive)}</td>
                       <td className="p-3">
-                        <div className="flex gap-2">
-                          <Button variant="ghost" size="sm" onClick={() => handleViewWorkflow(item)}>
+                        <div className="flex items-center gap-1">
+                          {item.isActive ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-red-600 border-red-200 hover:text-red-700 hover:bg-red-50"
+                              disabled={toggleMutation.isPending}
+                              onClick={() => toggleMutation.mutate({ id: item.id, isActive: false })}
+                            >
+                              <Pause className="h-3.5 w-3.5 ms-1" />
+                              إيقاف
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-green-600 border-green-200 hover:text-green-700 hover:bg-green-50"
+                              disabled={toggleMutation.isPending}
+                              onClick={() => toggleMutation.mutate({ id: item.id, isActive: true })}
+                            >
+                              <Play className="h-3.5 w-3.5 ms-1" />
+                              تشغيل
+                            </Button>
+                          )}
+                          <Button variant="ghost" size="sm" onClick={() => handleViewWorkflow(item)} title="عرض">
                             <Eye className="h-4 w-4" />
                           </Button>
                           <Button variant="ghost" size="sm" onClick={() => {
@@ -296,18 +363,23 @@ export default function Workflows() {
                               isActive: item.isActive,
                             });
                             setShowNewDialog(true);
-                          }}>
+                          }} title="تعديل">
                             <Settings className="h-4 w-4" />
                           </Button>
-                          {item.isActive ? (
-                            <Button variant="ghost" size="sm" onClick={() => toast.success(`تم إيقاف ${item.name}`)}>
-                              <Pause className="h-4 w-4" />
-                            </Button>
-                          ) : (
-                            <Button variant="ghost" size="sm" onClick={() => toast.success(`تم تشغيل ${item.name}`)}>
-                              <Play className="h-4 w-4" />
-                            </Button>
-                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            disabled={deleteMutation.isPending}
+                            onClick={() => {
+                              if (window.confirm(`هل أنت متأكد من حذف "${item.name}"؟`)) {
+                                deleteMutation.mutate(item.id);
+                              }
+                            }}
+                            title="حذف"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -377,8 +449,8 @@ export default function Workflows() {
             }}>
               إلغاء
             </Button>
-            <Button onClick={handleCreateWorkflow} disabled={createMutation.isPending}>
-              {createMutation.isPending && <Loader2 className="ms-2 h-4 w-4 animate-spin" />}
+            <Button onClick={handleCreateWorkflow} disabled={createMutation.isPending || updateMutation.isPending}>
+              {(createMutation.isPending || updateMutation.isPending) && <Loader2 className="ms-2 h-4 w-4 animate-spin" />}
               {selectedWorkflow ? 'حفظ التغييرات' : 'إنشاء'}
             </Button>
           </div>
