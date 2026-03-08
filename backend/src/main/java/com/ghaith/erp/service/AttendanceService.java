@@ -26,7 +26,7 @@ public class AttendanceService {
     }
 
     public List<AttendanceRecord> getAttendanceByEmployee(Long employeeId) {
-        return attendanceRepository.findByEmployeeId(employeeId);
+        return attendanceRepository.findByEmployee_Id(employeeId);
     }
 
     public List<AttendanceRecord> getAttendanceByDate(java.time.LocalDate date) {
@@ -39,8 +39,22 @@ public class AttendanceService {
         return attendanceRepository.findByDateBetween(start, end);
     }
 
+    public List<AttendanceRecord> getAttendanceByDepartment(Long departmentId) {
+        return attendanceRepository.findByEmployeeDepartmentId(departmentId);
+    }
+
+    public List<AttendanceRecord> getAttendanceByDepartmentAndDate(Long departmentId, java.time.LocalDate date) {
+        LocalDateTime startOfDay = date.atStartOfDay();
+        LocalDateTime endOfDay = date.atTime(23, 59, 59, 999999999);
+        return attendanceRepository.findByEmployeeDepartmentIdAndDateBetween(departmentId, startOfDay, endOfDay);
+    }
+
     public AttendanceRecord checkIn(Map<String, Object> payload) {
-        Long employeeId = ((Number) payload.get("employeeId")).longValue();
+        Object empIdObj = payload.get("employeeId");
+        if (empIdObj == null) {
+            throw new RuntimeException("لم يتم تحديد الموظف. تأكد من وجود سجل موظف مرتبط بحسابك.");
+        }
+        Long employeeId = ((Number) empIdObj).longValue();
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new RuntimeException("الموظف غير موجود"));
 
@@ -77,7 +91,11 @@ public class AttendanceService {
     }
 
     public AttendanceRecord createManual(Map<String, Object> payload) {
-        Long employeeId = ((Number) payload.get("employeeId")).longValue();
+        Object empIdObj = payload.get("employeeId");
+        if (empIdObj == null) {
+            throw new RuntimeException("لم يتم تحديد الموظف");
+        }
+        Long employeeId = ((Number) empIdObj).longValue();
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new RuntimeException("الموظف غير موجود"));
 

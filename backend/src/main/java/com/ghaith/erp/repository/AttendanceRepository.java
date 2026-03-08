@@ -8,9 +8,18 @@ import java.util.List;
 
 @Repository
 public interface AttendanceRepository extends JpaRepository<AttendanceRecord, Long> {
-    List<AttendanceRecord> findByEmployeeId(Long employeeId);
+    List<AttendanceRecord> findByEmployee_Id(Long employeeId);
 
     List<AttendanceRecord> findByDateBetween(LocalDateTime start, LocalDateTime end);
 
-    List<AttendanceRecord> findByEmployeeIdAndDateBetween(Long employeeId, LocalDateTime start, LocalDateTime end);
+    List<AttendanceRecord> findByEmployee_IdAndDateBetween(Long employeeId, LocalDateTime start, LocalDateTime end);
+
+    @org.springframework.data.jpa.repository.Query("SELECT a FROM AttendanceRecord a WHERE a.employee.department.id = :departmentId")
+    List<AttendanceRecord> findByEmployeeDepartmentId(@org.springframework.data.repository.query.Param("departmentId") Long departmentId);
+
+    @org.springframework.data.jpa.repository.Query("SELECT a FROM AttendanceRecord a WHERE a.employee.department.id = :departmentId AND a.date BETWEEN :start AND :end")
+    List<AttendanceRecord> findByEmployeeDepartmentIdAndDateBetween(
+            @org.springframework.data.repository.query.Param("departmentId") Long departmentId,
+            @org.springframework.data.repository.query.Param("start") LocalDateTime start,
+            @org.springframework.data.repository.query.Param("end") LocalDateTime end);
 }

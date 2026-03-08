@@ -166,6 +166,53 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [loading, isAuthenticated, setLocation]);
 
+  // حماية الوحدات - منع الوصول للصفحات غير المسموح بها
+  useEffect(() => {
+    if (loading || !isAuthenticated) return;
+
+    // تحديد الوحدة من المسار الحالي
+    const pathToModule: Record<string, ModuleType> = {
+      '/hr': 'hr',
+      '/finance': 'finance',
+      '/fleet': 'fleet',
+      '/property': 'property',
+      '/governance': 'governance',
+      '/bi': 'bi',
+      '/admin': 'admin',
+      '/support': 'support',
+      '/legal': 'legal',
+      '/documents': 'documents',
+      '/reports': 'reports',
+      '/settings': 'settings',
+      '/operations': 'projects',
+      '/projects': 'projects',
+      '/requests': 'requests',
+      '/comms': 'comms',
+      '/correspondence': 'comms',
+      '/store': 'store',
+      '/marketing': 'marketing',
+      '/workflow': 'workflow',
+      '/platform': 'platform',
+      '/public-site': 'public_site',
+      '/integrations': 'integrations',
+      '/logs': 'admin',
+    };
+
+    // الصفحات المسموح بها للجميع
+    const publicPaths = ['/', '/profile', '/inbox', '/departments'];
+    if (publicPaths.includes(location)) return;
+
+    // البحث عن الوحدة المطابقة
+    for (const [prefix, mod] of Object.entries(pathToModule)) {
+      if (location.startsWith(prefix)) {
+        if (!canAccessModule(mod)) {
+          setLocation('/');
+        }
+        return;
+      }
+    }
+  }, [loading, isAuthenticated, location, canAccessModule, setLocation]);
+
   // إغلاق الشريط الجانبي عند التنقل على الموبايل
   useEffect(() => {
     if (window.innerWidth < 1024) {

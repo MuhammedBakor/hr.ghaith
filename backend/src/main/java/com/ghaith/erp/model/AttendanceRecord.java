@@ -12,9 +12,14 @@ import java.time.LocalDateTime;
 public class AttendanceRecord extends BaseEntity {
 
     @com.fasterxml.jackson.annotation.JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "employee_id", referencedColumnName = "id", nullable = false)
     private Employee employee;
+
+    // Expose employeeId directly for frontend convenience
+    public Long getEmployeeId() {
+        return employee != null ? employee.getId() : null;
+    }
 
     @Column(nullable = false)
     private LocalDateTime date;

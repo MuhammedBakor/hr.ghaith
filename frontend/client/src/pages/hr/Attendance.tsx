@@ -27,7 +27,8 @@ import {
   useManualAttendance,
   useEmployeeByUserId,
   useSubordinates,
-  useRequestEarlyLeave
+  useRequestEarlyLeave,
+  useDepartments,
 } from '@/services/hrService';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -45,6 +46,8 @@ interface AttendanceRecord {
   checkOutLatitude?: number | null;
   checkOutLongitude?: number | null;
   approvalStatus?: string;
+  departmentId?: number | null;
+  departmentName?: string;
 }
 
 const getStatusBadge = (status: string) => {
@@ -85,6 +88,7 @@ export default function Attendance() {
   const [showEarlyLeaveDialog, setShowEarlyLeaveDialog] = useState(false);
   const [earlyLeaveReason, setEarlyLeaveReason] = useState('');
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
 
   // تحديث الوقت كل ثانية
   useEffect(() => {
@@ -96,11 +100,20 @@ export default function Attendance() {
   const { data: currentEmployee } = useEmployeeByUserId(user?.id || 0);
 
   // جلب الموظفين التابعين للمدير (إذا كان مديراً)
-  const canSeeSubordinates = selectedRole === 'department_manager' || selectedRole === 'hr_manager' || selectedRole === 'admin' || selectedRole === 'general_manager';
+  const isTopRole = selectedRole === 'admin' || selectedRole === 'general_manager' || selectedRole === 'hr_manager';
+  const canSeeSubordinates = selectedRole === 'department_manager' || selectedRole === 'supervisor' || isTopRole;
   const { data: subordinates } = useSubordinates(currentEmployee?.id || 0);
 
   // جلب الموظفين مع فلترة الفرع
   const { data: employeesData } = useEmployees();
+
+  // جلب الأقسام للفلترة
+  const { data: departmentsData } = useDepartments();
+
+  // تحديد قسم الموظف الحالي
+  const currentEmployeeDeptId = currentEmployee
+    ? (typeof currentEmployee.department === 'object' ? currentEmployee.department?.id : currentEmployee.departmentId)
+    : null;
 
   // قائمة الموظفين المتاحين للتسجيل اليدوي
   const manualEntryEmployees = useMemo(() => {
@@ -117,10 +130,11 @@ export default function Attendance() {
   const todayAttendance = useMemo(() => {
     if (!currentEmployee || !attendanceData) return null;
     const today = new Date().toISOString().split('T')[0];
-    return (attendanceData as any[]).find((att: any) =>
-      att.employee?.id === currentEmployee.id &&
-      new Date(att.date).toISOString().split('T')[0] === today
-    );
+    return (attendanceData as any[]).find((att: any) => {
+      const attEmpId = att.employeeId || att.employee?.id;
+      return attEmpId === currentEmployee.id &&
+        new Date(att.date).toISOString().split('T')[0] === today;
+    });
   }, [currentEmployee, attendanceData]);
 
   // Mutations
@@ -154,8 +168,13 @@ export default function Attendance() {
         lng: position.coords.longitude
       });
 
+      if (!currentEmployee?.id) {
+        toast.error('لا يوجد سجل موظف مرتبط بحسابك. يرجى التواصل مع قسم الموارد البشرية.');
+        setIsGettingLocation(false);
+        return;
+      }
       checkInWithLocationMutation.mutate({
-        employeeId: currentEmployee?.id,
+        employeeId: currentEmployee.id,
         latitude: position.coords.latitude,
         longitude: position.coords.longitude,
       }, {
@@ -293,13 +312,17 @@ export default function Attendance() {
     });
   };
 
-  // تحويل البيانات من API إلى الشكل المطلوب
-  const records: AttendanceRecord[] = (attendanceData || []).map((att: any) => {
-    const employee = (employeesData as any[])?.find((e: any) => e.id === att.employeeId);
+  // تحويل البيانات من API إلى الشكل المطلوب مع فلترة حسب الدور
+  const allRecords: AttendanceRecord[] = useMemo(() => (attendanceData || []).map((att: any) => {
+    const attEmployeeId = att.employeeId || att.employee?.id;
+    const employee = (employeesData as any[])?.find((e: any) => e.id === attEmployeeId);
+    const empObj = employee || att.employee;
+    const empDeptId = empObj ? (typeof empObj.department === 'object' ? empObj.department?.id : empObj.departmentId) : null;
+    const empDeptName = empObj ? (typeof empObj.department === 'object' ? (empObj.department?.nameAr || empObj.department?.name) : '') : '';
     return {
       id: att.id,
-      employeeId: att.employeeId,
-      employeeName: employee ? `${employee.firstName} ${employee.lastName}` : (att.employee ? `${att.employee.firstName} ${att.employee.lastName}` : `موظف #${att.employeeId}`),
+      employeeId: attEmployeeId,
+      employeeName: employee ? `${employee.firstName} ${employee.lastName}` : (att.employee ? `${att.employee.firstName} ${att.employee.lastName}` : `موظف #${attEmployeeId}`),
       date: att.date ? new Date(att.date).toISOString().split('T')[0] : selectedDate,
       checkIn: att.checkIn ? new Date(att.checkIn).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }) : null,
       checkOut: att.checkOut ? new Date(att.checkOut).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }) : null,
@@ -310,8 +333,36 @@ export default function Attendance() {
       checkOutLatitude: att.checkOutLatitude,
       checkOutLongitude: att.checkOutLongitude,
       approvalStatus: att.approvalStatus,
+      departmentId: empDeptId,
+      departmentName: empDeptName,
     };
-  });
+  }), [attendanceData, employeesData, selectedDate]);
+
+  // فلترة السجلات حسب الدور
+  const roleFilteredRecords = useMemo(() => {
+    if (isTopRole) {
+      // مدير النظام، المدير العام، مدير الموارد البشرية: يرون الجميع
+      return allRecords;
+    }
+    if (selectedRole === 'department_manager') {
+      // مدير القسم: يرى فقط موظفي قسمه
+      if (!currentEmployeeDeptId) return allRecords.filter(r => r.employeeId === currentEmployee?.id);
+      return allRecords.filter(r => r.departmentId === currentEmployeeDeptId);
+    }
+    if (selectedRole === 'supervisor') {
+      // المشرف: يرى فقط التابعين له + نفسه
+      const subordinateIds = (subordinates || []).map((s: any) => s.id);
+      return allRecords.filter(r => r.employeeId === currentEmployee?.id || subordinateIds.includes(r.employeeId));
+    }
+    // موظف عادي أو مندوب: يرى فقط سجله
+    return allRecords.filter(r => r.employeeId === currentEmployee?.id);
+  }, [allRecords, selectedRole, isTopRole, currentEmployee, currentEmployeeDeptId, subordinates]);
+
+  // فلترة بالقسم المختار (للأدوار العليا فقط)
+  const records = useMemo(() => {
+    if (selectedDepartment === 'all') return roleFilteredRecords;
+    return roleFilteredRecords.filter(r => String(r.departmentId) === selectedDepartment);
+  }, [roleFilteredRecords, selectedDepartment]);
 
   // حساب الإحصائيات
   const stats = {
@@ -326,6 +377,11 @@ export default function Attendance() {
       accessorKey: 'employeeName',
       header: 'الموظف',
     },
+    ...(canSeeSubordinates ? [{
+      accessorKey: 'departmentName' as keyof AttendanceRecord,
+      header: 'القسم',
+      cell: ({ row }: any) => row.original.departmentName || '-',
+    }] : []),
     {
       accessorKey: 'date',
       header: 'التاريخ',
@@ -466,9 +522,33 @@ export default function Attendance() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">الحضور والانصراف</h2>
-          <p className="text-gray-500">متابعة حضور وانصراف الموظفين</p>
+          <p className="text-gray-500">
+            {isTopRole
+              ? 'متابعة حضور وانصراف جميع الموظفين'
+              : selectedRole === 'department_manager'
+                ? 'متابعة حضور وانصراف موظفي القسم'
+                : selectedRole === 'supervisor'
+                  ? 'متابعة حضور وانصراف الموظفين التابعين لك'
+                  : 'سجل الحضور والانصراف الخاص بك'}
+          </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          {/* فلترة بالقسم - تظهر للأدوار العليا */}
+          {isTopRole && (
+            <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="جميع الأقسام" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">جميع الأقسام</SelectItem>
+                {(departmentsData || []).map((dept: any) => (
+                  <SelectItem key={dept.id} value={String(dept.id)}>
+                    {dept.nameAr || dept.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <Input
             type="date"
             value={selectedDate}

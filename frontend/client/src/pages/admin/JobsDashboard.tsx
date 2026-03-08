@@ -182,7 +182,18 @@ export default function JobsDashboard() {
 
   const formatDate = (date: Date | string | null) => {
     if (!date) return "-";
-    return formatDateTime(date);
+    try {
+      const d = new Date(date);
+      return d.toLocaleDateString("ar-SA", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return "-";
+    }
   };
 
   const handleViewDetails = (jobId: string) => {
@@ -375,7 +386,7 @@ export default function JobsDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">معلق</p>
-                <p className="text-2xl font-bold text-yellow-600">{statsData?.stats.pending || 0}</p>
+                <p className="text-2xl font-bold text-yellow-600">{statsData?.stats?.pending || 0}</p>
               </div>
               <Clock className="h-8 w-8 text-yellow-600 opacity-50" />
             </div>
@@ -386,7 +397,7 @@ export default function JobsDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">قيد التنفيذ</p>
-                <p className="text-2xl font-bold text-blue-600">{statsData?.stats.processing || 0}</p>
+                <p className="text-2xl font-bold text-blue-600">{statsData?.stats?.processing || 0}</p>
               </div>
               <Activity className="h-8 w-8 text-blue-600 opacity-50" />
             </div>
@@ -397,7 +408,7 @@ export default function JobsDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">مكتمل</p>
-                <p className="text-2xl font-bold text-green-600">{statsData?.stats.completed || 0}</p>
+                <p className="text-2xl font-bold text-green-600">{statsData?.stats?.completed || 0}</p>
               </div>
               <CheckCircle2 className="h-8 w-8 text-green-600 opacity-50" />
             </div>
@@ -408,7 +419,7 @@ export default function JobsDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">فاشل</p>
-                <p className="text-2xl font-bold text-red-600">{statsData?.stats.failed || 0}</p>
+                <p className="text-2xl font-bold text-red-600">{statsData?.stats?.failed || 0}</p>
               </div>
               <AlertCircle className="h-8 w-8 text-red-600 opacity-50" />
             </div>
@@ -419,7 +430,7 @@ export default function JobsDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">ملغي</p>
-                <p className="text-2xl font-bold text-gray-600">{statsData?.stats.cancelled || 0}</p>
+                <p className="text-2xl font-bold text-gray-600">{statsData?.stats?.cancelled || 0}</p>
               </div>
               <XCircle className="h-8 w-8 text-gray-600 opacity-50" />
             </div>
@@ -479,7 +490,7 @@ export default function JobsDashboard() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {jobsData?.jobs.map((job: { id: string; type: string; status: string; attempts: number; maxAttempts: number; createdAt: Date | string | null; scheduledAt: Date | string | null }) => (
+                {jobsData?.jobs?.map((job: { id: string; type: string; status: string; attempts: number; maxAttempts: number; createdAt: Date | string | null; scheduledAt: Date | string | null }) => (
                   <TableRow key={job.id}>
                     <TableCell>
                       <span className="font-medium">
