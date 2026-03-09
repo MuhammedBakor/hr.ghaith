@@ -496,7 +496,6 @@ export default function IncomingMail() {
             )}
           </CardContent>
         </Card>
-      </div>
 
       {/* تفاصيل البريد الوارد */}
       {detailItem && (
@@ -550,5 +549,6 @@ export default function IncomingMail() {
           </div>
         </LetterPrintWrapper>
       )}
+      </div>
   );
 }
