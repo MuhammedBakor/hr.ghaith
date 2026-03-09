@@ -117,3 +117,5 @@ uploads/
 *.sql.bak
 *.dump
 ghaith_backups/
+backend/target/
+backend/src/main/resources/application.yml
