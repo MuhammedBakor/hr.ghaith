@@ -63,9 +63,11 @@ const Login = lazy(() => import("@/pages/Login"));
 const Register = lazy(() => import("@/pages/Register"));
 const SecurityDashboard = lazy(() => import("@/pages/admin/SecurityDashboard"));
 const Activate = lazy(() => import("@/pages/Activate"));
+const CompleteProfile = lazy(() => import("@/pages/hr/CompleteProfile"));
 const Home = lazy(() => import("@/pages/Home"));
 const EmployeeList = lazy(() => import("@/pages/hr/EmployeeList"));
 const Attendance = lazy(() => import("@/pages/hr/Attendance"));
+const AttendanceMonitoring = lazy(() => import("@/pages/hr/AttendanceMonitoring"));
 const Leaves = lazy(() => import("@/pages/hr/Leaves"));
 const Payroll = lazy(() => import("@/pages/hr/Payroll"));
 const SalaryComponents = lazy(() => import("@/pages/hr/SalaryComponents"));
@@ -313,6 +315,7 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
       <Route path="/activate" component={Activate} />
+      <Route path="/complete-profile" component={CompleteProfile} />
       <Route path="/setup" component={SetupWizard} />
 
       {/* Protected Routes */}
@@ -334,7 +337,7 @@ function Router() {
 
       {/* HR Module Routes */}
       <Route path="/hr">
-        <RoleProtectedRoute module="hr">
+        <RoleProtectedRoute module="hr" hrSubPage="employees">
           <DashboardLayout>
             <EmployeeList />
           </DashboardLayout>
@@ -350,33 +353,51 @@ function Router() {
       </Route>
 
       <Route path="/hr/attendance-reports">
-        <DashboardLayout>
-          <AttendanceReports />
-        </DashboardLayout>
+        <RoleProtectedRoute module="hr" hrSubPage="reports">
+          <DashboardLayout>
+            <AttendanceReports />
+          </DashboardLayout>
+        </RoleProtectedRoute>
+      </Route>
+
+      <Route path="/hr/attendance-monitoring">
+        <RoleProtectedRoute module="hr" hrSubPage="attendance-monitoring">
+          <DashboardLayout>
+            <AttendanceMonitoring />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/hr/field-tracking">
-        <DashboardLayout>
-          <FieldTracking />
-        </DashboardLayout>
+        <RoleProtectedRoute module="hr" hrSubPage="tracking">
+          <DashboardLayout>
+            <FieldTracking />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/hr/qr-scanner">
-        <DashboardLayout>
-          <QRScanner />
-        </DashboardLayout>
+        <RoleProtectedRoute module="hr" hrSubPage="qr">
+          <DashboardLayout>
+            <QRScanner />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/hr/email-reports">
-        <DashboardLayout>
-          <AttendanceEmailReports />
-        </DashboardLayout>
+        <RoleProtectedRoute module="hr" hrSubPage="reports">
+          <DashboardLayout>
+            <AttendanceEmailReports />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/hr/shifts">
-        <DashboardLayout>
-          <ShiftsManagement />
-        </DashboardLayout>
+        <RoleProtectedRoute module="hr" hrSubPage="shifts">
+          <DashboardLayout>
+            <ShiftsManagement />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/hr/leaves">
@@ -396,64 +417,84 @@ function Router() {
       </Route>
 
       <Route path="/hr/salary-components">
-        <DashboardLayout>
-          <SalaryComponents />
-        </DashboardLayout>
+        <RoleProtectedRoute module="hr" hrSubPage="salary">
+          <DashboardLayout>
+            <SalaryComponents />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/hr/approval-chains">
-        <DashboardLayout>
-          <ApprovalChains />
-        </DashboardLayout>
+        <RoleProtectedRoute module="hr" hrSubPage="approvals">
+          <DashboardLayout>
+            <ApprovalChains />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/hr/performance">
-        <DashboardLayout>
-          <Performance />
-        </DashboardLayout>
+        <RoleProtectedRoute module="hr" hrSubPage="performance">
+          <DashboardLayout>
+            <Performance />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/hr/training">
-        <DashboardLayout>
-          <Training />
-        </DashboardLayout>
+        <RoleProtectedRoute module="hr" hrSubPage="training">
+          <DashboardLayout>
+            <Training />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/hr/organization">
-        <DashboardLayout>
-          <Organization />
-        </DashboardLayout>
+        <RoleProtectedRoute module="hr" hrSubPage="organization">
+          <DashboardLayout>
+            <Organization />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/hr/recruitment">
-        <DashboardLayout>
-          <ApplicationList />
-        </DashboardLayout>
+        <RoleProtectedRoute module="hr" hrSubPage="recruitment">
+          <DashboardLayout>
+            <ApplicationList />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/hr/employees">
-        <DashboardLayout>
-          <EmployeeList />
-        </DashboardLayout>
+        <RoleProtectedRoute module="hr" hrSubPage="employees-list">
+          <DashboardLayout>
+            <EmployeeList />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/hr/employees/add">
-        <DashboardLayout>
-          <AddEmployeeSimple />
-        </DashboardLayout>
+        <RoleProtectedRoute module="hr" hrSubPage="employees">
+          <DashboardLayout>
+            <AddEmployeeSimple />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/hr/employees/add-full">
-        <DashboardLayout>
-          <AddEmployee />
-        </DashboardLayout>
+        <RoleProtectedRoute module="hr" hrSubPage="employees">
+          <DashboardLayout>
+            <AddEmployee />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/hr/employees/:id">
         {(params) => (
-          <DashboardLayout>
-            <EmployeeProfile id={params.id} />
-          </DashboardLayout>
+          <RoleProtectedRoute module="hr" hrSubPage="employees">
+            <DashboardLayout>
+              <EmployeeProfile id={params.id} />
+            </DashboardLayout>
+          </RoleProtectedRoute>
         )}
       </Route>
 
@@ -462,38 +503,50 @@ function Router() {
       </Route>
 
       <Route path="/hr/employee-docs">
-        <DashboardLayout>
-          <EmployeeDocs />
-        </DashboardLayout>
+        <RoleProtectedRoute module="hr" hrSubPage="employees">
+          <DashboardLayout>
+            <EmployeeDocs />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/hr/onboarding-review">
-        <DashboardLayout>
-          <OnboardingReview />
-        </DashboardLayout>
+        <RoleProtectedRoute module="hr" hrSubPage="onboarding">
+          <DashboardLayout>
+            <OnboardingReview />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
-      <Route path="/hr/leave-management" /* MERGED: supervisor tab in /hr/leaves */>
-        <DashboardLayout>
-          <LeaveManagement />
-        </DashboardLayout>
+      <Route path="/hr/leave-management">
+        <RoleProtectedRoute module="hr" hrSubPage="leaves">
+          <DashboardLayout>
+            <LeaveManagement />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
-      <Route path="/hr/performance-advanced" /* MERGED: tab in /hr/performance?tab=advanced */>
-        <DashboardLayout>
-          <PerformanceAdvanced />
-        </DashboardLayout>
+      <Route path="/hr/performance-advanced">
+        <RoleProtectedRoute module="hr" hrSubPage="performance">
+          <DashboardLayout>
+            <PerformanceAdvanced />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/hr/training-advanced">
-        <DashboardLayout>
-          <TrainingAdvanced />
-        </DashboardLayout>
+        <RoleProtectedRoute module="hr" hrSubPage="training">
+          <DashboardLayout>
+            <TrainingAdvanced />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/hr/automation">
-        <DashboardLayout>
-          <HRAutomation />
-        </DashboardLayout>
+        <RoleProtectedRoute module="hr" hrSubPage="automation">
+          <DashboardLayout>
+            <HRAutomation />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/fleet/automation">
         <DashboardLayout>
@@ -529,40 +582,52 @@ function Router() {
         </DashboardLayout>
       </Route>
 
-      <Route path="/hr/recruitment-advanced" /* MERGED: tab في /hr/recruitment?tab=advanced */>
-        <DashboardLayout>
-          <RecruitmentAdvanced />
-        </DashboardLayout>
+      <Route path="/hr/recruitment-advanced">
+        <RoleProtectedRoute module="hr" hrSubPage="recruitment">
+          <DashboardLayout>
+            <RecruitmentAdvanced />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
-      <Route path="/hr/organization-structure" /* MERGED: chart tab in /hr/organization */>
-        <DashboardLayout>
-          <OrganizationStructure />
-        </DashboardLayout>
+      <Route path="/hr/organization-structure">
+        <RoleProtectedRoute module="hr" hrSubPage="organization">
+          <DashboardLayout>
+            <OrganizationStructure />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/hr/department-employees">
-        <DashboardLayout>
-          <DepartmentEmployees />
-        </DashboardLayout>
+        <RoleProtectedRoute module="hr" hrSubPage="employees">
+          <DashboardLayout>
+            <DepartmentEmployees />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/hr/violations">
-        <DashboardLayout>
-          <ViolationsManagement />
-        </DashboardLayout>
+        <RoleProtectedRoute module="hr" hrSubPage="violations">
+          <DashboardLayout>
+            <ViolationsManagement />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/hr/my-violations">
-        <DashboardLayout>
-          <MyViolations />
-        </DashboardLayout>
+        <RoleProtectedRoute module="hr" hrSubPage="my_violations">
+          <DashboardLayout>
+            <MyViolations />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/hr/penalty-escalation">
-        <DashboardLayout>
-          <PenaltyEscalation />
-        </DashboardLayout>
+        <RoleProtectedRoute module="hr" hrSubPage="escalation">
+          <DashboardLayout>
+            <PenaltyEscalation />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       {/* Finance Module Routes */}

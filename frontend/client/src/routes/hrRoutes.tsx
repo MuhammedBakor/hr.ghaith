@@ -35,6 +35,7 @@ const AttendanceEmailReports = lazy(() => import("@/pages/hr/AttendanceEmailRepo
 const ShiftsManagement = lazy(() => import("@/pages/hr/ShiftsManagement"));
 const OfficialLetters = lazy(() => import("@/pages/hr/OfficialLetters"));
 const LeaveTypes = lazy(() => import("@/pages/hr/LeaveTypes"));
+const LeaveBalances = lazy(() => import("@/pages/hr/LeaveBalances"));
 const WorkSchedules = lazy(() => import("@/pages/hr/WorkSchedules"));
 const Positions = lazy(() => import("@/pages/hr/Positions"));
 const PendingReservesPage = lazy(() => import("@/pages/admin/PendingReserves"));
@@ -222,6 +223,11 @@ export function HrRoutes() {
     </DashboardLayout>
     </Route>
         <Route path="/hr/official-letters" element={<DashboardLayout><OfficialLettersHR /></DashboardLayout>} />
+    <Route path="/hr/leave-balances">
+    <DashboardLayout>
+    <LeaveBalances />
+    </DashboardLayout>
+    </Route>
     </>
   );
 }

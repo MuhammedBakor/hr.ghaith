@@ -60,6 +60,25 @@ public class Employee extends BaseEntity {
     @Column(precision = 15, scale = 2)
     private BigDecimal salary;
 
+    // Personal Info
+    private String nationalId;
+    private String nationality;
+    private String dateOfBirth;
+    private String gender;
+    private String maritalStatus;
+    private String address;
+    private String city;
+
+    // Emergency Contact
+    private String emergencyName;
+    private String emergencyRelation;
+    private String emergencyPhone;
+
+    // Bank Info
+    private String bankName;
+    private String bankAccount;
+    private String iban;
+
     public String getUserRole() {
         if (user != null && user.getRole() != null) {
             return user.getRole().name();
@@ -68,6 +87,6 @@ public class Employee extends BaseEntity {
     }
 
     public enum EmployeeStatus {
-        active, inactive, terminated, on_leave, suspended
+        active, inactive, terminated, on_leave, suspended, incomplete
     }
 }

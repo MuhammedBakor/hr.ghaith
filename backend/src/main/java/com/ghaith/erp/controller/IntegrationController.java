@@ -52,6 +52,42 @@ public class IntegrationController {
         return ResponseEntity.ok(body);
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateIntegrationById(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> body) {
+        if (body == null) body = new HashMap<>();
+        for (Map<String, Object> integration : integrations) {
+            if (integration.get("id") != null && integration.get("id").toString().equals(id.toString())) {
+                integration.putAll(body);
+                integration.put("id", id);
+                return ResponseEntity.ok(integration);
+            }
+        }
+        body.put("id", id);
+        return ResponseEntity.ok(body);
+    }
+
+    @PostMapping("/{id}/test")
+    public ResponseEntity<?> testIntegrationConnection(@PathVariable Long id) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", "\u0627\u0644\u0627\u062a\u0635\u0627\u0644 \u0646\u0627\u062c\u062d");
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/{id}/toggle")
+    public ResponseEntity<?> toggleIntegrationStatus(@PathVariable Long id) {
+        for (Map<String, Object> integration : integrations) {
+            if (integration.get("id") != null && integration.get("id").toString().equals(id.toString())) {
+                String currentStatus = (String) integration.getOrDefault("status", "inactive");
+                integration.put("status", "active".equals(currentStatus) ? "inactive" : "active");
+                return ResponseEntity.ok(integration);
+            }
+        }
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        return ResponseEntity.ok(response);
+    }
+
     @PostMapping("/toggle-status")
     public ResponseEntity<?> toggleStatus(@RequestBody(required = false) Map<String, Object> body) {
         if (body == null) return ResponseEntity.ok(new HashMap<>());

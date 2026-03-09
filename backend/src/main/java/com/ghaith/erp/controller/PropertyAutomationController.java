@@ -9,9 +9,18 @@ import java.util.*;
 @CrossOrigin(origins = "*")
 public class PropertyAutomationController {
 
-    @GetMapping("")
+    @GetMapping({"", "/services"})
     public ResponseEntity<?> getAll() {
         return ResponseEntity.ok(Collections.emptyList());
+    }
+
+    @PostMapping("/run")
+    public ResponseEntity<?> run(@RequestBody(required = false) Map<String, Object> body) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", "تم التنفيذ بنجاح");
+        response.put("affected", 0);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/initialize")

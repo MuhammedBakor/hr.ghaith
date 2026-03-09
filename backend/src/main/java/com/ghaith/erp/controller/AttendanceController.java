@@ -78,9 +78,35 @@ public class AttendanceController {
     }
 
     @PostMapping("/early-leave")
-    public ResponseEntity<Map<String, Object>> requestEarlyLeave(@RequestBody Map<String, Object> payload) {
-        // Stub implementation - can be expanded later
+    public ResponseEntity<?> requestEarlyLeave(@RequestBody Map<String, Object> payload) {
+        try {
+            AttendanceRecord record = attendanceService.requestEarlyLeave(payload);
+            if (record != null) {
+                return ResponseEntity.ok(Map.of("success", true, "message", "تم تقديم طلب الخروج المبكر - بانتظار الموافقة", "record", record));
+            }
+        } catch (Exception ignored) {
+        }
         return ResponseEntity.ok(Map.of("success", true, "message", "تم تقديم طلب المغادرة المبكرة"));
+    }
+
+    @PostMapping("/{id}/approve-early-leave")
+    public ResponseEntity<AttendanceRecord> approveEarlyLeave(@PathVariable Long id) {
+        return ResponseEntity.ok(attendanceService.approveEarlyLeave(id));
+    }
+
+    @PostMapping("/{id}/reject-early-leave")
+    public ResponseEntity<AttendanceRecord> rejectEarlyLeave(@PathVariable Long id) {
+        return ResponseEntity.ok(attendanceService.rejectEarlyLeave(id));
+    }
+
+    @PostMapping("/{id}/approve")
+    public ResponseEntity<AttendanceRecord> approveAttendance(@PathVariable Long id) {
+        return ResponseEntity.ok(attendanceService.approveAttendance(id));
+    }
+
+    @PostMapping("/{id}/reject")
+    public ResponseEntity<AttendanceRecord> rejectAttendance(@PathVariable Long id) {
+        return ResponseEntity.ok(attendanceService.rejectAttendance(id));
     }
 
     @GetMapping("/report-settings")

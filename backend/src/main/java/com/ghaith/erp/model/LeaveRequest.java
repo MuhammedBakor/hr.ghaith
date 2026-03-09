@@ -3,6 +3,7 @@ package com.ghaith.erp.model;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 @Builder
@@ -36,7 +37,73 @@ public class LeaveRequest extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String managerRemarks;
 
+    // Approval workflow fields
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "approval_stage")
+    private ApprovalStage approvalStage = ApprovalStage.PENDING;
+
+    // Department manager approval
+    @Enumerated(EnumType.STRING)
+    @Column(name = "dept_manager_decision")
+    private ApprovalDecision deptManagerDecision;
+
+    @Column(name = "dept_manager_remarks", columnDefinition = "TEXT")
+    private String deptManagerRemarks;
+
+    @Column(name = "dept_manager_decided_at")
+    private LocalDateTime deptManagerDecidedAt;
+
+    @Column(name = "dept_manager_id")
+    private Long deptManagerId;
+
+    // HR manager approval
+    @Enumerated(EnumType.STRING)
+    @Column(name = "hr_manager_decision")
+    private ApprovalDecision hrManagerDecision;
+
+    @Column(name = "hr_manager_remarks", columnDefinition = "TEXT")
+    private String hrManagerRemarks;
+
+    @Column(name = "hr_manager_decided_at")
+    private LocalDateTime hrManagerDecidedAt;
+
+    @Column(name = "hr_manager_id")
+    private Long hrManagerId;
+
+    // General manager approval
+    @Enumerated(EnumType.STRING)
+    @Column(name = "gm_decision")
+    private ApprovalDecision gmDecision;
+
+    @Column(name = "gm_remarks", columnDefinition = "TEXT")
+    private String gmRemarks;
+
+    @Column(name = "gm_decided_at")
+    private LocalDateTime gmDecidedAt;
+
+    @Column(name = "gm_id")
+    private Long gmId;
+
+    // Number of days requested
+    @Column(name = "days_count")
+    private Integer daysCount;
+
     public enum LeaveStatus {
         pending, approved, rejected, cancelled
+    }
+
+    public enum ApprovalStage {
+        PENDING,
+        PENDING_DEPT_MANAGER,
+        PENDING_HR,
+        PENDING_GM,
+        APPROVED,
+        REJECTED
+    }
+
+    public enum ApprovalDecision {
+        APPROVED,
+        REJECTED
     }
 }

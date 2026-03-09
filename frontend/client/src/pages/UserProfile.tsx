@@ -122,7 +122,7 @@ function ActivityItem({ a }: { a: any }) {
 // MAIN COMPONENT
 export default function UserProfile() {
   const { user } = useAuth();
-  const { selectedRole } = useAppContext();
+  const { selectedRole, currentEmployee } = useAppContext();
   const queryClient = useQueryClient();
 
   // Data - using direct API calls since there's no userProfile service
@@ -189,12 +189,13 @@ export default function UserProfile() {
 
   useEffect(() => {
     if (profile) {
+      const emp = currentEmployee;
       setProfileForm({
-        name: profile.name ?? '',
-        email: profile.email ?? '',
-        phone: (profile as any).phone ?? '',
-        jobTitle: (profile as any).jobTitle ?? '',
-        department: (profile as any).department ?? '',
+        name: profile.name ?? (emp ? `${emp.firstName} ${emp.lastName}` : ''),
+        email: profile.email ?? emp?.email ?? '',
+        phone: (profile as any).phone ?? emp?.phone ?? '',
+        jobTitle: (profile as any).jobTitle ?? emp?.position?.title ?? emp?.position ?? '',
+        department: (profile as any).department ?? emp?.department?.nameAr ?? emp?.department?.name ?? '',
         bio: (profile as any).bio ?? '',
       });
     }
@@ -233,7 +234,9 @@ export default function UserProfile() {
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-2 flex-wrap">
                 <div>
-                  <h1 className="text-xl font-bold text-gray-900">{profile?.name ?? 'المستخدم'}</h1>
+                  <h1 className="text-xl font-bold text-gray-900">
+                    {currentEmployee ? `${currentEmployee.firstName} ${currentEmployee.lastName}` : (profile?.name ?? 'المستخدم')}
+                  </h1>
                   <p className="text-sm text-gray-500 mt-0.5">{profile?.email}</p>
                   <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                     <Badge style={{ backgroundColor: roleColors[selectedRole] + '20', color: roleColors[selectedRole] }} className="border-0 text-xs font-medium">

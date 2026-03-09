@@ -113,8 +113,12 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
   const id = propId || params.id;
   const employeeId = parseInt(id || '0');
 
+  // Check if mode=edit query param is set
+  const searchParams = new URLSearchParams(window.location.search);
+  const startInEditMode = searchParams.get('mode') === 'edit';
+
   const [activeTab, setActiveTab] = useState('overview');
-  const [viewMode, setViewMode] = useState<ViewMode>("profile");
+  const [viewMode, setViewMode] = useState<ViewMode>(startInEditMode ? "edit" : "profile");
 
   // جلب بيانات الموظف من API
   const { data: employeeData, isLoading: isLoadingEmployee } = useEmployee(employeeId);
@@ -184,6 +188,20 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
         phone: employeeData.phone || '',
         departmentId: (typeof employeeData.department === 'object' ? String(employeeData.department?.id || '') : ''),
         positionId: (typeof employeeData.position === 'object' ? String(employeeData.position?.id || '') : ''),
+        salary: employeeData.salary ? String(employeeData.salary) : '',
+        nationalId: employeeData.nationalId || '',
+        nationality: employeeData.nationality || '',
+        dateOfBirth: employeeData.dateOfBirth || '',
+        gender: employeeData.gender || '',
+        maritalStatus: employeeData.maritalStatus || '',
+        address: employeeData.address || '',
+        city: employeeData.city || '',
+        emergencyName: employeeData.emergencyName || '',
+        emergencyRelation: employeeData.emergencyRelation || '',
+        emergencyPhone: employeeData.emergencyPhone || '',
+        bankName: employeeData.bankName || '',
+        bankAccount: employeeData.bankAccount || '',
+        iban: employeeData.iban || '',
       });
     }
   }, [employeeData]);
@@ -196,6 +214,20 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
     phone: '',
     departmentId: '',
     positionId: '',
+    salary: '',
+    nationalId: '',
+    nationality: '',
+    dateOfBirth: '',
+    gender: '',
+    maritalStatus: '',
+    address: '',
+    city: '',
+    emergencyName: '',
+    emergencyRelation: '',
+    emergencyPhone: '',
+    bankName: '',
+    bankAccount: '',
+    iban: '',
   });
 
   const handleSaveEdit = () => {
@@ -205,7 +237,23 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
       lastName: editForm.lastName,
       email: editForm.email,
       phone: editForm.phone,
+      nationalId: editForm.nationalId || null,
+      nationality: editForm.nationality || null,
+      dateOfBirth: editForm.dateOfBirth || null,
+      gender: editForm.gender || null,
+      maritalStatus: editForm.maritalStatus || null,
+      address: editForm.address || null,
+      city: editForm.city || null,
+      emergencyName: editForm.emergencyName || null,
+      emergencyRelation: editForm.emergencyRelation || null,
+      emergencyPhone: editForm.emergencyPhone || null,
+      bankName: editForm.bankName || null,
+      bankAccount: editForm.bankAccount || null,
+      iban: editForm.iban || null,
     };
+    if (editForm.salary) {
+      updateData.salary = parseFloat(editForm.salary);
+    }
     if (editForm.departmentId) {
       updateData.department = { id: parseInt(editForm.departmentId) };
     }
@@ -335,9 +383,18 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
         return <Badge className="bg-yellow-100 text-yellow-800">في إجازة</Badge>;
       case 'terminated':
         return <Badge className="bg-gray-100 text-gray-800">منتهي الخدمة</Badge>;
+      case 'incomplete':
+        return <Badge className="bg-orange-100 text-orange-800">غير مكتمل</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
+  };
+
+  const getMissingFieldStyle = (value: any) => {
+    if (!value || value === '' || value === 0 || value === '-') {
+      return 'bg-yellow-50 border-yellow-300';
+    }
+    return '';
   };
 
   const getDocumentStatusBadge = (status: string) => {
@@ -394,16 +451,18 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
         </div>
       </div>
 
+      {/* البيانات الأساسية */}
       <Card>
         <CardHeader>
           <CardTitle>البيانات الأساسية</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-6">
+          <div className="grid gap-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>الاسم الأول</Label>
                 <Input
+                  className={getMissingFieldStyle(editForm.firstName)}
                   value={editForm.firstName}
                   onChange={(e) => setEditForm(prev => ({ ...prev, firstName: e.target.value }))}
                 />
@@ -411,6 +470,7 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
               <div className="space-y-2">
                 <Label>اسم العائلة</Label>
                 <Input
+                  className={getMissingFieldStyle(editForm.lastName)}
                   value={editForm.lastName}
                   onChange={(e) => setEditForm(prev => ({ ...prev, lastName: e.target.value }))}
                 />
@@ -421,6 +481,7 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
                 <Label>البريد الإلكتروني</Label>
                 <Input
                   type="email"
+                  className={getMissingFieldStyle(editForm.email)}
                   value={editForm.email}
                   onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value }))}
                 />
@@ -428,6 +489,7 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
               <div className="space-y-2">
                 <Label>رقم الجوال</Label>
                 <Input
+                  className={getMissingFieldStyle(editForm.phone)}
                   value={editForm.phone}
                   onChange={(e) => setEditForm(prev => ({ ...prev, phone: e.target.value }))}
                 />
@@ -440,7 +502,7 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
                   value={editForm.departmentId}
                   onValueChange={(value) => setEditForm(prev => ({ ...prev, departmentId: value }))}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className={getMissingFieldStyle(editForm.departmentId)}>
                     <SelectValue placeholder="اختر القسم" />
                   </SelectTrigger>
                   <SelectContent>
@@ -458,7 +520,7 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
                   value={editForm.positionId}
                   onValueChange={(value) => setEditForm(prev => ({ ...prev, positionId: value }))}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className={getMissingFieldStyle(editForm.positionId)}>
                     <SelectValue placeholder="اختر المنصب" />
                   </SelectTrigger>
                   <SelectContent>
@@ -471,15 +533,222 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
                 </Select>
               </div>
             </div>
-            <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4">
-              <Button variant="outline" onClick={() => setViewMode("profile")}>إلغاء</Button>
-              <Button disabled={updateMutation.isPending} onClick={handleSaveEdit}>
-                {updateMutation.isPending ? 'جاري الحفظ...' : 'حفظ التعديلات'}
-              </Button>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>الراتب الأساسي</Label>
+                <Input
+                  type="number"
+                  className={getMissingFieldStyle(editForm.salary)}
+                  value={editForm.salary}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, salary: e.target.value }))}
+                  placeholder="أدخل الراتب"
+                  dir="ltr"
+                />
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* البيانات الشخصية */}
+      <Card>
+        <CardHeader>
+          <CardTitle>البيانات الشخصية</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>رقم الهوية / الإقامة</Label>
+                <Input
+                  className={getMissingFieldStyle(editForm.nationalId)}
+                  value={editForm.nationalId}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, nationalId: e.target.value }))}
+                  placeholder="أدخل رقم الهوية"
+                  dir="ltr"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>الجنسية</Label>
+                <Input
+                  className={getMissingFieldStyle(editForm.nationality)}
+                  value={editForm.nationality}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, nationality: e.target.value }))}
+                  placeholder="أدخل الجنسية"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>تاريخ الميلاد</Label>
+                <Input
+                  type="date"
+                  className={getMissingFieldStyle(editForm.dateOfBirth)}
+                  value={editForm.dateOfBirth}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, dateOfBirth: e.target.value }))}
+                  dir="ltr"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>الجنس</Label>
+                <Select
+                  value={editForm.gender}
+                  onValueChange={(value) => setEditForm(prev => ({ ...prev, gender: value }))}
+                >
+                  <SelectTrigger className={getMissingFieldStyle(editForm.gender)}>
+                    <SelectValue placeholder="اختر الجنس" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="male">ذكر</SelectItem>
+                    <SelectItem value="female">أنثى</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>الحالة الاجتماعية</Label>
+                <Select
+                  value={editForm.maritalStatus}
+                  onValueChange={(value) => setEditForm(prev => ({ ...prev, maritalStatus: value }))}
+                >
+                  <SelectTrigger className={getMissingFieldStyle(editForm.maritalStatus)}>
+                    <SelectValue placeholder="اختر الحالة" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="single">أعزب</SelectItem>
+                    <SelectItem value="married">متزوج</SelectItem>
+                    <SelectItem value="divorced">مطلق</SelectItem>
+                    <SelectItem value="widowed">أرمل</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>المدينة</Label>
+                <Input
+                  className={getMissingFieldStyle(editForm.city)}
+                  value={editForm.city}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, city: e.target.value }))}
+                  placeholder="أدخل المدينة"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>العنوان</Label>
+              <Input
+                className={getMissingFieldStyle(editForm.address)}
+                value={editForm.address}
+                onChange={(e) => setEditForm(prev => ({ ...prev, address: e.target.value }))}
+                placeholder="أدخل العنوان"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* جهة اتصال الطوارئ */}
+      <Card>
+        <CardHeader>
+          <CardTitle>جهة اتصال الطوارئ</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>اسم جهة الاتصال</Label>
+                <Input
+                  className={getMissingFieldStyle(editForm.emergencyName)}
+                  value={editForm.emergencyName}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, emergencyName: e.target.value }))}
+                  placeholder="أدخل الاسم"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>صلة القرابة</Label>
+                <Select
+                  value={editForm.emergencyRelation}
+                  onValueChange={(value) => setEditForm(prev => ({ ...prev, emergencyRelation: value }))}
+                >
+                  <SelectTrigger className={getMissingFieldStyle(editForm.emergencyRelation)}>
+                    <SelectValue placeholder="اختر صلة القرابة" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="father">أب</SelectItem>
+                    <SelectItem value="mother">أم</SelectItem>
+                    <SelectItem value="spouse">زوج/زوجة</SelectItem>
+                    <SelectItem value="brother">أخ</SelectItem>
+                    <SelectItem value="sister">أخت</SelectItem>
+                    <SelectItem value="son">ابن</SelectItem>
+                    <SelectItem value="daughter">ابنة</SelectItem>
+                    <SelectItem value="friend">صديق</SelectItem>
+                    <SelectItem value="other">أخرى</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>رقم الهاتف</Label>
+              <Input
+                className={getMissingFieldStyle(editForm.emergencyPhone)}
+                value={editForm.emergencyPhone}
+                onChange={(e) => setEditForm(prev => ({ ...prev, emergencyPhone: e.target.value }))}
+                placeholder="05xxxxxxxx"
+                dir="ltr"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* البيانات البنكية */}
+      <Card>
+        <CardHeader>
+          <CardTitle>البيانات البنكية</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>اسم البنك</Label>
+                <Input
+                  className={getMissingFieldStyle(editForm.bankName)}
+                  value={editForm.bankName}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, bankName: e.target.value }))}
+                  placeholder="مثال: بنك الراجحي"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>رقم الحساب</Label>
+                <Input
+                  className={getMissingFieldStyle(editForm.bankAccount)}
+                  value={editForm.bankAccount}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, bankAccount: e.target.value }))}
+                  placeholder="أدخل رقم الحساب"
+                  dir="ltr"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>رقم الآيبان (IBAN)</Label>
+              <Input
+                className={getMissingFieldStyle(editForm.iban)}
+                value={editForm.iban}
+                onChange={(e) => setEditForm(prev => ({ ...prev, iban: e.target.value }))}
+                placeholder="SA..."
+                dir="ltr"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* أزرار الحفظ */}
+      <div className="flex flex-col-reverse sm:flex-row gap-3">
+        <Button variant="outline" onClick={() => setViewMode("profile")}>إلغاء</Button>
+        <Button disabled={updateMutation.isPending} onClick={handleSaveEdit}>
+          {updateMutation.isPending ? 'جاري الحفظ...' : 'حفظ التعديلات'}
+        </Button>
+      </div>
     </div>
   );
 
@@ -827,10 +1096,6 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
           <Card>
             <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
               <CardTitle className="text-lg">سجل الإجازات</CardTitle>
-              <Button size="sm">
-                <Plus className="h-4 w-4 ms-2" />
-                طلب إجازة
-              </Button>
             </CardHeader>
             <CardContent>
               {leaveRecords.length === 0 ? (

@@ -2,7 +2,7 @@ import api from "../lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export type LeaveStatus = "pending" | "approved" | "rejected" | "cancelled";
-export type EmployeeStatus = "active" | "inactive" | "terminated" | "on_leave" | "suspended";
+export type EmployeeStatus = "active" | "inactive" | "terminated" | "on_leave" | "suspended" | "incomplete";
 
 export interface Employee {
     id: number;
@@ -228,8 +228,11 @@ export const useLeaves = () => useQuery({
 export const useCreateLeave = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: (data: any) => api.post('/hr/leaves', data),
-        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['leaves'] }),
+        mutationFn: (data: any) => api.post('/hr/leaves', data).then(res => res.data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['leaves'] });
+            queryClient.invalidateQueries({ queryKey: ['leave-balances'] });
+        },
     });
 };
 
@@ -254,6 +257,132 @@ export const useLeavesByEmployee = (employeeId: number) => useQuery({
     queryFn: () => api.get(`/hr/leaves/employee/${employeeId}`).then(res => res.data),
     enabled: !!employeeId,
 });
+
+export const useLeavesByDepartment = (departmentId: number) => useQuery({
+    queryKey: ['leaves', 'department', departmentId],
+    queryFn: () => api.get(`/hr/leaves/department/${departmentId}`).then(res => res.data),
+    enabled: !!departmentId,
+});
+
+export const useLeavesByStage = (stage: string) => useQuery({
+    queryKey: ['leaves', 'stage', stage],
+    queryFn: () => api.get(`/hr/leaves/stage/${stage}`).then(res => res.data),
+    enabled: !!stage,
+});
+
+export const useEmployeeLeaveStats = (employeeId: number) => useQuery({
+    queryKey: ['leaves', 'stats', employeeId],
+    queryFn: () => api.get(`/hr/leaves/employee/${employeeId}/stats`).then(res => res.data),
+    enabled: !!employeeId,
+});
+
+// Leave approval workflow
+export const useApproveLeaveByDeptManager = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, managerId, remarks }: { id: number; managerId: number; remarks?: string }) =>
+            api.post(`/hr/leaves/${id}/approve/dept-manager`, { managerId, remarks }).then(res => res.data),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['leaves'] }),
+    });
+};
+
+export const useRejectLeaveByDeptManager = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, managerId, remarks }: { id: number; managerId: number; remarks?: string }) =>
+            api.post(`/hr/leaves/${id}/reject/dept-manager`, { managerId, remarks }).then(res => res.data),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['leaves'] }),
+    });
+};
+
+export const useApproveLeaveByHrManager = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, managerId, remarks }: { id: number; managerId: number; remarks?: string }) =>
+            api.post(`/hr/leaves/${id}/approve/hr-manager`, { managerId, remarks }).then(res => res.data),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['leaves'] }),
+    });
+};
+
+export const useRejectLeaveByHrManager = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, managerId, remarks }: { id: number; managerId: number; remarks?: string }) =>
+            api.post(`/hr/leaves/${id}/reject/hr-manager`, { managerId, remarks }).then(res => res.data),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['leaves'] }),
+    });
+};
+
+export const useApproveLeaveByGM = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, managerId, remarks }: { id: number; managerId: number; remarks?: string }) =>
+            api.post(`/hr/leaves/${id}/approve/gm`, { managerId, remarks }).then(res => res.data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['leaves'] });
+            queryClient.invalidateQueries({ queryKey: ['leave-balances'] });
+        },
+    });
+};
+
+export const useRejectLeaveByGM = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, managerId, remarks }: { id: number; managerId: number; remarks?: string }) =>
+            api.post(`/hr/leaves/${id}/reject/gm`, { managerId, remarks }).then(res => res.data),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['leaves'] }),
+    });
+};
+
+export const useCancelLeave = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, employeeId }: { id: number; employeeId: number }) =>
+            api.post(`/hr/leaves/${id}/cancel`, { employeeId }).then(res => res.data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['leaves'] });
+            queryClient.invalidateQueries({ queryKey: ['leave-balances'] });
+        },
+    });
+};
+
+// Leave Balances
+export const useLeaveBalances = () => useQuery({
+    queryKey: ['leave-balances'],
+    queryFn: () => api.get('/hr/leave-balances').then(res => res.data),
+});
+
+export const useLeaveBalancesByEmployee = (employeeId: number) => useQuery({
+    queryKey: ['leave-balances', 'employee', employeeId],
+    queryFn: () => api.get(`/hr/leave-balances/employee/${employeeId}`).then(res => res.data),
+    enabled: !!employeeId,
+});
+
+export const useSetLeaveBalance = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (data: { employeeId: number; leaveType: string; totalBalance: number }) =>
+            api.post('/hr/leave-balances', data).then(res => res.data),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['leave-balances'] }),
+    });
+};
+
+export const useUpdateLeaveBalance = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, ...data }: { id: number; totalBalance?: number; usedBalance?: number }) =>
+            api.put(`/hr/leave-balances/${id}`, data).then(res => res.data),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['leave-balances'] }),
+    });
+};
+
+export const useDeleteLeaveBalance = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (id: number) => api.delete(`/hr/leave-balances/${id}`),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['leave-balances'] }),
+    });
+};
 // Attendance
 export const useAttendance = (date?: string) => useQuery({
     queryKey: ['attendance', date],

@@ -15,11 +15,6 @@ public class HrExtendedController {
         return ResponseEntity.ok(Collections.emptyList());
     }
 
-    @GetMapping("/leave-balances")
-    public ResponseEntity<?> getLeaveBalances() {
-        return ResponseEntity.ok(Collections.emptyList());
-    }
-
     @GetMapping("/salary-components")
     public ResponseEntity<?> getSalaryComponents() {
         return ResponseEntity.ok(Collections.emptyList());
@@ -33,16 +28,6 @@ public class HrExtendedController {
     @GetMapping("/work-schedules")
     public ResponseEntity<?> getWorkSchedules() {
         return ResponseEntity.ok(Collections.emptyList());
-    }
-
-    @GetMapping("/employee-documents")
-    public ResponseEntity<?> getEmployeeDocuments() {
-        return ResponseEntity.ok(Collections.emptyList());
-    }
-
-    @PostMapping("/employee-documents")
-    public ResponseEntity<?> createEmployeeDocument(@RequestBody(required = false) Map<String, Object> body) {
-        return ResponseEntity.ok(body != null ? body : new HashMap<>());
     }
 
     @GetMapping("/penalties")

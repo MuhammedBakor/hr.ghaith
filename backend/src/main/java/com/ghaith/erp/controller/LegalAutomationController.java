@@ -29,14 +29,14 @@ public class LegalAutomationController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/services/toggle")
+    @PostMapping({"/services/toggle", "/toggle"})
     public ResponseEntity<?> toggle(@RequestBody(required = false) Map<String, Object> body) {
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/services/run-now")
+    @PostMapping({"/services/run-now", "/run"})
     public ResponseEntity<?> runNow(@RequestBody(required = false) Map<String, Object> body) {
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
@@ -45,10 +45,18 @@ public class LegalAutomationController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/services/update")
+    @PostMapping({"/services/update", "/update"})
     public ResponseEntity<?> update(@RequestBody(required = false) Map<String, Object> body) {
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/services/{serviceKey}")
+    public ResponseEntity<?> updateService(@PathVariable String serviceKey, @RequestBody(required = false) Map<String, Object> body) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("serviceKey", serviceKey);
         return ResponseEntity.ok(response);
     }
 

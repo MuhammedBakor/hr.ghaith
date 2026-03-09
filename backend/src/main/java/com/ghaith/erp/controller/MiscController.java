@@ -21,6 +21,10 @@ public class MiscController {
     private static final AtomicLong templateIdCounter = new AtomicLong(1);
     private static final List<Map<String, Object>> documents = new CopyOnWriteArrayList<>();
     private static final AtomicLong documentIdCounter = new AtomicLong(1);
+    private static final List<Map<String, Object>> documentTemplates = new CopyOnWriteArrayList<>();
+    private static final AtomicLong documentTemplateIdCounter = new AtomicLong(1);
+    private static final List<Map<String, Object>> documentArchive = new CopyOnWriteArrayList<>();
+    private static final AtomicLong archiveIdCounter = new AtomicLong(1);
 
     @GetMapping("/roles")
     public ResponseEntity<?> getRoles() {
@@ -126,6 +130,104 @@ public class MiscController {
         return ResponseEntity.ok(response);
     }
 
+    // ===== Document Templates =====
+
+    @GetMapping("/documents/templates")
+    public ResponseEntity<?> getDocumentTemplates() {
+        return ResponseEntity.ok(documentTemplates);
+    }
+
+    @PostMapping("/documents/templates")
+    public ResponseEntity<?> createDocumentTemplate(@RequestBody(required = false) Map<String, Object> body) {
+        if (body == null) body = new HashMap<>();
+        body.put("id", documentTemplateIdCounter.getAndIncrement());
+        body.putIfAbsent("createdAt", new java.util.Date());
+        documentTemplates.add(body);
+        return ResponseEntity.ok(body);
+    }
+
+    @PutMapping("/documents/templates/{id}")
+    public ResponseEntity<?> updateDocumentTemplate(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> body) {
+        if (body == null) body = new HashMap<>();
+        for (Map<String, Object> tmpl : documentTemplates) {
+            if (tmpl.get("id") != null && tmpl.get("id").toString().equals(id.toString())) {
+                tmpl.putAll(body);
+                tmpl.put("id", id);
+                return ResponseEntity.ok(tmpl);
+            }
+        }
+        body.put("id", id);
+        return ResponseEntity.ok(body);
+    }
+
+    @DeleteMapping("/documents/templates/{id}")
+    public ResponseEntity<?> deleteDocumentTemplate(@PathVariable Long id) {
+        documentTemplates.removeIf(tmpl -> tmpl.get("id") != null && tmpl.get("id").toString().equals(id.toString()));
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        return ResponseEntity.ok(response);
+    }
+
+    // ===== Document Archive =====
+
+    @GetMapping("/documents/archive")
+    public ResponseEntity<?> getDocumentArchive() {
+        return ResponseEntity.ok(documentArchive);
+    }
+
+    @PostMapping("/documents/{id}/archive")
+    public ResponseEntity<?> archiveDocument(@PathVariable Long id) {
+        for (Map<String, Object> doc : documents) {
+            if (doc.get("id") != null && doc.get("id").toString().equals(id.toString())) {
+                Map<String, Object> archived = new HashMap<>(doc);
+                archived.put("archiveId", archiveIdCounter.getAndIncrement());
+                archived.put("archivedAt", new java.util.Date());
+                documentArchive.add(archived);
+                documents.remove(doc);
+                return ResponseEntity.ok(archived);
+            }
+        }
+        Map<String, Object> response = new HashMap<>();
+        response.put("archiveId", archiveIdCounter.getAndIncrement());
+        response.put("documentId", id);
+        response.put("archivedAt", new java.util.Date());
+        documentArchive.add(response);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/documents/archive/{id}/restore")
+    public ResponseEntity<?> restoreDocument(@PathVariable Long id) {
+        for (Map<String, Object> archived : documentArchive) {
+            if ((archived.get("archiveId") != null && archived.get("archiveId").toString().equals(id.toString()))
+                    || (archived.get("id") != null && archived.get("id").toString().equals(id.toString()))) {
+                documentArchive.remove(archived);
+                archived.remove("archiveId");
+                archived.remove("archivedAt");
+                documents.add(archived);
+                return ResponseEntity.ok(archived);
+            }
+        }
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/documents/archive/{id}")
+    public ResponseEntity<?> deleteArchivedDocument(@PathVariable Long id) {
+        documentArchive.removeIf(a -> (a.get("archiveId") != null && a.get("archiveId").toString().equals(id.toString()))
+                || (a.get("id") != null && a.get("id").toString().equals(id.toString())));
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        return ResponseEntity.ok(response);
+    }
+
+    // ===== Logs =====
+
+    @GetMapping("/logs/messages")
+    public ResponseEntity<?> getLogMessages() {
+        return ResponseEntity.ok(Collections.emptyList());
+    }
+
     @GetMapping("/evidence-packs")
     public ResponseEntity<?> getEvidencePacks() {
         return ResponseEntity.ok(Collections.emptyList());
@@ -151,14 +253,67 @@ public class MiscController {
         return ResponseEntity.ok(Collections.emptyList());
     }
 
+    private static final List<Map<String, Object>> subscriptions = new CopyOnWriteArrayList<>();
+    private static final AtomicLong subscriptionIdCounter = new AtomicLong(1);
+
     @GetMapping("/subscriptions")
-    public ResponseEntity<?> getSubscriptions() {
-        return ResponseEntity.ok(Collections.emptyList());
+    public ResponseEntity<?> getSubscriptions(@RequestParam(required = false) String status) {
+        if (status != null && !status.equals("all")) {
+            List<Map<String, Object>> filtered = subscriptions.stream()
+                .filter(s -> status.equals(s.get("status")))
+                .toList();
+            return ResponseEntity.ok(filtered);
+        }
+        return ResponseEntity.ok(subscriptions);
+    }
+
+    @PostMapping("/subscriptions")
+    public ResponseEntity<?> createSubscription(@RequestBody Map<String, Object> body) {
+        Map<String, Object> sub = new LinkedHashMap<>(body);
+        long id = subscriptionIdCounter.getAndIncrement();
+        sub.put("id", id);
+        sub.put("subscriptionCode", "SUB-" + String.format("%05d", id));
+        sub.put("status", "active");
+        sub.put("createdAt", new Date().toString());
+        subscriptions.add(sub);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("success", true);
+        result.put("subscriptionCode", sub.get("subscriptionCode"));
+        result.put("data", sub);
+        return ResponseEntity.ok(result);
+    }
+
+    @PutMapping("/subscriptions/{id}/status")
+    public ResponseEntity<?> updateSubscriptionStatus(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        for (Map<String, Object> sub : subscriptions) {
+            if (id.equals(((Number) sub.get("id")).longValue())) {
+                sub.put("status", body.get("status"));
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("success", true);
+                result.put("data", sub);
+                return ResponseEntity.ok(result);
+            }
+        }
+        return ResponseEntity.ok(Map.of("success", false, "error", "الاشتراك غير موجود"));
+    }
+
+    @PostMapping("/subscriptions/{id}/resend-welcome")
+    public ResponseEntity<?> resendWelcome(@PathVariable Long id) {
+        return ResponseEntity.ok(Map.of("success", true));
     }
 
     @GetMapping("/subscriptions/available-modules")
     public ResponseEntity<?> getAvailableModules() {
-        return ResponseEntity.ok(Collections.emptyList());
+        List<Map<String, Object>> modules = List.of(
+            Map.of("id", 1, "name", "HR", "nameAr", "الموارد البشرية"),
+            Map.of("id", 2, "name", "Finance", "nameAr", "المالية"),
+            Map.of("id", 3, "name", "Legal", "nameAr", "الشؤون القانونية"),
+            Map.of("id", 4, "name", "Correspondence", "nameAr", "المراسلات"),
+            Map.of("id", 5, "name", "Fleet", "nameAr", "إدارة الأسطول"),
+            Map.of("id", 6, "name", "Property", "nameAr", "إدارة الممتلكات"),
+            Map.of("id", 7, "name", "Support", "nameAr", "الدعم الفني")
+        );
+        return ResponseEntity.ok(modules);
     }
 
     @GetMapping("/delegations")
@@ -248,8 +403,29 @@ public class MiscController {
     // ===== Requests =====
 
     @GetMapping("/requests")
-    public ResponseEntity<?> getRequests() {
-        return ResponseEntity.ok(requests);
+    public ResponseEntity<?> getRequests(
+            @RequestParam(required = false) Long requesterId,
+            @RequestParam(required = false) Long departmentId,
+            @RequestParam(required = false) String status) {
+        List<Map<String, Object>> result = new ArrayList<>(requests);
+
+        if (requesterId != null) {
+            result = result.stream()
+                .filter(r -> requesterId.toString().equals(String.valueOf(r.get("requesterId"))))
+                .collect(java.util.stream.Collectors.toList());
+        }
+        if (departmentId != null) {
+            result = result.stream()
+                .filter(r -> departmentId.toString().equals(String.valueOf(r.get("requesterDepartmentId"))))
+                .collect(java.util.stream.Collectors.toList());
+        }
+        if (status != null && !status.isEmpty()) {
+            result = result.stream()
+                .filter(r -> status.equals(r.get("status")))
+                .collect(java.util.stream.Collectors.toList());
+        }
+
+        return ResponseEntity.ok(result);
     }
 
     @PostMapping("/requests")
@@ -267,8 +443,14 @@ public class MiscController {
         if (body == null) body = new HashMap<>();
         for (Map<String, Object> req : requests) {
             if (req.get("id") != null && req.get("id").toString().equals(id.toString())) {
+                String oldStatus = String.valueOf(req.get("status"));
                 req.putAll(body);
                 req.put("id", id);
+                req.put("updatedAt", new java.util.Date());
+                // Track who approved/rejected
+                if (body.containsKey("approverName")) {
+                    req.put("approverName", body.get("approverName"));
+                }
                 return ResponseEntity.ok(req);
             }
         }
@@ -403,11 +585,25 @@ public class MiscController {
 
     @GetMapping("/workflow/approvals")
     public ResponseEntity<?> getWorkflowApprovals() {
-        return ResponseEntity.ok(Collections.emptyList());
+        // Return pending requests as workflow approvals
+        List<Map<String, Object>> pending = requests.stream()
+            .filter(r -> "pending".equals(r.get("status")))
+            .collect(java.util.stream.Collectors.toList());
+        return ResponseEntity.ok(pending);
     }
 
     @PostMapping("/workflow/approvals/{id}/approve")
     public ResponseEntity<?> approveWorkflow(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> body) {
+        for (Map<String, Object> req : requests) {
+            if (req.get("id") != null && req.get("id").toString().equals(id.toString())) {
+                req.put("status", "approved");
+                req.put("updatedAt", new java.util.Date());
+                if (body != null && body.containsKey("approverName")) {
+                    req.put("approverName", body.get("approverName"));
+                }
+                return ResponseEntity.ok(req);
+            }
+        }
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
         response.put("id", id);
@@ -417,6 +613,17 @@ public class MiscController {
 
     @PostMapping("/workflow/approvals/{id}/reject")
     public ResponseEntity<?> rejectWorkflow(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> body) {
+        for (Map<String, Object> req : requests) {
+            if (req.get("id") != null && req.get("id").toString().equals(id.toString())) {
+                req.put("status", "rejected");
+                req.put("updatedAt", new java.util.Date());
+                if (body != null) {
+                    if (body.containsKey("approverName")) req.put("approverName", body.get("approverName"));
+                    if (body.containsKey("reason")) req.put("rejectionReason", body.get("reason"));
+                }
+                return ResponseEntity.ok(req);
+            }
+        }
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
         response.put("id", id);

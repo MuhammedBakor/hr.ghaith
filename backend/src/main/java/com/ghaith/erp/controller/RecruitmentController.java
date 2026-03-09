@@ -50,9 +50,25 @@ public class RecruitmentController {
         return ResponseEntity.ok(recruitmentService.getAllApplications());
     }
 
+    @PostMapping("/applications")
+    public ResponseEntity<JobApplication> createApplication(@RequestBody JobApplication application) {
+        return ResponseEntity.ok(recruitmentService.createApplication(application));
+    }
+
+    @PutMapping("/applications/{id}")
+    public ResponseEntity<JobApplication> updateApplication(@PathVariable Long id, @RequestBody JobApplication application) {
+        return ResponseEntity.ok(recruitmentService.updateApplication(id, application));
+    }
+
     @PutMapping("/applications/{id}/status")
     public ResponseEntity<JobApplication> updateApplicationStatus(@PathVariable Long id, @RequestBody String status) {
         return ResponseEntity.ok(recruitmentService.updateApplicationStatus(id, status));
+    }
+
+    @DeleteMapping("/applications/{id}")
+    public ResponseEntity<Void> deleteApplication(@PathVariable Long id) {
+        recruitmentService.deleteApplication(id);
+        return ResponseEntity.noContent().build();
     }
 
     // Interviews
@@ -64,5 +80,16 @@ public class RecruitmentController {
     @PostMapping("/interviews")
     public ResponseEntity<Interview> createInterview(@RequestBody Interview interview) {
         return ResponseEntity.ok(recruitmentService.createInterview(interview));
+    }
+
+    @PutMapping("/interviews/{id}")
+    public ResponseEntity<Interview> updateInterview(@PathVariable Long id, @RequestBody Interview interview) {
+        return ResponseEntity.ok(recruitmentService.updateInterview(id, interview));
+    }
+
+    @DeleteMapping("/interviews/{id}")
+    public ResponseEntity<Void> deleteInterview(@PathVariable Long id) {
+        recruitmentService.deleteInterview(id);
+        return ResponseEntity.noContent().build();
     }
 }

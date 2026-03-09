@@ -43,6 +43,18 @@ public class PlatformController {
         return ResponseEntity.ok(body);
     }
 
+    @PutMapping("/ai-policies/{id}")
+    public ResponseEntity<?> updateAiPolicy(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> body) {
+        for (Map<String, Object> policy : aiPolicies) {
+            if (policy.get("id") != null && policy.get("id").toString().equals(id.toString())) {
+                if (body != null) policy.putAll(body);
+                policy.put("id", id);
+                return ResponseEntity.ok(policy);
+            }
+        }
+        return ResponseEntity.notFound().build();
+    }
+
     // ===== Alerts =====
 
     @GetMapping("/alerts")
@@ -57,6 +69,18 @@ public class PlatformController {
         body.putIfAbsent("createdAt", new java.util.Date());
         alerts.add(body);
         return ResponseEntity.ok(body);
+    }
+
+    @PutMapping("/alerts/{id}/read")
+    public ResponseEntity<?> markAlertAsRead(@PathVariable Long id) {
+        for (Map<String, Object> alert : alerts) {
+            if (alert.get("id") != null && alert.get("id").toString().equals(id.toString())) {
+                alert.put("read", true);
+            }
+        }
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        return ResponseEntity.ok(response);
     }
 
     // ===== Calendar =====
@@ -75,6 +99,26 @@ public class PlatformController {
         return ResponseEntity.ok(body);
     }
 
+    @PutMapping("/calendar/{id}")
+    public ResponseEntity<?> updateCalendarEvent(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> body) {
+        for (Map<String, Object> event : calendarEvents) {
+            if (event.get("id") != null && event.get("id").toString().equals(id.toString())) {
+                if (body != null) event.putAll(body);
+                event.put("id", id);
+                return ResponseEntity.ok(event);
+            }
+        }
+        return ResponseEntity.notFound().build();
+    }
+
+    @DeleteMapping("/calendar/{id}")
+    public ResponseEntity<?> deleteCalendarEvent(@PathVariable Long id) {
+        calendarEvents.removeIf(event -> event.get("id") != null && event.get("id").toString().equals(id.toString()));
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        return ResponseEntity.ok(response);
+    }
+
     // ===== DMS =====
 
     @GetMapping("/dms")
@@ -91,22 +135,68 @@ public class PlatformController {
         return ResponseEntity.ok(body);
     }
 
+    @PutMapping("/dms/{id}")
+    public ResponseEntity<?> updateDmsDocument(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> body) {
+        for (Map<String, Object> doc : dmsDocuments) {
+            if (doc.get("id") != null && doc.get("id").toString().equals(id.toString())) {
+                if (body != null) doc.putAll(body);
+                doc.put("id", id);
+                return ResponseEntity.ok(doc);
+            }
+        }
+        return ResponseEntity.notFound().build();
+    }
+
+    @DeleteMapping("/dms/{id}")
+    public ResponseEntity<?> deleteDmsDocument(@PathVariable Long id) {
+        dmsDocuments.removeIf(doc -> doc.get("id") != null && doc.get("id").toString().equals(id.toString()));
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        return ResponseEntity.ok(response);
+    }
+
     // ===== Inbox =====
+
+    private static final List<Map<String, Object>> inboxItems = new CopyOnWriteArrayList<>();
+    private static final AtomicLong inboxIdCounter = new AtomicLong(1);
 
     @GetMapping("/inbox")
     public ResponseEntity<?> getInbox() {
-        return ResponseEntity.ok(Collections.emptyList());
+        return ResponseEntity.ok(inboxItems);
     }
 
     @GetMapping("/inbox/stats")
     public ResponseEntity<?> getInboxStats() {
         Map<String, Object> stats = new HashMap<>();
-        stats.put("total", 0);
-        stats.put("unread", 0);
+        stats.put("total", inboxItems.size());
+        stats.put("unread", inboxItems.stream().filter(i -> !Boolean.TRUE.equals(i.get("read"))).count());
         return ResponseEntity.ok(stats);
     }
 
+    @PutMapping("/inbox/{id}")
+    public ResponseEntity<?> updateInboxItem(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> body) {
+        for (Map<String, Object> item : inboxItems) {
+            if (item.get("id") != null && item.get("id").toString().equals(id.toString())) {
+                if (body != null) item.putAll(body);
+                item.put("id", id);
+                return ResponseEntity.ok(item);
+            }
+        }
+        return ResponseEntity.notFound().build();
+    }
+
     // ===== Monitoring =====
+
+    @GetMapping("/monitoring")
+    public ResponseEntity<?> getMonitoring() {
+        Map<String, Object> monitoring = new HashMap<>();
+        monitoring.put("cpu", 25);
+        monitoring.put("memory", 40);
+        monitoring.put("disk", 55);
+        monitoring.put("uptime", "99.9%");
+        monitoring.put("status", "healthy");
+        return ResponseEntity.ok(monitoring);
+    }
 
     @GetMapping("/monitoring/metrics")
     public ResponseEntity<?> getMonitoringMetrics() {
@@ -131,6 +221,13 @@ public class PlatformController {
         response.put("status", "healthy");
         response.put("services", Collections.emptyList());
         return ResponseEntity.ok(response);
+    }
+
+    // ===== Search =====
+
+    @GetMapping("/search")
+    public ResponseEntity<?> search(@RequestParam(required = false) String query) {
+        return ResponseEntity.ok(Collections.emptyList());
     }
 
     // ===== Notifications =====
@@ -159,6 +256,28 @@ public class PlatformController {
             }
         }
         return ResponseEntity.ok(body != null ? body : new HashMap<>());
+    }
+
+    @PutMapping("/notifications/{id}/read")
+    public ResponseEntity<?> markNotificationAsRead(@PathVariable Long id) {
+        for (Map<String, Object> n : notifications) {
+            if (n.get("id") != null && n.get("id").toString().equals(id.toString())) {
+                n.put("read", true);
+            }
+        }
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/notifications/read-all")
+    public ResponseEntity<?> markAllNotificationsAsRead() {
+        for (Map<String, Object> n : notifications) {
+            n.put("read", true);
+        }
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        return ResponseEntity.ok(response);
     }
 
     // ===== Notify Preferences =====
@@ -204,6 +323,26 @@ public class PlatformController {
         return ResponseEntity.ok(body);
     }
 
+    @PutMapping("/notify-rules/{id}")
+    public ResponseEntity<?> updateNotifyRule(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> body) {
+        for (Map<String, Object> rule : notifyRules) {
+            if (rule.get("id") != null && rule.get("id").toString().equals(id.toString())) {
+                if (body != null) rule.putAll(body);
+                rule.put("id", id);
+                return ResponseEntity.ok(rule);
+            }
+        }
+        return ResponseEntity.notFound().build();
+    }
+
+    @DeleteMapping("/notify-rules/{id}")
+    public ResponseEntity<?> deleteNotifyRule(@PathVariable Long id) {
+        notifyRules.removeIf(rule -> rule.get("id") != null && rule.get("id").toString().equals(id.toString()));
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        return ResponseEntity.ok(response);
+    }
+
     // ===== Upgrades =====
 
     @GetMapping("/upgrades")
@@ -238,5 +377,12 @@ public class PlatformController {
         body.putIfAbsent("createdAt", new java.util.Date());
         upgrades.add(body);
         return ResponseEntity.ok(body);
+    }
+
+    @PostMapping("/upgrades/{id}/install")
+    public ResponseEntity<?> installUpgrade(@PathVariable Long id) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        return ResponseEntity.ok(response);
     }
 }

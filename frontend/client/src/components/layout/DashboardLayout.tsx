@@ -128,6 +128,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     canAccessModule,
     canAccessHrSubPage,
     allowedRoles,
+    currentEmployee: ctxEmployee,
   } = useAppContext();
 
   // جلب بيانات الموظفين لمدير القسم
@@ -258,6 +259,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       icon: Grid3X3,
       module: 'home' as ModuleType,
     }] : []),
+    // مراقبة الحضور - وصول سريع للمدير العام ومدير النظام
+    ...(isTopAdmin ? [{
+      label: 'مراقبة الحضور',
+      path: '/hr/attendance-monitoring',
+      icon: ClipboardCheck,
+      module: 'home' as ModuleType,
+    }] : []),
     {
       label: ['employee', 'supervisor'].includes(selectedRole) ? 'الحضور' : 'الموارد البشرية',
       path: '/hr',
@@ -266,6 +274,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       children: [
         { label: 'الموظفين', path: '/hr', icon: Users, hrSubPage: 'employees' },
         { label: 'الحضور والانصراف', path: '/hr/attendance', icon: Clock, hrSubPage: 'attendance' },
+        { label: 'مراقبة الحضور', path: '/hr/attendance-monitoring', icon: ClipboardCheck, hrSubPage: 'attendance-monitoring' },
         { label: 'الإجازات', path: '/hr/leave-management', icon: Calendar, hrSubPage: 'leaves' },
         { label: 'الرواتب', path: '/hr/payroll', icon: DollarSign, hrSubPage: 'payroll' },
         { label: 'تقييم الأداء', path: '/hr/performance-advanced', icon: Target, hrSubPage: 'performance' },
@@ -277,6 +286,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         { label: 'الورديات والسياسات', path: '/hr/shifts', icon: CalendarClock, hrSubPage: 'shifts' },
         { label: 'الموظفين', path: '/hr/employees', icon: Users, hrSubPage: 'employees-list' },
         { label: 'الإجازات', path: '/hr/leaves', icon: CalendarOff, hrSubPage: 'leaves-list' },
+        { label: 'أرصدة الإجازات', path: '/hr/leave-balances', icon: Calendar, hrSubPage: 'leave-balances' },
         { label: 'التتبع الميداني', path: '/hr/field-tracking', icon: MapPin, hrSubPage: 'tracking' },
         { label: 'ماسح QR', path: '/hr/qr-scanner', icon: Scan, hrSubPage: 'qr' },
         { label: 'سلاسل الموافقات', path: '/hr/approval-chains', icon: GitBranch, hrSubPage: 'approvals' },
@@ -410,10 +420,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       module: 'requests',
       children: [
         { label: 'كل الطلبات', path: '/requests', icon: FileText },
-        { label: 'أنواع الطلبات', path: '/requests/types', icon: ListTodo },
+        ...(['admin', 'general_manager', 'hr_manager'].includes(selectedRole) ? [
+          { label: 'أنواع الطلبات', path: '/requests/types', icon: ListTodo },
+        ] : []),
         { label: 'سير العمل', path: '/requests/workflows', icon: GitBranch },
+        ...(['admin', 'general_manager', 'hr_manager', 'department_manager', 'supervisor'].includes(selectedRole) ? [
+          { label: 'الموافقات', path: '/workflow/approvals', icon: CheckCircle },
+        ] : []),
         { label: 'التذاكر', path: '/support/tickets', icon: Ticket },
-        { label: 'أتمتة الدعم', path: '/support/automation', icon: Zap },
+        ...(['admin', 'general_manager'].includes(selectedRole) ? [
+          { label: 'أتمتة الدعم', path: '/support/automation', icon: Zap },
+        ] : []),
       ]
     },
     {
@@ -521,6 +538,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       children: [
         { label: 'العمليات', path: '/workflow', icon: GitBranch },
         { label: 'الموافقات', path: '/workflow/approvals', icon: CheckCircle },
+        { label: 'التفويضات', path: '/workflow/delegations', icon: Users },
+        { label: 'إعدادات الموافقات', path: '/workflow/settings', icon: Settings },
       ]
     },
     { label: 'صندوق الوارد', path: '/inbox', icon: Mail, module: 'inbox' },
@@ -741,11 +760,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="p-4 border-t border-gray-100">
             <div className="flex items-center gap-3">
               <Avatar>
-                <AvatarImage src={`https://ui-avatars.com/api/?name=${user?.username || roleLabels[selectedRole]}&background=random`} />
-                <AvatarFallback>{(user?.username || roleLabels[selectedRole]).substring(0, 2).toUpperCase()}</AvatarFallback>
+                <AvatarImage src={`https://ui-avatars.com/api/?name=${ctxEmployee ? `${ctxEmployee.firstName} ${ctxEmployee.lastName}` : (user?.username || roleLabels[selectedRole])}&background=random`} />
+                <AvatarFallback>{(ctxEmployee ? ctxEmployee.firstName : (user?.username || roleLabels[selectedRole])).substring(0, 2).toUpperCase()}</AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">{user?.username || roleLabels[selectedRole]}</p>
+                <p className="text-sm font-medium text-gray-900 truncate">
+                  {ctxEmployee ? `${ctxEmployee.firstName} ${ctxEmployee.lastName}` : (user?.username || roleLabels[selectedRole])}
+                </p>
                 <p className="text-xs truncate" style={{ color: roleColors[selectedRole] }}>{roleLabels[selectedRole]}</p>
               </div>
               <Button variant="ghost" size="icon" onClick={handleLogout} title="تسجيل الخروج">

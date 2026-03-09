@@ -74,9 +74,16 @@ public class AuthenticationService {
                 var user = repository.findByEmail(request.getEmail())
                                 .orElseThrow();
                 var jwtToken = jwtService.generateToken(user);
-                return AuthenticationResponse.builder()
-                                .token(jwtToken)
-                                .build();
+
+                // Include employee status and ID in response
+                var empOptForResponse = employeeRepository.findByUserId(user.getId());
+                var responseBuilder = AuthenticationResponse.builder().token(jwtToken);
+                if (empOptForResponse.isPresent()) {
+                        var empForResponse = empOptForResponse.get();
+                        responseBuilder.employeeStatus(empForResponse.getStatus().name());
+                        responseBuilder.employeeId(empForResponse.getId());
+                }
+                return responseBuilder.build();
         }
 
         public VerifyCodeResponse verifyCode(String code) {
@@ -189,22 +196,28 @@ public class AuthenticationService {
                 user.setVerificationCode(null);
                 repository.save(user);
 
-                employee.setStatus(Employee.EmployeeStatus.active);
+                employee.setStatus(Employee.EmployeeStatus.incomplete);
                 employeeRepository.save(employee);
 
+                // Generate token so employee can proceed to complete profile
+                var jwtToken = jwtService.generateToken(user);
+
                 response.put("success", true);
+                response.put("token", jwtToken);
+                response.put("employeeId", employee.getId());
                 return response;
         }
 
         public UserResponse getMe() {
                 var authentication = SecurityContextHolder.getContext().getAuthentication();
-                if (authentication == null || !authentication.isAuthenticated()) {
-                        throw new RuntimeException("غير مفوض");
+                if (authentication == null || !authentication.isAuthenticated()
+                        || "anonymousUser".equals(authentication.getPrincipal())) {
+                        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "غير مفوض");
                 }
 
                 var userEmail = authentication.getName();
                 var user = repository.findByEmail(userEmail)
-                                .orElseThrow(() -> new RuntimeException("المستخدم غير موجود"));
+                                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "المستخدم غير موجود"));
 
                 return UserResponse.builder()
                                 .id(user.getId())

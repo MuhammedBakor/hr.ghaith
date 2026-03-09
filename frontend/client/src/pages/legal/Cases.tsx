@@ -21,14 +21,14 @@ export default function CasesPage() {
   const pageSize = 20;
 
   const { data, isLoading, refetch, isError, error } = useQuery({
-    queryKey: ['cases'],
-    queryFn: () => api.get('/cases').then(r => r.data),
+    queryKey: ['legal-cases-page'],
+    queryFn: () => api.get('/legal/cases').then(r => r.data),
   });
-  const list = (data || []) as any[];
+  const list = (data?.items || (Array.isArray(data) ? data : [])) as any[];
 
-  const createMut = useMutation({ mutationFn: (data: any) => api.post('/cases', data).then(r => r.data), onSuccess: () => { refetch(); setOpen(false); resetForm(); }, onError: (e: any) => { alert(e?.response?.data?.message || e.message || "حدث خطأ"); } });
-  const updateMut = useMutation({ mutationFn: ({ id, ...data }: any) => api.put(`/cases/${id}`, data).then(r => r.data), onSuccess: () => { refetch(); setOpen(false); resetForm(); }, onError: (e: any) => { alert(e?.response?.data?.message || e.message || "حدث خطأ"); } });
-  const deleteMut = useMutation({ mutationFn: ({ id, ...data }: any) => api.delete(`/cases/${id}`, { data }).then(r => r.data), onSuccess: () => refetch(), onError: (e: any) => { alert(e?.response?.data?.message || e.message || "حدث خطأ"); } });
+  const createMut = useMutation({ mutationFn: (data: any) => api.post('/legal/cases', data).then(r => r.data), onSuccess: () => { refetch(); setOpen(false); resetForm(); }, onError: (e: any) => { alert(e?.response?.data?.message || e.message || "حدث خطأ"); } });
+  const updateMut = useMutation({ mutationFn: ({ id, ...data }: any) => api.put(`/legal/cases/${id}`, data).then(r => r.data), onSuccess: () => { refetch(); setOpen(false); resetForm(); }, onError: (e: any) => { alert(e?.response?.data?.message || e.message || "حدث خطأ"); } });
+  const deleteMut = useMutation({ mutationFn: ({ id, ...data }: any) => api.delete(`/legal/cases/${id}`, { data }).then(r => r.data), onSuccess: () => refetch(), onError: (e: any) => { alert(e?.response?.data?.message || e.message || "حدث خطأ"); } });
 
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);

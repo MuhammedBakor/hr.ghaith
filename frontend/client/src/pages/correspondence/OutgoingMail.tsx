@@ -1,7 +1,6 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
 import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
-import DashboardLayout from "@/components/layout/DashboardLayout";
 import LetterPrintWrapper from "@/components/letters/LetterPrintWrapper";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -152,7 +151,6 @@ export default function OutgoingMail() {
 
   
   return (
-    <DashboardLayout>
       <div className="space-y-6">
         {/* العنوان والإجراءات */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -500,7 +498,6 @@ export default function OutgoingMail() {
             )}
           </CardContent>
         </Card>
-      </div>
 
       {/* تفاصيل البريد الصادر */}
       {detailItem && (
@@ -553,6 +550,6 @@ export default function OutgoingMail() {
           </div>
         </LetterPrintWrapper>
       )}
-    </DashboardLayout>
+      </div>
   );
 }

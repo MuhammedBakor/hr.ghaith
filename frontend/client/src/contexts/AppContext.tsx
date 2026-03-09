@@ -152,42 +152,45 @@ export const modulePermissions: Record<UserRoleType, ModuleType[]> = {
     'home', 'store', 'requests', 'documents', 'reports', 'comms', 'settings'
   ],
   supervisor: [
-    'home', 'hr', 'requests', 'documents', 'comms', 'support'
+    'home', 'hr', 'requests', 'documents', 'comms', 'support', 'workflow'
   ],
   employee: [
     'home', 'hr', 'requests', 'documents', 'comms', 'support'
   ],
   department_manager: [
-    'home', 'hr', 'property', 'requests', 'documents', 'comms', 'support'
+    'home', 'hr', 'property', 'requests', 'documents', 'comms', 'support', 'workflow'
   ],
   agent: [
-    'home', 'fleet', 'requests', 'comms'
+    'home', 'fleet', 'requests', 'comms', 'support'
   ],
 };
 
 // صلاحيات HR الفرعية لكل صفة
 export const hrSubPermissions: Record<UserRoleType, string[]> = {
   admin: [
-    'employees', 'attendance', 'leaves', 'payroll', 'performance',
-    'training', 'organization', 'recruitment', 'violations', 'my_violations'
+    'employees', 'employees-list', 'attendance', 'attendance-monitoring', 'leaves', 'leaves-list', 'leave-balances', 'payroll', 'performance',
+    'training', 'organization', 'recruitment', 'violations', 'my_violations',
+    'shifts', 'tracking', 'qr', 'approvals', 'letters', 'reports', 'onboarding', 'escalation', 'automation', 'salary'
   ],
   general_manager: [
-    'employees', 'attendance', 'leaves', 'payroll', 'performance',
-    'training', 'organization', 'recruitment', 'violations'
+    'employees', 'employees-list', 'attendance', 'attendance-monitoring', 'leaves', 'leaves-list', 'leave-balances', 'payroll', 'performance',
+    'training', 'organization', 'recruitment', 'violations',
+    'shifts', 'tracking', 'qr', 'approvals', 'letters', 'reports', 'onboarding', 'escalation', 'automation', 'salary'
   ],
   hr_manager: [
-    'employees', 'attendance', 'leaves', 'payroll', 'performance',
-    'training', 'organization', 'recruitment', 'violations'
+    'employees', 'employees-list', 'attendance', 'attendance-monitoring', 'leaves', 'leaves-list', 'leave-balances', 'payroll', 'performance',
+    'training', 'organization', 'recruitment', 'violations',
+    'shifts', 'tracking', 'qr', 'approvals', 'letters', 'reports', 'onboarding', 'escalation', 'automation', 'salary'
   ],
   finance_manager: ['payroll'],
   fleet_manager: ['attendance'],
   legal_manager: [],
   projects_manager: ['attendance'],
   store_manager: ['attendance'],
-  supervisor: ['attendance', 'leaves', 'my_violations'],
+  supervisor: ['attendance', 'attendance-monitoring', 'leaves', 'my_violations'],
   employee: ['attendance', 'leaves', 'my_violations'],
-  department_manager: ['attendance', 'leaves', 'my_violations'],
-  agent: [],
+  department_manager: ['attendance', 'attendance-monitoring', 'leaves', 'leaves-list', 'my_violations', 'employees-list'],
+  agent: ['attendance', 'my_violations'],
 };
 
 // صلاحيات كل صفة
@@ -341,6 +344,7 @@ interface AppContextType {
   isDepartmentManager: boolean;
   currentUserId: number | null;
   currentEmployeeId: number | null;
+  currentEmployee: any | null;
 
   // الأدوار المتاحة للمستخدم الحالي
   allowedRoles: UserRoleType[];
@@ -540,6 +544,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       isDepartmentManager,
       currentUserId,
       currentEmployeeId,
+      currentEmployee: currentEmployee || null,
       allowedRoles,
     }}>
       {children}

@@ -28,7 +28,7 @@ export default function Activate() {
   const search = useSearch();
   const params = new URLSearchParams(search);
 
-  const [step, setStep] = useState<'verify' | 'password' | 'success'>('verify');
+  const [step, setStep] = useState<'verify' | 'password'>('verify');
   const [employeeNumber, setEmployeeNumber] = useState(params.get('emp') || '');
   const [activationCode, setActivationCode] = useState(params.get('code') || '');
   const [password, setPassword] = useState('');
@@ -62,8 +62,12 @@ export default function Activate() {
       api.post('/auth/employee-invitation/complete', data).then(res => res.data),
     onSuccess: (result) => {
       if (result.success) {
-        setStep('success');
-        toast.success('تم تفعيل حسابك بنجاح');
+        if (result.token) {
+          localStorage.setItem('token', result.token);
+        }
+        // Redirect to complete profile instead of showing success
+        navigate(`/complete-profile?employeeId=${result.employeeId}`);
+        toast.success('تم تفعيل حسابك بنجاح! يرجى إكمال بياناتك');
       } else {
         toast.error(result.error || 'فشل تفعيل الحساب');
       }
@@ -106,21 +110,15 @@ export default function Activate() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-            {step === 'success' ? (
-              <CheckCircle2 className="h-8 w-8 text-green-500" />
-            ) : (
-              <KeyRound className="h-8 w-8 text-primary" />
-            )}
+            <KeyRound className="h-8 w-8 text-primary" />
           </div>
           <CardTitle className="text-lg md:text-2xl">
             {step === 'verify' && 'تفعيل الحساب'}
             {step === 'password' && 'إنشاء كلمة المرور'}
-            {step === 'success' && 'تم التفعيل بنجاح'}
           </CardTitle>
           <CardDescription>
             {step === 'verify' && 'أدخل الرقم الوظيفي وكود التفعيل'}
             {step === 'password' && `مرحباً ${employeeName}، قم بإنشاء كلمة مرور جديدة`}
-            {step === 'success' && 'يمكنك الآن تسجيل الدخول إلى النظام'}
           </CardDescription>
         </CardHeader>
 
@@ -228,26 +226,6 @@ export default function Activate() {
             </>
           )}
 
-          {step === 'success' && (
-            <div className="text-center space-y-4">
-              <div className="p-4 bg-green-50 rounded-lg space-y-2">
-                <p className="text-green-700 font-medium">
-                  تم تفعيل حسابك بنجاح!
-                </p>
-                <p className="text-green-700 text-sm">
-                  يمكنك الآن تسجيل الدخول باستخدام:
-                </p>
-                <div className="bg-white rounded-md p-3 text-sm space-y-1">
-                  <p className="text-gray-700">البريد الإلكتروني: <span className="font-mono font-medium">{employeeEmail}</span></p>
-                  <p className="text-gray-700">كلمة المرور: <span className="font-medium">التي قمت بإنشائها للتو</span></p>
-                </div>
-              </div>
-
-              <Button className="w-full" onClick={() => navigate('/')}>
-                الذهاب لتسجيل الدخول
-              </Button>
-            </div>
-          )}
         </CardContent>
       </Card>
 

@@ -13,12 +13,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Clock, CheckCircle2, AlertCircle, User, Check, X } from 'lucide-react';
+import { Search, Clock, CheckCircle2, AlertCircle, User, Check, X, Building2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { useUser } from '@/services/authService';
+import { useAppContext } from '@/contexts/AppContext';
 import { toast } from 'sonner';
 
 interface Request {
@@ -30,12 +31,17 @@ interface Request {
   priority: string;
   status: string;
   requesterId: number;
+  requesterName?: string;
+  requesterDepartment?: string;
+  requesterDepartmentId?: number;
+  approverName?: string;
   assignedTo?: number | null;
   createdAt: string;
 }
 
 export default function RequestList() {
   const { data: currentUser, isError } = useUser();
+  const { selectedRole, currentEmployee, currentEmployeeId, currentUserId } = useAppContext();
   const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [newRequest, setNewRequest] = useState({
@@ -76,11 +82,130 @@ export default function RequestList() {
     },
   });
 
-  const filteredRequests = (requests || []).filter((req: Request) =>
-    req.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    req.requestNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    req.requestType?.toLowerCase().includes(searchTerm.toLowerCase())
+  // Role-based checks
+  const isManager = ['admin', 'general_manager', 'hr_manager', 'department_manager'].includes(selectedRole);
+  const isAdmin = ['admin', 'general_manager'].includes(selectedRole);
+
+  // Get current employee department ID
+  const myDeptId = currentEmployee?.department?.id || currentEmployee?.departmentId;
+  const myUserId = currentUserId || currentUser?.id;
+
+  // Filter requests based on search
+  const allRequests = (requests || []) as Request[];
+
+  const filterBySearch = (reqs: Request[]) =>
+    reqs.filter((req) =>
+      req.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      req.requestNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      req.requestType?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      req.requesterName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      req.requesterDepartment?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+  // "My Requests" tab - requests created by the current user
+  const myRequests = filterBySearch(
+    allRequests.filter((req) =>
+      req.requesterId?.toString() === myUserId?.toString()
+    )
   );
+
+  // "Assigned to me" tab - pending requests that the current role can approve
+  const assignedRequests = filterBySearch(
+    allRequests.filter((req) => {
+      if (req.status !== 'pending') return false;
+      // Don't show own requests in assigned tab
+      if (req.requesterId?.toString() === myUserId?.toString()) return false;
+
+      // Admin/GM see all pending requests
+      if (isAdmin) return true;
+
+      // Department manager sees requests from their department
+      if (selectedRole === 'department_manager' && myDeptId) {
+        return req.requesterDepartmentId?.toString() === myDeptId?.toString();
+      }
+
+      // HR manager sees all pending requests
+      if (selectedRole === 'hr_manager') return true;
+
+      // Supervisor sees requests from their team (same department)
+      if (selectedRole === 'supervisor' && myDeptId) {
+        return req.requesterDepartmentId?.toString() === myDeptId?.toString();
+      }
+
+      return false;
+    })
+  );
+
+  // "All requests" tab - role-based visibility
+  const allFilteredRequests = filterBySearch(
+    isAdmin
+      ? allRequests
+      : selectedRole === 'hr_manager'
+        ? allRequests
+        : (selectedRole === 'department_manager' || selectedRole === 'supervisor') && myDeptId
+          ? allRequests.filter((req) =>
+              req.requesterDepartmentId?.toString() === myDeptId?.toString() ||
+              req.requesterId?.toString() === myUserId?.toString()
+            )
+          : allRequests.filter((req) => req.requesterId?.toString() === myUserId?.toString())
+  );
+
+  // Can this user approve/reject?
+  const canApprove = (req: Request) => {
+    if (req.status !== 'pending') return false;
+    if (req.requesterId?.toString() === myUserId?.toString()) return false;
+    if (isAdmin) return true;
+    if (selectedRole === 'hr_manager') return true;
+    if (selectedRole === 'department_manager' && myDeptId) {
+      return req.requesterDepartmentId?.toString() === myDeptId?.toString();
+    }
+    if (selectedRole === 'supervisor' && myDeptId) {
+      return req.requesterDepartmentId?.toString() === myDeptId?.toString();
+    }
+    return false;
+  };
+
+  const handleApprove = (req: Request) => {
+    const approverName = currentEmployee
+      ? `${currentEmployee.firstName} ${currentEmployee.lastName}`
+      : currentUser?.username || '';
+    updateRequestMutation.mutate({
+      id: req.id,
+      status: 'approved',
+      approverName,
+    });
+  };
+
+  const handleReject = (req: Request) => {
+    const approverName = currentEmployee
+      ? `${currentEmployee.firstName} ${currentEmployee.lastName}`
+      : currentUser?.username || '';
+    updateRequestMutation.mutate({
+      id: req.id,
+      status: 'rejected',
+      approverName,
+    });
+  };
+
+  const handleCreateRequest = () => {
+    const empName = currentEmployee
+      ? `${currentEmployee.firstName} ${currentEmployee.lastName}`
+      : currentUser?.username || '';
+    const empDept = currentEmployee?.department?.nameAr || currentEmployee?.department?.name || '';
+    const empDeptId = currentEmployee?.department?.id || currentEmployee?.departmentId || null;
+
+    createRequestMutation.mutate({
+      requestNumber: `REQ-${Date.now()}`,
+      requestType: newRequest.type,
+      title: newRequest.subject,
+      description: newRequest.description,
+      priority: newRequest.priority,
+      requesterId: myUserId,
+      requesterName: empName,
+      requesterDepartment: empDept,
+      requesterDepartmentId: empDeptId,
+    });
+  };
 
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
@@ -131,6 +256,98 @@ export default function RequestList() {
         return null;
     }
   };
+
+  const renderRequestTable = (data: Request[], showRequester: boolean, showActions: boolean) => (
+    <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
+      {isLoading ? (
+        <div className="text-center py-8">جاري التحميل...</div>
+      ) : data.length === 0 ? (
+        <div className="text-center py-8 text-muted-foreground">لا توجد طلبات</div>
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>رقم الطلب</TableHead>
+              {showRequester && <TableHead>مقدم الطلب</TableHead>}
+              {showRequester && <TableHead>القسم</TableHead>}
+              <TableHead>النوع</TableHead>
+              <TableHead>الموضوع</TableHead>
+              <TableHead>تاريخ الطلب</TableHead>
+              <TableHead>الأولوية</TableHead>
+              <TableHead>الحالة</TableHead>
+              {showActions && <TableHead className="w-[100px]">إجراءات</TableHead>}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {data.map((req) => (
+              <TableRow key={req.id}>
+                <TableCell className="font-medium">{req.requestNumber}</TableCell>
+                {showRequester && (
+                  <TableCell>
+                    <div className="flex items-center gap-1.5">
+                      <User className="h-3.5 w-3.5 text-gray-400" />
+                      <span className="text-sm">{req.requesterName || 'غير معروف'}</span>
+                    </div>
+                  </TableCell>
+                )}
+                {showRequester && (
+                  <TableCell>
+                    <div className="flex items-center gap-1.5">
+                      <Building2 className="h-3.5 w-3.5 text-gray-400" />
+                      <span className="text-sm">{req.requesterDepartment || '-'}</span>
+                    </div>
+                  </TableCell>
+                )}
+                <TableCell>{getRequestTypeName(req.requestType)}</TableCell>
+                <TableCell>{req.title}</TableCell>
+                <TableCell>{formatDate(req.createdAt)}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    {getPriorityIcon(req.priority)}
+                    <span className="text-sm text-gray-600">
+                      {req.priority === 'high' ? 'عالية' : req.priority === 'medium' ? 'متوسطة' : 'منخفضة'}
+                    </span>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="space-y-1">
+                    {getStatusBadge(req.status)}
+                    {req.approverName && req.status !== 'pending' && (
+                      <p className="text-xs text-gray-500">بواسطة: {req.approverName}</p>
+                    )}
+                  </div>
+                </TableCell>
+                {showActions && (
+                  <TableCell>
+                    {canApprove(req) && (
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleApprove(req)}
+                          title="موافقة"
+                        >
+                          <Check className="h-4 w-4 text-green-600" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleReject(req)}
+                          title="رفض"
+                        >
+                          <X className="h-4 w-4 text-red-600" />
+                        </Button>
+                      </div>
+                    )}
+                  </TableCell>
+                )}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+    </div>
+  );
 
   if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>;
 
@@ -197,13 +414,7 @@ export default function RequestList() {
               </Select>
             </div>
             <Button
-              onClick={() => createRequestMutation.mutate({
-                requestNumber: `REQ-${Date.now()}`,
-                requestType: newRequest.type,
-                title: newRequest.subject,
-                description: newRequest.description,
-                priority: newRequest.priority
-              })}
+              onClick={handleCreateRequest}
               className="w-full"
               disabled={!newRequest.type || !newRequest.subject || createRequestMutation.isPending}
             >
@@ -214,10 +425,18 @@ export default function RequestList() {
       )}
 
       <Tabs defaultValue="my-requests" className="w-full">
-        <TabsList className="grid w-full grid-cols-1 md:grid-cols-3 lg:w-[400px]">
-          <TabsTrigger value="my-requests">طلباتي</TabsTrigger>
-          <TabsTrigger value="assigned">مسندة إلي</TabsTrigger>
-          <TabsTrigger value="all">كل الطلبات</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-1 md:grid-cols-3 lg:w-[500px]">
+          <TabsTrigger value="my-requests">
+            طلباتي ({myRequests.length})
+          </TabsTrigger>
+          {isManager && (
+            <TabsTrigger value="assigned">
+              مسندة إلي ({assignedRequests.length})
+            </TabsTrigger>
+          )}
+          <TabsTrigger value="all">
+            {isAdmin ? 'كل الطلبات' : 'طلبات القسم'} ({allFilteredRequests.length})
+          </TabsTrigger>
         </TabsList>
 
         <div className="mt-4 flex items-center gap-4 bg-white p-4 rounded-lg border shadow-sm">
@@ -233,140 +452,17 @@ export default function RequestList() {
         </div>
 
         <TabsContent value="my-requests" className="mt-4">
-          <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
-            {isLoading ? (
-              <div className="text-center py-8">جاري التحميل...</div>
-            ) : filteredRequests.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">لا توجد طلبات</div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>رقم الطلب</TableHead>
-                    <TableHead>النوع</TableHead>
-                    <TableHead>الموضوع</TableHead>
-                    <TableHead>تاريخ الطلب</TableHead>
-                    <TableHead>الأولوية</TableHead>
-                    <TableHead>الحالة</TableHead>
-                    <TableHead className="w-[100px]">إجراءات</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredRequests.map((req: Request) => (
-                    <TableRow key={req.id}>
-                      <TableCell className="font-medium">{req.requestNumber}</TableCell>
-                      <TableCell>{getRequestTypeName(req.requestType)}</TableCell>
-                      <TableCell>{req.title}</TableCell>
-                      <TableCell>{formatDate(req.createdAt)}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {getPriorityIcon(req.priority)}
-                          <span className="text-sm text-gray-600">
-                            {req.priority === 'high' ? 'عالية' : req.priority === 'medium' ? 'متوسطة' : 'منخفضة'}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>{getStatusBadge(req.status)}</TableCell>
-                      <TableCell>
-                        {req.status === 'pending' && (
-                          <div className="flex items-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => updateRequestMutation.mutate({ id: req.id, status: 'approved' })}
-                              title="موافقة"
-                            >
-                              <Check className="h-4 w-4 text-green-600" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => updateRequestMutation.mutate({ id: req.id, status: 'rejected' })}
-                              title="رفض"
-                            >
-                              <X className="h-4 w-4 text-red-600" />
-                            </Button>
-                          </div>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </div>
+          {renderRequestTable(myRequests, false, false)}
         </TabsContent>
 
-        <TabsContent value="assigned">
-          <div className="flex flex-col items-center justify-center py-12 text-gray-500 bg-white rounded-lg border border-dashed">
-            <User className="h-12 w-12 mb-4 text-gray-300" />
-            <p>لا توجد طلبات مسندة إليك حالياً</p>
-          </div>
-        </TabsContent>
+        {isManager && (
+          <TabsContent value="assigned" className="mt-4">
+            {renderRequestTable(assignedRequests, true, true)}
+          </TabsContent>
+        )}
 
-        <TabsContent value="all">
-          <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
-            {isLoading ? (
-              <div className="text-center py-8">جاري التحميل...</div>
-            ) : filteredRequests.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">لا توجد طلبات</div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>رقم الطلب</TableHead>
-                    <TableHead>النوع</TableHead>
-                    <TableHead>الموضوع</TableHead>
-                    <TableHead>تاريخ الطلب</TableHead>
-                    <TableHead>الأولوية</TableHead>
-                    <TableHead>الحالة</TableHead>
-                    <TableHead className="w-[100px]">إجراءات</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredRequests.map((req: Request) => (
-                    <TableRow key={req.id}>
-                      <TableCell className="font-medium">{req.requestNumber}</TableCell>
-                      <TableCell>{getRequestTypeName(req.requestType)}</TableCell>
-                      <TableCell>{req.title}</TableCell>
-                      <TableCell>{formatDate(req.createdAt)}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {getPriorityIcon(req.priority)}
-                          <span className="text-sm text-gray-600">
-                            {req.priority === 'high' ? 'عالية' : req.priority === 'medium' ? 'متوسطة' : 'منخفضة'}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>{getStatusBadge(req.status)}</TableCell>
-                      <TableCell>
-                        {req.status === 'pending' && (
-                          <div className="flex items-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => updateRequestMutation.mutate({ id: req.id, status: 'approved' })}
-                              title="موافقة"
-                            >
-                              <Check className="h-4 w-4 text-green-600" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => updateRequestMutation.mutate({ id: req.id, status: 'rejected' })}
-                              title="رفض"
-                            >
-                              <X className="h-4 w-4 text-red-600" />
-                            </Button>
-                          </div>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </div>
+        <TabsContent value="all" className="mt-4">
+          {renderRequestTable(allFilteredRequests, isManager, isManager)}
         </TabsContent>
       </Tabs>
     </div>

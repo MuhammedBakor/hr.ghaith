@@ -228,6 +228,107 @@ public class EmployeeService {
             employee.setBranch(hrBranchRepository.findById(employeeDetails.getBranch().getId()).orElse(null));
         }
 
+        // Additional personal info fields
+        if (employeeDetails.getNationalId() != null) {
+            employee.setNationalId(employeeDetails.getNationalId());
+        }
+        if (employeeDetails.getNationality() != null) {
+            employee.setNationality(employeeDetails.getNationality());
+        }
+        if (employeeDetails.getDateOfBirth() != null) {
+            employee.setDateOfBirth(employeeDetails.getDateOfBirth());
+        }
+        if (employeeDetails.getGender() != null) {
+            employee.setGender(employeeDetails.getGender());
+        }
+        if (employeeDetails.getMaritalStatus() != null) {
+            employee.setMaritalStatus(employeeDetails.getMaritalStatus());
+        }
+        if (employeeDetails.getAddress() != null) {
+            employee.setAddress(employeeDetails.getAddress());
+        }
+        if (employeeDetails.getCity() != null) {
+            employee.setCity(employeeDetails.getCity());
+        }
+
+        // Emergency contact fields
+        if (employeeDetails.getEmergencyName() != null) {
+            employee.setEmergencyName(employeeDetails.getEmergencyName());
+        }
+        if (employeeDetails.getEmergencyRelation() != null) {
+            employee.setEmergencyRelation(employeeDetails.getEmergencyRelation());
+        }
+        if (employeeDetails.getEmergencyPhone() != null) {
+            employee.setEmergencyPhone(employeeDetails.getEmergencyPhone());
+        }
+
+        // Bank info fields
+        if (employeeDetails.getBankName() != null) {
+            employee.setBankName(employeeDetails.getBankName());
+        }
+        if (employeeDetails.getBankAccount() != null) {
+            employee.setBankAccount(employeeDetails.getBankAccount());
+        }
+        if (employeeDetails.getIban() != null) {
+            employee.setIban(employeeDetails.getIban());
+        }
+
+        return employeeRepository.save(employee);
+    }
+
+    public Employee updateEmployeeSelfService(Long employeeId, java.util.Map<String, Object> profileData) {
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new RuntimeException("الموظف غير موجود"));
+
+        // Only allow updating self-service fields (NOT salary, department, position, branch, role, manager)
+        if (profileData.containsKey("nationalId")) {
+            employee.setNationalId((String) profileData.get("nationalId"));
+        }
+        if (profileData.containsKey("nationality")) {
+            employee.setNationality((String) profileData.get("nationality"));
+        }
+        if (profileData.containsKey("dateOfBirth")) {
+            employee.setDateOfBirth((String) profileData.get("dateOfBirth"));
+        }
+        if (profileData.containsKey("gender")) {
+            employee.setGender((String) profileData.get("gender"));
+        }
+        if (profileData.containsKey("maritalStatus")) {
+            employee.setMaritalStatus((String) profileData.get("maritalStatus"));
+        }
+        if (profileData.containsKey("address")) {
+            employee.setAddress((String) profileData.get("address"));
+        }
+        if (profileData.containsKey("city")) {
+            employee.setCity((String) profileData.get("city"));
+        }
+        if (profileData.containsKey("phone")) {
+            employee.setPhone((String) profileData.get("phone"));
+        }
+
+        // Emergency Contact
+        if (profileData.containsKey("emergencyName")) {
+            employee.setEmergencyName((String) profileData.get("emergencyName"));
+        }
+        if (profileData.containsKey("emergencyRelation")) {
+            employee.setEmergencyRelation((String) profileData.get("emergencyRelation"));
+        }
+        if (profileData.containsKey("emergencyPhone")) {
+            employee.setEmergencyPhone((String) profileData.get("emergencyPhone"));
+        }
+
+        // Bank Info
+        if (profileData.containsKey("bankName")) {
+            employee.setBankName((String) profileData.get("bankName"));
+        }
+        if (profileData.containsKey("bankAccount")) {
+            employee.setBankAccount((String) profileData.get("bankAccount"));
+        }
+        if (profileData.containsKey("iban")) {
+            employee.setIban((String) profileData.get("iban"));
+        }
+
+        // Keep status as incomplete - admin needs to review and add salary
         return employeeRepository.save(employee);
     }
 

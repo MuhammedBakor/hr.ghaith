@@ -15,9 +15,14 @@ public class LegalContract extends BaseEntity {
     private String contractNumber;
     private String title;
     private String partyName;
+    private String partyA;
+    private String partyB;
+    private String contractType;
     private LocalDate startDate;
     private LocalDate endDate;
     private String status; // draft, active, expired, terminated
     private BigDecimal amount;
+    private BigDecimal value;
     private String category; // employment, vendor, property, etc.
+    private String description;
 }

@@ -13,9 +13,12 @@ import java.time.LocalDate;
 public class LegalCase extends BaseEntity {
     private String caseNumber;
     private String title;
+    private String caseType;
     private String court;
-    private String status; // open, won, lost, settled
+    private String status; // open, in_progress, closed, won, lost
     private LocalDate nextHearingDate;
+    private String hearingDate;
     private String lawyer;
     private String description;
+    private java.math.BigDecimal claimAmount;
 }

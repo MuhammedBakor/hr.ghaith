@@ -68,6 +68,8 @@ const getStatusBadge = (status: string) => {
       return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-200">في إجازة</Badge>;
     case 'terminated':
       return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-200">منتهي الخدمة</Badge>;
+    case 'incomplete':
+      return <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-200">غير مكتمل</Badge>;
     default:
       return <Badge variant="outline">{status}</Badge>;
   }
@@ -381,9 +383,11 @@ export default function EmployeeList() {
                   عرض الملف
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => openEdit(emp)}>
-                <Edit className="ms-2 h-4 w-4" />
-                تعديل البيانات
+              <DropdownMenuItem asChild>
+                <Link href={`/hr/employees/${emp.id}?mode=edit`}>
+                  <Edit className="ms-2 h-4 w-4" />
+                  تعديل البيانات
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               {/* Reactivate - show when suspended, terminated, or inactive */}
@@ -502,7 +506,7 @@ export default function EmployeeList() {
         <TabsList className="flex w-full overflow-x-auto">
           <TabsTrigger value="employees" className="flex-shrink-0">
             قائمة الموظفين
-            <Badge className="ms-2 bg-green-100 text-green-800 text-xs">{employees.filter(e => e.status === 'active').length}</Badge>
+            <Badge className="ms-2 bg-green-100 text-green-800 text-xs">{employees.filter(e => e.status === 'active' || e.status === 'incomplete').length}</Badge>
           </TabsTrigger>
           <TabsTrigger value="suspended" className="flex-shrink-0">
             موقوفون مؤقتاً
@@ -534,18 +538,18 @@ export default function EmployeeList() {
                 )}
               </CardTitle>
               <CardDescription>
-                {loading ? 'جاري التحميل...' : `${employees.filter(e => e.status === 'active').length} موظف نشط`}
+                {loading ? 'جاري التحميل...' : `${employees.filter(e => e.status === 'active').length} موظف نشط` + (employees.filter(e => e.status === 'incomplete').length > 0 ? ` · ${employees.filter(e => e.status === 'incomplete').length} غير مكتمل` : '')}
               </CardDescription>
               <div className="flex flex-wrap gap-2 mt-2">
                 <PrintButton title="قائمة الموظفين" />
                 <ExportButtons
-                  data={employees.filter(e => e.status === 'active').map(emp => ({
+                  data={employees.filter(e => e.status === 'active' || e.status === 'incomplete').map(emp => ({
                     name: `${emp.firstName} ${emp.lastName}`,
                     email: emp.email,
                     position: emp.position,
                     department: emp.department,
                     joinDate: emp.joinDate,
-                    status: 'نشط'
+                    status: emp.status === 'incomplete' ? 'غير مكتمل' : 'نشط'
                   }))}
                   columns={[
                     { key: 'name', label: 'الاسم' },
@@ -566,10 +570,10 @@ export default function EmployeeList() {
               ) : (
                 <DataTable
                   columns={columns}
-                  data={employees.filter(e => e.status === 'active')}
+                  data={employees.filter(e => e.status === 'active' || e.status === 'incomplete')}
                   searchKey="firstName"
                   searchPlaceholder="بحث بالاسم..."
-                  emptyMessage={selectedBranchId ? `لا يوجد موظفين نشطين في ${branchName}` : "لا يوجد موظفين نشطين"}
+                  emptyMessage={selectedBranchId ? `لا يوجد موظفين في ${branchName}` : "لا يوجد موظفين"}
                 />
               )}
             </CardContent>

@@ -52,7 +52,7 @@ public class HrAutomationController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/update")
+    @RequestMapping(value = "/update", method = {RequestMethod.POST, RequestMethod.PUT})
     public ResponseEntity<?> update(@RequestBody(required = false) Map<String, Object> body) {
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);

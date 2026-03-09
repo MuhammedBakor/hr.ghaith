@@ -27,7 +27,7 @@ export const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({ children
             }
 
             if (hrSubPage && !canAccessHrSubPage(hrSubPage)) {
-                setLocation('/hr');
+                setLocation('/');
                 return;
             }
         }

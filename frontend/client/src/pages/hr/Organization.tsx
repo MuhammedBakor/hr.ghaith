@@ -13,7 +13,6 @@ import {
   Users,
   ChevronDown,
   ChevronRight,
-  User,
   Briefcase,
   ArrowRight
 } from 'lucide-react';
@@ -28,9 +27,11 @@ import {
 interface Department {
   id: number;
   name: string;
+  nameAr?: string;
   managerId?: number | null;
   parentId?: number | null;
   employeeCount?: number;
+  managerCount?: number;
   children?: Department[];
   expanded?: boolean;
 }
@@ -43,7 +44,6 @@ export default function Organization() {
   const [showInlineForm, setShowInlineForm] = useState(false);
   const [inlineData, setInlineData] = useState<any>({});
 
-  const [searchTerm, setSearchTerm] = useState('');
   const { selectedRole: userRole } = useAppContext();
   const canEdit = userRole === "admin" || userRole === "manager";
   const canDelete = userRole === "admin";
@@ -92,18 +92,30 @@ export default function Organization() {
     const roots: Department[] = [];
 
     depts.forEach(dept => {
-      map.set(dept.id, { ...dept, children: [], employeeCount: 0 });
+      map.set(dept.id, { ...dept, children: [], employeeCount: 0, managerCount: 0 });
     });
 
-    // حساب عدد الموظفين لكل قسم
+    // حساب عدد الموظفين والمديرين لكل قسم
     if (employeesData) {
-      employeesData.forEach((emp: { departmentId?: number | null;[key: string]: unknown }) => {
-        if (emp.departmentId && map.has(emp.departmentId)) {
-          const dept = map.get(emp.departmentId)!;
+      employeesData.forEach((emp: any) => {
+        const deptId = emp.department?.id || emp.departmentId;
+        if (deptId && map.has(deptId)) {
+          const dept = map.get(deptId)!;
           dept.employeeCount = (dept.employeeCount || 0) + 1;
+          // Count as manager if this employee is a manager of any department
+          if (emp.user?.role === 'manager' || emp.role === 'manager') {
+            dept.managerCount = (dept.managerCount || 0) + 1;
+          }
         }
       });
     }
+
+    // Also count managers from managerId field on departments
+    map.forEach(dept => {
+      if (dept.managerId && dept.managerCount === 0) {
+        dept.managerCount = 1;
+      }
+    });
 
     map.forEach(dept => {
       if (dept.parentId && map.has(dept.parentId)) {
@@ -148,16 +160,6 @@ export default function Organization() {
 
     return (
       <div className="relative">
-        <div className="mb-4 flex items-center gap-2">
-          <input
-            type="text"
-            placeholder="بحث..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full md:w-64 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
-          {searchTerm && <button onClick={() => setSearchTerm('')} className="text-gray-400 hover:text-gray-600">✕</button>}
-        </div>
         <div
           className={`flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer ${level > 0 ? 'me-8' : ''}`}
           onClick={() => hasChildren && toggleExpand(dept.id)}
@@ -180,8 +182,8 @@ export default function Organization() {
             <p className="font-medium">{dept.nameAr || dept.name}</p>
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <span className="flex items-center gap-1">
-                <User className="h-3 w-3" />
-                {dept.managerId ? `مدير #${dept.managerId}` : 'بدون مدير'}
+                <Briefcase className="h-3 w-3" />
+                {dept.managerCount || 0} مدير
               </span>
               <span className="flex items-center gap-1">
                 <Users className="h-3 w-3" />
@@ -315,7 +317,7 @@ export default function Organization() {
             </div>
           ) : (
             <div className="space-y-2">
-              {departments?.filter((item: any) => !searchTerm || JSON.stringify(item).toLowerCase().includes(searchTerm.toLowerCase()))?.map(dept => (
+              {departments?.map(dept => (
                 <DepartmentNode key={dept.id} dept={dept} />
               ))}
             </div>

@@ -1,39 +1,76 @@
-import { formatDate, formatDateTime } from '@/lib/formatDate';
+import { formatDate } from '@/lib/formatDate';
 import { useAppContext } from '@/contexts/AppContext';
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
+import { useUser } from '@/services/authService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CheckCircle, XCircle, Clock, Loader2 } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Loader2, User, Building2, Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { PrintButton } from "@/components/PrintButton";
 
 export default function Approvals() {
-  const confirmDelete = (fn: () => void) => { if (window.confirm("هل أنت متأكد من الحذف؟")) fn(); };
-
   const [searchTerm, setSearchTerm] = useState('');
-  const { selectedRole: userRole } = useAppContext();
-  const canEdit = userRole === "admin" || userRole === "manager";
-  const canDelete = userRole === "admin";
+  const { selectedRole, currentEmployee, currentUserId } = useAppContext();
+  const { data: currentUser } = useUser();
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 20;
-
-  const [showDialog, setShowDialog] = React.useState(false);
-  const [formData, setFormData] = React.useState<Record<string, any>>({});
+  const isAdmin = ['admin', 'general_manager'].includes(selectedRole);
+  const isManager = ['admin', 'general_manager', 'hr_manager', 'department_manager', 'supervisor'].includes(selectedRole);
+  const myDeptId = currentEmployee?.department?.id || currentEmployee?.departmentId;
+  const myUserId = currentUserId || currentUser?.id;
 
   const queryClient = useQueryClient();
-  const { data: requests, isLoading, isError, error} = useQuery({
+  const { data: requests, isLoading, isError } = useQuery({
     queryKey: ['requests'],
     queryFn: () => api.get('/requests').then(r => r.data),
   });
 
-  const approveMutation = useMutation({ mutationFn: (data: any) => api.put(`/requests/${data.id}`, data).then(r => r.data), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['requests'] }); toast.success('تم تحديث الحالة'); }, onError: (e: any) => { alert(e.message || "حدث خطأ"); } });
+  const approveMutation = useMutation({
+    mutationFn: (data: any) => api.put(`/requests/${data.id}`, data).then(r => r.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['requests'] });
+      toast.success('تم تحديث الحالة');
+    },
+    onError: (e: any) => {
+      toast.error(e.message || "حدث خطأ");
+    },
+  });
 
-  const pendingRequests = (requests || []).filter((r: any) => r.status === 'pending');
+  const getApproverName = () =>
+    currentEmployee ? `${currentEmployee.firstName} ${currentEmployee.lastName}` : currentUser?.username || '';
+
+  // Filter pending requests based on role
+  const pendingRequests = (requests || []).filter((r: any) => {
+    if (r.status !== 'pending') return false;
+    // Don't show own requests
+    if (r.requesterId?.toString() === myUserId?.toString()) return false;
+
+    if (isAdmin) return true;
+    if (selectedRole === 'hr_manager') return true;
+    if ((selectedRole === 'department_manager' || selectedRole === 'supervisor') && myDeptId) {
+      return r.requesterDepartmentId?.toString() === myDeptId?.toString();
+    }
+    return false;
+  });
+
+  const filteredPending = pendingRequests.filter((r: any) =>
+    !searchTerm ||
+    r.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    r.requesterName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    r.requesterDepartment?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    r.requestType?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Count approved/rejected today
+  const today = new Date().toDateString();
+  const processedToday = (requests || []).filter((r: any) =>
+    (r.status === 'approved' || r.status === 'rejected') &&
+    r.updatedAt && new Date(r.updatedAt).toDateString() === today
+  ).length;
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
@@ -41,20 +78,18 @@ export default function Approvals() {
 
   if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>;
 
-  
+  if (!isManager) {
+    return (
+      <div className="p-8 text-center text-gray-500" dir="rtl">
+        <Clock className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+        <p className="text-lg font-medium">ليس لديك صلاحية الموافقة على الطلبات</p>
+        <p className="text-sm mt-2">يمكنك إنشاء طلبات جديدة من صفحة الطلبات</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6" dir="rtl">
-        <div className="mb-4 flex items-center gap-2">
-          <input
-            type="text"
-            placeholder="بحث..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full md:w-64 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
-          {searchTerm && <button onClick={() => setSearchTerm('')} className="text-gray-400 hover:text-gray-600">✕</button>}
-        </div>
       <div>
         <h2 className="text-2xl font-bold">الموافقات</h2>
         <p className="text-gray-500">الطلبات التي تحتاج موافقتك</p>
@@ -70,36 +105,112 @@ export default function Approvals() {
             </div>
           </CardContent>
         </Card>
+        <Card>
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-green-50"><CheckCircle className="h-6 w-6 text-green-600" /></div>
+            <div>
+              <p className="text-sm text-gray-500">تمت معالجتها اليوم</p>
+              <p className="text-2xl font-bold">{processedToday}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute end-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="بحث بالاسم، القسم، النوع..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pe-9"
+          />
+        </div>
+        {searchTerm && (
+          <button onClick={() => setSearchTerm('')} className="text-gray-400 hover:text-gray-600 text-sm">
+            مسح
+          </button>
+        )}
       </div>
 
       <Card>
-        <CardHeader><CardTitle>الطلبات المعلقة</CardTitle>
-              <PrintButton title="الطلبات المعلقة" /></CardHeader>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>الطلبات المعلقة</CardTitle>
+            <PrintButton title="الطلبات المعلقة" />
+          </div>
+        </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="text-end">مقدم الطلب</TableHead>
+                <TableHead className="text-end">القسم</TableHead>
                 <TableHead className="text-end">النوع</TableHead>
+                <TableHead className="text-end">الموضوع</TableHead>
                 <TableHead className="text-end">التاريخ</TableHead>
-                <TableHead className="text-end">الحالة</TableHead>
+                <TableHead className="text-end">الأولوية</TableHead>
                 <TableHead className="text-end">الإجراءات</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {pendingRequests.length === 0 ? (
-                <TableRow><TableCell colSpan={4} className="text-center py-8 text-gray-500">لا توجد طلبات معلقة</TableCell></TableRow>
+              {filteredPending.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                    لا توجد طلبات معلقة
+                  </TableCell>
+                </TableRow>
               ) : (
-                pendingRequests?.filter((item: any) => !searchTerm || JSON.stringify(item).toLowerCase().includes(searchTerm.toLowerCase()))?.map((req: any) => (
+                filteredPending.map((req: any) => (
                   <TableRow key={req.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-1.5">
+                        <User className="h-3.5 w-3.5 text-gray-400" />
+                        <span className="font-medium">{req.requesterName || 'غير معروف'}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1.5">
+                        <Building2 className="h-3.5 w-3.5 text-gray-400" />
+                        <span>{req.requesterDepartment || '-'}</span>
+                      </div>
+                    </TableCell>
                     <TableCell>{req.requestType}</TableCell>
+                    <TableCell className="max-w-[200px] truncate">{req.title}</TableCell>
                     <TableCell>{req.createdAt ? formatDate(req.createdAt) : '-'}</TableCell>
-                    <TableCell><Badge variant="secondary">قيد الانتظار</Badge></TableCell>
+                    <TableCell>
+                      <Badge className={
+                        req.priority === 'high' ? 'bg-red-100 text-red-800' :
+                        req.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-green-100 text-green-800'
+                      }>
+                        {req.priority === 'high' ? 'عالية' : req.priority === 'medium' ? 'متوسطة' : 'منخفضة'}
+                      </Badge>
+                    </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
-                        <Button size="sm" variant="default" onClick={() => approveMutation.mutate({ id: req.id, status: 'approved' })}>
+                        <Button
+                          size="sm"
+                          variant="default"
+                          disabled={approveMutation.isPending}
+                          onClick={() => approveMutation.mutate({
+                            id: req.id,
+                            status: 'approved',
+                            approverName: getApproverName(),
+                          })}
+                        >
                           <CheckCircle className="h-4 w-4 me-1" />موافقة
                         </Button>
-                        <Button size="sm" variant="destructive" onClick={() => approveMutation.mutate({ id: req.id, status: 'rejected' })}>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          disabled={approveMutation.isPending}
+                          onClick={() => approveMutation.mutate({
+                            id: req.id,
+                            status: 'rejected',
+                            approverName: getApproverName(),
+                          })}
+                        >
                           <XCircle className="h-4 w-4 me-1" />رفض
                         </Button>
                       </div>
@@ -111,22 +222,6 @@ export default function Approvals() {
           </Table>
         </CardContent>
       </Card>
-    
-        {showDialog && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowDialog(false)}>
-            <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl" dir="rtl" onClick={e => e.stopPropagation()}>
-              <h3 className="text-lg font-bold mb-4">إدخال البيانات</h3>
-              <div className="space-y-3">
-                <input aria-label="حقل إدخال" className="w-full border rounded-lg p-2 text-end" placeholder="الاسم / العنوان" onChange={e => setFormData({...formData, name: e.target.value})} />
-                <textarea className="w-full border rounded-lg p-2 text-end" placeholder="الوصف / الملاحظات" rows={3} onChange={e => setFormData({...formData, description: e.target.value})} />
-              </div>
-              <div className="flex gap-2 mt-4 justify-end">
-                <button onClick={() => setShowDialog(false)} className="px-4 py-2 border rounded-lg hover:bg-gray-50">إلغاء</button>
-                <button onClick={() => { setShowDialog(false); }} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">حفظ</button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+    </div>
   );
 }

@@ -2,7 +2,6 @@ import { formatDate, formatDateTime } from '@/lib/formatDate';
 import { useAppContext } from '@/contexts/AppContext';
 import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
-import DashboardLayout from "@/components/layout/DashboardLayout";
 import LetterPrintWrapper from "@/components/letters/LetterPrintWrapper";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -154,7 +153,6 @@ export default function IncomingMail() {
 
   
   return (
-    <DashboardLayout>
       <div className="space-y-6">
         {/* العنوان والإجراءات */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -552,6 +550,5 @@ export default function IncomingMail() {
           </div>
         </LetterPrintWrapper>
       )}
-    </DashboardLayout>
   );
 }

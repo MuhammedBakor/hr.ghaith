@@ -30,7 +30,8 @@ import {
   useRequestEarlyLeave,
   useDepartments,
 } from '@/services/hrService';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 
 interface AttendanceRecord {
   id: number;
@@ -68,6 +69,10 @@ const getStatusBadge = (status: string) => {
       return <Badge className="bg-emerald-100 text-emerald-800">مسجل دخول</Badge>;
     case 'pending_approval':
       return <Badge className="bg-amber-100 text-amber-800">بانتظار الموافقة</Badge>;
+    case 'pending_early_leave':
+      return <Badge className="bg-amber-100 text-amber-800">طلب خروج مبكر</Badge>;
+    case 'rejected':
+      return <Badge className="bg-red-100 text-red-800">مرفوض</Badge>;
     default:
       return <Badge variant="outline">{status}</Badge>;
   }
@@ -142,6 +147,28 @@ export default function Attendance() {
   const checkOutWithLocationMutation = useCheckOut();
   const manualAttendanceMutation = useManualAttendance();
   const earlyLeaveMutation = useRequestEarlyLeave();
+
+  // Approve/reject mutations for managers
+  const approveEarlyLeaveMut = useMutation({
+    mutationFn: (id: number) => api.post(`/hr/attendance/${id}/approve-early-leave`).then(r => r.data),
+    onSuccess: () => { toast.success('تمت الموافقة على طلب الخروج المبكر'); queryClient.invalidateQueries({ queryKey: ['attendance'] }); },
+    onError: (e: any) => toast.error(e?.response?.data?.message || 'حدث خطأ'),
+  });
+  const rejectEarlyLeaveMut = useMutation({
+    mutationFn: (id: number) => api.post(`/hr/attendance/${id}/reject-early-leave`).then(r => r.data),
+    onSuccess: () => { toast.success('تم رفض طلب الخروج المبكر'); queryClient.invalidateQueries({ queryKey: ['attendance'] }); },
+    onError: (e: any) => toast.error(e?.response?.data?.message || 'حدث خطأ'),
+  });
+  const approveAttendanceMut = useMutation({
+    mutationFn: (id: number) => api.post(`/hr/attendance/${id}/approve`).then(r => r.data),
+    onSuccess: () => { toast.success('تمت الموافقة على الحضور'); queryClient.invalidateQueries({ queryKey: ['attendance'] }); },
+    onError: (e: any) => toast.error(e?.response?.data?.message || 'حدث خطأ'),
+  });
+  const rejectAttendanceMut = useMutation({
+    mutationFn: (id: number) => api.post(`/hr/attendance/${id}/reject`).then(r => r.data),
+    onSuccess: () => { toast.success('تم رفض الحضور'); queryClient.invalidateQueries({ queryKey: ['attendance'] }); },
+    onError: (e: any) => toast.error(e?.response?.data?.message || 'حدث خطأ'),
+  });
 
   // الحصول على الموقع الجغرافي
   const getCurrentLocation = (): Promise<GeolocationPosition> => {
@@ -244,6 +271,7 @@ export default function Attendance() {
     }
     earlyLeaveMutation.mutate({
       reason: earlyLeaveReason,
+      employeeId: currentEmployee?.id,
     }, {
       onSuccess: () => {
         toast.success('تم تقديم طلب الخروج المبكر بنجاح');
@@ -421,6 +449,42 @@ export default function Attendance() {
       header: 'الحالة',
       cell: ({ row }) => getStatusBadge(row.original.status),
     },
+    ...(canSeeSubordinates ? [{
+      id: 'actions',
+      header: 'إجراءات',
+      cell: ({ row }: any) => {
+        const record = row.original;
+        if (record.status === 'pending_early_leave') {
+          return (
+            <div className="flex items-center gap-1">
+              <Button size="sm" variant="ghost" className="h-7 px-2 text-green-600 hover:bg-green-50"
+                onClick={() => approveEarlyLeaveMut.mutate(record.id)} title="موافقة">
+                <CheckCircle2 className="h-4 w-4" />
+              </Button>
+              <Button size="sm" variant="ghost" className="h-7 px-2 text-red-600 hover:bg-red-50"
+                onClick={() => rejectEarlyLeaveMut.mutate(record.id)} title="رفض">
+                <XCircle className="h-4 w-4" />
+              </Button>
+            </div>
+          );
+        }
+        if (record.status === 'pending_approval') {
+          return (
+            <div className="flex items-center gap-1">
+              <Button size="sm" variant="ghost" className="h-7 px-2 text-green-600 hover:bg-green-50"
+                onClick={() => approveAttendanceMut.mutate(record.id)} title="موافقة">
+                <CheckCircle2 className="h-4 w-4" />
+              </Button>
+              <Button size="sm" variant="ghost" className="h-7 px-2 text-red-600 hover:bg-red-50"
+                onClick={() => rejectAttendanceMut.mutate(record.id)} title="رفض">
+                <XCircle className="h-4 w-4" />
+              </Button>
+            </div>
+          );
+        }
+        return null;
+      },
+    }] : []),
   ];
 
   // Render Manual Entry Form (للمدير المباشر فقط)
@@ -637,12 +701,12 @@ export default function Attendance() {
               </Button>
               <Button
                 onClick={() => setShowEarlyLeaveDialog(true)}
-                disabled={!todayAttendance?.checkIn || !!todayAttendance?.checkOut}
+                disabled={!todayAttendance?.checkIn || !!todayAttendance?.checkOut || todayAttendance?.status === 'pending_early_leave' || todayAttendance?.status === 'early_leave'}
                 variant="outline"
                 className="gap-2 border-amber-300 text-amber-600 hover:bg-amber-50"
               >
                 <AlertTriangle className="h-4 w-4" />
-                طلب خروج مبكر
+                {todayAttendance?.status === 'pending_early_leave' ? 'بانتظار الموافقة' : todayAttendance?.status === 'early_leave' ? 'تمت الموافقة' : 'طلب خروج مبكر'}
               </Button>
             </div>
           </div>

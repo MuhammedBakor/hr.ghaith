@@ -58,11 +58,13 @@ public class AttendanceService {
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new RuntimeException("الموظف غير موجود"));
 
+        LocalDateTime now = LocalDateTime.now();
         AttendanceRecord record = new AttendanceRecord();
         record.setEmployee(employee);
-        record.setDate(LocalDateTime.now());
-        record.setCheckIn(LocalDateTime.now());
-        record.setStatus("present");
+        record.setDate(now);
+        record.setCheckIn(now);
+        record.setStatus("checked_in");
+        record.setWorkHours(0.0);
 
         if (payload.containsKey("latitude") && payload.get("latitude") != null)
             record.setCheckInLatitude(((Number) payload.get("latitude")).doubleValue());
@@ -74,7 +76,9 @@ public class AttendanceService {
 
     public AttendanceRecord checkOut(Long id, Map<String, Object> payload) {
         AttendanceRecord record = attendanceRepository.findById(id).orElseThrow();
-        record.setCheckOut(LocalDateTime.now());
+        LocalDateTime now = LocalDateTime.now();
+        record.setCheckOut(now);
+        record.setStatus("present"); // checked out normally
 
         if (payload.containsKey("latitude") && payload.get("latitude") != null)
             record.setCheckOutLatitude(((Number) payload.get("latitude")).doubleValue());
@@ -83,8 +87,11 @@ public class AttendanceService {
 
         // Calculate work hours
         if (record.getCheckIn() != null) {
-            long duration = java.time.Duration.between(record.getCheckIn(), record.getCheckOut()).toMinutes();
-            record.setWorkHours(duration / 60.0);
+            long durationMinutes = java.time.Duration.between(record.getCheckIn(), now).toMinutes();
+            double hours = durationMinutes / 60.0;
+            record.setWorkHours(Math.round(hours * 10.0) / 10.0); // round to 1 decimal
+        } else {
+            record.setWorkHours(0.0);
         }
 
         return attendanceRepository.save(record);
@@ -136,6 +143,68 @@ public class AttendanceService {
                 }
             }
         }
+    }
+
+    public AttendanceRecord requestEarlyLeave(Map<String, Object> payload) {
+        String reason = (String) payload.getOrDefault("reason", "");
+        java.time.LocalDate today = java.time.LocalDate.now();
+        List<AttendanceRecord> todayRecords = getAttendanceByDate(today);
+
+        Object empIdObj = payload.get("employeeId");
+        if (empIdObj != null) {
+            Long employeeId = ((Number) empIdObj).longValue();
+            AttendanceRecord found = todayRecords.stream()
+                .filter(r -> r.getEmployee() != null && r.getEmployee().getId().equals(employeeId))
+                .findFirst()
+                .orElse(null);
+
+            if (found != null) {
+                // Mark as pending early leave approval
+                found.setStatus("pending_early_leave");
+                found.setApprovalStatus("pending");
+                found.setNotes(reason);
+                return attendanceRepository.save(found);
+            }
+        }
+        return null;
+    }
+
+    public AttendanceRecord approveEarlyLeave(Long recordId) {
+        AttendanceRecord record = attendanceRepository.findById(recordId).orElseThrow();
+        LocalDateTime now = LocalDateTime.now();
+        record.setStatus("early_leave");
+        record.setApprovalStatus("approved");
+        record.setCheckOut(now);
+        if (record.getCheckIn() != null) {
+            long durationMinutes = java.time.Duration.between(record.getCheckIn(), now).toMinutes();
+            record.setWorkHours(Math.round(durationMinutes / 60.0 * 10.0) / 10.0);
+        }
+        return attendanceRepository.save(record);
+    }
+
+    public AttendanceRecord rejectEarlyLeave(Long recordId) {
+        AttendanceRecord record = attendanceRepository.findById(recordId).orElseThrow();
+        record.setStatus("checked_in"); // revert to checked_in
+        record.setApprovalStatus("rejected");
+        return attendanceRepository.save(record);
+    }
+
+    public AttendanceRecord approveAttendance(Long recordId) {
+        AttendanceRecord record = attendanceRepository.findById(recordId).orElseThrow();
+        record.setApprovalStatus("approved");
+        record.setStatus("present");
+        if (record.getCheckIn() != null && record.getCheckOut() != null) {
+            long durationMinutes = java.time.Duration.between(record.getCheckIn(), record.getCheckOut()).toMinutes();
+            record.setWorkHours(Math.round(durationMinutes / 60.0 * 10.0) / 10.0);
+        }
+        return attendanceRepository.save(record);
+    }
+
+    public AttendanceRecord rejectAttendance(Long recordId) {
+        AttendanceRecord record = attendanceRepository.findById(recordId).orElseThrow();
+        record.setApprovalStatus("rejected");
+        record.setStatus("rejected");
+        return attendanceRepository.save(record);
     }
 
     public AttendanceRecord checkInWithQR(Map<String, Object> payload, Long userId) {

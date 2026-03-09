@@ -108,7 +108,7 @@ function AlertBanner({ message, module, link, severity }: {
 // ═══════════════════════════════════════════════════════════
 export default function Home() {
   const { user } = useAuth();
-  const { selectedRole } = useAppContext();
+  const { selectedRole, currentEmployee } = useAppContext();
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [debouncedQuery, setDebouncedQuery] = useState('');
@@ -183,7 +183,7 @@ export default function Home() {
 
   // Determine which dashboard to show
   const renderDashboard = () => {
-    const commonProps = { stats, pendingActions, kpis, moduleIssues, user, roleLabel: roleLabels[selectedRole] };
+    const commonProps = { stats, pendingActions, kpis, moduleIssues, user, roleLabel: roleLabels[selectedRole], currentEmployee };
 
     // Managers
     if (['hr_manager', 'finance_manager', 'fleet_manager', 'legal_manager', 'projects_manager', 'store_manager', 'department_manager'].includes(selectedRole)) {
@@ -376,7 +376,7 @@ export default function Home() {
         <div className="max-w-screen-2xl mx-auto px-4 py-3 flex items-center gap-4">
           <div className="flex-1 min-w-0">
             <h1 className="text-lg font-bold text-gray-900">
-              {greetingTime()}، {user?.username?.split(' ')[0] ?? 'مرحباً'} 👋
+              {greetingTime()}، {currentEmployee ? `${currentEmployee.firstName} ${currentEmployee.lastName}` : (user?.username?.split(' ')[0] ?? 'مرحباً')} 👋
             </h1>
             <p className="text-xs text-gray-500 hidden sm:block">
               {new Date().toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}

@@ -97,4 +97,63 @@ public class RecruitmentService {
     public Interview createInterview(Interview interview) {
         return interviewRepository.save(interview);
     }
+
+    @Transactional
+    public JobApplication createApplication(JobApplication application) {
+        return applicationRepository.save(application);
+    }
+
+    @Transactional
+    public JobApplication updateApplication(Long id, JobApplication applicationDetails) {
+        JobApplication application = applicationRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("الطلب غير موجود"));
+        if (applicationDetails.getApplicantName() != null)
+            application.setApplicantName(applicationDetails.getApplicantName());
+        if (applicationDetails.getPosition() != null)
+            application.setPosition(applicationDetails.getPosition());
+        if (applicationDetails.getEmail() != null)
+            application.setEmail(applicationDetails.getEmail());
+        if (applicationDetails.getPhone() != null)
+            application.setPhone(applicationDetails.getPhone());
+        if (applicationDetails.getResumeUrl() != null)
+            application.setResumeUrl(applicationDetails.getResumeUrl());
+        if (applicationDetails.getStatus() != null)
+            application.setStatus(applicationDetails.getStatus());
+        return applicationRepository.save(application);
+    }
+
+    @Transactional
+    public void deleteApplication(Long id) {
+        applicationRepository.deleteById(id);
+    }
+
+    @Transactional
+    public Interview updateInterview(Long id, Interview interviewDetails) {
+        Interview interview = interviewRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("المقابلة غير موجودة"));
+        if (interviewDetails.getInterviewDate() != null)
+            interview.setInterviewDate(interviewDetails.getInterviewDate());
+        if (interviewDetails.getScheduledAt() != null)
+            interview.setScheduledAt(interviewDetails.getScheduledAt());
+        if (interviewDetails.getInterviewer() != null)
+            interview.setInterviewer(interviewDetails.getInterviewer());
+        if (interviewDetails.getInterviewType() != null)
+            interview.setInterviewType(interviewDetails.getInterviewType());
+        if (interviewDetails.getDuration() != null)
+            interview.setDuration(interviewDetails.getDuration());
+        if (interviewDetails.getLocation() != null)
+            interview.setLocation(interviewDetails.getLocation());
+        if (interviewDetails.getMeetingLink() != null)
+            interview.setMeetingLink(interviewDetails.getMeetingLink());
+        if (interviewDetails.getStatus() != null)
+            interview.setStatus(interviewDetails.getStatus());
+        if (interviewDetails.getNotes() != null)
+            interview.setNotes(interviewDetails.getNotes());
+        return interviewRepository.save(interview);
+    }
+
+    @Transactional
+    public void deleteInterview(Long id) {
+        interviewRepository.deleteById(id);
+    }
 }

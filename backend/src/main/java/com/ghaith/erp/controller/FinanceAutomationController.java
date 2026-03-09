@@ -9,7 +9,7 @@ import java.util.*;
 @CrossOrigin(origins = "*")
 public class FinanceAutomationController {
 
-    @GetMapping("")
+    @GetMapping({"", "/services"})
     public ResponseEntity<?> getAll() {
         return ResponseEntity.ok(Collections.emptyList());
     }

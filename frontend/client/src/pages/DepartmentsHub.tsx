@@ -87,6 +87,7 @@ const departments: Department[] = [
     items: [
       { label: 'الموظفين', path: '/hr', icon: Users },
       { label: 'الحضور والانصراف', path: '/hr/attendance', icon: Clock },
+      { label: 'مراقبة الحضور', path: '/hr/attendance-monitoring', icon: ClipboardCheck },
       { label: 'الإجازات', path: '/hr/leave-management', icon: Calendar },
       { label: 'الرواتب', path: '/hr/payroll', icon: DollarSign },
       { label: 'تقييم الأداء', path: '/hr/performance-advanced', icon: Target },

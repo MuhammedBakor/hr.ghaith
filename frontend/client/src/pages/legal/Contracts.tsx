@@ -124,10 +124,11 @@ export default function Contracts() {
 
   // تحويل البيانات من API
   const contractsData: Contract[] = useMemo(() => {
-    if (!contractsApiData || contractsApiData.length === 0) {
+    const rawList = contractsApiData?.items || (Array.isArray(contractsApiData) ? contractsApiData : []);
+    if (!rawList || rawList.length === 0) {
       return [];
     }
-    return contractsApiData.map((c: any) => ({
+    return rawList.map((c: any) => ({
       id: c.id,
       contractNumber: c.contractNumber || `CON-${c.id}`,
       title: c.title || 'بدون عنوان',

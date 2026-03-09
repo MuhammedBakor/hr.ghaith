@@ -18,18 +18,47 @@ public class ProjectController {
     private static final List<Map<String, Object>> members = new CopyOnWriteArrayList<>();
     private static final AtomicLong memberIdCounter = new AtomicLong(1);
 
+    private static final List<Map<String, Object>> dispatchVehicles = new CopyOnWriteArrayList<>();
+    private static final List<Map<String, Object>> dispatchDrivers = new CopyOnWriteArrayList<>();
+    private static final List<Map<String, Object>> dispatchOrders = new CopyOnWriteArrayList<>();
+    private static final AtomicLong dispatchIdCounter = new AtomicLong(1);
+
     @GetMapping("/stats")
     public ResponseEntity<?> getStats() {
-        Map<String, Object> stats = new HashMap<>();
-        stats.put("totalProjects", projects.size());
-        stats.put("totalTasks", tasks.size());
-        stats.put("totalMembers", members.size());
-        return ResponseEntity.ok(stats);
+        // Return an empty array (frontend treats this as vehicles array)
+        return ResponseEntity.ok(Collections.emptyList());
     }
 
     @GetMapping("")
     public ResponseEntity<?> getOperations() {
         return ResponseEntity.ok(projects);
+    }
+
+    // ===== Dispatch =====
+
+    @GetMapping("/dispatch/vehicles")
+    public ResponseEntity<?> getDispatchVehicles() {
+        return ResponseEntity.ok(dispatchVehicles);
+    }
+
+    @GetMapping("/dispatch/drivers")
+    public ResponseEntity<?> getDispatchDrivers() {
+        return ResponseEntity.ok(dispatchDrivers);
+    }
+
+    @GetMapping("/dispatch")
+    public ResponseEntity<?> getDispatchOrders() {
+        return ResponseEntity.ok(dispatchOrders);
+    }
+
+    @PostMapping("/dispatch")
+    public ResponseEntity<?> createDispatchOrder(@RequestBody(required = false) Map<String, Object> body) {
+        if (body == null) body = new HashMap<>();
+        body.put("id", dispatchIdCounter.getAndIncrement());
+        body.putIfAbsent("status", "pending");
+        body.putIfAbsent("createdAt", new java.util.Date());
+        dispatchOrders.add(body);
+        return ResponseEntity.ok(body);
     }
 
     @GetMapping("/projects")

@@ -1,6 +1,7 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { useUser } from '@/services/authService';
+import { useAppContext } from '@/contexts/AppContext';
 import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,7 +33,9 @@ export default function Workflows() {
   const confirmDelete = (fn: () => void) => { if (window.confirm("هل أنت متأكد من الحذف؟")) fn(); };
 
   const { data: currentUser, isError, error} = useUser();
+  const { selectedRole, currentEmployee } = useAppContext();
   const userRole = currentUser?.role || 'user';
+  const isAdmin = ['admin', 'general_manager', 'hr_manager'].includes(selectedRole);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState<keyof WorkflowTemplate>("name");
@@ -160,10 +163,19 @@ export default function Workflows() {
       toast.error('يرجى إدخال اسم سير العمل');
       return;
     }
+    const empName = currentEmployee
+      ? `${currentEmployee.firstName} ${currentEmployee.lastName}`
+      : currentUser?.username || '';
+    const empDept = currentEmployee?.department?.nameAr || currentEmployee?.department?.name || '';
+
     if (selectedWorkflow) {
       updateMutation.mutate({ id: selectedWorkflow.id, ...newWorkflow });
     } else {
-      createMutation.mutate(newWorkflow);
+      createMutation.mutate({
+        ...newWorkflow,
+        createdByName: empName,
+        createdByDepartment: empDept,
+      });
     }
   };
 
@@ -222,10 +234,12 @@ export default function Workflows() {
             <RefreshCw className="ms-2 h-4 w-4" />
             تحديث
           </Button>
-          <Button onClick={() => setShowNewDialog(true)}>
-            <Plus className="ms-2 h-4 w-4" />
-            سير عمل جديد
-          </Button>
+          {isAdmin && (
+            <Button onClick={() => setShowNewDialog(true)}>
+              <Plus className="ms-2 h-4 w-4" />
+              سير عمل جديد
+            </Button>
+          )}
         </div>
       </div>
 
@@ -312,6 +326,7 @@ export default function Workflows() {
                       <SortButton field="name">الاسم</SortButton>
                     </th>
                     <th className="text-end p-3 font-medium">الوصف</th>
+                    <th className="text-end p-3 font-medium">أنشأ بواسطة</th>
                     <th className="text-end p-3 font-medium">المشغل</th>
                     <th className="text-end p-3 font-medium">
                       <SortButton field="isActive">الحالة</SortButton>
@@ -324,6 +339,14 @@ export default function Workflows() {
                     <tr key={item.id} className="border-b hover:bg-muted/50">
                       <td className="p-3 font-medium">{item.name}</td>
                       <td className="p-3 text-muted-foreground max-w-[200px] truncate">{item.description || '-'}</td>
+                      <td className="p-3">
+                        <div className="text-sm">
+                          <span className="font-medium">{item.createdByName || '-'}</span>
+                          {item.createdByDepartment && (
+                            <span className="text-muted-foreground block text-xs">{item.createdByDepartment}</span>
+                          )}
+                        </div>
+                      </td>
                       <td className="p-3">{getTriggerLabel(item.triggerEvent)}</td>
                       <td className="p-3">{getStatusBadge(item.isActive)}</td>
                       <td className="p-3">
