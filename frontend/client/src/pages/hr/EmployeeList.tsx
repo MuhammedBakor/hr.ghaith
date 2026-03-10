@@ -144,7 +144,7 @@ export default function EmployeeList() {
     department: (typeof emp.department === 'object' ? (emp.department?.nameAr || emp.department?.name) : emp.department) || '',
     departmentId: (typeof emp.department === 'object' ? emp.department?.id : null),
     status: emp.status || 'active',
-    joinDate: emp.hireDate ? new Date(emp.hireDate).toISOString() : new Date().toISOString(),
+    joinDate: emp.hireDate ? new Date(emp.hireDate).toISOString() : (emp.createdAt ? new Date(emp.createdAt).toISOString() : ''),
     branchId: typeof emp.branch === 'object' ? emp.branch?.id : emp.branchId,
   }));
 

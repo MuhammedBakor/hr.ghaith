@@ -183,6 +183,7 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
         branch: employeeData.branch?.nameAr || employeeData.branch?.name || employeeData.branch || '',
         manager: employeeData.manager ? `${employeeData.manager.firstName} ${employeeData.manager.lastName}` : '',
         userRole: employeeData.userRole || employeeData.user?.role || employeeData.role || '',
+        joinDate: employeeData.hireDate || employeeData.createdAt || '',
         basicSalary: salary,
       });
       setEditForm({
