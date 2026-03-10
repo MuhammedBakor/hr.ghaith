@@ -47,7 +47,7 @@ const NAV_GROUPS = [
     module: "hr",
     items: [
       { icon: Users, label: "الموظفون", path: "/hr/employees", module: "hr" },
-      { icon: ClipboardList, label: "الحضور والغياب", path: "/hr/attendance", module: "hr" },
+      { icon: ClipboardList, label: "الحضور والغياب", path: "/hr/attendance-monitoring", module: "hr" },
       { icon: FileText, label: "الإجازات", path: "/hr/leaves", module: "hr" },
       { icon: DollarSign, label: "الرواتب", path: "/hr/payroll", module: "hr" },
       { icon: BookOpen, label: "الأداء والتدريب", path: "/hr/performance", module: "hr" },

@@ -200,6 +200,13 @@ public class FleetController {
         return ResponseEntity.ok(Collections.emptyList());
     }
 
+    // ==================== Violations ====================
+
+    @GetMapping("/violations")
+    public ResponseEntity<List<Object>> getViolations() {
+        return ResponseEntity.ok(Collections.emptyList());
+    }
+
     // ==================== Automation ====================
 
     @GetMapping("/automation/services")

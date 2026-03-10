@@ -1,5 +1,14 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'wouter';
+import { useNavigationHistory } from '@/hooks/useNavigationHistory';
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 import {
   LayoutDashboard,
   Users,
@@ -155,9 +164,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     : currentEmployee?.departmentId;
   const deptEmployeeCount = isDeptManager && currentDeptId
     ? allEmployees?.filter((emp: any) => {
-        const empDeptId = typeof emp.department === 'object' ? emp.department?.id : emp.departmentId;
-        return empDeptId === currentDeptId;
-      }).length || 0
+      const empDeptId = typeof emp.department === 'object' ? emp.department?.id : emp.departmentId;
+      return empDeptId === currentDeptId;
+    }).length || 0
     : 0;
 
   // حماية الصفحات - توجيه المستخدم غير المصادق لصفحة الدخول
@@ -221,22 +230,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [location]);
 
-  // عرض شاشة التحميل أثناء التحقق من المصادقة
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50" dir="rtl">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-500">جاري التحقق من الصلاحيات...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // لا تعرض المحتوى إذا لم يكن المستخدم مصادقاً
-  if (!isAuthenticated) {
-    return null;
-  }
+  // سيتم التحقق من المصادقة بعد تعريف كل الـ hooks
 
   // الأقسام التي يتم استبدالها بصفحة "الأقسام" للمدير العام ومدير النظام
   const isTopAdmin = selectedRole === 'admin' || selectedRole === 'general_manager';
@@ -250,6 +244,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       label: `موظفي القسم (${deptEmployeeCount})`,
       path: '/hr/department-employees',
       icon: Users2,
+      module: 'home' as ModuleType,
+    }] : []),
+    // مراقبة الحضور - وصول سريع لمدراء الأقسام
+    ...(isDeptManager ? [{
+      label: 'مراقبة الحضور',
+      path: '/hr/attendance-monitoring',
+      icon: ClipboardCheck,
       module: 'home' as ModuleType,
     }] : []),
     // عنصر الأقسام - يظهر فقط لمدير النظام والمدير العام
@@ -266,6 +267,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       icon: ClipboardCheck,
       module: 'home' as ModuleType,
     }] : []),
+    // إدارة الإجازات - وصول سريع للمدير العام ومدير النظام
+    ...(isTopAdmin ? [{
+      label: 'إدارة الإجازات',
+      path: '/hr/leave-management',
+      icon: Calendar,
+      module: 'home' as ModuleType,
+    }] : []),
     {
       label: ['employee', 'supervisor'].includes(selectedRole) ? 'الحضور' : 'الموارد البشرية',
       path: '/hr',
@@ -273,8 +281,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       module: 'hr',
       children: [
         { label: 'الموظفين', path: '/hr', icon: Users, hrSubPage: 'employees' },
-        { label: 'الحضور والانصراف', path: '/hr/attendance', icon: Clock, hrSubPage: 'attendance' },
-        { label: 'مراقبة الحضور', path: '/hr/attendance-monitoring', icon: ClipboardCheck, hrSubPage: 'attendance-monitoring' },
+        { label: 'الحضور', path: '/hr/attendance', icon: ClipboardCheck, hrSubPage: 'attendance' },
+        { label: 'إضافة موظف', path: '/hr/employees/add', icon: UserPlus, hrSubPage: 'add-employee' },
         { label: 'الإجازات', path: '/hr/leave-management', icon: Calendar, hrSubPage: 'leaves' },
         { label: 'الرواتب', path: '/hr/payroll', icon: DollarSign, hrSubPage: 'payroll' },
         { label: 'تقييم الأداء', path: '/hr/performance-advanced', icon: Target, hrSubPage: 'performance' },
@@ -642,6 +650,65 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const navItems = filterNavItems(allNavItems);
 
+  // Build path-to-label map and section map for breadcrumb navigation
+  const map: Record<string, string> = {};
+  const sectionMap: Record<string, { label: string; path: string }> = {};
+  for (const item of allNavItems) {
+    map[item.path] = item.label;
+
+    // If it's a department module, its logical parent is the Departments Hub
+    if (item.module && departmentModules.includes(item.module)) {
+      sectionMap[item.path] = { label: 'الأقسام', path: '/departments' };
+    }
+
+    if (item.children) {
+      for (const child of item.children) {
+        // Child gets its own label in the map.
+        // We allow overwriting the item path label if the child path is the same,
+        // so that the more specific (child) label is used for that path.
+        map[child.path] = child.label;
+
+        // Every child path maps to its parent section
+        sectionMap[child.path] = { label: item.label, path: item.path };
+      }
+    }
+  }
+
+  // Robust mapping for unlisted pages:
+  // If a path starts with a module path (e.g. /hr/anything), and isn't in sectionMap,
+  // make it a child of the module's main path.
+  const currentPath = location;
+  if (!sectionMap[currentPath]) {
+    for (const item of allNavItems) {
+      if (item.module && currentPath.startsWith(item.path + '/') && currentPath !== item.path) {
+        sectionMap[currentPath] = { label: item.label, path: item.path };
+        break;
+      }
+    }
+  }
+
+  // Explicitly ensure /departments parent is home
+  sectionMap['/departments'] = { label: 'الرئيسية', path: '/' };
+
+  const { history, navigateTo } = useNavigationHistory(map, sectionMap);
+
+  // عرض شاشة التحميل أثناء التحقق من المصادقة
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50" dir="rtl">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-500">جاري التحقق من الصلاحيات...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // لا تعرض المحتوى إذا لم يكن المستخدم مصادقاً
+  if (!isAuthenticated) {
+    return null;
+  }
+
   const toggleExpand = (path: string) => {
     setExpandedItems(prev =>
       prev.includes(path)
@@ -891,21 +958,133 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </header>
 
+        {/* Navigation History Breadcrumb */}
+        {location !== '/' && history.length > 0 && (
+          <div className="bg-white border-b border-gray-100 px-4 lg:px-8 py-3">
+            <Breadcrumb>
+              <BreadcrumbList className="gap-2 sm:gap-3">
+                {history.map((entry, index) => {
+                  const isLast = index === history.length - 1;
+
+                  // Helper to find icon and color for a path
+                  const getMetadata = (path: string) => {
+                    // Default values
+                    let icon = null;
+                    let color = '#64748b'; // slate-500
+                    let bgColor = 'bg-slate-50';
+                    let borderColor = 'border-slate-200';
+
+                    if (path === '/') return { icon: Home, color: '#3b82f6', bgColor: 'bg-blue-50', borderColor: 'border-blue-200' };
+                    if (path === '/departments') return { icon: Grid3X3, color: '#6366f1', bgColor: 'bg-indigo-50', borderColor: 'border-indigo-200' };
+
+                    // Find in nav items
+                    const findInItems = (items: NavItem[]): any => {
+                      for (const item of items) {
+                        if (item.path === path) return item;
+                        if (item.children) {
+                          const found = findInItems(item.children);
+                          if (found) return found;
+                        }
+                      }
+                      return null;
+                    };
+
+                    const matchedItem = findInItems(allNavItems);
+                    if (matchedItem) {
+                      icon = matchedItem.icon;
+
+                      // Map module to colors (sync with DepartmentsHub)
+                      const moduleColors: Record<string, { color: string, bg: string, border: string }> = {
+                        hr: { color: '#2980B9', bg: 'bg-blue-50', border: 'border-blue-200' },
+                        finance: { color: '#27AE60', bg: 'bg-emerald-50', border: 'border-emerald-200' },
+                        fleet: { color: '#D35400', bg: 'bg-orange-50', border: 'border-orange-200' },
+                        property: { color: '#8E44AD', bg: 'bg-purple-50', border: 'border-purple-200' },
+                        operations: { color: '#1ABC9C', bg: 'bg-teal-50', border: 'border-teal-200' },
+                        governance: { color: '#2C3E50', bg: 'bg-slate-50', border: 'border-slate-200' },
+                        bi: { color: '#E74C3C', bg: 'bg-red-50', border: 'border-red-200' },
+                        legal: { color: '#7F8C8D', bg: 'bg-gray-50', border: 'border-gray-200' },
+                        marketing: { color: '#E91E63', bg: 'bg-pink-50', border: 'border-pink-200' },
+                        store: { color: '#F39C12', bg: 'bg-amber-50', border: 'border-amber-200' },
+                      };
+
+                      const mod = matchedItem.module || (path.split('/')[1] as ModuleType);
+                      if (moduleColors[mod]) {
+                        color = moduleColors[mod].color;
+                        bgColor = moduleColors[mod].bg;
+                        borderColor = moduleColors[mod].border;
+                      }
+                    }
+
+                    return { icon, color, bgColor, borderColor };
+                  };
+
+                  const meta = getMetadata(entry.path);
+                  const Icon = meta.icon;
+
+                  return (
+                    <React.Fragment key={entry.key}>
+                      <BreadcrumbItem>
+                        {!isLast ? (
+                          <BreadcrumbLink
+                            asChild
+                            className="cursor-pointer transition-all duration-200"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              navigateTo(entry.path);
+                            }}
+                          >
+                            <div className={cn(
+                              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs sm:text-sm font-medium transition-all group",
+                              meta.bgColor,
+                              meta.borderColor,
+                              "hover:shadow-sm hover:scale-[1.02]"
+                            )} style={{ color: meta.color }}>
+                              {Icon && <Icon className="h-3.5 w-3.5" />}
+                              <span>{entry.label}</span>
+                            </div>
+                          </BreadcrumbLink>
+                        ) : (
+                          <BreadcrumbPage className="transition-all duration-200">
+                            <div className={cn(
+                              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold shadow-sm border",
+                              "text-white"
+                            )} style={{ backgroundColor: meta.color, borderColor: meta.color }}>
+                              {Icon && <Icon className="h-3.5 w-3.5" />}
+                              <span>{entry.label}</span>
+                            </div>
+                          </BreadcrumbPage>
+                        )}
+                      </BreadcrumbItem>
+                      {!isLast && (
+                        <BreadcrumbSeparator className="opacity-40">
+                          <ChevronLeft className="h-4 w-4" />
+                        </BreadcrumbSeparator>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </BreadcrumbList>
+            </Breadcrumb>
+          </div>
+        )}
+
         {/* Page Content */}
         <main className="flex-1 p-4 lg:p-8 overflow-y-auto">
           <div className="max-w-7xl mx-auto">
             {children}
           </div>
         </main>
-      </div>
+      </div >
 
       {/* Overlay for mobile sidebar */}
-      {isSidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/40 z-40 lg:hidden"
-          onClick={() => setIsSidebarOpen(false)}
-        />
-      )}
-    </div>
+      {
+        isSidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+        )
+      }
+    </div >
   );
 }

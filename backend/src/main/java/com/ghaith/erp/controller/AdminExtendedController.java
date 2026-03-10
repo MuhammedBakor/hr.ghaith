@@ -393,6 +393,24 @@ public class AdminExtendedController {
         return ResponseEntity.ok(new HashMap<>());
     }
 
+    @PostMapping("/rbac")
+    public ResponseEntity<?> createRbac(@RequestBody(required = false) Map<String, Object> body) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("data", body);
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/rbac/{id}")
+    public ResponseEntity<?> deleteRbac(@PathVariable Long id) {
+        return ResponseEntity.ok(Map.of("success", true));
+    }
+
+    @GetMapping("/role-packs/{id}/permissions")
+    public ResponseEntity<?> getRolePackPermissions(@PathVariable Long id) {
+        return ResponseEntity.ok(Collections.emptyList());
+    }
+
     @GetMapping("/exceptions/suspense-items")
     public ResponseEntity<?> getSuspenseItems() {
         return ResponseEntity.ok(Collections.emptyList());

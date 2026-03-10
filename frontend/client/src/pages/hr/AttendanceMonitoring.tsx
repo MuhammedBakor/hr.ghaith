@@ -1,38 +1,72 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Clock, LogIn, LogOut, AlertTriangle, Loader2, RefreshCw, Users, CheckCircle, XCircle } from 'lucide-react';
+import {
+  Clock, LogIn, LogOut, AlertTriangle, Loader2, RefreshCw, Users, CheckCircle, XCircle,
+  MapPin, UserCheck, Timer, ClipboardList, AlertCircle, ArrowRight, Calendar
+} from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
-import { useEmployees, useDepartments, useEmployeeByUserId } from '@/services/hrService';
+import {
+  useEmployees, useDepartments, useEmployeeByUserId,
+  useCheckIn, useCheckOut, useManualAttendance, useSubordinates, useRequestEarlyLeave,
+} from '@/services/hrService';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { formatDate } from '@/lib/formatDate';
 import { toast } from 'sonner';
 
+type ViewMode = 'list' | 'manual-entry';
+
 export default function AttendanceMonitoring() {
-  const { selectedRole } = useAppContext();
+  const { selectedRole, selectedBranchId, branches } = useAppContext();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const selectedBranch = branches?.find((b: any) => b.id === selectedBranchId);
+
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [showEarlyLeaveDialog, setShowEarlyLeaveDialog] = useState(false);
+  const [earlyLeaveReason, setEarlyLeaveReason] = useState('');
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // تحديث الوقت كل ثانية
+  const isAdminOrGM = selectedRole === 'admin' || selectedRole === 'general_manager';
+  useEffect(() => {
+    if (isAdminOrGM) return; // لا حاجة للساعة لمدير النظام والمدير العام
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, [isAdminOrGM]);
 
   const { data: employeesData } = useEmployees();
   const { data: departmentsData } = useDepartments();
-  const { data: currentEmployee } = useEmployeeByUserId(user?.id || 0);
+  const { data: currentEmployee, isError: isEmployeeError, isLoading: isEmployeeLoading } = useEmployeeByUserId(user?.id || 0);
+  const { data: subordinates } = useSubordinates(currentEmployee?.id || 0);
 
   const isTopRole = ['admin', 'general_manager', 'hr_manager'].includes(selectedRole);
-  const isManager = isTopRole || ['department_manager', 'supervisor'].includes(selectedRole);
+  const isDeptManagerRole = ['department_manager', 'finance_manager', 'fleet_manager', 'legal_manager', 'projects_manager', 'store_manager'].includes(selectedRole);
+  const isManager = isTopRole || isDeptManagerRole || selectedRole === 'supervisor';
+  const canSeeSubordinates = isManager;
 
-  // Department manager's own department
   const myDeptId = currentEmployee
     ? (typeof currentEmployee.department === 'object' ? currentEmployee.department?.id : currentEmployee.departmentId)
     : null;
+
+  // قائمة الموظفين المتاحين للتسجيل اليدوي
+  const manualEntryEmployees = useMemo(() => {
+    if (isTopRole) return employeesData || [];
+    return subordinates || [];
+  }, [isTopRole, employeesData, subordinates]);
 
   const { data: attendanceData, isLoading, refetch } = useQuery({
     queryKey: ['attendance-monitoring', selectedDate],
@@ -40,7 +74,23 @@ export default function AttendanceMonitoring() {
     refetchInterval: 30000,
   });
 
-  // Approve/reject mutations
+  // التحقق من حالة حضور الموظف الحالي اليوم
+  const todayAttendance = useMemo(() => {
+    if (!currentEmployee || !attendanceData || isAdminOrGM) return null;
+    const today = new Date().toISOString().split('T')[0];
+    return (attendanceData as any[]).find((att: any) => {
+      const attEmpId = att.employeeId || att.employee?.id;
+      return attEmpId === currentEmployee.id &&
+        new Date(att.date).toISOString().split('T')[0] === today;
+    });
+  }, [currentEmployee, attendanceData, isAdminOrGM]);
+
+  // Mutations
+  const checkInMutation = useCheckIn();
+  const checkOutMutation = useCheckOut();
+  const manualAttendanceMutation = useManualAttendance();
+  const earlyLeaveMutation = useRequestEarlyLeave();
+
   const approveEarlyLeaveMut = useMutation({
     mutationFn: (id: number) => api.post(`/hr/attendance/${id}/approve-early-leave`).then(r => r.data),
     onSuccess: () => { toast.success('تمت الموافقة على طلب الخروج المبكر'); refetch(); queryClient.invalidateQueries({ queryKey: ['attendance'] }); },
@@ -62,6 +112,147 @@ export default function AttendanceMonitoring() {
     onError: (e: any) => toast.error(e?.response?.data?.message || 'حدث خطأ'),
   });
 
+  // الحصول على الموقع الجغرافي
+  const getCurrentLocation = (): Promise<GeolocationPosition> => {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error('المتصفح لا يدعم تحديد الموقع'));
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      });
+    });
+  };
+
+  const handleLocationError = (error: any) => {
+    if (error.code === 1) {
+      toast.error('تم رفض الوصول للموقع. يرجى السماح بالوصول للموقع من إعدادات المتصفح.');
+    } else if (error.code === 2) {
+      toast.error('تعذر تحديد الموقع. يرجى التأكد من تفعيل GPS.');
+    } else if (error.code === 3) {
+      toast.error('انتهت مهلة تحديد الموقع. يرجى المحاولة مرة أخرى.');
+    } else {
+      toast.error('حدث خطأ في تحديد الموقع: ' + error.message);
+    }
+  };
+
+  // تسجيل الحضور بالموقع
+  const handleCheckIn = async () => {
+    setIsGettingLocation(true);
+    try {
+      const position = await getCurrentLocation();
+      setCurrentLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
+      if (!currentEmployee?.id) {
+        toast.error('لا يوجد سجل موظف مرتبط بحسابك. يرجى التواصل مع قسم الموارد البشرية.');
+        return;
+      }
+      checkInMutation.mutate({
+        employeeId: currentEmployee.id,
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+      }, {
+        onSuccess: () => { toast.success('تم تسجيل الحضور بنجاح'); refetch(); queryClient.invalidateQueries({ queryKey: ['attendance'] }); },
+        onError: (e: any) => toast.error('حدث خطأ: ' + e.message),
+      });
+    } catch (error: any) {
+      handleLocationError(error);
+    } finally {
+      setIsGettingLocation(false);
+    }
+  };
+
+  // تسجيل الانصراف بالموقع
+  const handleCheckOut = async () => {
+    setIsGettingLocation(true);
+    try {
+      const position = await getCurrentLocation();
+      if (!todayAttendance?.id) return;
+      checkOutMutation.mutate({
+        id: todayAttendance.id,
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+      }, {
+        onSuccess: () => { toast.success('تم تسجيل الانصراف بنجاح'); refetch(); queryClient.invalidateQueries({ queryKey: ['attendance'] }); },
+        onError: (e: any) => toast.error('حدث خطأ: ' + e.message),
+      });
+    } catch (error: any) {
+      handleLocationError(error);
+    } finally {
+      setIsGettingLocation(false);
+    }
+  };
+
+  // طلب الخروج المبكر
+  const handleEarlyLeaveRequest = () => {
+    if (!earlyLeaveReason.trim()) {
+      toast.error('يرجى كتابة سبب الخروج المبكر');
+      return;
+    }
+    earlyLeaveMutation.mutate({
+      reason: earlyLeaveReason,
+      employeeId: currentEmployee?.id,
+    }, {
+      onSuccess: () => {
+        toast.success('تم تقديم طلب الخروج المبكر بنجاح');
+        setShowEarlyLeaveDialog(false);
+        setEarlyLeaveReason('');
+        refetch();
+        queryClient.invalidateQueries({ queryKey: ['attendance'] });
+      },
+      onError: (e: any) => toast.error('حدث خطأ: ' + e.message),
+    });
+  };
+
+  // State للتسجيل اليدوي
+  const [manualEntry, setManualEntry] = useState({
+    employeeId: '',
+    date: new Date().toISOString().split('T')[0],
+    checkIn: '08:00',
+    checkOut: '',
+    notes: '',
+  });
+
+  // التسجيل اليدوي
+  const handleManualAttendance = () => {
+    if (!manualEntry.employeeId) {
+      toast.error('يرجى اختيار الموظف');
+      return;
+    }
+    const isAllowed = (manualEntryEmployees as any[])?.some((s: any) => s.id === parseInt(manualEntry.employeeId));
+    if (!isAllowed) {
+      toast.error('لا يمكنك تسجيل حضور لهذا الموظف');
+      return;
+    }
+    const [checkInHours, checkInMinutes] = manualEntry.checkIn.split(':').map(Number);
+    const checkInDate = new Date(manualEntry.date);
+    checkInDate.setHours(checkInHours, checkInMinutes, 0, 0);
+    let checkOutDate;
+    if (manualEntry.checkOut) {
+      const [checkOutHours, checkOutMinutes] = manualEntry.checkOut.split(':').map(Number);
+      checkOutDate = new Date(manualEntry.date);
+      checkOutDate.setHours(checkOutHours, checkOutMinutes, 0, 0);
+    }
+    manualAttendanceMutation.mutate({
+      employeeId: parseInt(manualEntry.employeeId),
+      date: manualEntry.date,
+      checkIn: checkInDate.toISOString(),
+      checkOut: checkOutDate?.toISOString(),
+      notes: manualEntry.notes,
+    }, {
+      onSuccess: () => {
+        toast.success('تم تسجيل الحضور اليدوي بنجاح - بانتظار موافقة الموارد البشرية');
+        setViewMode('list');
+        refetch();
+        queryClient.invalidateQueries({ queryKey: ['attendance'] });
+      },
+      onError: (e: any) => toast.error('حدث خطأ: ' + e.message),
+    });
+  };
+
+  // تحويل بيانات الحضور
   const records = useMemo(() => {
     const raw = (attendanceData || []) as any[];
     return raw.map((att: any) => {
@@ -71,7 +262,6 @@ export default function AttendanceMonitoring() {
       const deptId = emp ? (typeof emp.department === 'object' ? emp.department?.id : emp.departmentId) : null;
       const deptName = emp ? (typeof emp.department === 'object' ? (emp.department?.nameAr || emp.department?.name) : '') : '';
       const role = emp?.jobTitle || emp?.role || (typeof emp?.position === 'object' ? emp?.position?.title : emp?.position) || '';
-
       return {
         id: att.id,
         employeeId: empId,
@@ -85,19 +275,29 @@ export default function AttendanceMonitoring() {
         approvalStatus: att.approvalStatus,
         workHours: att.workHours != null ? parseFloat(att.workHours) : 0,
         notes: att.notes || '',
+        checkInLatitude: att.checkInLatitude,
+        checkInLongitude: att.checkInLongitude,
+        checkOutLatitude: att.checkOutLatitude,
+        checkOutLongitude: att.checkOutLongitude,
       };
     });
   }, [attendanceData, employeesData]);
 
-  // Apply role-based filtering first
+  // فلترة حسب الدور
   const roleFilteredRecords = useMemo(() => {
-    if (isTopRole) return records; // GM, HR, admin see all
-    if (selectedRole === 'department_manager' && myDeptId) {
+    if (isTopRole) return records;
+    if (isDeptManagerRole && myDeptId) {
       return records.filter(r => r.departmentId === myDeptId);
     }
-    return records; // supervisors see all (filtered by attendance-monitoring permission)
-  }, [records, isTopRole, selectedRole, myDeptId]);
+    if (selectedRole === 'supervisor') {
+      const subordinateIds = (subordinates || []).map((s: any) => s.id);
+      return records.filter(r => r.employeeId === currentEmployee?.id || subordinateIds.includes(r.employeeId));
+    }
+    // موظف عادي: يرى فقط سجله
+    return records.filter(r => r.employeeId === currentEmployee?.id);
+  }, [records, isTopRole, isDeptManagerRole, selectedRole, myDeptId, currentEmployee, subordinates]);
 
+  // فلترة إضافية
   const filteredRecords = useMemo(() => {
     let result = roleFilteredRecords;
     if (selectedDepartment !== 'all') {
@@ -108,26 +308,26 @@ export default function AttendanceMonitoring() {
       result = result.filter(r => r.employeeName.toLowerCase().includes(s));
     }
     if (statusFilter !== 'all') {
-      if (statusFilter === 'checked_in') {
-        result = result.filter(r => r.status === 'checked_in');
-      } else if (statusFilter === 'checked_out') {
-        result = result.filter(r => r.status === 'present' && r.checkOut);
-      } else if (statusFilter === 'early_leave') {
-        result = result.filter(r => r.status === 'early_leave' || r.status === 'pending_early_leave');
-      } else if (statusFilter === 'late') {
-        result = result.filter(r => r.status === 'late');
-      } else if (statusFilter === 'pending') {
-        result = result.filter(r => r.status === 'pending_approval' || r.status === 'pending_early_leave');
-      }
+      if (statusFilter === 'checked_in') result = result.filter(r => r.status === 'checked_in');
+      else if (statusFilter === 'checked_out') result = result.filter(r => r.status === 'present' && r.checkOut);
+      else if (statusFilter === 'early_leave') result = result.filter(r => r.status === 'early_leave' || r.status === 'pending_early_leave');
+      else if (statusFilter === 'late') result = result.filter(r => r.status === 'late');
+      else if (statusFilter === 'pending') result = result.filter(r => r.status === 'pending_approval' || r.status === 'pending_early_leave');
+      else if (statusFilter === 'absent') result = result.filter(r => r.status === 'absent');
+      else if (statusFilter === 'on_leave') result = result.filter(r => r.status === 'on_leave');
     }
     return result;
-  }, [records, selectedDepartment, searchTerm, statusFilter]);
+  }, [roleFilteredRecords, selectedDepartment, searchTerm, statusFilter]);
 
   const stats = useMemo(() => ({
     total: roleFilteredRecords.length,
     checkedIn: roleFilteredRecords.filter(r => r.status === 'checked_in').length,
+    present: roleFilteredRecords.filter(r => r.status === 'present' || r.status === 'checked_in').length,
     checkedOut: roleFilteredRecords.filter(r => r.status === 'present' && r.checkOut).length,
+    absent: roleFilteredRecords.filter(r => r.status === 'absent').length,
+    late: roleFilteredRecords.filter(r => r.status === 'late').length,
     earlyLeave: roleFilteredRecords.filter(r => r.status === 'early_leave' || r.status === 'pending_early_leave').length,
+    onLeave: roleFilteredRecords.filter(r => r.status === 'on_leave').length,
     pending: roleFilteredRecords.filter(r => r.status === 'pending_approval' || r.status === 'pending_early_leave').length,
   }), [roleFilteredRecords]);
 
@@ -137,6 +337,9 @@ export default function AttendanceMonitoring() {
     if (record.status === 'pending_approval') return <Badge className="bg-amber-100 text-amber-800">بانتظار الموافقة</Badge>;
     if (record.status === 'late') return <Badge className="bg-yellow-100 text-yellow-800">متأخر</Badge>;
     if (record.status === 'rejected') return <Badge className="bg-red-100 text-red-800">مرفوض</Badge>;
+    if (record.status === 'absent') return <Badge className="bg-red-100 text-red-800">غائب</Badge>;
+    if (record.status === 'on_leave') return <Badge className="bg-blue-100 text-blue-800">في إجازة</Badge>;
+    if (record.status === 'holiday') return <Badge className="bg-purple-100 text-purple-800">عطلة</Badge>;
     if (record.status === 'present' && record.checkOut) return <Badge className="bg-blue-100 text-blue-800">انصرف</Badge>;
     if (record.status === 'checked_in') return <Badge className="bg-green-100 text-green-800">مسجل دخول</Badge>;
     if (record.status === 'present') return <Badge className="bg-green-100 text-green-800">حاضر</Badge>;
@@ -152,18 +355,95 @@ export default function AttendanceMonitoring() {
     return record.status === 'pending_early_leave' || record.status === 'pending_approval';
   };
 
+  // Manual Entry Form
+  if (viewMode === 'manual-entry') {
+    return (
+      <div className="space-y-6" dir="rtl">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" onClick={() => setViewMode('list')}>
+            <ArrowRight className="h-4 w-4 ms-2" />
+            العودة للقائمة
+          </Button>
+          <div>
+            <h2 className="text-2xl font-bold">تسجيل حضور يدوي</h2>
+            <p className="text-muted-foreground">سجل حضور موظف تابع لك يدوياً (يتطلب موافقة الموارد البشرية)</p>
+          </div>
+        </div>
+
+        <Card className="border-amber-200 bg-amber-50/50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3 text-amber-800">
+              <AlertCircle className="h-5 w-5" />
+              <p className="text-sm">التسجيل اليدوي سيبقى معلقاً حتى موافقة مدير الموارد البشرية</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>بيانات الحضور</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-6">
+              <div className="space-y-2">
+                <Label>الموظف (التابعين لك فقط)</Label>
+                <Select value={manualEntry.employeeId} onValueChange={(v) => setManualEntry({ ...manualEntry, employeeId: v })}>
+                  <SelectTrigger><SelectValue placeholder="اختر الموظف" /></SelectTrigger>
+                  <SelectContent>
+                    {(manualEntryEmployees || []).map((emp: any) => (
+                      <SelectItem key={emp.id} value={String(emp.id)}>{emp.firstName} {emp.lastName}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>التاريخ</Label>
+                <Input type="date" value={manualEntry.date} onChange={(e) => setManualEntry({ ...manualEntry, date: e.target.value })} />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>وقت الحضور</Label>
+                  <Input type="time" value={manualEntry.checkIn} onChange={(e) => setManualEntry({ ...manualEntry, checkIn: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>وقت الانصراف</Label>
+                  <Input type="time" value={manualEntry.checkOut} onChange={(e) => setManualEntry({ ...manualEntry, checkOut: e.target.value })} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>ملاحظات (سبب التسجيل اليدوي)</Label>
+                <Textarea value={manualEntry.notes} onChange={(e) => setManualEntry({ ...manualEntry, notes: e.target.value })} placeholder="اكتب سبب التسجيل اليدوي..." />
+              </div>
+              <div className="flex gap-3 pt-4">
+                <Button variant="outline" onClick={() => setViewMode('list')}>إلغاء</Button>
+                <Button onClick={handleManualAttendance} disabled={manualAttendanceMutation.isPending}>
+                  {manualAttendanceMutation.isPending ? 'جاري الحفظ...' : 'حفظ'}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // List View
   return (
     <div className="space-y-6" dir="rtl">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <Users className="h-6 w-6 text-blue-600" />
-            مراقبة الحضور والانصراف
+            الحضور والانصراف
           </h2>
           <p className="text-gray-500">
-            {isTopRole ? 'متابعة تسجيل دخول وخروج جميع الموظفين' :
-             selectedRole === 'department_manager' ? 'متابعة تسجيل دخول وخروج موظفي القسم' :
-             'متابعة تسجيل دخول وخروج الموظفين'}
+            {isTopRole
+              ? 'متابعة حضور وانصراف جميع الموظفين'
+              : isDeptManagerRole
+                ? 'متابعة حضور وانصراف موظفي القسم'
+                : selectedRole === 'supervisor'
+                  ? 'متابعة حضور وانصراف الموظفين التابعين لك'
+                  : 'سجل الحضور والانصراف الخاص بك'}
           </p>
         </div>
         <Button variant="outline" onClick={() => refetch()} className="gap-2">
@@ -171,6 +451,110 @@ export default function AttendanceMonitoring() {
           تحديث
         </Button>
       </div>
+
+      {/* بطاقة تسجيل الحضور - مخفية لمدير النظام والمدير العام */}
+      {!isAdminOrGM && (
+        <Card className="bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200">
+          <CardContent className="p-6">
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-full bg-emerald-100">
+                    <UserCheck className="h-6 w-6 text-emerald-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-lg">
+                      {currentEmployee ? `${currentEmployee.firstName} ${currentEmployee.lastName}` : 'جاري التحميل...'}
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      {(typeof currentEmployee?.position === 'object' ? currentEmployee?.position?.title : currentEmployee?.position) || 'موظف'} - {selectedBranch?.name || 'الفرع الرئيسي'}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-start">
+                  <div className="flex items-center gap-2 text-2xl font-bold text-emerald-700">
+                    <Timer className="h-6 w-6" />
+                    {currentTime.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    {currentTime.toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                  </p>
+                </div>
+              </div>
+
+              {isEmployeeError && !isAdminOrGM && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-800 flex items-center gap-3">
+                  <AlertCircle className="h-5 w-5" />
+                  <p>لا يوجد سجل موظف مرتبط بحسابك. يرجى التواصل مع إدارة الموارد البشرية لتفعيل وظائف الحضور والانصراف.</p>
+                </div>
+              )}
+
+              {isAdminOrGM && !currentEmployee && !isEmployeeLoading && (
+                <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg text-blue-700 text-sm flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4" />
+                  <p>تنبيه: أنت داخل بحساب إداري لا يوجد له سجل موظف. يمكنك المراقبة ولكن لا يمكنك تسجيل الحضور لنفسك.</p>
+                </div>
+              )}
+
+              {todayAttendance && (
+                <div className="p-3 bg-white rounded-lg border border-emerald-200">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="h-5 w-5 text-emerald-600" />
+                      <span className="font-medium">تم تسجيل الحضور اليوم</span>
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      الدخول: {todayAttendance.checkIn ? new Date(todayAttendance.checkIn).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }) : '-'}
+                      {todayAttendance.checkOut && (
+                        <span className="me-4">
+                          الخروج: {new Date(todayAttendance.checkOut).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  onClick={handleCheckIn}
+                  disabled={isGettingLocation || checkInMutation.isPending || !!todayAttendance?.checkIn}
+                  className="gap-2 bg-emerald-600 hover:bg-emerald-700"
+                >
+                  {isGettingLocation || checkInMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
+                  تسجيل حضور
+                </Button>
+                <Button
+                  onClick={handleCheckOut}
+                  disabled={isGettingLocation || checkOutMutation.isPending || !todayAttendance?.checkIn || !!todayAttendance?.checkOut}
+                  variant="outline"
+                  className="gap-2 border-red-300 text-red-600 hover:bg-red-50"
+                >
+                  {isGettingLocation || checkOutMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
+                  تسجيل انصراف
+                </Button>
+                <Button
+                  onClick={() => setShowEarlyLeaveDialog(true)}
+                  disabled={!todayAttendance?.checkIn || !!todayAttendance?.checkOut || todayAttendance?.status === 'pending_early_leave' || todayAttendance?.status === 'early_leave'}
+                  variant="outline"
+                  className="gap-2 border-amber-300 text-amber-600 hover:bg-amber-50"
+                >
+                  <AlertTriangle className="h-4 w-4" />
+                  {todayAttendance?.status === 'pending_early_leave' ? 'بانتظار الموافقة' : todayAttendance?.status === 'early_leave' ? 'تمت الموافقة' : 'طلب خروج مبكر'}
+                </Button>
+              </div>
+            </div>
+            {currentLocation && (
+              <div className="mt-4 p-3 bg-white rounded-lg border border-emerald-200">
+                <p className="text-sm text-gray-600">
+                  <MapPin className="h-4 w-4 inline-block ms-1 text-emerald-600" />
+                  آخر موقع مسجل: {currentLocation.lat.toFixed(6)}, {currentLocation.lng.toFixed(6)}
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-5">
@@ -187,26 +571,26 @@ export default function AttendanceMonitoring() {
           <CardContent className="p-4 flex items-center gap-3">
             <div className="p-2 rounded-lg bg-green-50"><LogIn className="h-5 w-5 text-green-600" /></div>
             <div>
-              <p className="text-xs text-gray-500">مسجلين دخول</p>
-              <p className="text-xl font-bold text-green-600">{stats.checkedIn}</p>
+              <p className="text-xs text-gray-500">حاضرون</p>
+              <p className="text-xl font-bold text-green-600">{stats.present}</p>
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-blue-50"><LogOut className="h-5 w-5 text-blue-600" /></div>
+            <div className="p-2 rounded-lg bg-red-50"><XCircle className="h-5 w-5 text-red-600" /></div>
             <div>
-              <p className="text-xs text-gray-500">انصرفوا</p>
-              <p className="text-xl font-bold text-blue-600">{stats.checkedOut}</p>
+              <p className="text-xs text-gray-500">غائبون</p>
+              <p className="text-xl font-bold text-red-600">{stats.absent}</p>
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-orange-50"><AlertTriangle className="h-5 w-5 text-orange-600" /></div>
+            <div className="p-2 rounded-lg bg-yellow-50"><AlertTriangle className="h-5 w-5 text-yellow-600" /></div>
             <div>
-              <p className="text-xs text-gray-500">خروج مبكر</p>
-              <p className="text-xl font-bold text-orange-600">{stats.earlyLeave}</p>
+              <p className="text-xs text-gray-500">متأخرون</p>
+              <p className="text-xl font-bold text-yellow-600">{stats.late}</p>
             </div>
           </CardContent>
         </Card>
@@ -241,7 +625,10 @@ export default function AttendanceMonitoring() {
             <SelectItem value="all">جميع الحالات</SelectItem>
             <SelectItem value="checked_in">مسجل دخول</SelectItem>
             <SelectItem value="checked_out">انصرف</SelectItem>
+            <SelectItem value="absent">غائب</SelectItem>
+            <SelectItem value="late">متأخر</SelectItem>
             <SelectItem value="early_leave">خروج مبكر</SelectItem>
+            <SelectItem value="on_leave">في إجازة</SelectItem>
             <SelectItem value="pending">بانتظار الموافقة</SelectItem>
           </SelectContent>
         </Select>
@@ -250,11 +637,17 @@ export default function AttendanceMonitoring() {
 
       {/* Table */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Clock className="h-5 w-5" />
             سجل الحضور - {formatDate(selectedDate)}
           </CardTitle>
+          {canSeeSubordinates && (
+            <Button variant="outline" className="gap-2" onClick={() => setViewMode('manual-entry')}>
+              <ClipboardList className="h-4 w-4" />
+              تسجيل يدوي (للتابعين)
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -288,6 +681,7 @@ export default function AttendanceMonitoring() {
                           <span className="flex items-center gap-1 text-green-700">
                             <LogIn className="h-3.5 w-3.5" />
                             {formatTime(record.checkIn)}
+                            {record.checkInLatitude && <MapPin className="h-3 w-3 text-green-600" />}
                           </span>
                         ) : '-'}
                       </td>
@@ -296,6 +690,7 @@ export default function AttendanceMonitoring() {
                           <span className="flex items-center gap-1 text-red-600">
                             <LogOut className="h-3.5 w-3.5" />
                             {formatTime(record.checkOut)}
+                            {record.checkOutLatitude && <MapPin className="h-3 w-3 text-red-600" />}
                           </span>
                         ) : '-'}
                       </td>
@@ -310,48 +705,24 @@ export default function AttendanceMonitoring() {
                         <td className="px-4 py-3">
                           {record.status === 'pending_early_leave' && (
                             <div className="flex items-center gap-1">
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-7 px-2 text-green-600 hover:bg-green-50"
-                                onClick={() => approveEarlyLeaveMut.mutate(record.id)}
-                                disabled={approveEarlyLeaveMut.isPending}
-                                title="موافقة"
-                              >
+                              <Button size="sm" variant="ghost" className="h-7 px-2 text-green-600 hover:bg-green-50"
+                                onClick={() => approveEarlyLeaveMut.mutate(record.id)} disabled={approveEarlyLeaveMut.isPending} title="موافقة">
                                 <CheckCircle className="h-4 w-4" />
                               </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-7 px-2 text-red-600 hover:bg-red-50"
-                                onClick={() => rejectEarlyLeaveMut.mutate(record.id)}
-                                disabled={rejectEarlyLeaveMut.isPending}
-                                title="رفض"
-                              >
+                              <Button size="sm" variant="ghost" className="h-7 px-2 text-red-600 hover:bg-red-50"
+                                onClick={() => rejectEarlyLeaveMut.mutate(record.id)} disabled={rejectEarlyLeaveMut.isPending} title="رفض">
                                 <XCircle className="h-4 w-4" />
                               </Button>
                             </div>
                           )}
                           {record.status === 'pending_approval' && (
                             <div className="flex items-center gap-1">
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-7 px-2 text-green-600 hover:bg-green-50"
-                                onClick={() => approveAttendanceMut.mutate(record.id)}
-                                disabled={approveAttendanceMut.isPending}
-                                title="موافقة"
-                              >
+                              <Button size="sm" variant="ghost" className="h-7 px-2 text-green-600 hover:bg-green-50"
+                                onClick={() => approveAttendanceMut.mutate(record.id)} disabled={approveAttendanceMut.isPending} title="موافقة">
                                 <CheckCircle className="h-4 w-4" />
                               </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-7 px-2 text-red-600 hover:bg-red-50"
-                                onClick={() => rejectAttendanceMut.mutate(record.id)}
-                                disabled={rejectAttendanceMut.isPending}
-                                title="رفض"
-                              >
+                              <Button size="sm" variant="ghost" className="h-7 px-2 text-red-600 hover:bg-red-50"
+                                onClick={() => rejectAttendanceMut.mutate(record.id)} disabled={rejectAttendanceMut.isPending} title="رفض">
                                 <XCircle className="h-4 w-4" />
                               </Button>
                             </div>
@@ -373,6 +744,30 @@ export default function AttendanceMonitoring() {
           )}
         </CardContent>
       </Card>
+
+      {/* Dialog طلب الخروج المبكر */}
+      {showEarlyLeaveDialog && !isAdminOrGM && (
+        <div className="mt-4 p-6 bg-white border rounded-xl shadow-sm">
+          <div>
+            <div className="mb-4 border-b pb-3">
+              <h3 className="text-lg font-bold">طلب خروج مبكر</h3>
+              <p className="text-sm text-gray-500">سيتم إرسال طلبك للموافقة حسب الصلاحيات المحددة في النظام</p>
+            </div>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>سبب الخروج المبكر</Label>
+                <Textarea value={earlyLeaveReason} onChange={(e) => setEarlyLeaveReason(e.target.value)} placeholder="اكتب سبب طلب الخروج المبكر..." rows={4} />
+              </div>
+            </div>
+            <div className="flex gap-2 mt-4 pt-3 border-t justify-end">
+              <Button variant="outline" onClick={() => setShowEarlyLeaveDialog(false)}>إلغاء</Button>
+              <Button onClick={handleEarlyLeaveRequest} disabled={earlyLeaveMutation.isPending}>
+                {earlyLeaveMutation.isPending ? 'جاري الإرسال...' : 'إرسال الطلب'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

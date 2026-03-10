@@ -34,15 +34,38 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private Role role;
 
+    // Comma-separated additional roles (e.g. "SUPERVISOR,EMPLOYEE")
+    @Column(name = "roles")
+    private String roles;
+
     @Builder.Default
     @Column(nullable = false)
     private boolean enabled = false;
 
     private String verificationCode;
 
+    /** Returns all roles as a list (primary + additional) */
+    public List<String> getAllRoles() {
+        java.util.ArrayList<String> result = new java.util.ArrayList<>();
+        if (role != null) result.add(role.name());
+        if (roles != null && !roles.isBlank()) {
+            for (String r : roles.split(",")) {
+                String trimmed = r.trim();
+                if (!trimmed.isEmpty() && !result.contains(trimmed)) {
+                    result.add(trimmed);
+                }
+            }
+        }
+        return result;
+    }
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
+        java.util.ArrayList<GrantedAuthority> authorities = new java.util.ArrayList<>();
+        for (String r : getAllRoles()) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_" + r));
+        }
+        return authorities;
     }
 
     @Override

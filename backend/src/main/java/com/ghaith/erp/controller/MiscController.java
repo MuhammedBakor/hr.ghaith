@@ -84,6 +84,26 @@ public class MiscController {
         return ResponseEntity.ok(new HashMap<>());
     }
 
+    @PostMapping("/anomaly-rules")
+    public ResponseEntity<?> createAnomalyRule(@RequestBody(required = false) Map<String, Object> body) {
+        if (body == null) body = new HashMap<>();
+        body.put("id", System.currentTimeMillis());
+        return ResponseEntity.ok(body);
+    }
+
+    @PutMapping("/anomaly-rules/{id}/toggle")
+    public ResponseEntity<?> toggleAnomalyRule(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> body) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("id", id);
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/anomaly-rules/{id}")
+    public ResponseEntity<?> deleteAnomalyRule(@PathVariable Long id) {
+        return ResponseEntity.ok(Map.of("success", true));
+    }
+
     @GetMapping("/users")
     public ResponseEntity<?> getUsers() {
         return ResponseEntity.ok(Collections.emptyList());
@@ -92,6 +112,20 @@ public class MiscController {
     @GetMapping("/policies")
     public ResponseEntity<?> getPolicies() {
         return ResponseEntity.ok(Collections.emptyList());
+    }
+
+    @PostMapping("/policies")
+    public ResponseEntity<?> createPolicy(@RequestBody(required = false) Map<String, Object> body) {
+        if (body == null) body = new HashMap<>();
+        body.put("id", System.currentTimeMillis());
+        return ResponseEntity.ok(body);
+    }
+
+    @PutMapping("/policies/{id}")
+    public ResponseEntity<?> updatePolicy(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> body) {
+        if (body == null) body = new HashMap<>();
+        body.put("id", id);
+        return ResponseEntity.ok(body);
     }
 
     @GetMapping("/documents")

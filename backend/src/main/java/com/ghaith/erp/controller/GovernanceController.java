@@ -41,6 +41,25 @@ public class GovernanceController {
         return ResponseEntity.ok(new HashMap<>());
     }
 
+    @PostMapping("/risks")
+    public ResponseEntity<?> createRisk(@RequestBody(required = false) Map<String, Object> body) {
+        if (body == null) body = new HashMap<>();
+        body.put("id", System.currentTimeMillis());
+        return ResponseEntity.ok(body);
+    }
+
+    @PutMapping("/risks/{id}")
+    public ResponseEntity<?> updateRisk(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> body) {
+        if (body == null) body = new HashMap<>();
+        body.put("id", id);
+        return ResponseEntity.ok(body);
+    }
+
+    @DeleteMapping("/risks/{id}")
+    public ResponseEntity<?> deleteRisk(@PathVariable Long id) {
+        return ResponseEntity.ok(Map.of("success", true));
+    }
+
     @GetMapping("/audit-logs")
     public ResponseEntity<?> getAuditLogs() {
         return ResponseEntity.ok(Collections.emptyList());

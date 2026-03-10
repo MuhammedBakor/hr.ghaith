@@ -151,6 +151,7 @@ export const useEmployeeByUserId = (userId: number) => useQuery({
     queryKey: ['employees', 'user', userId],
     queryFn: () => api.get(`/hr/employees/user/${userId}`).then(res => res.data),
     enabled: !!userId,
+    retry: false,
 });
 
 export const useSubordinates = (managerId: number) => useQuery({

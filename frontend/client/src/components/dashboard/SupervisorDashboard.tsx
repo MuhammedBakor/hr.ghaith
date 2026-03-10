@@ -89,7 +89,7 @@ export function SupervisorDashboard({ stats, pendingActions, user, roleLabel, cu
                 <div className="bg-white rounded-2xl border border-gray-100 p-5">
                     <h2 className="text-sm font-semibold text-gray-900 mb-4">أدوات الإشراف</h2>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        <QuickAction icon={Clock} label="سجل الحضور" link="/hr/attendance" color="green" />
+                        <QuickAction icon={Clock} label="سجل الحضور" link="/hr/attendance-monitoring" color="green" />
                         <QuickAction icon={Calendar} label="الإجازات" link="/hr/leave-management" color="blue" />
                         <QuickAction icon={CheckSquare} label="الطلبات" link="/requests" color="amber" />
                         <QuickAction icon={User} label="ملفي الشخصي" link="/profile" color="purple" />

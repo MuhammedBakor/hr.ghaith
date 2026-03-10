@@ -86,6 +86,16 @@ public class Employee extends BaseEntity {
         return role;
     }
 
+    public java.util.List<String> getUserRoles() {
+        if (user != null) {
+            return user.getAllRoles();
+        }
+        if (role != null && !role.isBlank()) {
+            return java.util.List.of(role);
+        }
+        return java.util.List.of();
+    }
+
     public enum EmployeeStatus {
         active, inactive, terminated, on_leave, suspended, incomplete
     }

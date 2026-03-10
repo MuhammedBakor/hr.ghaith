@@ -198,13 +198,13 @@ export default function PurchaseOrders() {
     approved: purchaseOrders?.filter(po => po.status === "approved" || po.status === "partially_received" || po.status === "received").length || 0,
   };
 
-  // نموذج إنشاء طلب شراء جديد
-  if (viewMode === 'add') {
-    
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editItem, setEditItem] = React.useState<any>(null);
 
   if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>;
+
+  // نموذج إنشاء طلب شراء جديد
+  if (viewMode === 'add') {
 
   
   return (

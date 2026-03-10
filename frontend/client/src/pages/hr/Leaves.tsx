@@ -619,8 +619,8 @@ export default function Leaves() {
           <h2 className="text-2xl font-bold tracking-tight">{getPageTitle()}</h2>
           <p className="text-gray-500">{getPageSubtitle()}</p>
         </div>
-        {/* Only employees and admins can create leave requests */}
-        {(isEmployee || isAdmin) && (
+        {/* Only employees can create leave requests */}
+        {isEmployee && (
           <Button className="gap-2" onClick={() => setViewMode("new-leave")}>
             <Plus className="h-4 w-4" />
             طلب إجازة جديد

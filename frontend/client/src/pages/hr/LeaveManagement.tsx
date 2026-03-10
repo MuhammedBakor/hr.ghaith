@@ -375,7 +375,7 @@ export default function LeaveManagement() {
             العودة للقائمة
           </Button>
           <div className="flex-1">
-            <h1 className="text-2xl font-bold">إجازات الموظفين</h1>
+            <h1 className="text-2xl font-bold">ادارة رصيد اجازات الموظفيين</h1>
             <p className="text-muted-foreground">إدارة أرصدة الإجازات لجميع الموظفين</p>
           </div>
           {canEditBalance && (
@@ -656,10 +656,10 @@ export default function LeaveManagement() {
           {(isHrManager || isAdmin || isGM) && (
             <Button variant="outline" onClick={() => setViewMode('balances')}>
               <Users className="h-4 w-4 ms-2" />
-              إجازات الموظفين
+              ادارة رصيد اجازات الموظفيين
             </Button>
           )}
-          {(isEmployee || isAdmin) && (
+          {isEmployee && (
             <Button onClick={() => setViewMode('add')}>
               <Plus className="h-4 w-4 ms-2" />
               طلب إجازة

@@ -4,7 +4,7 @@ import { Route } from "wouter";
 import DashboardLayout from "../components/layout/DashboardLayout";
 
 const EmployeeList = lazy(() => import("@/pages/hr/EmployeeList"));
-const Attendance = lazy(() => import("@/pages/hr/Attendance"));
+const Attendance = lazy(() => import("@/pages/hr/AttendanceMonitoring"));
 const Leaves = lazy(() => import("@/pages/hr/Leaves"));
 const Payroll = lazy(() => import("@/pages/hr/Payroll"));
 const SalaryComponents = lazy(() => import("@/pages/hr/SalaryComponents"));

@@ -29,7 +29,9 @@ import {
   useDeleteEmployee,
   useUpdateEmployee,
   useDepartments,
-  usePositions
+  usePositions,
+  useBranches,
+  useEmployees
 } from '@/services/hrService';
 
 interface EmployeeDocument {
@@ -134,6 +136,8 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
 
   const { data: departmentsData } = useDepartments();
   const { data: positionsData } = usePositions();
+  const { data: branchesData } = useBranches();
+  const { data: allEmployeesData } = useEmployees();
 
   const deleteMutation = useDeleteEmployee();
   const updateMutation = useUpdateEmployee();
@@ -188,6 +192,9 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
         phone: employeeData.phone || '',
         departmentId: (typeof employeeData.department === 'object' ? String(employeeData.department?.id || '') : ''),
         positionId: (typeof employeeData.position === 'object' ? String(employeeData.position?.id || '') : ''),
+        branchId: (typeof employeeData.branch === 'object' ? String(employeeData.branch?.id || '') : ''),
+        managerId: employeeData.manager ? String(employeeData.manager.id || '') : '',
+        roles: employeeData.userRoles || (employeeData.user?.allRoles) || (employeeData.userRole ? [employeeData.userRole] : (employeeData.user?.role ? [employeeData.user.role] : [])),
         salary: employeeData.salary ? String(employeeData.salary) : '',
         nationalId: employeeData.nationalId || '',
         nationality: employeeData.nationality || '',
@@ -214,6 +221,9 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
     phone: '',
     departmentId: '',
     positionId: '',
+    branchId: '',
+    managerId: '',
+    roles: [] as string[],
     salary: '',
     nationalId: '',
     nationality: '',
@@ -259,6 +269,15 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
     }
     if (editForm.positionId) {
       updateData.position = { id: parseInt(editForm.positionId) };
+    }
+    if (editForm.branchId) {
+      updateData.branch = { id: parseInt(editForm.branchId) };
+    }
+    if (editForm.managerId) {
+      updateData.manager = { id: parseInt(editForm.managerId) };
+    }
+    if (editForm.roles && editForm.roles.length > 0) {
+      updateData.role = editForm.roles.join(',');
     }
 
     updateMutation.mutate(updateData, {
@@ -534,6 +553,80 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>الفرع</Label>
+                <Select
+                  value={editForm.branchId}
+                  onValueChange={(value) => setEditForm(prev => ({ ...prev, branchId: value }))}
+                >
+                  <SelectTrigger className={getMissingFieldStyle(editForm.branchId)}>
+                    <SelectValue placeholder="اختر الفرع" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(branchesData || []).map((branch: any) => (
+                      <SelectItem key={branch.id} value={String(branch.id)}>
+                        {branch.nameAr || branch.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>المدير المباشر</Label>
+                <Select
+                  value={editForm.managerId}
+                  onValueChange={(value) => setEditForm(prev => ({ ...prev, managerId: value }))}
+                >
+                  <SelectTrigger className={getMissingFieldStyle(editForm.managerId)}>
+                    <SelectValue placeholder="اختر المدير المباشر" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(allEmployeesData || [])
+                      .filter((emp: any) => emp.id !== employeeId)
+                      .map((emp: any) => (
+                      <SelectItem key={emp.id} value={String(emp.id)}>
+                        {emp.firstName} {emp.lastName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>الدور في النظام</Label>
+                <div className="border rounded-md p-3 space-y-3">
+                  {['DEPARTEMENT_MANAGER', 'SUPERVISOR', 'EMPLOYEE', 'AGENT'].map((roleOption) => (
+                    <div key={roleOption}>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={editForm.roles.includes(roleOption)}
+                          onChange={(e) => {
+                            setEditForm(prev => ({
+                              ...prev,
+                              roles: e.target.checked
+                                ? [...prev.roles, roleOption]
+                                : prev.roles.filter(r => r !== roleOption)
+                            }));
+                          }}
+                          className="rounded border-gray-300"
+                        />
+                        <span>{getRoleArabic(roleOption)}</span>
+                      </label>
+                      {/* عند اختيار مدير قسم — تنبيه لاختيار القسم */}
+                      {roleOption === 'DEPARTEMENT_MANAGER' && editForm.roles.includes('DEPARTEMENT_MANAGER') && (
+                        <p className="mr-6 mt-1 text-xs text-amber-600">
+                          تأكد من اختيار القسم الذي يديره في حقل "القسم" أعلاه
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {editForm.roles.length === 0 && (
+                  <p className="text-xs text-red-500">يجب اختيار دور واحد على الأقل</p>
+                )}
+              </div>
               <div className="space-y-2">
                 <Label>الراتب الأساسي</Label>
                 <Input

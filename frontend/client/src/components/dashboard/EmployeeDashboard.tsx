@@ -98,7 +98,7 @@ export function EmployeeDashboard({ stats, user, roleLabel, currentEmployee }: a
             <div className="bg-white rounded-2xl border border-gray-100 p-5">
                 <h2 className="text-sm font-semibold text-gray-900 mb-4">خدماتي الذاتية</h2>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                    <QuickAction icon={Clock} label="تسجيل الحضور" link="/hr/attendance" color="green" />
+                    <QuickAction icon={Clock} label="تسجيل الحضور" link="/hr/attendance-monitoring" color="green" />
                     <QuickAction icon={Calendar} label="طلب إجازة" link="/hr/leave-management" color="blue" />
                     <QuickAction icon={FileText} label="طلباتي" link="/requests" color="amber" />
                     <QuickAction icon={ShieldAlert} label="مخالفاتي" link="/hr/my-violations" color="red" />

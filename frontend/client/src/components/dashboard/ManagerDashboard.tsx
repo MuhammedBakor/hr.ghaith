@@ -88,7 +88,7 @@ export function ManagerDashboard({ stats, pendingActions, kpis, moduleIssues, us
                 <div className="bg-white rounded-2xl border border-gray-100 p-5">
                     <h2 className="text-sm font-semibold text-gray-900 mb-4">اختصارات إدارية</h2>
                     <div className="grid grid-cols-2 gap-3">
-                        <QuickAction icon={Users} label="الحضور" link="/hr/attendance" color="green" />
+                        <QuickAction icon={Users} label="الحضور" link="/hr/attendance-monitoring" color="green" />
                         <QuickAction icon={Calendar} label="الإجازات" link="/hr/leave-management" color="blue" />
                         <QuickAction icon={FileText} label="الطلبات" link="/requests" color="amber" />
                         <QuickAction icon={User} label="ملفي الشخصي" link="/profile" color="purple" />

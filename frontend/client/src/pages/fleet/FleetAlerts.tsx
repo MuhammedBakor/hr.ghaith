@@ -102,7 +102,7 @@ export default function FleetAlerts() {
   });
 
   const vehicles = vehiclesData || [];
-  const alerts = violationsData?.filter((item: any) => !searchTerm || JSON.stringify(item).toLowerCase().includes(searchTerm.toLowerCase()))?.map((v: any) => ({
+  const alerts = (violationsData || []).filter((item: any) => !searchTerm || JSON.stringify(item).toLowerCase().includes(searchTerm.toLowerCase())).map((v: any) => ({
     id: v.id,
     vehicleId: v.vehicleId,
     employeeId: v.employeeId,

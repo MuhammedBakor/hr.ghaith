@@ -54,12 +54,10 @@ export default function ReceivablesPage() {
     setDeleteConfirm(null);
   };
 
-  if (isLoading) return <div className="p-4 md:p-8 text-center">جاري التحميل...</div>;
-
-  
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editItem, setEditItem] = React.useState<any>(null);
 
+  if (isLoading) return <div className="p-4 md:p-8 text-center">جاري التحميل...</div>;
   if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>;
 
   

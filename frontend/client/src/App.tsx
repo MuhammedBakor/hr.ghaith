@@ -66,7 +66,6 @@ const Activate = lazy(() => import("@/pages/Activate"));
 const CompleteProfile = lazy(() => import("@/pages/hr/CompleteProfile"));
 const Home = lazy(() => import("@/pages/Home"));
 const EmployeeList = lazy(() => import("@/pages/hr/EmployeeList"));
-const Attendance = lazy(() => import("@/pages/hr/Attendance"));
 const AttendanceMonitoring = lazy(() => import("@/pages/hr/AttendanceMonitoring"));
 const Leaves = lazy(() => import("@/pages/hr/Leaves"));
 const Payroll = lazy(() => import("@/pages/hr/Payroll"));
@@ -347,7 +346,7 @@ function Router() {
       <Route path="/hr/attendance">
         <RoleProtectedRoute module="hr" hrSubPage="attendance">
           <DashboardLayout>
-            <Attendance />
+            <AttendanceMonitoring />
           </DashboardLayout>
         </RoleProtectedRoute>
       </Route>

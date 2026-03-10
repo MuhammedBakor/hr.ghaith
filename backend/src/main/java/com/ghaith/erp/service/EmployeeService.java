@@ -228,6 +228,43 @@ public class EmployeeService {
             employee.setBranch(hrBranchRepository.findById(employeeDetails.getBranch().getId()).orElse(null));
         }
 
+        // Manager update
+        if (employeeDetails.getManager() != null && employeeDetails.getManager().getId() != null) {
+            employee.setManager(employeeRepository.findById(employeeDetails.getManager().getId()).orElse(null));
+        }
+
+        // Role update (primary role + additional roles)
+        if (employeeDetails.getRole() != null && !employeeDetails.getRole().isBlank() && employee.getUser() != null) {
+            String roleStr = employeeDetails.getRole();
+            // Could be comma-separated list: "DEPARTEMENT_MANAGER,SUPERVISOR"
+            String[] roleParts = roleStr.split(",");
+            // First role = primary
+            try {
+                Role primaryRole = Role.valueOf(roleParts[0].trim().toUpperCase());
+                employee.getUser().setRole(primaryRole);
+            } catch (IllegalArgumentException e) {
+                System.out.println("Invalid primary role: " + roleParts[0]);
+            }
+            // Additional roles
+            if (roleParts.length > 1) {
+                StringBuilder additionalRoles = new StringBuilder();
+                for (int i = 1; i < roleParts.length; i++) {
+                    String r = roleParts[i].trim().toUpperCase();
+                    try {
+                        Role.valueOf(r); // validate
+                        if (additionalRoles.length() > 0) additionalRoles.append(",");
+                        additionalRoles.append(r);
+                    } catch (IllegalArgumentException e) {
+                        System.out.println("Invalid additional role: " + r);
+                    }
+                }
+                employee.getUser().setRoles(additionalRoles.length() > 0 ? additionalRoles.toString() : null);
+            } else {
+                employee.getUser().setRoles(null);
+            }
+            userRepository.save(employee.getUser());
+        }
+
         // Additional personal info fields
         if (employeeDetails.getNationalId() != null) {
             employee.setNationalId(employeeDetails.getNationalId());

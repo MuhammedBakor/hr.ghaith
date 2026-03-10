@@ -183,14 +183,14 @@ export const hrSubPermissions: Record<UserRoleType, string[]> = {
     'shifts', 'tracking', 'qr', 'approvals', 'letters', 'reports', 'onboarding', 'escalation', 'automation', 'salary'
   ],
   finance_manager: ['payroll'],
-  fleet_manager: ['attendance'],
+  fleet_manager: ['attendance', 'attendance-monitoring'],
   legal_manager: [],
-  projects_manager: ['attendance'],
-  store_manager: ['attendance'],
+  projects_manager: ['attendance', 'attendance-monitoring'],
+  store_manager: ['attendance', 'attendance-monitoring'],
   supervisor: ['attendance', 'attendance-monitoring', 'leaves', 'my_violations'],
-  employee: ['attendance', 'leaves', 'my_violations'],
+  employee: ['attendance', 'attendance-monitoring', 'leaves', 'my_violations'],
   department_manager: ['attendance', 'attendance-monitoring', 'leaves', 'leaves-list', 'my_violations', 'employees-list'],
-  agent: ['attendance', 'my_violations'],
+  agent: ['attendance', 'attendance-monitoring', 'my_violations'],
 };
 
 // صلاحيات كل صفة
@@ -393,43 +393,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
   const currentEmployeeId = currentEmployee?.id || null;
 
-  // v60: ربط الدور من السيرفر — فقط إذا لم يكن هناك دور مختار مسبقاً
+  // ربط الدور من السيرفر — تعيين الدور الأولي بعد تسجيل الدخول
   useEffect(() => {
     if (authData?.role) {
-      const hasPreference = !!localStorage.getItem('selectedRole');
+      const savedRole = localStorage.getItem('selectedRole') as UserRoleType | null;
 
-      if (!hasPreference) {
-        const serverRole = (authData.role as string).toLowerCase();
-        // Map DB role to frontend role
-        const roleMap: Record<string, UserRoleType> = {
-          'admin': 'admin',
-          'system_admin': 'admin',
-          'owner': 'admin',
-          'general_manager': 'general_manager',
-          'hr_manager': 'hr_manager',
-          'finance_manager': 'finance_manager',
-          'fleet_manager': 'fleet_manager',
-          'legal_manager': 'legal_manager',
-          'projects_manager': 'projects_manager',
-          'store_manager': 'store_manager',
-          'supervisor': 'supervisor',
-          'employee': 'employee',
-          'agent': 'employee',
-          'user': 'employee',
-        };
-
-        let mappedRole = roleMap[serverRole] || 'employee';
-
-        // إذا كان مدير قسم، حدد الدور بناءً على القسم
-        if (serverRole === 'departement_manager' && currentEmployee) {
+      // تحويل الدور الأساسي من السيرفر إلى دور الواجهة
+      const mapServerRole = (sr: string): UserRoleType => {
+        const s = sr.toLowerCase();
+        if (s === 'owner' || s === 'admin' || s === 'system_admin') return 'admin';
+        if (s === 'general_manager') return 'general_manager';
+        if (s === 'departement_manager' && currentEmployee) {
           const dept = currentEmployee.department;
           const deptCode = typeof dept === 'object' ? (dept?.code || dept?.nameAr || dept?.name) : dept;
-          mappedRole = departmentToRoleMap[deptCode] || 'department_manager';
-        } else if (serverRole === 'departement_manager') {
-          mappedRole = 'department_manager';
+          return departmentToRoleMap[deptCode] || 'department_manager';
         }
+        if (s === 'departement_manager') return 'department_manager';
+        if (s === 'supervisor') return 'supervisor';
+        if (s === 'agent') return 'agent';
+        return 'employee';
+      };
 
-        setSelectedRole(mappedRole);
+      // إذا لا يوجد اختيار سابق، عيّن الدور الأساسي
+      if (!savedRole) {
+        setSelectedRole(mapServerRole(authData.role as string));
       }
     }
   }, [authData?.role, currentEmployee]);
@@ -471,42 +458,74 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const currentBranch = branches.find(b => b.id === selectedBranchId) || null;
   const permissions = rolePermissions[selectedRole];
   const roleLevel = roleLevels[selectedRole];
-  const allowedModules = modulePermissions[selectedRole];
-  const allowedHrSubPages = hrSubPermissions[selectedRole];
 
   // هل المستخدم مدير قسم؟
   const isDepartmentManager = selectedRole === 'department_manager';
 
-  // تحديد الأدوار المتاحة للمستخدم بناءً على دوره الفعلي من السيرفر
+  // تحديد الأدوار المتاحة للمستخدم بناءً على أدواره من السيرفر (دعم الأدوار المتعددة)
   const allowedRoles: UserRoleType[] = (() => {
-    const serverRole = ((authData?.role as string) || '').toLowerCase();
+    // لا تغير الأدوار قبل تحميل بيانات المستخدم
+    if (!authData?.role) {
+      return Object.keys(roleLabels) as UserRoleType[];
+    }
+    const serverRoles: string[] = (authData?.roles && authData.roles.length > 0)
+      ? authData.roles.map((r: string) => r.toLowerCase())
+      : [(authData.role as string).toLowerCase()];
     const allRoles = Object.keys(roleLabels) as UserRoleType[];
 
     // OWNER و admin يرون كل الأدوار
-    if (serverRole === 'owner' || serverRole === 'admin' || serverRole === 'system_admin') {
+    if (serverRoles.some(r => r === 'owner' || r === 'admin' || r === 'system_admin')) {
       return allRoles;
     }
     // المدير العام يرى كل الأدوار
-    if (serverRole === 'general_manager') {
+    if (serverRoles.includes('general_manager')) {
       return allRoles;
     }
-    // مدير القسم يرى فقط دوره المرتبط بقسمه (بدون تغيير الصفة)
-    if (serverRole === 'departement_manager' && currentEmployee) {
-      const dept = currentEmployee.department;
-      const deptCode = typeof dept === 'object' ? (dept?.code || dept?.nameAr || dept?.name) : dept;
-      const mappedRole = departmentToRoleMap[deptCode] || 'department_manager';
-      return [mappedRole];
+
+    // بناء قائمة الأدوار المتاحة من كل الأدوار المعينة
+    const result = new Set<UserRoleType>();
+    for (const serverRole of serverRoles) {
+      if (serverRole === 'departement_manager' && currentEmployee) {
+        const dept = currentEmployee.department;
+        const deptCode = typeof dept === 'object' ? (dept?.code || dept?.nameAr || dept?.name) : dept;
+        const mappedRole = departmentToRoleMap[deptCode] || 'department_manager';
+        result.add(mappedRole);
+      } else if (serverRole === 'departement_manager') {
+        result.add('department_manager');
+      } else if (serverRole === 'supervisor') {
+        result.add('supervisor');
+      } else if (serverRole === 'employee') {
+        result.add('employee');
+      } else if (serverRole === 'agent') {
+        result.add('agent');
+      } else {
+        // Try direct mapping
+        const roleMap: Record<string, UserRoleType> = {
+          'hr_manager': 'hr_manager',
+          'finance_manager': 'finance_manager',
+          'fleet_manager': 'fleet_manager',
+          'legal_manager': 'legal_manager',
+          'projects_manager': 'projects_manager',
+          'store_manager': 'store_manager',
+        };
+        if (roleMap[serverRole]) {
+          result.add(roleMap[serverRole]);
+        }
+      }
     }
-    if (serverRole === 'departement_manager') {
-      return ['department_manager'];
-    }
-    // المشرف
-    if (serverRole === 'supervisor') {
-      return ['supervisor'];
-    }
-    // الموظف العادي والمندوب
-    return ['employee'];
+
+    return result.size > 0 ? Array.from(result) : ['employee'];
   })();
+
+  const allowedModules = modulePermissions[selectedRole];
+  const allowedHrSubPages = hrSubPermissions[selectedRole];
+
+  // التحقق من أن الدور المختار لا يزال ضمن الأدوار المسموحة (فقط بعد تحميل بيانات المستخدم)
+  useEffect(() => {
+    if (authData?.role && allowedRoles.length > 0 && !allowedRoles.includes(selectedRole)) {
+      setSelectedRole(allowedRoles[0]);
+    }
+  }, [allowedRoles, selectedRole, authData?.role]);
 
   const hasPermission = (permission: keyof typeof rolePermissions[UserRoleType]) => {
     return permissions[permission];
