@@ -93,7 +93,8 @@ import {
   CalendarOff,
   Scan,
   History,
-  Inbox
+  Inbox,
+  RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -108,8 +109,42 @@ import {
 import { cn } from '@/lib/utils';
 import { useAppContext, roleLabels, UserRoleType, ModuleType, roleColors } from '@/contexts/AppContext';
 import { useAuth } from '@/_core/hooks/useAuth';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
+import { useQuickSearch } from '@/services/dashboardService';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+
+// ─── Search result row (used in topbar search dropdown) ──────────────────────
+function SearchResultItem({ result, onClose }: {
+  result: { id: number | string; type: string; module: string; title: string; subtitle?: string; link: string; badge?: string };
+  onClose: () => void;
+}) {
+  const COLOR_MAP: Record<string, { bg: string; text: string }> = {
+    hr: { bg: 'bg-blue-50', text: 'text-blue-600' },
+    finance: { bg: 'bg-green-50', text: 'text-green-600' },
+    fleet: { bg: 'bg-orange-50', text: 'text-orange-600' },
+    legal: { bg: 'bg-purple-50', text: 'text-purple-600' },
+    projects: { bg: 'bg-indigo-50', text: 'text-indigo-600' },
+    property: { bg: 'bg-teal-50', text: 'text-teal-600' },
+    admin: { bg: 'bg-gray-50', text: 'text-gray-600' },
+  };
+  const c = COLOR_MAP[result.module] ?? { bg: 'bg-gray-50', text: 'text-gray-600' };
+  return (
+    <Link href={result.link} onClick={onClose}>
+      <div className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors cursor-pointer">
+        <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center shrink-0', c.bg)}>
+          <span className={cn('text-xs font-bold', c.text)}>{result.module.slice(0, 2).toUpperCase()}</span>
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-gray-900 truncate">{result.title}</p>
+          {result.subtitle && <p className="text-xs text-gray-500 truncate">{result.subtitle}</p>}
+        </div>
+        {result.badge && <Badge variant="secondary" className="text-xs shrink-0">{result.badge}</Badge>}
+      </div>
+    </Link>
+  );
+}
 
 interface NavItem {
   label: string;
@@ -128,6 +163,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const {
     selectedBranchId,
     setSelectedBranchId,
+    selectedCompanyId,
+    setSelectedCompanyId,
     currentBranch,
     branches,
     branchesLoading,
@@ -140,34 +177,73 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     currentEmployee: ctxEmployee,
   } = useAppContext();
 
-  // جلب بيانات الموظفين لمدير القسم
+  // جلب بيانات الموظفين لمدير القسم - مع فلترة بالفرع والقسم
   const isDeptManager = ['hr_manager', 'finance_manager', 'fleet_manager', 'legal_manager', 'projects_manager', 'store_manager', 'department_manager'].includes(selectedRole);
-  const { data: allEmployees } = useQuery<any[]>({
-    queryKey: ['employees'],
-    queryFn: () => api.get('/hr/employees').then(r => r.data).catch(() => []),
-    enabled: isDeptManager && !!user,
+  const currentDeptId = ctxEmployee
+    ? (typeof ctxEmployee.department === 'object' ? ctxEmployee.department?.id : ctxEmployee.departmentId)
+    : null;
+
+  const { data: deptEmployeesData } = useQuery<any[]>({
+    queryKey: ['employees', { branchId: selectedBranchId, departmentId: currentDeptId }],
+    queryFn: () => {
+      const params: any = {};
+      if (selectedBranchId) params.branchId = selectedBranchId;
+      if (currentDeptId) params.departmentId = currentDeptId;
+      return api.get('/hr/employees', { params }).then(r => r.data).catch(() => []);
+    },
+    enabled: isDeptManager && !!user && !!currentDeptId,
     staleTime: 5 * 60 * 1000,
   });
+  const deptEmployeeCount = deptEmployeesData?.length || 0;
+
+  // ─── Topbar search ───────────────────────────────────────────────────────
+  const queryClient = useQueryClient();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const searchRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(searchQuery), 300);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) setShowSearch(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowSearch(true);
+        setTimeout(() => searchInputRef.current?.focus(), 50);
+      }
+      if (e.key === 'Escape') setShowSearch(false);
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, []);
+
+  const { data: searchResults, isLoading: searchLoading } = useQuickSearch(debouncedQuery);
+
+  const greetingTime = () => {
+    const h = new Date().getHours();
+    if (h < 12) return 'صباح الخير';
+    if (h < 17) return 'مساء الخير';
+    return 'مساء النور';
+  };
 
   const { data: adminCompanies } = useQuery<any[]>({
     queryKey: ['admin', 'companies'],
     queryFn: () => api.get('/admin/companies').then(r => Array.isArray(r.data) ? r.data : []).catch(() => []),
     staleTime: 2 * 60 * 1000,
   });
-
-  // حساب عدد موظفي القسم
-  const currentEmployee = allEmployees?.find((emp: any) =>
-    emp.userId === user?.id || emp.user?.id === user?.id
-  );
-  const currentDeptId = typeof currentEmployee?.department === 'object'
-    ? currentEmployee?.department?.id
-    : currentEmployee?.departmentId;
-  const deptEmployeeCount = isDeptManager && currentDeptId
-    ? allEmployees?.filter((emp: any) => {
-      const empDeptId = typeof emp.department === 'object' ? emp.department?.id : emp.departmentId;
-      return empDeptId === currentDeptId;
-    }).length || 0
-    : 0;
 
   // حماية الصفحات - توجيه المستخدم غير المصادق لصفحة الدخول
   useEffect(() => {
@@ -259,16 +335,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       path: '/departments',
       icon: Grid3X3,
       module: 'home' as ModuleType,
+    }, {
+      label: 'الشركات',
+      path: '/admin/system',
+      icon: Building2,
+      module: 'home' as ModuleType,
     }] : []),
-    // مراقبة الحضور - وصول سريع للمدير العام ومدير النظام
-    ...(isTopAdmin ? [{
+    // مراقبة الحضور - وصول سريع للمدير العام ومدير النظام (فقط عند دخول فرع)
+    ...(isTopAdmin && selectedBranchId !== null ? [{
       label: 'مراقبة الحضور',
       path: '/hr/attendance-monitoring',
       icon: ClipboardCheck,
       module: 'home' as ModuleType,
     }] : []),
-    // إدارة الإجازات - وصول سريع للمدير العام ومدير النظام
-    ...(isTopAdmin ? [{
+    // إدارة الإجازات - وصول سريع للمدير العام ومدير النظام (فقط عند دخول فرع)
+    ...(isTopAdmin && selectedBranchId !== null ? [{
       label: 'إدارة الإجازات',
       path: '/hr/leave-management',
       icon: Calendar,
@@ -420,50 +501,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         { label: 'سجل التحليلات', path: '/bi/audit', icon: ScrollText },
       ]
     },
-    { label: 'التكاملات', path: '/integrations', icon: LinkIcon, module: 'integrations' },
-    {
-      label: 'الطلبات',
-      path: '/requests',
-      icon: FileText,
-      module: 'requests',
-      children: [
-        { label: 'كل الطلبات', path: '/requests', icon: FileText },
-        ...(['admin', 'general_manager', 'hr_manager'].includes(selectedRole) ? [
-          { label: 'أنواع الطلبات', path: '/requests/types', icon: ListTodo },
-        ] : []),
-        { label: 'سير العمل', path: '/requests/workflows', icon: GitBranch },
-        ...(['admin', 'general_manager', 'hr_manager', 'department_manager', 'supervisor'].includes(selectedRole) ? [
-          { label: 'الموافقات', path: '/workflow/approvals', icon: CheckCircle },
-        ] : []),
-        { label: 'التذاكر', path: '/support/tickets', icon: Ticket },
-        ...(['admin', 'general_manager'].includes(selectedRole) ? [
-          { label: 'أتمتة الدعم', path: '/support/automation', icon: Zap },
-        ] : []),
-      ]
-    },
-    {
-      label: 'المستندات',
-      path: '/documents',
-      icon: FileStack,
-      module: 'documents',
-      children: [
-        { label: 'كل المستندات', path: '/documents', icon: FileStack },
-        { label: 'المجلدات', path: '/documents/folders', icon: FolderOpen },
-        { label: 'القوالب', path: '/documents/templates', icon: FilePlus },
-        { label: 'الأرشيف', path: '/documents/archive', icon: Archive },
-      ]
-    },
-    {
-      label: 'التقارير',
-      path: '/reports',
-      icon: BarChart3,
-      module: 'reports',
-      children: [
-        { label: 'نظرة عامة', path: '/reports', icon: BarChart3 },
-        { label: 'تقارير مخصصة', path: '/reports/custom', icon: FilePlus },
-        { label: 'جدولة التقارير', path: '/reports/scheduled', icon: CalendarClock },
-      ]
-    },
     {
       label: 'مدير النظام',
       path: '/admin',
@@ -471,7 +508,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       module: 'admin',
       children: [
         { label: 'نظرة عامة', path: '/admin', icon: Shield },
-        { label: 'لوحة النظام', path: '/admin/system', icon: Monitor },
         { label: 'الاشتراكات', path: '/admin/subscriptions', icon: Building2 },
         { label: 'المستخدمين', path: '/admin/users', icon: UserCog },
         { label: 'الأدوار والصلاحيات', path: '/admin/roles', icon: KeyRound },
@@ -494,19 +530,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         { label: 'سير العمل', path: '/workflow/flows', icon: GitBranch },
         { label: 'سجل الوظائف', path: '/platform/jobs', icon: Cpu },
         { label: 'الكليشة', path: '/settings/branding', icon: FileText },
-      ]
-    },
-    {
-      label: 'التواصل',
-      path: '/comms',
-      icon: Mail,
-      module: 'comms',
-      children: [
-        { label: 'المراسلات', path: '/comms', icon: MessageSquare },
-        { label: 'الخطابات الرسمية', path: '/comms/official-letters', icon: Send },
-        { label: 'الصادر', path: '/correspondence/outgoing', icon: Send },
-        { label: 'الوارد', path: '/correspondence/incoming', icon: Mail },
-        { label: 'المعاملات', path: '/correspondence/transactions', icon: FileStack },
       ]
     },
     {
@@ -539,19 +562,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       ]
     },
     {
-      label: 'سير العمل',
-      path: '/workflow',
-      icon: GitBranch,
-      module: 'workflow',
-      children: [
-        { label: 'العمليات', path: '/workflow', icon: GitBranch },
-        { label: 'الموافقات', path: '/workflow/approvals', icon: CheckCircle },
-        { label: 'التفويضات', path: '/workflow/delegations', icon: Users },
-        { label: 'إعدادات الموافقات', path: '/workflow/settings', icon: Settings },
-      ]
-    },
-    { label: 'صندوق الوارد', path: '/inbox', icon: Mail, module: 'inbox' },
-    {
       label: 'أدوات المنصة',
       path: '/platform/calendar',
       icon: Cog,
@@ -569,16 +579,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         { label: 'سياسة الذكاء الاصطناعي', path: '/platform/ai-policy', icon: Cpu },
         { label: 'تفضيلات الإشعارات', path: '/platform/notify-prefs', icon: Bell },
         { label: 'قواعد الإشعارات', path: '/platform/notify-rules', icon: Zap },
-      ]
-    },
-    {
-      label: 'الموقع العام',
-      path: '/public-site',
-      icon: Globe,
-      module: 'public_site',
-      children: [
-        { label: 'الصفحات', path: '/public-site', icon: Globe },
-        { label: 'المدونة', path: '/public-site/blog', icon: BookOpen },
       ]
     },
     {
@@ -737,30 +737,43 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const hasChildren = item.children && item.children.length > 0;
     const isExpanded = expandedItems.includes(item.path);
 
+    const activeStyle = {
+      backgroundColor: 'rgba(201,168,76,0.18)',
+      color: '#C9A84C',
+      border: '1px solid rgba(201,168,76,0.4)',
+    };
+    const inactiveStyle = {
+      color: '#c9d1d9',
+      border: '1px solid transparent',
+    };
+    const hoverStyle = {
+      backgroundColor: 'rgba(96,165,250,0.07)',
+      border: '1px solid rgba(96,165,250,0.25)',
+      color: '#e5e7eb',
+    };
+
     if (hasChildren) {
       return (
         <div key={item.path}>
           <button
             onClick={() => toggleExpand(item.path)}
-            className={cn(
-              "w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-              isActive
-                ? 'bg-primary/10 text-primary'
-                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-            )}
+            className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-150"
+            style={isActive ? activeStyle : inactiveStyle}
+            onMouseEnter={e => { if (!isActive) Object.assign(e.currentTarget.style, hoverStyle); }}
+            onMouseLeave={e => { if (!isActive) { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.border = '1px solid transparent'; e.currentTarget.style.color = '#c9d1d9'; } }}
           >
             <div className="flex items-center gap-3">
-              <item.icon className={cn("h-5 w-5", isActive ? 'text-primary' : 'text-gray-400')} />
-              {item.label}
+              <item.icon className="h-[18px] w-[18px] flex-shrink-0" style={{ color: isActive ? '#C9A84C' : '#6b7280' }} />
+              <span>{item.label}</span>
             </div>
             {isExpanded ? (
-              <ChevronDown className="h-4 w-4" />
+              <ChevronDown className="h-3.5 w-3.5" style={{ color: '#6b7280' }} />
             ) : (
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-3.5 w-3.5" style={{ color: '#6b7280' }} />
             )}
           </button>
           {isExpanded && (
-            <div className="me-4 mt-1 space-y-1 border-r-2 border-gray-100 pe-2">
+            <div className="me-3 mt-0.5 space-y-0.5 pe-2" style={{ borderRight: '1px solid #2d3555' }}>
               {item.children!.map(child => renderNavItem(child, true))}
             </div>
           )}
@@ -772,18 +785,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <Link
         key={item.path}
         href={item.path}
-        className={cn(
-          "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-          isChild ? "py-2" : "",
-          isActive
-            ? 'bg-primary/10 text-primary'
-            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-        )}
+        className="flex items-center gap-3 px-4 rounded-lg text-sm font-medium transition-all duration-150"
+        style={{
+          ...(isActive ? activeStyle : inactiveStyle),
+          paddingTop: isChild ? '9px' : '11px',
+          paddingBottom: isChild ? '9px' : '11px',
+        }}
+        onMouseEnter={(e: React.MouseEvent<HTMLAnchorElement>) => { if (!isActive) Object.assign((e.currentTarget as HTMLElement).style, hoverStyle); }}
+        onMouseLeave={(e: React.MouseEvent<HTMLAnchorElement>) => { if (!isActive) { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; (e.currentTarget as HTMLElement).style.border = '1px solid transparent'; (e.currentTarget as HTMLElement).style.color = '#c9d1d9'; } }}
       >
-        <item.icon className={cn(
-          isChild ? "h-4 w-4" : "h-5 w-5",
-          isActive ? 'text-primary' : 'text-gray-400'
-        )} />
+        <item.icon
+          className="flex-shrink-0"
+          style={{ width: isChild ? '15px' : '18px', height: isChild ? '15px' : '18px', color: isActive ? '#C9A84C' : '#6b7280' }}
+        />
         {item.label}
       </Link>
     );
@@ -794,52 +808,77 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     window.location.href = '/login';
   };
 
+  const selectedCompanyData = selectedCompanyId && adminCompanies
+    ? adminCompanies.find((c: any) => c.id === selectedCompanyId)
+    : null;
+  const companyDisplayName = selectedCompanyData
+    ? (selectedCompanyData.nameAr || selectedCompanyData.name)
+    : null;
+
+  const scopeLabel = companyDisplayName
+    ? (selectedCompanyData?.city ? `شركة ${companyDisplayName} - فرع ${selectedCompanyData.city}` : `شركة ${companyDisplayName}`)
+    : selectedBranchId === null && (selectedRole === 'admin' || selectedRole === 'general_manager')
+      ? 'لوحة تحكم (شاملة)'
+      : currentBranch?.name || roleLabels[selectedRole];
+
   return (
-    <div className="min-h-screen bg-gray-50 flex" dir="rtl">
+    <div className="min-h-screen flex" style={{ backgroundColor: '#f3f4f6' }} dir="rtl">
       {/* Sidebar */}
       <aside
-        className={`bg-white border-l border-gray-200 fixed inset-y-0 right-0 z-50 w-64 transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full'
+        style={{ backgroundColor: '#1a2035', borderLeft: '1px solid #2d3555' }}
+        className={`fixed inset-y-0 right-0 z-50 w-64 transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full'
           } lg:relative lg:translate-x-0`}
       >
         <div className="h-full flex flex-col">
-          {/* Logo */}
-          <div className="h-16 flex items-center justify-between px-6 border-b border-gray-100">
-            <div className="flex items-center gap-2 font-bold text-xl text-primary">
-              <span className="text-2xl">🌧️</span>
-              <span>منصة غيث</span>
+          {/* Logo + Scope */}
+          <div className="px-5 pt-5 pb-4" style={{ borderBottom: '1px solid #2d3555' }}>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2 font-bold text-lg" style={{ color: '#C9A84C' }}>
+                <span className="text-xl">🌧️</span>
+                <span>منصة غيث</span>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="lg:hidden"
+                style={{ color: '#9ca3af' }}
+                onClick={() => setIsSidebarOpen(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="lg:hidden"
-              onClick={() => setIsSidebarOpen(false)}
-            >
-              <X className="h-5 w-5" />
-            </Button>
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <p className="text-xs" style={{ color: '#6b7280' }}>نطاق العمل:</p>
+                <p className="text-sm font-semibold truncate" style={{ color: '#e5e7eb' }}>
+                  {ctxEmployee?.firstNameAr && ctxEmployee?.lastNameAr
+                    ? `${ctxEmployee.firstNameAr} ${ctxEmployee.lastNameAr}`
+                    : ctxEmployee?.firstName && ctxEmployee?.lastName
+                      ? `${ctxEmployee.firstName} ${ctxEmployee.lastName}`
+                      : user?.username || ''}
+                </p>
+              </div>
+              <p className="text-sm font-semibold truncate" style={{ color: '#C9A84C' }}>{scopeLabel}</p>
+            </div>
           </div>
 
           {/* Nav Items */}
-          <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
+          <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-0.5">
             {navItems.map((item) => renderNavItem(item))}
           </nav>
 
-          {/* User Profile */}
-          <div className="p-4 border-t border-gray-100">
-            <div className="flex items-center gap-3">
-              <Avatar>
-                <AvatarImage src={`https://ui-avatars.com/api/?name=${ctxEmployee ? `${ctxEmployee.firstName} ${ctxEmployee.lastName}` : (user?.username || roleLabels[selectedRole])}&background=random`} />
-                <AvatarFallback>{(ctxEmployee ? ctxEmployee.firstName : (user?.username || roleLabels[selectedRole])).substring(0, 2).toUpperCase()}</AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">
-                  {ctxEmployee ? `${ctxEmployee.firstName} ${ctxEmployee.lastName}` : (user?.username || roleLabels[selectedRole])}
-                </p>
-                <p className="text-xs truncate" style={{ color: roleColors[selectedRole] }}>{roleLabels[selectedRole]}</p>
-              </div>
-              <Button variant="ghost" size="icon" onClick={handleLogout} title="تسجيل الخروج">
-                <LogOut className="h-4 w-4 text-gray-400" />
-              </Button>
-            </div>
+          {/* Logout Button */}
+          <div className="p-3" style={{ borderTop: '1px solid #2d3555' }}>
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg font-medium text-sm transition-colors"
+              style={{ backgroundColor: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)' }}
+              onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'rgba(239,68,68,0.25)'; }}
+              onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'rgba(239,68,68,0.15)'; }}
+            >
+              <LogOut className="h-4 w-4" />
+              تسجيل الخروج
+            </button>
           </div>
         </div>
       </aside>
@@ -847,43 +886,143 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 lg:me-0 transition-all duration-300">
         {/* Header */}
-        <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-4 lg:px-8 sticky top-0 z-40">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="outline"
-              size="icon"
-              className="lg:hidden shrink-0"
+        <header
+          style={{ backgroundColor: '#1a2035', borderBottom: '1px solid #2d3555' }}
+          className="h-16 flex items-center px-4 lg:px-8 sticky top-0 z-40 gap-4"
+        >
+          {/* Left: greeting */}
+          <div className="flex items-center gap-3 flex-none">
+            <button
+              className="lg:hidden shrink-0 p-2 rounded-lg transition-colors"
+              style={{ color: '#9ca3af', backgroundColor: 'transparent' }}
+              onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.08)'; }}
+              onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
               onClick={() => setIsSidebarOpen(true)}
             >
               <Menu className="h-5 w-5" />
-            </Button>
-            <h1 className="text-lg font-semibold text-gray-800 truncate">
-              {navItems.find(i => location === i.path || location.startsWith(`${i.path}/`))?.label || 'الرئيسية'}
-            </h1>
+            </button>
+            <div dir="rtl">
+              <p className="text-sm font-semibold leading-tight" style={{ color: '#e5e7eb' }}>
+                {greetingTime()}، {ctxEmployee?.firstNameAr || ctxEmployee?.firstName || user?.username?.split(' ')[0] || 'مرحباً'} 👋
+              </p>
+              <p className="text-xs leading-tight hidden lg:block" style={{ color: '#6b7280' }}>
+                {new Date().toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+              </p>
+            </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* خانة الإشعارات */}
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-5 w-5 text-gray-500" />
-              <span className="absolute top-2 end-2 h-2 w-2 bg-red-500 rounded-full"></span>
-            </Button>
+          {/* Center: company/scope label */}
+          <div className="flex-1 hidden lg:flex items-center justify-center pointer-events-none overflow-hidden px-4">
+            {companyDisplayName ? (
+              <span className="text-sm font-semibold truncate" style={{ color: '#C9A84C' }}>
+                شركة {companyDisplayName}
+                {selectedCompanyData?.city && (
+                  <span className="font-normal" style={{ color: '#6b7280' }}> - فرع {selectedCompanyData.city}</span>
+                )}
+              </span>
+            ) : selectedBranchId === null && (selectedRole === 'admin' || selectedRole === 'general_manager') ? (
+              <span className="text-sm font-semibold" style={{ color: '#9ca3af' }}>لوحة تحكم (شاملة)</span>
+            ) : null}
+          </div>
+
+          {/* Right: search + icons */}
+          <div className="flex items-center gap-2 flex-none">
+            {/* Compact search bar */}
+            <div ref={searchRef} className="relative hidden lg:block">
+              <div className="relative">
+                <Search className="absolute end-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none" style={{ color: '#6b7280' }} />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={e => { setSearchQuery(e.target.value); setShowSearch(e.target.value.length >= 2); }}
+                  onFocus={() => searchQuery.length >= 2 && setShowSearch(true)}
+                  placeholder="بحث... (Ctrl+K)"
+                  className="text-xs py-1.5 rounded-lg outline-none transition-all"
+                  style={{
+                    width: showSearch || searchQuery ? '200px' : '160px',
+                    paddingInlineEnd: '28px',
+                    paddingInlineStart: '36px',
+                    backgroundColor: 'rgba(255,255,255,0.07)',
+                    border: '1px solid #2d3555',
+                    color: '#c9d1d9',
+                    transition: 'width 0.2s ease',
+                  }}
+                  onMouseEnter={e => { (e.currentTarget).style.backgroundColor = 'rgba(255,255,255,0.1)'; }}
+                  onMouseLeave={e => { if (document.activeElement !== e.currentTarget) (e.currentTarget).style.backgroundColor = 'rgba(255,255,255,0.07)'; }}
+                  onFocusCapture={e => { (e.currentTarget).style.backgroundColor = 'rgba(255,255,255,0.12)'; (e.currentTarget).style.borderColor = '#C9A84C'; }}
+                  onBlur={e => { (e.currentTarget).style.backgroundColor = 'rgba(255,255,255,0.07)'; (e.currentTarget).style.borderColor = '#2d3555'; }}
+                />
+                <kbd className="absolute start-2.5 top-1/2 -translate-y-1/2 text-[9px] px-1 py-0.5 rounded pointer-events-none"
+                  style={{ backgroundColor: 'rgba(255,255,255,0.1)', color: '#6b7280' }}>⌘K</kbd>
+              </div>
+              {showSearch && (
+                <div className="absolute top-full end-0 mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden">
+                  {searchLoading ? (
+                    <div className="p-6 text-center text-sm text-gray-500">جاري البحث...</div>
+                  ) : searchResults && searchResults.length > 0 ? (
+                    searchResults.map((r: any, i: number) => (
+                      <SearchResultItem key={i} result={r} onClose={() => { setShowSearch(false); setSearchQuery(''); }} />
+                    ))
+                  ) : (
+                    <div className="p-8 text-center text-gray-400 text-sm">لا نتائج لـ "{debouncedQuery}"</div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Divider */}
+            <div className="hidden lg:block w-px h-5 mx-1" style={{ backgroundColor: '#2d3555' }} />
+
+            {/* Refresh */}
+            <button
+              className="p-2 rounded-lg transition-colors"
+              style={{ color: '#9ca3af', backgroundColor: 'transparent' }}
+              onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.08)'; }}
+              onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+              onClick={() => queryClient.invalidateQueries()}
+              title="تحديث البيانات"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </button>
+
+            {/* Settings */}
+            <Link href="/settings">
+              <button
+                className="p-2 rounded-lg transition-colors"
+                style={{ color: '#9ca3af', backgroundColor: 'transparent' }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.08)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; }}
+                title="الإعدادات"
+              >
+                <Settings className="h-4 w-4" />
+              </button>
+            </Link>
+
+            {/* Bell */}
+            <button
+              className="relative p-2 rounded-lg transition-colors"
+              style={{ color: '#9ca3af', backgroundColor: 'transparent' }}
+              onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.08)'; }}
+              onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+            >
+              <Bell className="h-5 w-5" />
+            </button>
 
             {/* خانة الصفة - فقط للمستخدمين الذين لديهم أكثر من دور */}
             {allowedRoles.length > 1 && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="gap-2 border border-purple-200 bg-purple-50 hover:bg-purple-100"
-                    style={{ borderColor: `${roleColors[selectedRole]}40`, backgroundColor: `${roleColors[selectedRole]}10` }}
+                  <button
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                    style={{ backgroundColor: 'rgba(201,168,76,0.12)', color: '#C9A84C', border: '1px solid rgba(201,168,76,0.3)' }}
+                    onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'rgba(201,168,76,0.2)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'rgba(201,168,76,0.12)'; }}
                   >
-                    <Shield className="h-4 w-4" style={{ color: roleColors[selectedRole] }} />
-                    <span className="hidden sm:inline-block text-sm font-medium" style={{ color: roleColors[selectedRole] }}>
-                      {roleLabels[selectedRole]}
-                    </span>
-                    <ChevronDown className="h-3 w-3" style={{ color: roleColors[selectedRole] }} />
-                  </Button>
+                    <Shield className="h-4 w-4" />
+                    <span className="hidden sm:inline-block">{roleLabels[selectedRole]}</span>
+                    <ChevronDown className="h-3 w-3" />
+                  </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
                   <DropdownMenuLabel>تغيير الصفة</DropdownMenuLabel>
@@ -892,10 +1031,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     <DropdownMenuItem
                       key={role}
                       onClick={() => setSelectedRole(role)}
-                      className={selectedRole === role ? 'bg-purple-50 text-purple-700' : ''}
+                      className={selectedRole === role ? 'bg-amber-50 text-amber-700' : ''}
                     >
                       <Shield
-                        className={`h-4 w-4 ms-2`}
+                        className="h-4 w-4 ms-2"
                         style={{ color: selectedRole === role ? roleColors[role] : '#9ca3af' }}
                       />
                       {roleLabels[role]}
@@ -909,49 +1048,49 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {permissions.canViewAllBranches && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="gap-2 border border-blue-200 bg-blue-50 hover:bg-blue-100">
-                    <Building2 className="h-4 w-4 text-blue-600" />
-                    <span className="hidden sm:inline-block text-sm font-medium text-blue-700">
-                      {currentBranch?.name || 'جميع الفروع'}
+                  <button
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                    style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: '#c9d1d9', border: '1px solid #2d3555' }}
+                    onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)'; }}
+                  >
+                    <Building2 className="h-4 w-4" style={{ color: '#C9A84C' }} />
+                    <span className="hidden sm:inline-block">
+                      {companyDisplayName
+                        ? `شركة ${companyDisplayName}`
+                        : selectedBranchId === null
+                          ? 'جميع الفروع'
+                          : currentBranch?.name || 'جميع الفروع'}
                     </span>
-                    <ChevronDown className="h-3 w-3 text-blue-500" />
-                  </Button>
+                    <ChevronDown className="h-3 w-3" />
+                  </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuLabel>تغيير الفرع</DropdownMenuLabel>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>اختر الشركة</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    key="all"
-                    onClick={() => setSelectedBranchId(null)}
-                    className={selectedBranchId === null ? 'bg-blue-50 text-blue-700' : ''}
+                    onClick={() => { setSelectedBranchId(null); setSelectedCompanyId(null); }}
+                    className={selectedBranchId === null ? 'bg-amber-50 text-amber-700' : ''}
                   >
-                    <Building2 className={`h-4 w-4 ms-2 ${selectedBranchId === null ? 'text-blue-600' : 'text-gray-400'}`} />
-                    جميع الفروع
-                    <span className="mr-auto text-xs bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded">كل</span>
+                    <Building2 className={`h-4 w-4 ms-2 ${selectedBranchId === null ? 'text-amber-600' : 'text-gray-400'}`} />
+                    <span>جميع الفروع</span>
+                    <span className="mr-auto text-xs bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded">كل</span>
                   </DropdownMenuItem>
-                  {branches.map((branch) => (
+                  {adminCompanies && adminCompanies.map((comp: any) => (
                     <DropdownMenuItem
-                      key={branch.id}
-                      onClick={() => setSelectedBranchId(branch.id)}
-                      className={selectedBranchId === branch.id ? 'bg-blue-50 text-blue-700' : ''}
+                      key={`comp-${comp.id}`}
+                      className={selectedCompanyId === comp.id ? 'bg-amber-50 text-amber-700' : ''}
+                      onClick={() => {
+                        setSelectedCompanyId(comp.id);
+                        setSelectedBranchId(comp.branchId ?? comp.id);
+                        setLocation('/');
+                      }}
                     >
-                      <Building2 className={`h-4 w-4 ms-2 ${selectedBranchId === branch.id ? 'text-blue-600' : 'text-gray-400'}`} />
-                      {branch.name}
+                      <Building2 className={`h-4 w-4 ms-2 shrink-0 ${selectedCompanyId === comp.id ? 'text-amber-600' : 'text-gray-400'}`} />
+                      <span className="flex-1">{comp.nameAr || comp.name}</span>
+                      {comp.city && <span className="text-xs text-gray-400 shrink-0">{comp.city}</span>}
                     </DropdownMenuItem>
                   ))}
-                  {adminCompanies && adminCompanies.length > 0 && (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuLabel className="text-xs text-gray-400">الشركات</DropdownMenuLabel>
-                      {adminCompanies.map((comp: any) => (
-                        <DropdownMenuItem key={`comp-${comp.id}`} className="flex items-center gap-2">
-                          <Building2 className="h-4 w-4 ms-2 text-gray-400" />
-                          <span>{comp.nameAr || comp.name}</span>
-                          {comp.city && <span className="mr-auto text-xs text-gray-400">{comp.city}</span>}
-                        </DropdownMenuItem>
-                      ))}
-                    </>
-                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
@@ -960,7 +1099,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Navigation History Breadcrumb */}
         {location !== '/' && history.length > 0 && (
-          <div className="bg-white border-b border-gray-100 px-4 lg:px-8 py-3">
+          <div style={{ backgroundColor: '#1e2540', borderBottom: '1px solid #2d3555' }} className="px-4 lg:px-8 py-3">
             <Breadcrumb>
               <BreadcrumbList className="gap-2 sm:gap-3">
                 {history.map((entry, index) => {
@@ -1056,8 +1195,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         )}
                       </BreadcrumbItem>
                       {!isLast && (
-                        <BreadcrumbSeparator className="opacity-40">
-                          <ChevronLeft className="h-4 w-4" />
+                        <BreadcrumbSeparator>
+                          <ChevronLeft className="h-4 w-4" style={{ color: '#4b5563' }} />
                         </BreadcrumbSeparator>
                       )}
                     </React.Fragment>

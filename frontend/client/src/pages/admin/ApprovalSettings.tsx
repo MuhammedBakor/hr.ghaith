@@ -29,8 +29,8 @@ export default function ApprovalSettingsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
 
-  const [showDialog, setShowDialog] = React.useState(false);
-  const [formData, setFormData] = React.useState<Record<string, any>>({});
+  const [showDialog, setShowDialog] = useState(false);
+  const [formData, setFormData] = useState<Record<string, any>>({});
 
   const { data: settings, isLoading, refetch, isError, error} = useQuery({
     queryKey: ["approvalSettings", "list"],

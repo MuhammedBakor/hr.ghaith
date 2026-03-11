@@ -65,6 +65,7 @@ const SecurityDashboard = lazy(() => import("@/pages/admin/SecurityDashboard"));
 const Activate = lazy(() => import("@/pages/Activate"));
 const CompleteProfile = lazy(() => import("@/pages/hr/CompleteProfile"));
 const Home = lazy(() => import("@/pages/Home"));
+const BranchSelector = lazy(() => import("@/pages/BranchSelector"));
 const EmployeeList = lazy(() => import("@/pages/hr/EmployeeList"));
 const AttendanceMonitoring = lazy(() => import("@/pages/hr/AttendanceMonitoring"));
 const Leaves = lazy(() => import("@/pages/hr/Leaves"));
@@ -316,6 +317,7 @@ function Router() {
       <Route path="/activate" component={Activate} />
       <Route path="/complete-profile" component={CompleteProfile} />
       <Route path="/setup" component={SetupWizard} />
+      <Route path="/select-branch" component={BranchSelector} />
 
       {/* Protected Routes */}
       <Route path="/inbox">

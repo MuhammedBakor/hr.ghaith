@@ -1,17 +1,16 @@
-import { useState, useEffect, useRef } from 'react';
-import { Link } from 'wouter';
+import { useState } from 'react';
+import { Link, useLocation } from 'wouter';
+import { useQuery } from '@tanstack/react-query';
+import api from '@/lib/api';
 import {
   useDashboardSummary,
   usePendingActions,
   useKpiSummary,
-  useQuickSearch
 } from '@/services/dashboardService';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useAppContext, roleLabels, UserRoleType } from '@/contexts/AppContext';
-import { Users, FileText, Car, Shield, AlertTriangle, CheckCircle2, TrendingUp, Search, Settings, Building2, DollarSign, Scale, MessageSquare, FolderKanban, RefreshCw, ChevronRight, Calendar, UserCheck, BarChart3, Loader2, X, AlertCircle, Inbox, ClipboardList, CheckSquare, TrendingDown, Gauge, Radio } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Users, FileText, Car, Shield, AlertTriangle, CheckCircle2, TrendingUp, Building2, DollarSign, Scale, MessageSquare, FolderKanban, ChevronRight, Calendar, UserCheck, BarChart3, Loader2, X, AlertCircle, Inbox, ClipboardList, CheckSquare, TrendingDown, Gauge, Radio, MapPin, Globe } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 
@@ -108,67 +107,25 @@ function AlertBanner({ message, module, link, severity }: {
 // ═══════════════════════════════════════════════════════════
 export default function Home() {
   const { user } = useAuth();
-  const { selectedRole, currentEmployee } = useAppContext();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showSearch, setShowSearch] = useState(false);
-  const [debouncedQuery, setDebouncedQuery] = useState('');
-  const searchRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [refreshKey, setRefreshKey] = useState(0);
+  const { selectedRole, currentEmployee, selectedBranchId, setSelectedBranchId, setSelectedCompanyId, canAccessModule } = useAppContext();
+  const [, setLocation] = useLocation();
+  const isAdminEntry = (selectedRole === 'admin' || selectedRole === 'general_manager') && selectedBranchId === null;
 
-  // Debounce search
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedQuery(searchQuery), 300);
-    return () => clearTimeout(t);
-  }, [searchQuery]);
-
-  // Close search on outside click
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
-        setShowSearch(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  // Keyboard shortcut: Ctrl+K
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-        e.preventDefault();
-        setShowSearch(true);
-        setTimeout(() => inputRef.current?.focus(), 50);
-      }
-      if (e.key === 'Escape') setShowSearch(false);
-    };
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
-  }, []);
-
+  const { data: adminCompanies } = useQuery<any[]>({
+    queryKey: ['admin', 'companies'],
+    queryFn: () => api.get('/admin/companies').then(r => Array.isArray(r.data) ? r.data : []).catch(() => []),
+    enabled: isAdminEntry,
+    staleTime: 2 * 60 * 1000,
+  });
   // ─── API Calls ────────────────────────────────────────────
-  const { data: dashboard, isLoading, refetch } = useDashboardSummary();
+  const { data: dashboard, isLoading } = useDashboardSummary(selectedBranchId);
   const { data: pendingActions } = usePendingActions();
-  const { data: searchResults, isLoading: searchLoading } = useQuickSearch(debouncedQuery);
   const { data: kpis } = useKpiSummary();
-
-  const handleRefresh = () => {
-    refetch();
-    setRefreshKey(k => k + 1);
-  };
 
   const stats = dashboard?.stats;
   const systemStatus = (dashboard?.systemStatus ?? 'healthy') as 'healthy' | 'warning' | 'critical';
   const alerts = dashboard?.criticalAlerts ?? [];
   const moduleIssues = dashboard?.health ?? [];
-
-  const greetingTime = () => {
-    const h = new Date().getHours();
-    if (h < 12) return 'صباح الخير';
-    if (h < 17) return 'مساء الخير';
-    return 'مساء النور';
-  };
 
   if (isLoading) {
     return (
@@ -183,6 +140,94 @@ export default function Home() {
 
   // Determine which dashboard to show
   const renderDashboard = () => {
+    // Admin entry (no branch selected) — show companies overview
+    if (isAdminEntry) {
+      return (
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-xl font-bold" style={{ color: '#1a2035' }}>المؤسسات والشركات</h2>
+            <p className="text-sm mt-1" style={{ color: '#6b7280' }}>نظرة عامة على جميع الكيانات التابعة للمنصة</p>
+          </div>
+          {(!adminCompanies || adminCompanies.length === 0) ? (
+            <div className="flex flex-col items-center justify-center py-24 rounded-2xl" style={{ backgroundColor: '#ffffff', boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
+              <Building2 className="w-14 h-14 mb-4" style={{ color: '#d1d5db' }} />
+              <p className="text-base font-medium" style={{ color: '#9ca3af' }}>لا توجد شركات مضافة بعد</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+              {adminCompanies.map((company: any) => (
+                <div
+                  key={company.id}
+                  className="rounded-2xl p-5 cursor-pointer group transition-all duration-200"
+                  style={{
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #f0f0f0',
+                    boxShadow: '0 4px 20px rgba(30,58,95,0.08)',
+                  }}
+                  onClick={() => {
+                    // Use company's associated branchId (HrBranch) to enter company context
+                    setSelectedCompanyId(company.id);
+                    setSelectedBranchId(company.branchId ?? company.id);
+                    setLocation('/');
+                  }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLElement).style.transform = 'translateY(-4px)';
+                    (e.currentTarget as HTMLElement).style.boxShadow = '0 12px 40px rgba(30,58,95,0.15)';
+                    (e.currentTarget as HTMLElement).style.borderColor = 'rgb(201,168,76)';
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
+                    (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 20px rgba(30,58,95,0.08)';
+                    (e.currentTarget as HTMLElement).style.borderColor = '#f0f0f0';
+                  }}
+                >
+                  {/* Company icon */}
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style={{ backgroundColor: 'rgba(201,168,76,0.1)' }}>
+                    <Building2 className="w-6 h-6" style={{ color: 'rgb(201,168,76)' }} />
+                  </div>
+                  {/* Name */}
+                  <h3 className="font-bold text-base mb-1 truncate" style={{ color: '#1a2035' }}>
+                    {company.nameAr || company.name}
+                  </h3>
+                  {company.nameEn && company.nameEn !== company.nameAr && (
+                    <p className="text-xs mb-2 truncate" style={{ color: '#9ca3af' }}>{company.nameEn}</p>
+                  )}
+                  {/* Meta */}
+                  <div className="space-y-1 mt-3">
+                    {company.city && (
+                      <div className="flex items-center gap-1.5 text-xs" style={{ color: '#6b7280' }}>
+                        <MapPin className="w-3.5 h-3.5" />
+                        <span>{company.city}</span>
+                      </div>
+                    )}
+                    {company.website && (
+                      <div className="flex items-center gap-1.5 text-xs" style={{ color: '#6b7280' }}>
+                        <Globe className="w-3.5 h-3.5" />
+                        <span className="truncate">{company.website}</span>
+                      </div>
+                    )}
+                    {company.status && (
+                      <div className="mt-3">
+                        <span
+                          className="text-xs px-2 py-0.5 rounded-full font-medium"
+                          style={{
+                            backgroundColor: company.status === 'active' ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
+                            color: company.status === 'active' ? '#16a34a' : '#dc2626',
+                          }}
+                        >
+                          {company.status === 'active' ? 'نشط' : 'غير نشط'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
     const commonProps = { stats, pendingActions, kpis, moduleIssues, user, roleLabel: roleLabels[selectedRole], currentEmployee };
 
     // Managers
@@ -222,108 +267,108 @@ export default function Home() {
 
         {/* ─── Main KPI Stats Grid ─────────────────────────── */}
         <div>
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">إحصاءات النظام</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wider mb-3" style={{ color: '#6b7280' }}>إحصاءات النظام</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-            <StatCard
+            {canAccessModule('hr') && <StatCard
               title="الموظفون النشطون"
               value={stats?.hr.active ?? 0}
               sub={`${stats?.hr.pendingLeaves ?? 0} إجازة معلقة`}
               icon={Users} color="blue" link="/hr/employees"
               alert={(stats?.hr.pendingLeaves ?? 0) > 15}
-            />
-            <StatCard
+            />}
+            {canAccessModule('finance') && <StatCard
               title="فواتير متأخرة"
               value={stats?.finance.overdue ?? 0}
               sub={`${stats?.finance.totalInvoices ?? 0} إجمالي الفواتير`}
               icon={DollarSign} color="red" link="/finance/invoices"
               alert={(stats?.finance.overdue ?? 0) > 0}
-            />
-            <StatCard
+            />}
+            {canAccessModule('fleet') && <StatCard
               title="مركبات متاحة"
               value={stats?.fleet.available ?? 0}
               sub={`${stats?.fleet.inMaintenance ?? 0} في الصيانة`}
               icon={Car} color="orange" link="/fleet/vehicles"
               alert={(stats?.fleet.inMaintenance ?? 0) > 3}
-            />
-            <StatCard
+            />}
+            {canAccessModule('support') && <StatCard
               title="تذاكر مفتوحة"
               value={stats?.support.open ?? 0}
               sub={`${stats?.support.critical ?? 0} حرجة`}
               icon={MessageSquare} color="yellow" link="/support/tickets"
               alert={(stats?.support.critical ?? 0) > 0}
-            />
-            <StatCard
+            />}
+            {canAccessModule('legal') && <StatCard
               title="قضايا قانونية"
               value={stats?.legal.openCases ?? 0}
               sub={`${stats?.legal.expiringContracts ?? 0} عقد ينتهي قريباً`}
               icon={Scale} color="purple" link="/legal"
               alert={(stats?.legal.expiringContracts ?? 0) > 0}
-            />
-            <StatCard
+            />}
+            {canAccessModule('projects') && <StatCard
               title="مشاريع نشطة"
               value={stats?.projects.active ?? 0}
               sub={`${stats?.projects.overdue ?? 0} متأخرة`}
               icon={FolderKanban} color="indigo" link="/projects"
               alert={(stats?.projects.overdue ?? 0) > 0}
-            />
+            />}
           </div>
         </div>
 
         {/* ─── Secondary Stats Row ─────────────────────────── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <StatCard
+          {canAccessModule('hr') && <StatCard
             title="موظفون جدد (هذا الشهر)"
             value={stats?.hr.monthHires ?? 0}
             icon={UserCheck} color="green" link="/hr/employees"
-          />
-          <StatCard
+          />}
+          {canAccessModule('governance') && <StatCard
             title="طلبات اعتماد معلقة"
             value={stats?.governance.pendingApprovals ?? 0}
             icon={CheckSquare} color="blue" link="/governance"
             alert={(stats?.governance.pendingApprovals ?? 0) > 5}
-          />
-          <StatCard
+          />}
+          {canAccessModule('property') && <StatCard
             title="وحدات عقارية"
             value={stats?.property.total ?? 0}
             sub={`${stats?.property.vacant ?? 0} شاغرة`}
             icon={Building2} color="teal" link="/property"
-          />
-          <StatCard
+          />}
+          {canAccessModule('governance') && <StatCard
             title="مخاطر مفتوحة"
             value={stats?.governance.openRisks ?? 0}
             icon={Shield} color="red" link="/governance"
             alert={(stats?.governance.openRisks ?? 0) > 0}
-          />
+          />}
         </div>
 
         {/* ─── Quick Actions & Pending Actions ─────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 p-5">
-            <h2 className="text-sm font-semibold text-gray-900 mb-4">الوصول السريع</h2>
+          <div className="lg:col-span-2 rounded-2xl p-5" style={{ backgroundColor: '#ffffff', border: 'none', boxShadow: '0 4px 24px rgba(0,0,0,0.08), 0 1px 6px rgba(0,0,0,0.05)' }}>
+            <h2 className="text-sm font-semibold mb-4" style={{ color: 'rgb(201, 168, 76)' }}>الوصول السريع</h2>
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-              <QuickAction icon={Users} label="الموظفون" link="/hr/employees" color="blue" count={stats?.hr.active} />
-              <QuickAction icon={FileText} label="الإجازات" link="/hr/leaves" color="green" count={stats?.hr.pendingLeaves} />
-              <QuickAction icon={DollarSign} label="الفواتير" link="/finance/invoices" color="teal" count={stats?.finance.overdue} />
-              <QuickAction icon={Car} label="الأسطول" link="/fleet/vehicles" color="orange" count={stats?.fleet.inMaintenance} />
-              <QuickAction icon={MessageSquare} label="الدعم الفني" link="/support/tickets" color="yellow" count={stats?.support.critical} />
-              <QuickAction icon={Scale} label="القانونية" link="/legal" color="purple" count={stats?.legal.expiringContracts} />
-              <QuickAction icon={FolderKanban} label="المشاريع" link="/projects" color="indigo" count={stats?.projects.overdue} />
-              <QuickAction icon={Building2} label="العقارات" link="/property" color="pink" />
-              <QuickAction icon={Shield} label="الحوكمة" link="/governance" color="red" count={stats?.governance.pendingApprovals} />
-              <QuickAction icon={ClipboardList} label="الطلبات" link="/requests" color="gray" count={pendingActions?.total} />
+              {canAccessModule('hr') && <QuickAction icon={Users} label="الموظفون" link="/hr/employees" color="blue" count={stats?.hr.active} />}
+              {canAccessModule('hr') && <QuickAction icon={FileText} label="الإجازات" link="/hr/leaves" color="green" count={stats?.hr.pendingLeaves} />}
+              {canAccessModule('finance') && <QuickAction icon={DollarSign} label="الفواتير" link="/finance/invoices" color="teal" count={stats?.finance.overdue} />}
+              {canAccessModule('fleet') && <QuickAction icon={Car} label="الأسطول" link="/fleet/vehicles" color="orange" count={stats?.fleet.inMaintenance} />}
+              {canAccessModule('support') && <QuickAction icon={MessageSquare} label="الدعم الفني" link="/support/tickets" color="yellow" count={stats?.support.critical} />}
+              {canAccessModule('legal') && <QuickAction icon={Scale} label="القانونية" link="/legal" color="purple" count={stats?.legal.expiringContracts} />}
+              {canAccessModule('projects') && <QuickAction icon={FolderKanban} label="المشاريع" link="/projects" color="indigo" count={stats?.projects.overdue} />}
+              {canAccessModule('property') && <QuickAction icon={Building2} label="العقارات" link="/property" color="pink" />}
+              {canAccessModule('governance') && <QuickAction icon={Shield} label="الحوكمة" link="/governance" color="red" count={stats?.governance.pendingApprovals} />}
+              {canAccessModule('requests') && <QuickAction icon={ClipboardList} label="الطلبات" link="/requests" color="gray" count={pendingActions?.total} />}
               <QuickAction icon={Inbox} label="البريد الوارد" link="/inbox" color="blue" />
-              <QuickAction icon={BarChart3} label="التقارير" link="/bi" color="green" />
+              {canAccessModule('bi') && <QuickAction icon={BarChart3} label="التقارير" link="/bi" color="green" />}
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-100 p-5">
-            <h2 className="text-sm font-semibold text-gray-900 mb-4">يحتاج إجراءك</h2>
+          <div className="rounded-2xl p-5" style={{ backgroundColor: '#ffffff', border: 'none', boxShadow: '0 4px 24px rgba(0,0,0,0.08), 0 1px 6px rgba(0,0,0,0.05)' }}>
+            <h2 className="text-sm font-semibold mb-4" style={{ color: 'rgb(201, 168, 76)' }}>يحتاج إجراءك</h2>
             <div className="space-y-1">
               {pendingActions?.items?.map((item: any, i: number) => (
                 <PendingActionRow key={i} item={item} />
               ))}
               {(!pendingActions?.items || pendingActions.items.length === 0) && (
-                <div className="py-10 text-center text-gray-400">لا إجراءات معلقة</div>
+                <div className="py-10 text-center" style={{ color: 'rgba(0,0,0,0.45)' }}>لا إجراءات معلقة</div>
               )}
             </div>
           </div>
@@ -331,21 +376,21 @@ export default function Home() {
 
         {/* ─── Module Health + KPIs ─────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white rounded-2xl border border-gray-100 p-5">
-            <h2 className="text-sm font-semibold text-gray-900 mb-4">صحة الوحدات</h2>
+          <div className="rounded-2xl p-5" style={{ backgroundColor: '#ffffff', border: 'none', boxShadow: '0 4px 24px rgba(0,0,0,0.08), 0 1px 6px rgba(0,0,0,0.05)' }}>
+            <h2 className="text-sm font-semibold mb-4" style={{ color: 'rgb(201, 168, 76)' }}>صحة الوحدات</h2>
             <div className="space-y-3">
               {moduleIssues.length > 0 ? (
                 moduleIssues.map((mod: any, i: number) => (
                   <ModuleHealthBadge key={i} status={mod.status} name={mod.nameAr} />
                 ))
               ) : (
-                <div className="py-8 text-center text-green-600 font-medium">جميع الوحدات تعمل بشكل طبيعي</div>
+                <div className="py-8 text-center font-medium" style={{ color: 'rgba(0,0,0,0.7)' }}>جميع الوحدات تعمل بشكل طبيعي</div>
               )}
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-100 p-5">
-            <h2 className="text-sm font-semibold text-gray-900 mb-4">مؤشرات الأسبوع</h2>
+          <div className="rounded-2xl p-5" style={{ backgroundColor: '#ffffff', border: 'none', boxShadow: '0 4px 24px rgba(0,0,0,0.08), 0 1px 6px rgba(0,0,0,0.05)' }}>
+            <h2 className="text-sm font-semibold mb-4" style={{ color: 'rgb(201, 168, 76)' }}>مؤشرات الأسبوع</h2>
             {kpis ? (
               <div className="space-y-6">
                 <div className="flex items-center justify-between p-3 bg-blue-50 rounded-xl">
@@ -361,7 +406,7 @@ export default function Home() {
                 <Progress value={kpis?.week?.ticketResolutionRate} className="h-2" />
               </div>
             ) : (
-              <div className="py-10 text-center text-gray-300">جاري التحميل...</div>
+              <div className="py-10 text-center text-gray-400">جاري التحميل...</div>
             )}
           </div>
         </div>
@@ -371,60 +416,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50/50">
-      {/* ─── Header ─────────────────────────────────────────── */}
-      <div className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-gray-100">
-        <div className="max-w-screen-2xl mx-auto px-4 py-3 flex items-center gap-4">
-          <div className="flex-1 min-w-0">
-            <h1 className="text-lg font-bold text-gray-900">
-              {greetingTime()}، {currentEmployee ? `${currentEmployee.firstName} ${currentEmployee.lastName}` : (user?.username?.split(' ')[0] ?? 'مرحباً')} 👋
-            </h1>
-            <p className="text-xs text-gray-500 hidden sm:block">
-              {new Date().toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-            </p>
-          </div>
-
-          <div ref={searchRef} className="relative w-72 hidden md:block">
-            <div className="relative">
-              <Search className="absolute end-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                ref={inputRef}
-                value={searchQuery}
-                onChange={e => { setSearchQuery(e.target.value); setShowSearch(e.target.value.length >= 2); }}
-                onFocus={() => searchQuery.length >= 2 && setShowSearch(true)}
-                placeholder="بحث شامل... (Ctrl+K)"
-                className="pe-10 ps-14 text-sm bg-gray-50 border-gray-200 focus:bg-white"
-              />
-              <kbd className="absolute start-3 top-1/2 -translate-y-1/2 text-[10px] bg-gray-100 text-gray-400 px-1.5 py-0.5 rounded">⌘K</kbd>
-            </div>
-
-            {showSearch && (
-              <div className="absolute top-full end-0 start-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden">
-                {searchLoading ? (
-                  <div className="p-6 text-center text-sm text-gray-500">جاري البحث...</div>
-                ) : searchResults && searchResults.length > 0 ? (
-                  searchResults.map((r: any, i: number) => (
-                    <SearchResult key={i} result={r} onClose={() => { setShowSearch(false); setSearchQuery(''); }} />
-                  ))
-                ) : (
-                  <div className="p-8 text-center text-gray-400 text-sm">لا نتائج لـ "{debouncedQuery}"</div>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={handleRefresh}>
-              <RefreshCw className="w-4 h-4" />
-            </Button>
-            <Link href="/settings">
-              <Button variant="ghost" size="icon">
-                <Settings className="w-4 h-4" />
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </div>
-
       {/* ─── Main Content ────────────────────────────────────── */}
       <div className="max-w-screen-2xl mx-auto px-4 py-6">
         {renderDashboard()}

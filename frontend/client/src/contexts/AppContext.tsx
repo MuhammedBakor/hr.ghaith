@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
 import { useUser } from '@/services/authService';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
@@ -87,7 +87,9 @@ export const roleLevels: Record<UserRoleType, number> = {
 export interface Branch {
   id: number;
   name: string;
+  nameAr?: string;
   code: string;
+  city?: string;
 }
 
 // الوحدات المتاحة في النظام
@@ -118,6 +120,32 @@ export type ModuleType =
   | 'public_site'
   | 'inbox'
   | 'platform';
+
+// ربط كودات الأقسام (departmentCodes في AdminCompany) بالوحدات
+export const DEPT_CODE_TO_MODULE: Record<string, ModuleType> = {
+  'hr': 'hr',
+  'finance': 'finance',
+  'fleet': 'fleet',
+  'property': 'property',
+  'operations': 'projects',
+  'governance': 'governance',
+  'legal': 'legal',
+  'bi': 'bi',
+  'support': 'support',
+  'marketing': 'marketing',
+  'store': 'store',
+  'requests': 'requests',
+  'documents': 'documents',
+  'reports': 'reports',
+  'comms': 'comms',
+  'workflow': 'workflow',
+  'public-site': 'public_site',
+  'integrations': 'integrations',
+  'inbox': 'inbox',
+};
+
+// الوحدات الأساسية المتاحة دائماً بغض النظر عن أقسام الشركة
+const CORE_MODULES: ModuleType[] = ['home', 'admin', 'platform', 'settings', 'system', 'inbox'];
 
 // صلاحيات الوحدات لكل صفة
 export const modulePermissions: Record<UserRoleType, ModuleType[]> = {
@@ -320,6 +348,10 @@ interface AppContextType {
   branches: Branch[];
   branchesLoading: boolean;
 
+  // الشركة المختارة
+  selectedCompanyId: number | null;
+  setSelectedCompanyId: (companyId: number | null) => void;
+
   // الصفة
   selectedRole: UserRoleType;
   setSelectedRole: (role: UserRoleType) => void;
@@ -361,12 +393,61 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return null;
   });
 
+  const [selectedCompanyId, setSelectedCompanyIdState] = useState<number | null>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('selectedCompanyId');
+      return saved ? parseInt(saved) : null;
+    }
+    return null;
+  });
+
+  const setSelectedCompanyId = (companyId: number | null) => {
+    setSelectedCompanyIdState(companyId);
+    if (typeof window !== 'undefined') {
+      if (companyId !== null) {
+        localStorage.setItem('selectedCompanyId', companyId.toString());
+      } else {
+        localStorage.removeItem('selectedCompanyId');
+      }
+    }
+  };
+
   const [selectedRole, setSelectedRoleState] = useState<UserRoleType>(() => {
     if (typeof window !== 'undefined') {
       return (localStorage.getItem('selectedRole') as UserRoleType) || 'admin';
     }
     return 'admin';
   });
+
+  // جلب أقسام الشركة المختارة
+  const { data: selectedCompanyData } = useQuery<any>({
+    queryKey: ['admin', 'company', selectedCompanyId],
+    queryFn: () => api.get(`/admin/companies/${selectedCompanyId}`).then(r => r.data).catch(() => null),
+    enabled: !!selectedCompanyId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // قائمة كودات أقسام الشركة المختارة (null = لا قيود)
+  const companyDeptCodes = useMemo<string[] | null>(() => {
+    if (!selectedCompanyId || !selectedCompanyData) return null;
+    try {
+      const codes = JSON.parse(selectedCompanyData.departmentCodes || '[]');
+      return Array.isArray(codes) && codes.length > 0 ? codes : null;
+    } catch {
+      return null;
+    }
+  }, [selectedCompanyId, selectedCompanyData]);
+
+  // الوحدات المتاحة للشركة المختارة
+  const companyModuleSet = useMemo<Set<ModuleType> | null>(() => {
+    if (!companyDeptCodes) return null;
+    const s = new Set<ModuleType>(CORE_MODULES);
+    for (const code of companyDeptCodes) {
+      const mod = DEPT_CODE_TO_MODULE[code];
+      if (mod) s.add(mod);
+    }
+    return s;
+  }, [companyDeptCodes]);
 
   // جلب الفروع من السيرفر
   const { data: branchesData, isLoading: branchesLoading } = useQuery<any[]>({
@@ -379,18 +460,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const { data: authData } = useUser();
   const currentUserId = authData?.id || null;
 
-  // جلب معلومات الموظف المرتبط بالمستخدم
-  const { data: employeeData } = useQuery<any[]>({
-    queryKey: ['employees'],
-    queryFn: () => api.get('/hr/employees').then(r => r.data).catch(() => []),
+  // جلب الموظف المرتبط بالمستخدم الحالي مباشرةً (بدلاً من جلب كل الموظفين)
+  const { data: currentEmployee } = useQuery<any>({
+    queryKey: ['employee', 'me', currentUserId],
+    queryFn: () => api.get(`/hr/employees/user/${currentUserId}`).then(r => r.data).catch(() => null),
     enabled: !!currentUserId,
     staleTime: 5 * 60 * 1000,
   });
-
-  // البحث عن الموظف المرتبط بالمستخدم الحالي
-  const currentEmployee = employeeData?.find((emp: any) =>
-    emp.userId === currentUserId || emp.user?.id === currentUserId
-  );
   const currentEmployeeId = currentEmployee?.id || null;
 
   // ربط الدور من السيرفر — تعيين الدور الأولي بعد تسجيل الدخول
@@ -428,7 +504,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const branches: Branch[] = branchesData?.map((b: any) => ({
     id: b.id,
     name: b.name,
+    nameAr: b.nameAr || '',
     code: b.code || '',
+    city: b.city || '',
   })) || [];
 
   // حفظ الاختيارات في localStorage
@@ -439,6 +517,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('selectedBranchId', branchId.toString());
       } else {
         localStorage.removeItem('selectedBranchId');
+        // Also clear company when branch is cleared (admin entry mode)
+        localStorage.removeItem('selectedCompanyId');
+        setSelectedCompanyIdState(null);
       }
     }
     // تحديث السياق في السيرفر
@@ -531,8 +612,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return permissions[permission];
   };
 
-  const canAccessModule = (module: ModuleType) => {
-    return allowedModules.includes(module);
+  const canAccessModule = (module: ModuleType): boolean => {
+    // فحص صلاحية الدور أولاً
+    if (!allowedModules.includes(module)) return false;
+    // إذا كنا في سياق شركة وتم تحديد أقسامها، نطبق القيود
+    if (companyModuleSet !== null) {
+      return companyModuleSet.has(module);
+    }
+    return true;
   };
 
   const canAccessHrSubPage = (subPage: string) => {
@@ -547,6 +634,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     <AppContext.Provider value={{
       selectedBranchId,
       setSelectedBranchId,
+      selectedCompanyId,
+      setSelectedCompanyId,
       currentBranch,
       branches,
       branchesLoading,

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from '@tanstack/react-query';
 import api from '@/lib/api';
+import { useAppContext } from '@/contexts/AppContext';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -44,6 +45,7 @@ const roleLabels: Record<string, string> = {
 export default function ProjectMembers() {
   const { data: currentUser, isError, error} = useQuery({ queryKey: ['auth', 'me'], queryFn: () => api.get('/auth/me').then(r => r.data) });
   const userRole = currentUser?.role || 'user';
+  const { selectedBranchId } = useAppContext();
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -52,7 +54,14 @@ export default function ProjectMembers() {
   const [selectedRole, setSelectedRole] = useState<string>("member");
 
   const { data: projects } = useQuery({ queryKey: ['projects', 'list'], queryFn: () => api.get('/projects').then(r => r.data) });
-  const { data: users } = useQuery({ queryKey: ['hr', 'employees'], queryFn: () => api.get('/hr/employees').then(r => r.data) });
+  const { data: users } = useQuery({
+    queryKey: ['hr', 'employees', selectedBranchId],
+    queryFn: () => {
+      const params: any = {};
+      if (selectedBranchId) params.branchId = selectedBranchId;
+      return api.get('/hr/employees', { params }).then(r => r.data);
+    }
+  });
   const { data: members, isLoading, refetch } = useQuery({
     queryKey: ['projects', 'members', selectedProjectId],
     queryFn: () => api.get(`/projects/members?projectId=${selectedProjectId}`).then(r => r.data),

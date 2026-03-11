@@ -1,5 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'wouter';
+import { useQuery } from '@tanstack/react-query';
+import api from '@/lib/api';
+import { useAppContext } from '@/contexts/AppContext';
 import {
   Users,
   CreditCard,
@@ -56,6 +59,21 @@ import {
   KeyRound,
   CalendarOff,
   ArrowRight,
+  FileStack,
+  Mail,
+  Globe,
+  Plug2,
+  MessageSquare,
+  Send,
+  BookOpen,
+  FolderOpen,
+  Archive,
+  FilePlus,
+  CheckCircle,
+  Ticket,
+  Inbox,
+  ListTodo,
+  Settings,
 } from 'lucide-react';
 
 interface DepartmentItem {
@@ -279,12 +297,151 @@ const departments: Department[] = [
       { label: 'الطلبات', path: '/store/orders', icon: ShoppingCart },
     ],
   },
+  {
+    id: 'requests',
+    label: 'الطلبات',
+    icon: FileText,
+    color: '#2563EB',
+    bgColor: 'bg-blue-50',
+    borderColor: 'border-blue-200',
+    description: 'إدارة الطلبات وسير العمل والموافقات والدعم الفني',
+    items: [
+      { label: 'كل الطلبات', path: '/requests', icon: FileText },
+      { label: 'أنواع الطلبات', path: '/requests/types', icon: ListTodo },
+      { label: 'سير العمل', path: '/requests/workflows', icon: GitBranch },
+      { label: 'الموافقات', path: '/workflow/approvals', icon: CheckCircle },
+      { label: 'التذاكر', path: '/support/tickets', icon: Ticket },
+      { label: 'أتمتة الدعم', path: '/support/automation', icon: Zap },
+    ],
+  },
+  {
+    id: 'documents',
+    label: 'المستندات',
+    icon: FileStack,
+    color: '#7C3AED',
+    bgColor: 'bg-violet-50',
+    borderColor: 'border-violet-200',
+    description: 'إدارة المستندات والمجلدات والقوالب والأرشيف',
+    items: [
+      { label: 'كل المستندات', path: '/documents', icon: FileStack },
+      { label: 'المجلدات', path: '/documents/folders', icon: FolderOpen },
+      { label: 'القوالب', path: '/documents/templates', icon: FilePlus },
+      { label: 'الأرشيف', path: '/documents/archive', icon: Archive },
+    ],
+  },
+  {
+    id: 'reports',
+    label: 'التقارير',
+    icon: BarChart3,
+    color: '#0891B2',
+    bgColor: 'bg-cyan-50',
+    borderColor: 'border-cyan-200',
+    description: 'التقارير المخصصة والمجدولة ونظرة عامة على بيانات النظام',
+    items: [
+      { label: 'نظرة عامة', path: '/reports', icon: BarChart3 },
+      { label: 'تقارير مخصصة', path: '/reports/custom', icon: FilePlus },
+      { label: 'جدولة التقارير', path: '/reports/scheduled', icon: CalendarClock },
+    ],
+  },
+  {
+    id: 'comms',
+    label: 'التواصل',
+    icon: Mail,
+    color: '#059669',
+    bgColor: 'bg-emerald-50',
+    borderColor: 'border-emerald-200',
+    description: 'المراسلات والخطابات الرسمية والبريد الصادر والوارد',
+    items: [
+      { label: 'المراسلات', path: '/comms', icon: MessageSquare },
+      { label: 'الخطابات الرسمية', path: '/comms/official-letters', icon: Send },
+      { label: 'الصادر', path: '/correspondence/outgoing', icon: Send },
+      { label: 'الوارد', path: '/correspondence/incoming', icon: Mail },
+    ],
+  },
+  {
+    id: 'workflow',
+    label: 'سير العمل',
+    icon: GitBranch,
+    color: '#7C3AED',
+    bgColor: 'bg-purple-50',
+    borderColor: 'border-purple-200',
+    description: 'إدارة العمليات والموافقات والتفويضات وإعدادات سير العمل',
+    items: [
+      { label: 'العمليات', path: '/workflow', icon: GitBranch },
+      { label: 'الموافقات', path: '/workflow/approvals', icon: CheckCircle },
+      { label: 'التفويضات', path: '/workflow/delegations', icon: Users },
+      { label: 'إعدادات الموافقات', path: '/workflow/settings', icon: Settings },
+    ],
+  },
+  {
+    id: 'inbox',
+    label: 'صندوق الوارد',
+    icon: Inbox,
+    color: '#EA580C',
+    bgColor: 'bg-orange-50',
+    borderColor: 'border-orange-200',
+    description: 'استعراض وإدارة الرسائل والإشعارات الواردة',
+    items: [
+      { label: 'صندوق الوارد', path: '/inbox', icon: Inbox },
+    ],
+  },
+  {
+    id: 'public-site',
+    label: 'الموقع العام',
+    icon: Globe,
+    color: '#0284C7',
+    bgColor: 'bg-sky-50',
+    borderColor: 'border-sky-200',
+    description: 'إدارة صفحات الموقع الإلكتروني العام والمدونة',
+    items: [
+      { label: 'الصفحات', path: '/public-site', icon: Globe },
+      { label: 'المدونة', path: '/public-site/blog', icon: BookOpen },
+    ],
+  },
+  {
+    id: 'integrations',
+    label: 'التكاملات',
+    icon: Plug2,
+    color: '#475569',
+    bgColor: 'bg-slate-50',
+    borderColor: 'border-slate-200',
+    description: 'إدارة تكاملات النظام مع الخدمات والأنظمة الخارجية',
+    items: [
+      { label: 'التكاملات', path: '/integrations', icon: Plug2 },
+    ],
+  },
 ];
 
 export default function DepartmentsHub() {
   const [selectedDept, setSelectedDept] = useState<string | null>(null);
+  const { selectedCompanyId, selectedBranchId } = useAppContext();
 
-  const activeDept = departments.find(d => d.id === selectedDept);
+  // Fetch company data to get its assigned departments (only when in a company context)
+  const isInCompanyContext = selectedBranchId !== null && selectedCompanyId !== null;
+  const { data: companyData } = useQuery<any>({
+    queryKey: ['admin', 'companies', selectedCompanyId],
+    queryFn: () => api.get(`/admin/companies/${selectedCompanyId}`).then(r => r.data).catch(() => null),
+    enabled: isInCompanyContext,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Parse the allowed department codes from company; if none configured, show all
+  const allowedDeptIds = useMemo<string[] | null>(() => {
+    if (!isInCompanyContext || !companyData) return null;
+    try {
+      const codes = JSON.parse(companyData.departmentCodes || '[]');
+      return Array.isArray(codes) && codes.length > 0 ? codes : null;
+    } catch {
+      return null;
+    }
+  }, [companyData, isInCompanyContext]);
+
+  // Filter departments: show all if no restrictions, otherwise only allowed ones
+  const visibleDepartments = allowedDeptIds
+    ? departments.filter(d => allowedDeptIds.includes(d.id))
+    : departments;
+
+  const activeDept = visibleDepartments.find(d => d.id === selectedDept);
 
   return (
     <div className="space-y-6">
@@ -297,7 +454,7 @@ export default function DepartmentsHub() {
       {!selectedDept ? (
         /* Department Cards Grid */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {departments.map((dept) => {
+          {visibleDepartments.map((dept) => {
             const Icon = dept.icon;
             return (
               <button

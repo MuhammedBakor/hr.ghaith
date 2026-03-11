@@ -75,10 +75,16 @@ export const hrService = {
 
 // Hooks
 // Employees
-export const useEmployees = () => useQuery({
-    queryKey: ['employees'],
-    queryFn: () => api.get('/hr/employees').then(res => res.data),
-});
+export const useEmployees = (filters?: { branchId?: number | null; departmentId?: number | null }) => {
+    const params: Record<string, any> = {};
+    if (filters?.branchId) params.branchId = filters.branchId;
+    if (filters?.departmentId) params.departmentId = filters.departmentId;
+    const hasFilters = Object.keys(params).length > 0;
+    return useQuery({
+        queryKey: ['employees', params],
+        queryFn: () => api.get('/hr/employees', { params }).then(res => res.data),
+    });
+};
 
 // Branches
 export const useBranches = () => useQuery({

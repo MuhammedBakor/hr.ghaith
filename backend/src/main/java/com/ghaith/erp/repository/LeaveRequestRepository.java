@@ -33,4 +33,8 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Long
     // Count rejected leaves for an employee
     @Query("SELECT COUNT(lr) FROM LeaveRequest lr WHERE lr.employee.id = :employeeId AND lr.status = 'rejected'")
     long countRejectedByEmployeeId(@Param("employeeId") Long employeeId);
+
+    // Count leave requests for employees in a specific branch
+    @Query("SELECT COUNT(lr) FROM LeaveRequest lr WHERE lr.employee.branch.id = :branchId")
+    long countByEmployeeBranchId(@Param("branchId") Long branchId);
 }

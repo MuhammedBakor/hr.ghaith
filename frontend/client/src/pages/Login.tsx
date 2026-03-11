@@ -1,20 +1,68 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, CloudRain, User, Lock, AlertCircle, Eye, EyeOff, KeyRound, Mail, CheckCircle2, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Loader2, User, Lock, AlertCircle, Eye, EyeOff, KeyRound, Mail, CheckCircle2 } from 'lucide-react';
 import { useLogin, useSendPasswordResetCode, useResetPassword } from '@/services/authService';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 
 type ViewType = 'main' | 'login' | 'reset-request' | 'reset-verify' | 'reset-success';
 
-export default function Login() {
-  const { selectedRole: userRole } = useAppContext();
+// ─── Brand colours (matches gyth.html) ───────────────────────────────────────
+const GOLD = '#C9A13B';
+const GOLD_HOVER = '#A8842F';
+const PRIMARY = '#2F3440';
+const APP_BG = '#F5F7FA';
 
+// ─── Decorative card (matches gyth.html landing section) ─────────────────────
+function DecorativeCard() {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <div className="hidden md:block relative h-64 w-full select-none">
+      {/* Back layer — brand gradient, rotated +3° */}
+      <div
+        className="absolute inset-0 shadow-2xl"
+        style={{
+          background: 'linear-gradient(135deg, #2F3440, #1F2430, #C9A13B)',
+          borderRadius: '3rem',
+          transform: 'rotate(3deg)',
+          opacity: 0.9,
+        }}
+      />
+      {/* Front layer — frosted, rotated -3° (hover → 0°) */}
+      <div
+        className="absolute inset-0 shadow-xl flex items-center justify-center p-8"
+        style={{
+          background: 'rgba(255,255,255,0.1)',
+          backdropFilter: 'blur(2px)',
+          border: '1px solid rgba(255,255,255,0.2)',
+          borderRadius: '3rem',
+          transform: hovered ? 'rotate(0deg)' : 'rotate(-3deg)',
+          transition: 'transform 0.5s ease',
+        }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
+        <div
+          className="grid grid-cols-2 gap-4 w-full h-full"
+          style={{ opacity: 0.9 }}
+        >
+          <div className="rounded-2xl" style={{ background: 'rgba(255,255,255,0.2)' }} />
+          <div className="rounded-2xl" style={{ background: 'rgba(201,161,59,0.4)' }} />
+          <div className="rounded-2xl" style={{ background: 'rgba(47,52,64,0.4)' }} />
+          <div className="rounded-2xl" style={{ background: 'rgba(255,255,255,0.2)' }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Shared input class ───────────────────────────────────────────────────────
+const inputCls =
+  'w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all bg-white';
+
+export default function Login() {
+  useAppContext();
   const [, setLocation] = useLocation();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const [currentView, setCurrentView] = useState<ViewType>('main');
@@ -24,7 +72,6 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState('');
 
-
   const [resetEmail, setResetEmail] = useState('');
   const [resetCode, setResetCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -33,477 +80,520 @@ export default function Login() {
   const [resetError, setResetError] = useState('');
 
   const loginMut = useLogin();
-
-
   const sendResetCodeMutation = useSendPasswordResetCode();
   const verifyResetMutation = useResetPassword();
 
   useEffect(() => {
-    if (!authLoading && isAuthenticated) {
-      setLocation('/');
-    }
+    if (!authLoading && isAuthenticated) setLocation('/');
   }, [isAuthenticated, authLoading, setLocation]);
 
-  // Handle login submit
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
-
-    if (!username || !password) {
-      setLoginError('الرجاء إدخال اسم المستخدم وكلمة المرور');
-      return;
-    }
-
-    loginMut.mutate(
-      { username, password },
-      {
-        onSuccess: () => {
-          window.location.href = '/';
-        },
-        onError: (err: any) => {
-          setLoginError(err.response?.data?.error || err.response?.data?.message || err.message || 'فشل تسجيل الدخول');
-        }
-      }
-    );
+    if (!username || !password) { setLoginError('الرجاء إدخال اسم المستخدم وكلمة المرور'); return; }
+    loginMut.mutate({ username, password }, {
+      onSuccess: () => { window.location.href = '/select-branch'; },
+      onError: (err: any) => { setLoginError(err.response?.data?.error || err.response?.data?.message || err.message || 'فشل تسجيل الدخول'); },
+    });
   };
 
-  // Handle send reset code
   const handleSendResetCode = () => {
-    if (!resetEmail.trim()) {
-      setResetError('يرجى إدخال البريد الإلكتروني');
-      return;
-    }
-
+    if (!resetEmail.trim()) { setResetError('يرجى إدخال البريد الإلكتروني'); return; }
     setResetError('');
-    sendResetCodeMutation.mutate({
-      email: resetEmail.trim(),
-    }, {
-      onSuccess: () => {
-        setCurrentView('reset-verify');
-      },
-      onError: (err: any) => {
-        setResetError(err.response?.data?.message || err.message || 'فشل إرسال الرمز');
-      }
+    sendResetCodeMutation.mutate({ email: resetEmail.trim() }, {
+      onSuccess: () => setCurrentView('reset-verify'),
+      onError: (err: any) => { setResetError(err.response?.data?.message || err.message || 'فشل إرسال الرمز'); },
     });
   };
 
-  // Handle verify reset code and set new password
   const handleVerifyAndReset = () => {
-    if (!resetCode.trim()) {
-      setResetError('يرجى إدخال رمز التحقق');
-      return;
-    }
-    if (!newPassword || newPassword.length < 6) {
-      setResetError('كلمة المرور يجب أن تكون 6 أحرف على الأقل');
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setResetError('كلمة المرور غير متطابقة');
-      return;
-    }
-
+    if (!resetCode.trim()) { setResetError('يرجى إدخال رمز التحقق'); return; }
+    if (!newPassword || newPassword.length < 6) { setResetError('كلمة المرور يجب أن تكون 6 أحرف على الأقل'); return; }
+    if (newPassword !== confirmPassword) { setResetError('كلمة المرور غير متطابقة'); return; }
     setResetError('');
-    verifyResetMutation.mutate({
-      email: resetEmail.trim(),
-      verificationCode: resetCode.trim(),
-      newPassword
-    }, {
-      onSuccess: () => {
-        setCurrentView('reset-success');
-      },
-      onError: (err: any) => {
-        setResetError(err.response?.data?.message || err.message || 'فشل إعادة تعيين كلمة المرور');
-      }
+    verifyResetMutation.mutate({ email: resetEmail.trim(), verificationCode: resetCode.trim(), newPassword }, {
+      onSuccess: () => setCurrentView('reset-success'),
+      onError: (err: any) => { setResetError(err.response?.data?.message || err.message || 'فشل إعادة تعيين كلمة المرور'); },
     });
   };
 
-  // Reset all states
   const resetAllStates = () => {
-    setUsername('');
-    setPassword('');
-    setLoginError('');
-    setResetEmail('');
-    setResetCode('');
-    setNewPassword('');
-    setConfirmPassword('');
-    setResetError('');
+    setUsername(''); setPassword(''); setLoginError('');
+    setResetEmail(''); setResetCode(''); setNewPassword(''); setConfirmPassword(''); setResetError('');
   };
 
-  // Go back to main view
-  const goBack = () => {
-    resetAllStates();
-    setCurrentView('main');
+  // ─── Services carousel drag-to-scroll ────────────────────────────────────
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const isDragging = useRef(false);
+  const dragStartX = useRef(0);
+  const scrollStartX = useRef(0);
+
+  const onCarouselMouseDown = (e: React.MouseEvent) => {
+    isDragging.current = true;
+    dragStartX.current = e.clientX;
+    scrollStartX.current = carouselRef.current?.scrollLeft ?? 0;
+    (carouselRef.current as HTMLElement).style.cursor = 'grabbing';
   };
+  const onCarouselMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging.current || !carouselRef.current) return;
+    e.preventDefault();
+    carouselRef.current.scrollLeft = scrollStartX.current - (e.clientX - dragStartX.current);
+  };
+  const stopDrag = () => {
+    isDragging.current = false;
+    if (carouselRef.current) (carouselRef.current as HTMLElement).style.cursor = 'grab';
+  };
+
+  // ─── Contact form state ───────────────────────────────────────────────────
+  const [contactName, setContactName] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactMessage, setContactMessage] = useState('');
 
   if (authLoading) {
-
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-blue-700">جاري التحقق...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: APP_BG }}>
+        <Loader2 className="h-8 w-8 animate-spin" style={{ color: GOLD }} />
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100" dir="rtl">
-      {/* Header */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-gray-100 sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-md">
-              <CloudRain className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">منصة غيث</h1>
-              <p className="text-xs text-gray-500">نظام إدارة الموارد المؤسسية</p>
-            </div>
-          </div>
-          {currentView !== 'main' && (
-            <Button variant="ghost" onClick={goBack} className="text-gray-600 hover:text-gray-900">
-              <ArrowRight className="h-4 w-4 ms-2" />
-              العودة للقائمة الرئيسية
-            </Button>
-          )}
-        </div>
-      </div>
+  // ─── Gold button helpers ─────────────────────────────────────────────────
+  const goldBtn = {
+    style: { backgroundColor: GOLD, color: '#fff' } as React.CSSProperties,
+    onMouseEnter: (e: React.MouseEvent<HTMLButtonElement>) => { (e.currentTarget).style.backgroundColor = GOLD_HOVER; },
+    onMouseLeave: (e: React.MouseEvent<HTMLButtonElement>) => { (e.currentTarget).style.backgroundColor = GOLD; },
+  };
 
-      {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-4 py-8">
+  const outlineBtn = {
+    style: { backgroundColor: 'transparent', color: PRIMARY, border: `2px solid ${PRIMARY}` } as React.CSSProperties,
+    onMouseEnter: (e: React.MouseEvent<HTMLButtonElement>) => { (e.currentTarget).style.backgroundColor = '#f0f0f0'; },
+    onMouseLeave: (e: React.MouseEvent<HTMLButtonElement>) => { (e.currentTarget).style.backgroundColor = 'transparent'; },
+  };
 
-        {/* Main Menu View */}
-        {currentView === 'main' && (
-          <div className="space-y-6">
-            <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">مرحباً بك في منصة غيث</h2>
-              <p className="text-gray-600">اختر الخدمة المطلوبة للمتابعة</p>
-            </div>
+  // ─── Back button ─────────────────────────────────────────────────────────
+  const BackBtn = ({ to }: { to: ViewType }) => (
+    <button
+      onClick={() => { resetAllStates(); setCurrentView(to); }}
+      className="flex items-center gap-1.5 text-xs mb-8 transition-colors"
+      style={{ color: '#9ca3af' }}
+      onMouseEnter={e => { (e.currentTarget).style.color = GOLD; }}
+      onMouseLeave={e => { (e.currentTarget).style.color = '#9ca3af'; }}
+    >
+      ← رجوع
+    </button>
+  );
 
-            <div className="grid gap-4 md:grid-cols-2">
-              {/* تسجيل الدخول */}
-              <Card
-                className="cursor-pointer hover:shadow-lg transition-all hover:border-blue-200 group"
-                onClick={() => setCurrentView('login')}
+  // ─── Error banner ─────────────────────────────────────────────────────────
+  const ErrorBanner = ({ msg }: { msg: string }) => msg ? (
+    <div className="flex items-center gap-2 mb-4 px-4 py-3 rounded-xl text-sm"
+      style={{ backgroundColor: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca' }}>
+      <AlertCircle className="h-4 w-4 shrink-0" />
+      {msg}
+    </div>
+  ) : null;
+
+  // ─── Shared glass panel style ─────────────────────────────────────────────
+  const glassPanel: React.CSSProperties = {
+    background: 'rgba(255,255,255,0.95)',
+    backdropFilter: 'blur(12px)',
+    WebkitBackdropFilter: 'blur(12px)',
+    border: '1px solid rgba(228,231,236,0.8)',
+    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
+  };
+
+  // ─── Service cards data ───────────────────────────────────────────────────
+  const services = [
+    { title: 'إدارة العقارات', desc: 'نظام متكامل لإدارة الأملاك، ومتابعة المستأجرين، وتحصيل الإيجارات بفعالية.', accent: GOLD },
+    { title: 'تأجير السيارات', desc: 'إدارة الحجوزات، تتبع العقود، وإدارة الأسطول والفحوصات الدورية.', accent: PRIMARY },
+    { title: 'أسطول التريلات', desc: 'تتبع مسارات الشحنات، وإدارة السائقين والصيانة والوقود.', accent: '#3B82F6' },
+    { title: 'العمرة والحج', desc: 'إدارة التفويج، الحجوزات، والسكن والإعاشة للمعتمرين والحجاج.', accent: '#22C55E' },
+    { title: 'إدارة المشاريع', desc: 'تتبع إنجاز المشاريع وتوزيع المهام بدقة عالية وفعالية.', accent: GOLD },
+    { title: 'ذكاء الأعمال', desc: 'تقارير وإحصائيات مفصلة لدعم اتخاذ القرارات السريعة.', accent: PRIMARY },
+    { title: 'الموارد البشرية', desc: 'إدارة شاملة للموظفين، الرواتب، الإجازات، والحضور والانصراف.', accent: '#8B5CF6' },
+    { title: 'الشؤون القانونية', desc: 'متابعة القضايا والعقود والوثائق القانونية بكل سهولة.', accent: '#6B7280' },
+  ];
+
+  // ─── Views ───────────────────────────────────────────────────────────────
+  const renderContent = () => {
+    // ── MAIN (landing) ────────────────────────────────────────────────────
+    if (currentView === 'main') return (
+      <>
+        {/* Hero */}
+        <section
+          className="flex items-center justify-center px-6 py-8 relative"
+          style={{ animation: 'fadeIn 0.4s ease-in-out', minHeight: '55vh' }}
+        >
+          <div
+            className="absolute pointer-events-none"
+            style={{
+              top: '50%', left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: 800, height: 800,
+              background: `radial-gradient(circle, rgba(201,161,59,0.06) 0%, transparent 70%)`,
+              borderRadius: '50%',
+            }}
+          />
+          <div className="max-w-6xl mx-auto w-full grid grid-cols-1 md:grid-cols-2 gap-12 items-center relative z-10">
+            <div className="space-y-6" dir="rtl">
+              <h1
+                className="font-extrabold leading-tight"
+                style={{ fontSize: 'clamp(1.8rem, 4vw, 3rem)', color: PRIMARY }}
               >
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-4">
-                    <div className="p-3 bg-blue-50 rounded-xl group-hover:bg-blue-100 transition-colors">
-                      <User className="h-6 w-6 text-blue-600" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900 mb-1">تسجيل الدخول</h3>
-                      <p className="text-sm text-gray-500">للمستخدمين الذين لديهم حساب مفعّل</p>
-                    </div>
-                    <ArrowLeft className="h-5 w-5 text-gray-400 group-hover:text-blue-600 transition-colors" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* استعادة كلمة المرور */}
-              <Card
-                className="cursor-pointer hover:shadow-lg transition-all hover:border-amber-200 group"
-                onClick={() => setCurrentView('reset-request')}
-              >
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-4">
-                    <div className="p-3 bg-amber-50 rounded-xl group-hover:bg-amber-100 transition-colors">
-                      <KeyRound className="h-6 w-6 text-amber-600" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900 mb-1">استعادة كلمة المرور</h3>
-                      <p className="text-sm text-gray-500">نسيت كلمة المرور؟ أدخل بريدك الإلكتروني لإرسال رمز تحقق</p>
-                    </div>
-                    <ArrowLeft className="h-5 w-5 text-gray-400 group-hover:text-amber-600 transition-colors" />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        )}
-
-        {/* Login View */}
-        {currentView === 'login' && (
-          <Card className="max-w-md mx-auto">
-            <CardHeader className="text-center">
-              <div className="mx-auto mb-4 p-3 bg-blue-50 rounded-xl w-fit">
-                <User className="h-8 w-8 text-blue-600" />
+                الإدارة المؤسسية
+                <br />
+                <span style={{ color: GOLD }}>برؤية حديثة</span>
+              </h1>
+              <p className="text-lg" style={{ color: '#6b7280' }}>
+                يساهم نظام غيث في تنظيم وتسهيل إدارة المؤسسات والشركات من خلال
+                إتاحة خدمات إلكترونية متطورة لتمكين العملاء من إجراء معاملاتهم
+                بكل سهولة وأمان.
+              </p>
+              <div className="flex flex-wrap gap-4 pt-2">
+                <button
+                  onClick={() => setCurrentView('login')}
+                  className="px-8 py-3 rounded-xl font-bold transition"
+                  style={{ backgroundColor: GOLD, color: '#fff', boxShadow: `0 4px 14px rgba(201,161,59,0.35)` }}
+                  onMouseEnter={e => { (e.currentTarget).style.backgroundColor = GOLD_HOVER; }}
+                  onMouseLeave={e => { (e.currentTarget).style.backgroundColor = GOLD; }}
+                >
+                  تسجيل الدخول
+                </button>
+                <button
+                  onClick={() => setCurrentView('reset-request')}
+                  className="px-8 py-3 rounded-xl font-bold transition"
+                  {...outlineBtn}
+                >
+                  استعادة كلمة المرور
+                </button>
               </div>
-              <CardTitle className="text-xl">تسجيل الدخول</CardTitle>
-              <CardDescription>أدخل بيانات حسابك للدخول إلى النظام</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleLoginSubmit} className="space-y-4">
-                {loginError && (
-                  <Alert variant="destructive" className="border-red-200 bg-red-50">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>{loginError}</AlertDescription>
-                  </Alert>
-                )}
+            </div>
+            <DecorativeCard />
+          </div>
+        </section>
 
-                <div className="space-y-2">
-                  <Label htmlFor="username">اسم المستخدم أو كود الاشتراك</Label>
+        {/* ── خدماتنا الرئيسية ─────────────────────────────── */}
+        <section className="py-8 relative z-10" dir="rtl">
+          <div className="max-w-7xl mx-auto px-6 mb-4">
+            <h2 className="text-2xl md:text-3xl font-bold" style={{ color: PRIMARY }}>خدماتنا الرئيسية</h2>
+          </div>
+          {/* Marquee container — overflow hidden, full width */}
+          <div dir="ltr" style={{ overflow: 'hidden', width: '100%' }}>
+            {/* Track — contains 2 copies for seamless loop */}
+            <div
+              className="marquee-track"
+              style={{ display: 'flex', gap: '24px', width: 'max-content', paddingBottom: '8px' }}
+            >
+              {[...services, ...services].map((s, i) => (
+                <div
+                  key={i}
+                  className="rounded-2xl p-5 flex-shrink-0"
+                  style={{
+                    ...glassPanel,
+                    width: '260px',
+                    borderTop: `4px solid ${s.accent}`,
+                    userSelect: 'none',
+                  }}
+                >
+                  <h3 className="text-xl font-bold mb-3" style={{ color: PRIMARY }}>{s.title}</h3>
+                  <p style={{ color: '#6b7280', lineHeight: 1.7 }}>{s.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── من نحن ───────────────────────────────────────── */}
+        <section
+          className="py-20 relative z-10"
+          style={{ backgroundColor: '#fff', borderTop: '1px solid rgba(228,231,236,0.8)', borderBottom: '1px solid rgba(228,231,236,0.8)' }}
+          dir="rtl"
+        >
+          <div className="max-w-7xl mx-auto px-6 text-center">
+            <h2 className="text-3xl md:text-4xl font-bold mb-6" style={{ color: PRIMARY }}>من نحن</h2>
+            <p className="max-w-3xl mx-auto text-lg leading-relaxed" style={{ color: '#6b7280' }}>
+              نحن منصة رقمية متكاملة تهدف إلى رقمنة وأتمتة العمليات الإدارية والتشغيلية للمؤسسات.
+              نقدم حلولاً مبتكرة تجمع بين القوة والمرونة لتناسب قطاعات الأعمال المختلفة،
+              ونسعى لنكون الشريك الاستراتيجي الأول في رحلة التحول الرقمي.
+            </p>
+          </div>
+        </section>
+
+        {/* ── تواصل معنا ───────────────────────────────────── */}
+        <section className="py-20 relative z-10" dir="rtl">
+          <div className="max-w-3xl mx-auto px-6">
+            <div className="rounded-3xl p-10 text-center" style={{ ...glassPanel, boxShadow: '0 20px 60px rgba(0,0,0,0.08)' }}>
+              <h2 className="text-3xl font-bold mb-3" style={{ color: PRIMARY }}>تواصل معنا</h2>
+              <p className="mb-8" style={{ color: '#9ca3af' }}>نحن هنا للإجابة على جميع استفساراتك ومساعدتك في البدء.</p>
+              <div className="space-y-4 text-right">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <input
+                    type="text"
+                    placeholder="الاسم الكريم"
+                    value={contactName}
+                    onChange={e => setContactName(e.target.value)}
+                    className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-all"
+                    style={{ border: '1px solid #e5e7eb', background: '#fff', color: PRIMARY }}
+                    onFocus={e => { e.currentTarget.style.borderColor = GOLD; }}
+                    onBlur={e => { e.currentTarget.style.borderColor = '#e5e7eb'; }}
+                  />
+                  <input
+                    type="email"
+                    placeholder="البريد الإلكتروني"
+                    value={contactEmail}
+                    onChange={e => setContactEmail(e.target.value)}
+                    className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-all"
+                    style={{ border: '1px solid #e5e7eb', background: '#fff', color: PRIMARY }}
+                    onFocus={e => { e.currentTarget.style.borderColor = GOLD; }}
+                    onBlur={e => { e.currentTarget.style.borderColor = '#e5e7eb'; }}
+                  />
+                </div>
+                <textarea
+                  placeholder="رسالتك..."
+                  rows={4}
+                  value={contactMessage}
+                  onChange={e => setContactMessage(e.target.value)}
+                  className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-all resize-none"
+                  style={{ border: '1px solid #e5e7eb', background: '#fff', color: PRIMARY }}
+                  onFocus={e => { e.currentTarget.style.borderColor = GOLD; }}
+                  onBlur={e => { e.currentTarget.style.borderColor = '#e5e7eb'; }}
+                />
+                <button
+                  className="w-full py-3 rounded-xl font-bold transition"
+                  style={{ backgroundColor: GOLD, color: '#fff', boxShadow: `0 4px 14px rgba(201,161,59,0.35)` }}
+                  onMouseEnter={e => { (e.currentTarget).style.backgroundColor = GOLD_HOVER; }}
+                  onMouseLeave={e => { (e.currentTarget).style.backgroundColor = GOLD; }}
+                >
+                  إرسال الرسالة
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Footer */}
+        <footer className="py-8 text-center text-sm" style={{ color: '#9ca3af', borderTop: '1px solid rgba(228,231,236,0.6)' }}>
+          © {new Date().getFullYear()} نظام غيث — جميع الحقوق محفوظة
+        </footer>
+      </>
+    );
+
+    // ── Sub-views (login, reset) — centered card ──────────────────────────
+    return (
+      <section className="flex-1 flex items-center justify-center px-4 py-12">
+        <div
+          className="w-full max-w-md rounded-2xl p-8 md:p-10"
+          dir="rtl"
+          style={{
+            background: 'rgba(255,255,255,0.95)',
+            border: '1px solid rgba(228,231,236,0.8)',
+            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
+            animation: 'fadeIn 0.3s ease-in-out',
+          }}
+        >
+          {/* ── LOGIN ─────────────────────────────────────────── */}
+          {currentView === 'login' && (
+            <>
+              <BackBtn to="main" />
+              <h2 className="text-2xl font-bold mb-1" style={{ color: PRIMARY }}>تسجيل الدخول</h2>
+              <p className="text-sm mb-7" style={{ color: '#9ca3af' }}>أدخل بيانات حسابك للمتابعة</p>
+              <ErrorBanner msg={loginError} />
+              <form onSubmit={handleLoginSubmit} className="space-y-4">
+                <div>
+                  <Label className="text-xs font-medium mb-1.5 block" style={{ color: '#374151' }}>اسم المستخدم</Label>
                   <div className="relative">
-                    <User className="absolute end-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      id="username"
-                      type="text"
-                      placeholder="أدخل اسم المستخدم"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      className="pe-10"
-                      autoComplete="username"
-                      disabled={loginMut.isPending}
-                    />
+                    <User className="absolute top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none" style={{ color: '#9ca3af', insetInlineEnd: '14px' }} />
+                    <input type="text" placeholder="أدخل اسم المستخدم" value={username}
+                      onChange={e => setUsername(e.target.value)} className={inputCls}
+                      style={{ paddingInlineEnd: '40px' }} disabled={loginMut.isPending} />
                   </div>
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="password">كلمة المرور</Label>
+                <div>
+                  <Label className="text-xs font-medium mb-1.5 block" style={{ color: '#374151' }}>كلمة المرور</Label>
                   <div className="relative">
-                    <Lock className="absolute end-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      id="password"
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder="أدخل كلمة المرور"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="pe-10 ps-10"
-                      autoComplete="current-password"
-                      disabled={loginMut.isPending}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute start-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    >
+                    <Lock className="absolute top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none" style={{ color: '#9ca3af', insetInlineEnd: '14px' }} />
+                    <input type={showPassword ? 'text' : 'password'} placeholder="أدخل كلمة المرور"
+                      value={password} onChange={e => setPassword(e.target.value)} className={inputCls}
+                      style={{ paddingInlineEnd: '40px', paddingInlineStart: '40px' }} disabled={loginMut.isPending} />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)}
+                      className="absolute top-1/2 -translate-y-1/2" style={{ color: '#9ca3af', insetInlineStart: '14px' }}>
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
                 </div>
-
-                <Button
-                  type="submit"
-                  className="w-full bg-blue-600 hover:bg-blue-700"
-                  disabled={loginMut.isPending}
-                >
-                  {loginMut.isPending ? (
-                    <>
-                      <Loader2 className="ms-2 h-4 w-4 animate-spin" />
-                      جاري تسجيل الدخول...
-                    </>
-                  ) : (
-                    'تسجيل الدخول'
-                  )}
-                </Button>
-
-                <div className="text-center pt-4 border-t">
-                  <button
-                    type="button"
-                    onClick={() => setCurrentView('reset-request')}
-                    className="text-sm text-blue-600 hover:text-blue-800"
-                  >
+                <button type="submit" disabled={loginMut.isPending}
+                  className="w-full py-3.5 rounded-xl text-sm font-bold mt-2 transition flex items-center justify-center gap-2"
+                  {...goldBtn}>
+                  {loginMut.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {loginMut.isPending ? 'جاري تسجيل الدخول...' : 'تسجيل الدخول'}
+                </button>
+                <div className="text-center pt-1">
+                  <button type="button" onClick={() => { resetAllStates(); setCurrentView('reset-request'); }}
+                    className="text-xs transition-colors" style={{ color: '#9ca3af' }}
+                    onMouseEnter={e => { (e.currentTarget).style.color = GOLD; }}
+                    onMouseLeave={e => { (e.currentTarget).style.color = '#9ca3af'; }}>
                     نسيت كلمة المرور؟
                   </button>
                 </div>
               </form>
-            </CardContent>
-          </Card>
-        )}
+            </>
+          )}
 
-        {/* Reset Password - Request View */}
-        {currentView === 'reset-request' && (
-          <Card className="max-w-md mx-auto">
-            <CardHeader className="text-center">
-              <div className="mx-auto mb-4 p-3 bg-amber-50 rounded-xl w-fit">
-                <KeyRound className="h-8 w-8 text-amber-600" />
+          {/* ── RESET REQUEST ──────────────────────────────────── */}
+          {currentView === 'reset-request' && (
+            <>
+              <BackBtn to="main" />
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5"
+                style={{ backgroundColor: 'rgba(201,161,59,0.12)' }}>
+                <KeyRound className="h-6 w-6" style={{ color: GOLD }} />
               </div>
-              <CardTitle className="text-xl">استعادة كلمة المرور</CardTitle>
-              <CardDescription>أدخل بريدك الإلكتروني لإرسال رمز التحقق</CardDescription>
-            </CardHeader>
-            <CardContent>
+              <h2 className="text-2xl font-bold mb-1" style={{ color: PRIMARY }}>استعادة كلمة المرور</h2>
+              <p className="text-sm mb-7" style={{ color: '#9ca3af' }}>أدخل بريدك الإلكتروني وسنرسل لك رمز التحقق</p>
+              <ErrorBanner msg={resetError} />
               <div className="space-y-4">
-                {resetError && (
-                  <Alert variant="destructive" className="border-red-200 bg-red-50">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>{resetError}</AlertDescription>
-                  </Alert>
-                )}
-
-                <div className="space-y-2">
-                  <Label htmlFor="resetEmail">البريد الإلكتروني</Label>
+                <div>
+                  <Label className="text-xs font-medium mb-1.5 block" style={{ color: '#374151' }}>البريد الإلكتروني</Label>
                   <div className="relative">
-                    <Mail className="absolute end-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      id="resetEmail"
-                      type="email"
-                      placeholder="أدخل بريدك الإلكتروني"
-                      value={resetEmail}
-                      onChange={(e) => setResetEmail(e.target.value)}
-                      className="pe-10"
-                      disabled={sendResetCodeMutation.isPending}
-                    />
+                    <Mail className="absolute top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none" style={{ color: '#9ca3af', insetInlineEnd: '14px' }} />
+                    <input type="email" placeholder="أدخل بريدك الإلكتروني" value={resetEmail}
+                      onChange={e => setResetEmail(e.target.value)} className={inputCls}
+                      style={{ paddingInlineEnd: '40px' }} disabled={sendResetCodeMutation.isPending} />
                   </div>
                 </div>
-
-                <Button
-                  onClick={handleSendResetCode}
-                  className="w-full bg-amber-600 hover:bg-amber-700"
-                  disabled={sendResetCodeMutation.isPending}
-                >
-                  {sendResetCodeMutation.isPending ? (
-                    <>
-                      <Loader2 className="ms-2 h-4 w-4 animate-spin" />
-                      جاري الإرسال...
-                    </>
-                  ) : (
-                    'إرسال رمز التحقق'
-                  )}
-                </Button>
+                <button onClick={handleSendResetCode} disabled={sendResetCodeMutation.isPending}
+                  className="w-full py-3.5 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2"
+                  {...goldBtn}>
+                  {sendResetCodeMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {sendResetCodeMutation.isPending ? 'جاري الإرسال...' : 'إرسال رمز التحقق'}
+                </button>
               </div>
-            </CardContent>
-          </Card>
-        )}
+            </>
+          )}
 
-        {/* Reset Password - Verify View */}
-        {currentView === 'reset-verify' && (
-          <Card className="max-w-md mx-auto">
-            <CardHeader className="text-center">
-              <div className="mx-auto mb-4 p-3 bg-amber-50 rounded-xl w-fit">
-                <KeyRound className="h-8 w-8 text-amber-600" />
+          {/* ── RESET VERIFY ───────────────────────────────────── */}
+          {currentView === 'reset-verify' && (
+            <>
+              <BackBtn to="reset-request" />
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5"
+                style={{ backgroundColor: 'rgba(201,161,59,0.12)' }}>
+                <KeyRound className="h-6 w-6" style={{ color: GOLD }} />
               </div>
-              <CardTitle className="text-xl">إعادة تعيين كلمة المرور</CardTitle>
-              <CardDescription>
-                تم إرسال رمز التحقق إلى بريدك الإلكتروني
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+              <h2 className="text-2xl font-bold mb-1" style={{ color: PRIMARY }}>إعادة تعيين كلمة المرور</h2>
+              <p className="text-sm mb-7" style={{ color: '#9ca3af' }}>تم إرسال رمز التحقق إلى بريدك الإلكتروني</p>
+              <ErrorBanner msg={resetError} />
               <div className="space-y-4">
-                {resetError && (
-                  <Alert variant="destructive" className="border-red-200 bg-red-50">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>{resetError}</AlertDescription>
-                  </Alert>
-                )}
-
-                <div className="space-y-2">
-                  <Label htmlFor="verifyCode">رمز التحقق</Label>
-                  <Input
-                    id="verifyCode"
-                    type="text"
-                    placeholder="أدخل رمز التحقق المُرسل"
-                    value={resetCode}
-                    onChange={(e) => setResetCode(e.target.value)}
-                    className="text-center font-mono tracking-widest text-lg"
-                    maxLength={6}
-                    disabled={verifyResetMutation.isPending}
-                  />
+                <div>
+                  <Label className="text-xs font-medium mb-1.5 block" style={{ color: '#374151' }}>رمز التحقق</Label>
+                  <input type="text" placeholder="أدخل رمز التحقق" value={resetCode}
+                    onChange={e => setResetCode(e.target.value)}
+                    className={`${inputCls} text-center font-mono tracking-widest text-base`}
+                    maxLength={6} disabled={verifyResetMutation.isPending} />
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="newPassword">كلمة المرور الجديدة</Label>
+                <div>
+                  <Label className="text-xs font-medium mb-1.5 block" style={{ color: '#374151' }}>كلمة المرور الجديدة</Label>
                   <div className="relative">
-                    <Lock className="absolute end-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      id="newPassword"
-                      type={showNewPassword ? 'text' : 'password'}
-                      placeholder="أدخل كلمة المرور الجديدة"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      className="pe-10 ps-10"
-                      disabled={verifyResetMutation.isPending}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowNewPassword(!showNewPassword)}
-                      className="absolute start-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    >
+                    <Lock className="absolute top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none" style={{ color: '#9ca3af', insetInlineEnd: '14px' }} />
+                    <input type={showNewPassword ? 'text' : 'password'} placeholder="أدخل كلمة المرور الجديدة"
+                      value={newPassword} onChange={e => setNewPassword(e.target.value)} className={inputCls}
+                      style={{ paddingInlineEnd: '40px', paddingInlineStart: '40px' }} disabled={verifyResetMutation.isPending} />
+                    <button type="button" onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute top-1/2 -translate-y-1/2" style={{ color: '#9ca3af', insetInlineStart: '14px' }}>
                       {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">تأكيد كلمة المرور</Label>
+                <div>
+                  <Label className="text-xs font-medium mb-1.5 block" style={{ color: '#374151' }}>تأكيد كلمة المرور</Label>
                   <div className="relative">
-                    <Lock className="absolute end-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      id="confirmPassword"
-                      type={showNewPassword ? 'text' : 'password'}
-                      placeholder="أعد إدخال كلمة المرور"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="pe-10"
-                      disabled={verifyResetMutation.isPending}
-                    />
+                    <Lock className="absolute top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none" style={{ color: '#9ca3af', insetInlineEnd: '14px' }} />
+                    <input type={showNewPassword ? 'text' : 'password'} placeholder="أعد إدخال كلمة المرور"
+                      value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className={inputCls}
+                      style={{ paddingInlineEnd: '40px' }} disabled={verifyResetMutation.isPending} />
                   </div>
                 </div>
-
-                <Button
-                  onClick={handleVerifyAndReset}
-                  className="w-full bg-amber-600 hover:bg-amber-700"
-                  disabled={verifyResetMutation.isPending}
-                >
-                  {verifyResetMutation.isPending ? (
-                    <>
-                      <Loader2 className="ms-2 h-4 w-4 animate-spin" />
-                      جاري إعادة التعيين...
-                    </>
-                  ) : (
-                    'إعادة تعيين كلمة المرور'
-                  )}
-                </Button>
-
-                <div className="text-center pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setCurrentView('reset-request')}
-                    className="text-sm text-gray-500 hover:text-gray-700"
-                  >
+                <button onClick={handleVerifyAndReset} disabled={verifyResetMutation.isPending}
+                  className="w-full py-3.5 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2"
+                  {...goldBtn}>
+                  {verifyResetMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {verifyResetMutation.isPending ? 'جاري إعادة التعيين...' : 'إعادة تعيين كلمة المرور'}
+                </button>
+                <div className="text-center">
+                  <button type="button" onClick={handleSendResetCode}
+                    className="text-xs transition-colors" style={{ color: '#9ca3af' }}
+                    onMouseEnter={e => { (e.currentTarget).style.color = GOLD; }}
+                    onMouseLeave={e => { (e.currentTarget).style.color = '#9ca3af'; }}>
                     لم يصلك الرمز؟ إعادة الإرسال
                   </button>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        )}
+            </>
+          )}
 
-        {/* Reset Password - Success View */}
-        {currentView === 'reset-success' && (
-          <Card className="max-w-md mx-auto">
-            <CardContent className="pt-8 pb-6">
-              <div className="text-center space-y-4">
-                <div className="mx-auto p-4 bg-emerald-50 rounded-full w-fit">
-                  <CheckCircle2 className="h-12 w-12 text-emerald-600" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900">تم بنجاح!</h3>
-                <p className="text-gray-600">
-                  تم إعادة تعيين كلمة المرور بنجاح. يمكنك الآن تسجيل الدخول باستخدام كلمة المرور الجديدة.
-                </p>
-                <Button
-                  onClick={() => {
-                    resetAllStates();
-                    setCurrentView('login');
-                  }}
-                  className="w-full bg-blue-600 hover:bg-blue-700 mt-4"
-                >
-                  الذهاب لتسجيل الدخول
-                </Button>
+          {/* ── RESET SUCCESS ───────────────────────────────────── */}
+          {currentView === 'reset-success' && (
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5"
+                style={{ backgroundColor: 'rgba(16,185,129,0.1)' }}>
+                <CheckCircle2 className="h-8 w-8" style={{ color: '#10b981' }} />
               </div>
-            </CardContent>
-          </Card>
-        )}
-
-      </div>
-
-      {/* Footer */}
-      <div className="fixed bottom-0 start-0 end-0 bg-white/80 backdrop-blur-sm border-t border-gray-100 py-3">
-        <div className="text-center text-sm text-gray-500">
-          © 2026 منصة غيث - جميع الحقوق محفوظة
+              <h2 className="text-2xl font-bold mb-2" style={{ color: PRIMARY }}>تم بنجاح!</h2>
+              <p className="text-sm mb-8" style={{ color: '#9ca3af' }}>
+                تم إعادة تعيين كلمة المرور. يمكنك الآن تسجيل الدخول بكلمة المرور الجديدة.
+              </p>
+              <button onClick={() => { resetAllStates(); setCurrentView('login'); }}
+                className="w-full py-3.5 rounded-xl text-sm font-bold transition"
+                {...goldBtn}>
+                تسجيل الدخول
+              </button>
+            </div>
+          )}
         </div>
-      </div>
+      </section>
+    );
+  };
 
+  return (
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: APP_BG, fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif' }}>
+      {/* Fade-in keyframes */}
+      <style>{`
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes marquee { 0% { transform: translateX(-50%); } 100% { transform: translateX(0); } }
+        .marquee-track { animation: marquee 28s linear infinite; }
+        .marquee-track:hover { animation-play-state: paused; }
+      `}</style>
+
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      <header
+        className="sticky top-0 z-50 border-b"
+        style={{
+          background: 'rgba(255,255,255,0.95)',
+          backdropFilter: 'blur(12px)',
+          borderColor: 'rgba(228,231,236,0.8)',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+        }}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16" dir="rtl">
+            {/* Logo */}
+            <button
+              onClick={() => { resetAllStates(); setCurrentView('main'); }}
+              className="flex items-center gap-3 focus:outline-none"
+            >
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xl shadow-md"
+                style={{ backgroundColor: PRIMARY, color: GOLD }}
+              >
+                غ
+              </div>
+              <span className="font-bold text-2xl" style={{ color: PRIMARY }}>نظام غيث</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* ── Main content ───────────────────────────────────────────────────── */}
+      <main className={currentView === 'main' ? 'flex flex-col' : 'flex-1 flex flex-col'}>
+        {renderContent()}
+      </main>
     </div>
   );
 }

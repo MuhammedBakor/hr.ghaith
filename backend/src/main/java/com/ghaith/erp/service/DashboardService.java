@@ -16,15 +16,22 @@ public class DashboardService {
     private final EmployeeRepository employeeRepository;
     private final LeaveRequestRepository leaveRequestRepository;
 
-    public DashboardSummaryDto getSummary() {
+    public DashboardSummaryDto getSummary(Long branchId) {
         // Aggregate stats from available modules
         // For modules not yet implemented in this backend, we return baseline data to
         // avoid frontend breakage
 
+        long activeCount = branchId != null
+                ? employeeRepository.findByBranchId(branchId).size()
+                : employeeRepository.count();
+        long leavesCount = branchId != null
+                ? leaveRequestRepository.countByEmployeeBranchId(branchId)
+                : leaveRequestRepository.count();
+
         DashboardSummaryDto.StatsDto.HrStats hrStats = DashboardSummaryDto.StatsDto.HrStats.builder()
-                .active((int) employeeRepository.count())
-                .pendingLeaves((int) leaveRequestRepository.count()) // Simple count for now
-                .monthHires(3) // Placeholder or calculate from joinDate
+                .active((int) activeCount)
+                .pendingLeaves((int) leavesCount)
+                .monthHires(0)
                 .build();
 
         DashboardSummaryDto.StatsDto stats = DashboardSummaryDto.StatsDto.builder()
@@ -36,7 +43,7 @@ public class DashboardService {
                 .projects(DashboardSummaryDto.StatsDto.ProjectStats.builder().active(0).overdue(0).build())
                 .property(DashboardSummaryDto.StatsDto.PropertyStats.builder().total(0).vacant(0).build())
                 .governance(
-                        DashboardSummaryDto.StatsDto.GovernanceStats.builder().pendingApprovals(5).openRisks(0).build())
+                        DashboardSummaryDto.StatsDto.GovernanceStats.builder().pendingApprovals(0).openRisks(0).build())
                 .build();
 
         return DashboardSummaryDto.builder()

@@ -17,6 +17,29 @@ import { PrintButton } from "@/components/PrintButton";
 
 type ViewMode = "list" | "add-company" | "add-setting" | "add-rule" | "add-role-pack";
 
+// Available departments that can be assigned to a company
+const AVAILABLE_DEPARTMENTS = [
+  { id: 'hr', label: 'الموارد البشرية' },
+  { id: 'finance', label: 'المالية' },
+  { id: 'fleet', label: 'الأسطول' },
+  { id: 'property', label: 'إدارة الأملاك' },
+  { id: 'operations', label: 'العمليات' },
+  { id: 'governance', label: 'الحوكمة' },
+  { id: 'legal', label: 'القانونية' },
+  { id: 'bi', label: 'ذكاء الأعمال' },
+  { id: 'support', label: 'الدعم الفني' },
+  { id: 'marketing', label: 'التسويق' },
+  { id: 'store', label: 'المخازن' },
+  { id: 'requests', label: 'الطلبات' },
+  { id: 'documents', label: 'المستندات' },
+  { id: 'reports', label: 'التقارير' },
+  { id: 'comms', label: 'التواصل' },
+  { id: 'workflow', label: 'سير العمل' },
+  { id: 'inbox', label: 'صندوق الوارد' },
+  { id: 'public-site', label: 'الموقع العام' },
+  { id: 'integrations', label: 'التكاملات' },
+];
+
 export default function SystemAdmin() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("companies");
@@ -29,7 +52,7 @@ export default function SystemAdmin() {
   const [editType, setEditType] = useState<string>("");
 
   // Form states
-  const [newCompany, setNewCompany] = useState({ code: "", name: "", nameAr: "", email: "", phone: "", city: "", taxNumber: "" });
+  const [newCompany, setNewCompany] = useState({ code: "", name: "", nameAr: "", email: "", phone: "", city: "", taxNumber: "", selectedDepts: [] as string[] });
   const [newSetting, setNewSetting] = useState({ key: "", value: "", type: "string", category: "", scope: "global", label: "", labelAr: "", description: "" });
   const [newRule, setNewRule] = useState({ code: "", name: "", nameAr: "", triggerType: "event", triggerEvent: "", actionType: "notification", actionConfig: "", description: "" });
   const [newRolePack, setNewRolePack] = useState({ code: "", name: "", nameAr: "", category: "", description: "" });
@@ -49,7 +72,7 @@ export default function SystemAdmin() {
   // Mutations - Create
   const createCompanyMutation = useMutation({
     mutationFn: (data: any) => api.post('/admin/companies', data).then(r => r.data),
-    onSuccess: () => { toast.success("تم إنشاء الشركة بنجاح"); setViewMode("list"); inv(['admin', 'companies']); setNewCompany({ code: "", name: "", nameAr: "", email: "", phone: "", city: "", taxNumber: "" }); },
+    onSuccess: () => { toast.success("تم إنشاء الشركة بنجاح"); setViewMode("list"); inv(['admin', 'companies']); setNewCompany({ code: "", name: "", nameAr: "", email: "", phone: "", city: "", taxNumber: "", selectedDepts: [] }); },
     onError: (e: any) => toast.error(`خطأ: ${e.message}`),
   });
   const createSettingMutation = useMutation({
@@ -71,7 +94,13 @@ export default function SystemAdmin() {
   // Mutations - Update
   const updateCompanyMutation = useMutation({
     mutationFn: ({ id, ...data }: any) => api.put(`/admin/companies/${id}`, data).then(r => r.data),
-    onSuccess: () => { toast.success("تم تحديث الشركة"); setEditItem(null); setEditType(""); inv(['admin', 'companies']); },
+    onSuccess: (_, variables) => {
+      toast.success("تم تحديث الشركة");
+      setEditItem(null);
+      setEditType("");
+      inv(['admin', 'companies']);
+      inv(['admin', 'company', variables.id]);
+    },
   });
   const updateSettingMutation = useMutation({
     mutationFn: ({ id, ...data }: any) => api.put(`/admin/settings/${id}`, data).then(r => r.data),
@@ -223,6 +252,32 @@ export default function SystemAdmin() {
                   <div className="space-y-1"><Label>رقم الهاتف</Label><Input value={editItem.phone || ''} onChange={e => setEditItem((p: any) => ({ ...p, phone: e.target.value }))} /></div>
                 </div>
                 <div className="space-y-1"><Label>الرقم الضريبي</Label><Input value={editItem.taxNumber || ''} onChange={e => setEditItem((p: any) => ({ ...p, taxNumber: e.target.value }))} /></div>
+                <div className="space-y-2">
+                  <Label>الأقسام المتاحة</Label>
+                  <div className="grid grid-cols-2 gap-1.5 border rounded-lg p-3 max-h-56 overflow-y-auto">
+                    {AVAILABLE_DEPARTMENTS.map(dept => {
+                      const currentCodes: string[] = (() => {
+                        try { return JSON.parse(editItem.departmentCodes || '[]'); } catch { return []; }
+                      })();
+                      return (
+                        <label key={dept.id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 rounded p-1">
+                          <input
+                            type="checkbox"
+                            checked={currentCodes.includes(dept.id)}
+                            onChange={e => {
+                              const updated = e.target.checked
+                                ? [...currentCodes, dept.id]
+                                : currentCodes.filter((d: string) => d !== dept.id);
+                              setEditItem((p: any) => ({ ...p, departmentCodes: JSON.stringify(updated) }));
+                            }}
+                            className="w-4 h-4 accent-amber-600"
+                          />
+                          <span className="text-sm">{dept.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
               </>
             )}
             {editType === 'setting' && (
@@ -370,9 +425,34 @@ export default function SystemAdmin() {
             <div className="space-y-2"><Label>رقم الهاتف</Label><Input value={newCompany.phone} onChange={e => setNewCompany({ ...newCompany, phone: e.target.value })} placeholder="+966..." /></div>
           </div>
           <div className="space-y-2"><Label>الرقم الضريبي</Label><Input value={newCompany.taxNumber} onChange={e => setNewCompany({ ...newCompany, taxNumber: e.target.value })} placeholder="300..." /></div>
+          <div className="space-y-2">
+            <Label>الأقسام المتاحة في هذه الشركة</Label>
+            <p className="text-xs text-gray-500">اختر الأقسام التي ستكون متاحة للمستخدمين في هذه الشركة</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 border rounded-lg p-3">
+              {AVAILABLE_DEPARTMENTS.map(dept => (
+                <label key={dept.id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 rounded p-1.5">
+                  <input
+                    type="checkbox"
+                    checked={newCompany.selectedDepts.includes(dept.id)}
+                    onChange={e => {
+                      const updated = e.target.checked
+                        ? [...newCompany.selectedDepts, dept.id]
+                        : newCompany.selectedDepts.filter(d => d !== dept.id);
+                      setNewCompany({ ...newCompany, selectedDepts: updated });
+                    }}
+                    className="w-4 h-4 accent-amber-600"
+                  />
+                  <span className="text-sm">{dept.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
           <div className="flex flex-wrap gap-3 pt-4">
             <Button variant="outline" onClick={handleBackToList}>إلغاء</Button>
-            <Button disabled={createCompanyMutation.isPending} onClick={() => createCompanyMutation.mutate(newCompany)}>{createCompanyMutation.isPending ? "جاري الإنشاء..." : "إنشاء الشركة"}</Button>
+            <Button disabled={createCompanyMutation.isPending} onClick={() => {
+              const { selectedDepts, ...companyData } = newCompany;
+              createCompanyMutation.mutate({ ...companyData, departmentCodes: JSON.stringify(selectedDepts) });
+            }}>{createCompanyMutation.isPending ? "جاري الإنشاء..." : "إنشاء الشركة"}</Button>
           </div>
         </div></CardContent>
       </Card>

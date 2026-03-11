@@ -63,11 +63,13 @@ export interface QuickSearchResult {
     badgeColor?: string;
 }
 
-export const useDashboardSummary = () => {
+export const useDashboardSummary = (branchId?: number | null) => {
     return useQuery<DashboardSummary>({
-        queryKey: ['dashboard-summary'],
+        queryKey: ['dashboard-summary', branchId ?? null],
         queryFn: async () => {
-            const { data } = await api.get('/dashboard/summary');
+            const params: Record<string, any> = {};
+            if (branchId) params.branchId = branchId;
+            const { data } = await api.get('/dashboard/summary', { params });
             return data;
         },
         refetchInterval: 60000,

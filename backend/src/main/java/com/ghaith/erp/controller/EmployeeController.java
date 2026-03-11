@@ -16,7 +16,18 @@ public class EmployeeController {
     private final EmployeeService employeeService;
 
     @GetMapping
-    public ResponseEntity<List<Employee>> getAllEmployees() {
+    public ResponseEntity<List<Employee>> getAllEmployees(
+            @RequestParam(required = false) Long branchId,
+            @RequestParam(required = false) Long departmentId) {
+        if (branchId != null && departmentId != null) {
+            return ResponseEntity.ok(employeeService.getAllEmployeesByBranchAndDepartment(branchId, departmentId));
+        }
+        if (branchId != null) {
+            return ResponseEntity.ok(employeeService.getAllEmployeesByBranch(branchId));
+        }
+        if (departmentId != null) {
+            return ResponseEntity.ok(employeeService.getAllEmployeesByDepartment(departmentId));
+        }
         return ResponseEntity.ok(employeeService.getAllEmployees());
     }
 

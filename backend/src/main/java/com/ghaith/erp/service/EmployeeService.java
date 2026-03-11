@@ -35,6 +35,18 @@ public class EmployeeService {
         return employeeRepository.findAll();
     }
 
+    public List<Employee> getAllEmployeesByBranch(Long branchId) {
+        return employeeRepository.findByBranchId(branchId);
+    }
+
+    public List<Employee> getAllEmployeesByBranchAndDepartment(Long branchId, Long departmentId) {
+        return employeeRepository.findByBranchIdAndDepartmentId(branchId, departmentId);
+    }
+
+    public List<Employee> getAllEmployeesByDepartment(Long departmentId) {
+        return employeeRepository.findByDepartmentId(departmentId);
+    }
+
     public Optional<Employee> getEmployeeById(Long id) {
         return employeeRepository.findById(id);
     }

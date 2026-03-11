@@ -34,6 +34,29 @@ public class AdminExtendedController {
         return ResponseEntity.ok(adminCompanyRepository.findAllByOrderByCreatedAtDesc());
     }
 
+    @GetMapping("/companies/{id}")
+    public ResponseEntity<?> getCompany(@PathVariable Long id) {
+        return adminCompanyRepository.findById(id)
+            .map(c -> (ResponseEntity<?>) ResponseEntity.ok(c))
+            .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/companies/{id}/departments")
+    public ResponseEntity<?> getCompanyDepartments(@PathVariable Long id) {
+        return adminCompanyRepository.findById(id)
+            .map(c -> ResponseEntity.ok((Object) (c.getDepartmentCodes() != null ? c.getDepartmentCodes() : "[]")))
+            .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/companies/{id}/departments")
+    public ResponseEntity<?> setCompanyDepartments(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        return adminCompanyRepository.findById(id).map(company -> {
+            Object codes = body.get("departmentCodes");
+            company.setDepartmentCodes(codes != null ? codes.toString() : "[]");
+            return ResponseEntity.ok(adminCompanyRepository.save(company));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
     @PostMapping("/companies")
     public ResponseEntity<?> createCompany(@RequestBody(required = false) AdminCompany body) {
         if (body == null) body = new AdminCompany();
@@ -83,6 +106,7 @@ public class AdminExtendedController {
             if (body.getTaxNumber() != null) existing.setTaxNumber(body.getTaxNumber());
             if (body.getDescription() != null) existing.setDescription(body.getDescription());
             if (body.getIsActive() != null) existing.setIsActive(body.getIsActive());
+            if (body.getDepartmentCodes() != null) existing.setDepartmentCodes(body.getDepartmentCodes());
             return ResponseEntity.ok(adminCompanyRepository.save(existing));
         }).orElse(ResponseEntity.notFound().build());
     }

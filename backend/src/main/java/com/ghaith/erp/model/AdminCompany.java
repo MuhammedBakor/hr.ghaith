@@ -33,4 +33,8 @@ public class AdminCompany extends BaseEntity {
     private Boolean isActive = true;
 
     private Long branchId;
+
+    // JSON array of department hub IDs assigned to this company (e.g., ["hr","finance","legal"])
+    @Column(columnDefinition = "TEXT")
+    private String departmentCodes;
 }

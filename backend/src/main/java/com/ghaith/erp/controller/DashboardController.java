@@ -17,8 +17,9 @@ public class DashboardController {
     private final DashboardService dashboardService;
 
     @GetMapping("/summary")
-    public ResponseEntity<DashboardSummaryDto> getSummary() {
-        return ResponseEntity.ok(dashboardService.getSummary());
+    public ResponseEntity<DashboardSummaryDto> getSummary(
+            @RequestParam(required = false) Long branchId) {
+        return ResponseEntity.ok(dashboardService.getSummary(branchId));
     }
 
     @GetMapping("/pending-actions")

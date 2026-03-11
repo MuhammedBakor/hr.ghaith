@@ -8,6 +8,9 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: false,
+      refetchOnWindowFocus: false,   // لا إعادة تحميل عند التركيز على النافذة
+      refetchOnReconnect: false,     // لا إعادة تحميل عند إعادة الاتصال
+      staleTime: 2 * 60 * 1000,     // البيانات صالحة لمدة دقيقتين قبل إعادة التحميل
     },
   },
 });

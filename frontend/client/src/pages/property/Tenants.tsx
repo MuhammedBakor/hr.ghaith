@@ -189,7 +189,7 @@ export default function Tenants() {
     setIsViewOpen(true);
   };
   
-  const tenants: Tenant[] = leasesData?.map((lease: any) => {
+  const tenants: Tenant[] = (leasesData || []).map((lease: any) => {
     const unit = units?.find((u: any) => u.id === lease.unitId);
     const property = properties?.find((p: any) => p.id === unit?.propertyId);
     return {

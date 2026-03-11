@@ -114,10 +114,19 @@ export default function EmployeeList() {
   const [editDepartmentId, setEditDepartmentId] = useState<string>('');
 
   // Get branch from AppContext
-  const { selectedBranchId, currentBranch } = useAppContext();
+  const { selectedBranchId, currentBranch, currentEmployee, selectedRole } = useAppContext();
 
-  // Fetch data using hrService hooks
-  const { data: employeesData, isLoading: loading, isError } = useEmployees();
+  // For generic department managers: also filter by their own department
+  // Specialist managers (hr_manager, legal_manager, etc.) can see all employees in their branch
+  const isGenericDeptManager = selectedRole === 'department_manager';
+  const deptManagerDeptId = isGenericDeptManager && currentEmployee?.department?.id
+    ? currentEmployee.department.id : null;
+
+  // Fetch data using hrService hooks - filter by branchId (company context) and optionally departmentId
+  const { data: employeesData, isLoading: loading, isError } = useEmployees({
+    branchId: selectedBranchId,
+    departmentId: deptManagerDeptId,
+  });
   const { data: departmentsData } = useDepartments();
   const { data: positionsData } = usePositions();
 
