@@ -115,6 +115,9 @@ import { useQuickSearch } from '@/services/dashboardService';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 
+const GOLD = '#C9A84C';
+const GOLD_HOVER = '#B8973B';
+
 // ─── Search result row (used in topbar search dropdown) ──────────────────────
 function SearchResultItem({ result, onClose }: {
   result: { id: number | string; type: string; module: string; title: string; subtitle?: string; link: string; badge?: string };
@@ -885,51 +888,49 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 lg:me-0 transition-all duration-300">
-        {/* Header */}
         <header
           style={{ backgroundColor: '#1a2035', borderBottom: '1px solid #2d3555' }}
-          className="h-16 flex items-center px-4 lg:px-8 sticky top-0 z-40 gap-4"
+          className="h-16 flex items-center px-3 md:px-6 lg:px-8 sticky top-0 z-40 gap-3 md:gap-4 shrink-0"
         >
-          {/* Left: greeting */}
-          <div className="flex items-center gap-3 flex-none">
+          {/* Left: greeting or menu toggle */}
+          <div className="flex items-center gap-2 md:gap-3 flex-none">
             <button
-              className="lg:hidden shrink-0 p-2 rounded-lg transition-colors"
-              style={{ color: '#9ca3af', backgroundColor: 'transparent' }}
-              onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.08)'; }}
-              onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+              className="lg:hidden shrink-0 p-2 rounded-xl transition-colors hover:bg-white/10"
+              style={{ color: '#e5e7eb', border: '1px solid rgba(255,255,255,0.1)' }}
               onClick={() => setIsSidebarOpen(true)}
             >
               <Menu className="h-5 w-5" />
             </button>
-            <div dir="rtl">
-              <p className="text-sm font-semibold leading-tight" style={{ color: '#e5e7eb' }}>
-                {greetingTime()}، {ctxEmployee?.firstNameAr || ctxEmployee?.firstName || user?.username?.split(' ')[0] || 'مرحباً'} 👋
+            <div dir="rtl" className="flex flex-col">
+              <p className="text-xs md:text-sm font-semibold leading-none truncate" style={{ color: '#e5e7eb' }}>
+                {greetingTime()}، {ctxEmployee?.firstNameAr || ctxEmployee?.firstName || user?.username?.split(' ')[0] || 'مرحباً'}
               </p>
-              <p className="text-xs leading-tight hidden lg:block" style={{ color: '#6b7280' }}>
-                {new Date().toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+              <p className="text-[10px] md:text-xs font-medium mt-1 leading-none" style={{ color: GOLD }}>
+                {roleLabels[selectedRole]}
               </p>
             </div>
           </div>
 
-          {/* Center: company/scope label */}
-          <div className="flex-1 hidden lg:flex items-center justify-center pointer-events-none overflow-hidden px-4">
-            {companyDisplayName ? (
-              <span className="text-sm font-semibold truncate" style={{ color: '#C9A84C' }}>
-                شركة {companyDisplayName}
-                {selectedCompanyData?.city && (
-                  <span className="font-normal" style={{ color: '#6b7280' }}> - فرع {selectedCompanyData.city}</span>
-                )}
-              </span>
-            ) : selectedBranchId === null && (selectedRole === 'admin' || selectedRole === 'general_manager') ? (
-              <span className="text-sm font-semibold" style={{ color: '#9ca3af' }}>لوحة تحكم (شاملة)</span>
-            ) : null}
+          {/* Center: company/scope label (Hidden on very small screens, compact on mid) */}
+          <div className="flex-1 hidden sm:flex items-center justify-center overflow-hidden px-2">
+            <span className="text-xs md:text-sm font-semibold truncate text-center" style={{ color: '#C9A84C' }}>
+              {companyDisplayName || currentBranch?.name || 'الرئيسية'}
+            </span>
           </div>
 
-          {/* Right: search + icons */}
-          <div className="flex items-center gap-2 flex-none">
-            {/* Compact search bar */}
-            <div ref={searchRef} className="relative hidden lg:block">
-              <div className="relative">
+          {/* Right: Consolidated actions for mobile, detailed for desktop */}
+          <div className="flex items-center gap-1.5 md:gap-2 flex-none">
+            {/* Search - Icon only on mobile, bar on desktop */}
+            <div ref={searchRef} className="relative">
+              <button
+                className="lg:hidden p-2 rounded-xl transition-colors hover:bg-white/10"
+                style={{ color: '#e5e7eb', border: '1px solid rgba(255,255,255,0.05)' }}
+                onClick={() => setShowSearch(!showSearch)}
+              >
+                <Search className="h-4 w-4" />
+              </button>
+
+              <div className="relative hidden lg:block">
                 <Search className="absolute end-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none" style={{ color: '#6b7280' }} />
                 <input
                   ref={searchInputRef}
@@ -948,16 +949,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     color: '#c9d1d9',
                     transition: 'width 0.2s ease',
                   }}
-                  onMouseEnter={e => { (e.currentTarget).style.backgroundColor = 'rgba(255,255,255,0.1)'; }}
-                  onMouseLeave={e => { if (document.activeElement !== e.currentTarget) (e.currentTarget).style.backgroundColor = 'rgba(255,255,255,0.07)'; }}
                   onFocusCapture={e => { (e.currentTarget).style.backgroundColor = 'rgba(255,255,255,0.12)'; (e.currentTarget).style.borderColor = '#C9A84C'; }}
                   onBlur={e => { (e.currentTarget).style.backgroundColor = 'rgba(255,255,255,0.07)'; (e.currentTarget).style.borderColor = '#2d3555'; }}
                 />
-                <kbd className="absolute start-2.5 top-1/2 -translate-y-1/2 text-[9px] px-1 py-0.5 rounded pointer-events-none"
-                  style={{ backgroundColor: 'rgba(255,255,255,0.1)', color: '#6b7280' }}>⌘K</kbd>
               </div>
+
               {showSearch && (
-                <div className="absolute top-full end-0 mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden">
+                <div className="absolute top-full end-0 mt-3 w-[calc(100vw-2rem)] sm:w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden transform translate-x-4 sm:translate-x-0">
                   {searchLoading ? (
                     <div className="p-6 text-center text-sm text-gray-500">جاري البحث...</div>
                   ) : searchResults && searchResults.length > 0 ? (
@@ -965,48 +963,42 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       <SearchResultItem key={i} result={r} onClose={() => { setShowSearch(false); setSearchQuery(''); }} />
                     ))
                   ) : (
-                    <div className="p-8 text-center text-gray-400 text-sm">لا نتائج لـ "{debouncedQuery}"</div>
+                    <div className="p-8 text-center text-gray-400 text-sm">
+                      {searchQuery.length < 2 ? 'ادخل حرفين على الأقل للبحث' : `لا نتائج لـ "${debouncedQuery}"`}
+                    </div>
                   )}
                 </div>
               )}
             </div>
 
-            {/* Divider */}
-            <div className="hidden lg:block w-px h-5 mx-1" style={{ backgroundColor: '#2d3555' }} />
-
-            {/* Refresh */}
-            <button
-              className="p-2 rounded-lg transition-colors"
-              style={{ color: '#9ca3af', backgroundColor: 'transparent' }}
-              onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.08)'; }}
-              onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-              onClick={() => queryClient.invalidateQueries()}
-              title="تحديث البيانات"
-            >
-              <RefreshCw className="h-4 w-4" />
-            </button>
-
-            {/* Settings */}
-            <Link href="/settings">
+            {/* Icons row - Hidden on mobile, dropdown instead? No, keep it simple for now but consolidated */}
+            <div className="hidden md:flex items-center gap-1">
               <button
-                className="p-2 rounded-lg transition-colors"
-                style={{ color: '#9ca3af', backgroundColor: 'transparent' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(255,255,255,0.08)'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; }}
-                title="الإعدادات"
+                className="p-2 rounded-lg transition-colors hover:bg-white/10"
+                style={{ color: '#9ca3af' }}
+                onClick={() => queryClient.invalidateQueries()}
+                title="تحديث البيانات"
               >
-                <Settings className="h-4 w-4" />
+                <RefreshCw className="h-4 w-4" />
               </button>
-            </Link>
+              <Link href="/settings">
+                <button
+                  className="p-2 rounded-lg transition-colors hover:bg-white/10"
+                  style={{ color: '#9ca3af' }}
+                  title="الإعدادات"
+                >
+                  <Settings className="h-4 w-4" />
+                </button>
+              </Link>
+            </div>
 
-            {/* Bell */}
+            {/* Bell/Notifications */}
             <button
-              className="relative p-2 rounded-lg transition-colors"
-              style={{ color: '#9ca3af', backgroundColor: 'transparent' }}
-              onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.08)'; }}
-              onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+              className="relative p-2 rounded-xl transition-colors hover:bg-white/10"
+              style={{ color: '#e5e7eb', border: '1px solid rgba(255,255,255,0.05)' }}
             >
-              <Bell className="h-5 w-5" />
+              <Bell className="h-4 w-4 md:h-5 md:w-5" />
+              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-[#1a2035]"></span>
             </button>
 
             {/* خانة الصفة - فقط للمستخدمين الذين لديهم أكثر من دور */}

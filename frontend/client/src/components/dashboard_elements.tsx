@@ -59,17 +59,17 @@ export interface StatCardProps {
 }
 
 export const COLOR_MAP: Record<ColorKey, { bg: string; icon: string; border: string; gradient: string; iconBg: string; glow: string }> = {
-    blue:   { bg: 'bg-blue-50',   icon: 'text-blue-400',   border: 'border-blue-900/40',   gradient: 'from-blue-500 to-blue-600',     iconBg: 'rgba(59,130,246,0.15)',  glow: 'rgba(59,130,246,0.12)' },
-    green:  { bg: 'bg-green-50',  icon: 'text-green-400',  border: 'border-green-900/40',  gradient: 'from-green-500 to-emerald-600', iconBg: 'rgba(34,197,94,0.15)',   glow: 'rgba(34,197,94,0.12)' },
-    red:    { bg: 'bg-red-50',    icon: 'text-red-400',    border: 'border-red-900/40',    gradient: 'from-red-500 to-rose-600',      iconBg: 'rgba(239,68,68,0.15)',   glow: 'rgba(239,68,68,0.12)' },
-    yellow: { bg: 'bg-yellow-50', icon: 'text-yellow-400', border: 'border-yellow-900/40', gradient: 'from-yellow-400 to-orange-500', iconBg: 'rgba(234,179,8,0.15)',   glow: 'rgba(234,179,8,0.12)' },
-    purple: { bg: 'bg-purple-50', icon: 'text-purple-400', border: 'border-purple-900/40', gradient: 'from-purple-500 to-violet-600', iconBg: 'rgba(168,85,247,0.15)',  glow: 'rgba(168,85,247,0.12)' },
-    indigo: { bg: 'bg-indigo-50', icon: 'text-indigo-400', border: 'border-indigo-900/40', gradient: 'from-indigo-500 to-blue-600',   iconBg: 'rgba(99,102,241,0.15)',  glow: 'rgba(99,102,241,0.12)' },
-    teal:   { bg: 'bg-teal-50',   icon: 'text-teal-400',   border: 'border-teal-900/40',   gradient: 'from-teal-500 to-cyan-600',     iconBg: 'rgba(20,184,166,0.15)',  glow: 'rgba(20,184,166,0.12)' },
-    orange: { bg: 'bg-orange-50', icon: 'text-orange-400', border: 'border-orange-900/40', gradient: 'from-orange-500 to-amber-600',  iconBg: 'rgba(249,115,22,0.15)',  glow: 'rgba(249,115,22,0.12)' },
-    amber:  { bg: 'bg-amber-50',  icon: 'text-amber-400',  border: 'border-amber-900/40',  gradient: 'from-amber-500 to-orange-600',  iconBg: 'rgba(245,158,11,0.15)',  glow: 'rgba(245,158,11,0.12)' },
-    pink:   { bg: 'bg-pink-50',   icon: 'text-pink-400',   border: 'border-pink-900/40',   gradient: 'from-pink-500 to-rose-600',     iconBg: 'rgba(236,72,153,0.15)',  glow: 'rgba(236,72,153,0.12)' },
-    gray:   { bg: 'bg-gray-50',   icon: 'text-gray-400',   border: 'border-gray-700/40',   gradient: 'from-gray-500 to-gray-600',     iconBg: 'rgba(107,114,128,0.15)', glow: 'rgba(107,114,128,0.12)' },
+    blue: { bg: 'bg-blue-50', icon: 'text-blue-400', border: 'border-blue-900/40', gradient: 'from-blue-500 to-blue-600', iconBg: 'rgba(59,130,246,0.15)', glow: 'rgba(59,130,246,0.12)' },
+    green: { bg: 'bg-green-50', icon: 'text-green-400', border: 'border-green-900/40', gradient: 'from-green-500 to-emerald-600', iconBg: 'rgba(34,197,94,0.15)', glow: 'rgba(34,197,94,0.12)' },
+    red: { bg: 'bg-red-50', icon: 'text-red-400', border: 'border-red-900/40', gradient: 'from-red-500 to-rose-600', iconBg: 'rgba(239,68,68,0.15)', glow: 'rgba(239,68,68,0.12)' },
+    yellow: { bg: 'bg-yellow-50', icon: 'text-yellow-400', border: 'border-yellow-900/40', gradient: 'from-yellow-400 to-orange-500', iconBg: 'rgba(234,179,8,0.15)', glow: 'rgba(234,179,8,0.12)' },
+    purple: { bg: 'bg-purple-50', icon: 'text-purple-400', border: 'border-purple-900/40', gradient: 'from-purple-500 to-violet-600', iconBg: 'rgba(168,85,247,0.15)', glow: 'rgba(168,85,247,0.12)' },
+    indigo: { bg: 'bg-indigo-50', icon: 'text-indigo-400', border: 'border-indigo-900/40', gradient: 'from-indigo-500 to-blue-600', iconBg: 'rgba(99,102,241,0.15)', glow: 'rgba(99,102,241,0.12)' },
+    teal: { bg: 'bg-teal-50', icon: 'text-teal-400', border: 'border-teal-900/40', gradient: 'from-teal-500 to-cyan-600', iconBg: 'rgba(20,184,166,0.15)', glow: 'rgba(20,184,166,0.12)' },
+    orange: { bg: 'bg-orange-50', icon: 'text-orange-400', border: 'border-orange-900/40', gradient: 'from-orange-500 to-amber-600', iconBg: 'rgba(249,115,22,0.15)', glow: 'rgba(249,115,22,0.12)' },
+    amber: { bg: 'bg-amber-50', icon: 'text-amber-400', border: 'border-amber-900/40', gradient: 'from-amber-500 to-orange-600', iconBg: 'rgba(245,158,11,0.15)', glow: 'rgba(245,158,11,0.12)' },
+    pink: { bg: 'bg-pink-50', icon: 'text-pink-400', border: 'border-pink-900/40', gradient: 'from-pink-500 to-rose-600', iconBg: 'rgba(236,72,153,0.15)', glow: 'rgba(236,72,153,0.12)' },
+    gray: { bg: 'bg-gray-50', icon: 'text-gray-400', border: 'border-gray-700/40', gradient: 'from-gray-500 to-gray-600', iconBg: 'rgba(107,114,128,0.15)', glow: 'rgba(107,114,128,0.12)' },
 };
 
 export function StatCard({ title, value, sub, icon: Icon, color = 'blue', link, alert, trend, trendLabel, badge }: StatCardProps) {
@@ -118,10 +118,10 @@ export function StatCard({ title, value, sub, icon: Icon, color = 'blue', link, 
                 </div>
             </div>
             <p className="text-xs font-medium mb-1" style={{ color: 'rgb(201, 168, 76)' }}>{title}</p>
-            <p className="text-3xl font-bold mb-2 tracking-tight" style={{ color: '#1a2035' }}>
+            <p className="text-xl md:text-2xl lg:text-3xl font-bold mb-1 md:mb-2 tracking-tight" style={{ color: '#1a2035' }}>
                 {typeof value === 'number' ? <AnimatedNumber value={value} /> : value}
             </p>
-            {sub && <p className="text-xs" style={{ color: 'rgba(0,0,0,0.5)' }}>{sub}</p>}
+            {sub && <p className="text-[10px] md:text-xs truncate" style={{ color: 'rgba(0,0,0,0.5)' }}>{sub}</p>}
             {trend !== undefined && trend !== 0 && (
                 <div className={cn('flex items-center gap-1 mt-2 text-xs font-medium', trend > 0 ? 'text-green-400' : 'text-red-400')}>
                     {trend > 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
@@ -165,10 +165,10 @@ export function QuickAction({ icon: Icon, label, link, color = 'blue', count: co
                         {countNum > 99 ? '99+' : countNum}
                     </span>
                 )}
-                <div className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ backgroundColor: c.iconBg }}>
-                    <Icon className={cn('w-5 h-5', c.icon)} />
+                <div className="w-10 h-10 md:w-11 md:h-11 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: c.iconBg }}>
+                    <Icon className={cn('w-4 h-4 md:w-5 md:h-5', c.icon)} />
                 </div>
-                <span className="text-xs font-medium text-center leading-tight" style={{ color: 'rgb(201, 168, 76)' }}>{label}</span>
+                <span className="text-[10px] md:text-xs font-medium text-center leading-tight line-clamp-2 min-h-[2.5em] flex items-center justify-center" style={{ color: 'rgb(201, 168, 76)' }}>{label}</span>
             </div>
         </Link>
     );
@@ -211,10 +211,10 @@ export function PendingActionRow({ item }: {
 // ═══════════════════════════════════════════════════════════
 export function ModuleHealthBadge({ status, name }: { status: 'healthy' | 'warning' | 'critical' | 'unknown'; name: string }) {
     const styles: Record<string, React.CSSProperties> = {
-        healthy:  { backgroundColor: 'rgba(34,197,94,0.1)',  border: '1px solid rgba(34,197,94,0.25)',  color: '#4ade80' },
-        warning:  { backgroundColor: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)', color: '#fbbf24' },
-        critical: { backgroundColor: 'rgba(239,68,68,0.1)',  border: '1px solid rgba(239,68,68,0.25)',  color: '#f87171' },
-        unknown:  { backgroundColor: 'rgba(107,114,128,0.1)',border: '1px solid rgba(107,114,128,0.25)',color: '#9ca3af' },
+        healthy: { backgroundColor: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)', color: '#4ade80' },
+        warning: { backgroundColor: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)', color: '#fbbf24' },
+        critical: { backgroundColor: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171' },
+        unknown: { backgroundColor: 'rgba(107,114,128,0.1)', border: '1px solid rgba(107,114,128,0.25)', color: '#9ca3af' },
     };
     return (
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium" style={styles[status] ?? styles.unknown}>

@@ -15,42 +15,29 @@ const PRIMARY = '#2F3440';
 const APP_BG = '#F5F7FA';
 
 // ─── Decorative card (matches gyth.html landing section) ─────────────────────
-function DecorativeCard() {
+function DecorativeCard({ small = false }: { small?: boolean }) {
   const [hovered, setHovered] = useState(false);
+  const radius = small ? '1.25rem' : '3rem';
+  const gap = small ? '0.4rem' : '1rem';
   return (
-    <div className="hidden md:block relative h-64 w-full select-none">
-      {/* Back layer — brand gradient, rotated +3° */}
+    <div className="relative w-full select-none h-28 sm:h-40 lg:h-60">
+      {/* Back layer */}
       <div
-        className="absolute inset-0 shadow-2xl"
-        style={{
-          background: 'linear-gradient(135deg, #2F3440, #1F2430, #C9A13B)',
-          borderRadius: '3rem',
-          transform: 'rotate(3deg)',
-          opacity: 0.9,
-        }}
+        className="absolute inset-0 shadow-xl"
+        style={{ background: 'linear-gradient(135deg, #2F3440, #1F2430, #C9A13B)', borderRadius: radius, transform: 'rotate(3deg)', opacity: 0.9 }}
       />
-      {/* Front layer — frosted, rotated -3° (hover → 0°) */}
+      {/* Front layer */}
       <div
-        className="absolute inset-0 shadow-xl flex items-center justify-center p-8"
-        style={{
-          background: 'rgba(255,255,255,0.1)',
-          backdropFilter: 'blur(2px)',
-          border: '1px solid rgba(255,255,255,0.2)',
-          borderRadius: '3rem',
-          transform: hovered ? 'rotate(0deg)' : 'rotate(-3deg)',
-          transition: 'transform 0.5s ease',
-        }}
+        className="absolute inset-0 shadow-lg flex items-center justify-center p-4"
+        style={{ background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(2px)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: radius, transform: hovered ? 'rotate(0deg)' : 'rotate(-3deg)', transition: 'transform 0.5s ease' }}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >
-        <div
-          className="grid grid-cols-2 gap-4 w-full h-full"
-          style={{ opacity: 0.9 }}
-        >
-          <div className="rounded-2xl" style={{ background: 'rgba(255,255,255,0.2)' }} />
-          <div className="rounded-2xl" style={{ background: 'rgba(201,161,59,0.4)' }} />
-          <div className="rounded-2xl" style={{ background: 'rgba(47,52,64,0.4)' }} />
-          <div className="rounded-2xl" style={{ background: 'rgba(255,255,255,0.2)' }} />
+        <div className="grid grid-cols-2 w-full h-full" style={{ gap, opacity: 0.9 }}>
+          <div className="rounded-xl" style={{ background: 'rgba(255,255,255,0.2)' }} />
+          <div className="rounded-xl" style={{ background: 'rgba(201,161,59,0.4)' }} />
+          <div className="rounded-xl" style={{ background: 'rgba(47,52,64,0.4)' }} />
+          <div className="rounded-xl" style={{ background: 'rgba(255,255,255,0.2)' }} />
         </div>
       </div>
     </div>
@@ -220,8 +207,8 @@ export default function Login() {
       <>
         {/* Hero */}
         <section
-          className="flex items-center justify-center px-6 py-8 relative"
-          style={{ animation: 'fadeIn 0.4s ease-in-out', minHeight: '55vh' }}
+          className="flex items-center justify-center px-4 sm:px-6 py-6 relative overflow-hidden"
+          style={{ animation: 'fadeIn 0.4s ease-in-out', minHeight: '45vh' }}
         >
           <div
             className="absolute pointer-events-none"
@@ -233,25 +220,26 @@ export default function Login() {
               borderRadius: '50%',
             }}
           />
-          <div className="max-w-6xl mx-auto w-full grid grid-cols-1 md:grid-cols-2 gap-12 items-center relative z-10">
-            <div className="space-y-6" dir="rtl">
+          <div className="max-w-6xl mx-auto w-full grid grid-cols-2 gap-4 lg:gap-12 items-center relative z-10 px-2 sm:px-4 md:px-0">
+            {/* Text — right column in RTL */}
+            <div className="space-y-3 md:space-y-6 text-right">
               <h1
                 className="font-extrabold leading-tight"
-                style={{ fontSize: 'clamp(1.8rem, 4vw, 3rem)', color: PRIMARY }}
+                style={{ fontSize: 'clamp(1.1rem, 5vw, 3rem)', color: PRIMARY }}
               >
                 الإدارة المؤسسية
                 <br />
                 <span style={{ color: GOLD }}>برؤية حديثة</span>
               </h1>
-              <p className="text-lg" style={{ color: '#6b7280' }}>
+              <p className="text-xs md:text-base" style={{ color: '#6b7280' }}>
                 يساهم نظام غيث في تنظيم وتسهيل إدارة المؤسسات والشركات من خلال
                 إتاحة خدمات إلكترونية متطورة لتمكين العملاء من إجراء معاملاتهم
                 بكل سهولة وأمان.
               </p>
-              <div className="flex flex-wrap gap-4 pt-2">
+              <div className="flex flex-wrap gap-2 md:gap-4">
                 <button
                   onClick={() => setCurrentView('login')}
-                  className="px-8 py-3 rounded-xl font-bold transition"
+                  className="px-5 md:px-8 py-2.5 md:py-3 rounded-xl font-bold transition text-sm md:text-base"
                   style={{ backgroundColor: GOLD, color: '#fff', boxShadow: `0 4px 14px rgba(201,161,59,0.35)` }}
                   onMouseEnter={e => { (e.currentTarget).style.backgroundColor = GOLD_HOVER; }}
                   onMouseLeave={e => { (e.currentTarget).style.backgroundColor = GOLD; }}
@@ -260,20 +248,21 @@ export default function Login() {
                 </button>
                 <button
                   onClick={() => setCurrentView('reset-request')}
-                  className="px-8 py-3 rounded-xl font-bold transition"
+                  className="hidden sm:block px-4 md:px-8 py-2 md:py-3 rounded-xl font-bold transition text-xs md:text-base"
                   {...outlineBtn}
                 >
                   استعادة كلمة المرور
                 </button>
               </div>
             </div>
-            <DecorativeCard />
+            {/* Decorative card — left column in RTL, compact on mobile */}
+            <DecorativeCard small />
           </div>
         </section>
 
         {/* ── خدماتنا الرئيسية ─────────────────────────────── */}
-        <section className="py-8 relative z-10" dir="rtl">
-          <div className="max-w-7xl mx-auto px-6 mb-4">
+        <section className="py-6 relative z-10" dir="rtl">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 mb-4">
             <h2 className="text-2xl md:text-3xl font-bold" style={{ color: PRIMARY }}>خدماتنا الرئيسية</h2>
           </div>
           {/* Marquee container — overflow hidden, full width */}
@@ -281,21 +270,21 @@ export default function Login() {
             {/* Track — contains 2 copies for seamless loop */}
             <div
               className="marquee-track"
-              style={{ display: 'flex', gap: '24px', width: 'max-content', paddingBottom: '8px' }}
+              style={{ display: 'flex', gap: '16px', width: 'max-content', paddingBottom: '16px', paddingInline: '16px' }}
             >
               {[...services, ...services].map((s, i) => (
                 <div
                   key={i}
-                  className="rounded-2xl p-5 flex-shrink-0"
+                  className="rounded-2xl p-5 flex-shrink-0 transition-transform hover:scale-105"
                   style={{
                     ...glassPanel,
-                    width: '260px',
+                    width: '240px',
                     borderTop: `4px solid ${s.accent}`,
                     userSelect: 'none',
                   }}
                 >
                   <h3 className="text-xl font-bold mb-3" style={{ color: PRIMARY }}>{s.title}</h3>
-                  <p style={{ color: '#6b7280', lineHeight: 1.7 }}>{s.desc}</p>
+                  <p className="text-sm" style={{ color: '#6b7280', lineHeight: 1.6 }}>{s.desc}</p>
                 </div>
               ))}
             </div>
@@ -304,13 +293,13 @@ export default function Login() {
 
         {/* ── من نحن ───────────────────────────────────────── */}
         <section
-          className="py-20 relative z-10"
+          className="py-10 md:py-16 relative z-10"
           style={{ backgroundColor: '#fff', borderTop: '1px solid rgba(228,231,236,0.8)', borderBottom: '1px solid rgba(228,231,236,0.8)' }}
           dir="rtl"
         >
-          <div className="max-w-7xl mx-auto px-6 text-center">
-            <h2 className="text-3xl md:text-4xl font-bold mb-6" style={{ color: PRIMARY }}>من نحن</h2>
-            <p className="max-w-3xl mx-auto text-lg leading-relaxed" style={{ color: '#6b7280' }}>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center">
+            <h2 className="text-2xl md:text-3xl font-bold mb-4" style={{ color: PRIMARY }}>من نحن</h2>
+            <p className="max-w-3xl mx-auto text-sm md:text-base leading-relaxed" style={{ color: '#6b7280' }}>
               نحن منصة رقمية متكاملة تهدف إلى رقمنة وأتمتة العمليات الإدارية والتشغيلية للمؤسسات.
               نقدم حلولاً مبتكرة تجمع بين القوة والمرونة لتناسب قطاعات الأعمال المختلفة،
               ونسعى لنكون الشريك الاستراتيجي الأول في رحلة التحول الرقمي.
@@ -319,11 +308,11 @@ export default function Login() {
         </section>
 
         {/* ── تواصل معنا ───────────────────────────────────── */}
-        <section className="py-20 relative z-10" dir="rtl">
-          <div className="max-w-3xl mx-auto px-6">
-            <div className="rounded-3xl p-10 text-center" style={{ ...glassPanel, boxShadow: '0 20px 60px rgba(0,0,0,0.08)' }}>
-              <h2 className="text-3xl font-bold mb-3" style={{ color: PRIMARY }}>تواصل معنا</h2>
-              <p className="mb-8" style={{ color: '#9ca3af' }}>نحن هنا للإجابة على جميع استفساراتك ومساعدتك في البدء.</p>
+        <section className="py-10 md:py-16 relative z-10" dir="rtl">
+          <div className="max-w-3xl mx-auto px-4 sm:px-6">
+            <div className="rounded-2xl md:rounded-3xl p-6 md:p-10 text-center" style={{ ...glassPanel, boxShadow: '0 20px 60px rgba(0,0,0,0.08)' }}>
+              <h2 className="text-2xl md:text-3xl font-bold mb-2" style={{ color: PRIMARY }}>تواصل معنا</h2>
+              <p className="mb-6 text-sm md:text-base" style={{ color: '#9ca3af' }}>نحن هنا للإجابة على جميع استفساراتك ومساعدتك في البدء.</p>
               <div className="space-y-4 text-right">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <input
@@ -379,9 +368,9 @@ export default function Login() {
 
     // ── Sub-views (login, reset) — centered card ──────────────────────────
     return (
-      <section className="flex-1 flex items-center justify-center px-4 py-12">
+      <section className="flex-1 flex items-center justify-center px-4 py-6 md:py-12">
         <div
-          className="w-full max-w-md rounded-2xl p-8 md:p-10"
+          className="w-full max-w-md rounded-2xl p-6 md:p-10"
           dir="rtl"
           style={{
             background: 'rgba(255,255,255,0.95)',
@@ -552,9 +541,10 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: APP_BG, fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif' }}>
+    <div dir="rtl" className="min-h-screen flex flex-col" style={{ backgroundColor: APP_BG, fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif', overflowX: 'hidden', width: '100%' }}>
       {/* Fade-in keyframes */}
       <style>{`
+        html, body { overflow-x: hidden; max-width: 100%; width: 100%; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes marquee { 0% { transform: translateX(-50%); } 100% { transform: translateX(0); } }
         .marquee-track { animation: marquee 28s linear infinite; }
@@ -572,20 +562,21 @@ export default function Login() {
         }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16" dir="rtl">
+          <div className="flex items-center h-16">
             {/* Logo */}
             <button
               onClick={() => { resetAllStates(); setCurrentView('main'); }}
               className="flex items-center gap-3 focus:outline-none"
             >
               <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xl shadow-md"
+                className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xl shadow-lg transition-transform hover:scale-110"
                 style={{ backgroundColor: PRIMARY, color: GOLD }}
               >
                 غ
               </div>
-              <span className="font-bold text-2xl" style={{ color: PRIMARY }}>نظام غيث</span>
+              <span className="font-bold text-xl md:text-2xl" style={{ color: PRIMARY }}>نظام غيث</span>
             </button>
+            {/* Mobile indicator or small label could go here if needed */}
           </div>
         </div>
       </header>

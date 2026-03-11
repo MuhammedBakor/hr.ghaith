@@ -145,8 +145,8 @@ export default function Home() {
       return (
         <div className="space-y-6">
           <div>
-            <h2 className="text-xl font-bold" style={{ color: '#1a2035' }}>المؤسسات والشركات</h2>
-            <p className="text-sm mt-1" style={{ color: '#6b7280' }}>نظرة عامة على جميع الكيانات التابعة للمنصة</p>
+            <h2 className="text-lg md:text-xl font-bold" style={{ color: '#1a2035' }}>المؤسسات والشركات</h2>
+            <p className="text-xs md:text-sm mt-1" style={{ color: '#6b7280' }}>نظرة عامة على جميع الكيانات التابعة للمنصة</p>
           </div>
           {(!adminCompanies || adminCompanies.length === 0) ? (
             <div className="flex flex-col items-center justify-center py-24 rounded-2xl" style={{ backgroundColor: '#ffffff', boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
@@ -158,7 +158,7 @@ export default function Home() {
               {adminCompanies.map((company: any) => (
                 <div
                   key={company.id}
-                  className="rounded-2xl p-5 cursor-pointer group transition-all duration-200"
+                  className="rounded-2xl p-4 md:p-5 cursor-pointer group transition-all duration-200"
                   style={{
                     backgroundColor: '#ffffff',
                     border: '1px solid #f0f0f0',
@@ -343,9 +343,9 @@ export default function Home() {
 
         {/* ─── Quick Actions & Pending Actions ─────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 rounded-2xl p-5" style={{ backgroundColor: '#ffffff', border: 'none', boxShadow: '0 4px 24px rgba(0,0,0,0.08), 0 1px 6px rgba(0,0,0,0.05)' }}>
+          <div className="lg:col-span-2 rounded-2xl p-4 md:p-5" style={{ backgroundColor: '#ffffff', border: 'none', boxShadow: '0 4px 24px rgba(0,0,0,0.08), 0 1px 6px rgba(0,0,0,0.05)' }}>
             <h2 className="text-sm font-semibold mb-4" style={{ color: 'rgb(201, 168, 76)' }}>الوصول السريع</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+            <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
               {canAccessModule('hr') && <QuickAction icon={Users} label="الموظفون" link="/hr/employees" color="blue" count={stats?.hr.active} />}
               {canAccessModule('hr') && <QuickAction icon={FileText} label="الإجازات" link="/hr/leaves" color="green" count={stats?.hr.pendingLeaves} />}
               {canAccessModule('finance') && <QuickAction icon={DollarSign} label="الفواتير" link="/finance/invoices" color="teal" count={stats?.finance.overdue} />}
@@ -417,7 +417,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50/50">
       {/* ─── Main Content ────────────────────────────────────── */}
-      <div className="max-w-screen-2xl mx-auto px-4 py-6">
+      <div className="max-w-screen-2xl mx-auto px-3 md:px-4 py-4 md:py-6">
         {renderDashboard()}
 
         {/* ─── Footer ─────────────────────────────────────── */}
