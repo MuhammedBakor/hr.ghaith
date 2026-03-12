@@ -381,12 +381,6 @@ interface AppContextType {
   // الأدوار المتاحة للمستخدم الحالي
   allowedRoles: UserRoleType[];
 
-  // الفروع المسموحة للمستخدم الحالي (مستمدة من تسجيل الدخول)
-  allowedBranches: any[];
-
-  // اختيار الموظف يدوياً (عند اختيار الفرع)
-  setSelectedEmployeeId: (employeeId: number | null) => void;
-
   // كودات أقسام الشركة المختارة (null = لا قيود)
   companyDeptCodes: string[] | null;
 
@@ -404,33 +398,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     return null;
   });
-
-  const [allowedBranches, setAllowedBranches] = useState<any[]>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('branches');
-      return saved ? JSON.parse(saved) : [];
-    }
-    return [];
-  });
-
-  // Watch for branches in localStorage (updated by authService)
-  useEffect(() => {
-    const checkBranches = () => {
-      const saved = localStorage.getItem('branches');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (JSON.stringify(parsed) !== JSON.stringify(allowedBranches)) {
-          setAllowedBranches(parsed);
-        }
-      }
-    };
-    window.addEventListener('storage', checkBranches);
-    const interval = setInterval(checkBranches, 1000);
-    return () => {
-      window.removeEventListener('storage', checkBranches);
-      clearInterval(interval);
-    };
-  }, [allowedBranches]);
 
   const [selectedCompanyId, setSelectedCompanyIdState] = useState<number | null>(() => {
     if (typeof window !== 'undefined') {
@@ -578,16 +545,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const setSelectedEmployeeId = (employeeId: number | null) => {
-    if (typeof window !== 'undefined') {
-      if (employeeId !== null) {
-        localStorage.setItem('selectedEmployeeId', employeeId.toString());
-      } else {
-        localStorage.removeItem('selectedEmployeeId');
-      }
-    }
-  };
-
   const currentBranch = branches.find(b => b.id === selectedBranchId) || null;
   const permissions = rolePermissions[selectedRole];
   const roleLevel = roleLevels[selectedRole];
@@ -708,8 +665,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       allowedRoles,
       companyDeptCodes,
       selectedCompanyData: selectedCompanyData ?? null,
-      allowedBranches,
-      setSelectedEmployeeId,
     }}>
       {children}
     </AppContext.Provider>

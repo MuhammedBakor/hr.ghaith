@@ -4,7 +4,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import java.util.List;
 
 @Data
 @Builder
@@ -15,5 +14,5 @@ public class AuthenticationResponse {
     private String error;
     private String employeeStatus;
     private Long employeeId;
-    private List<BranchAccessDto> branches;
+    private boolean hasMultipleBranches;
 }

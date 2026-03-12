@@ -19,12 +19,6 @@ export const authService = {
         const response = await api.post("/auth/authenticate", loginData);
         if (response.data.token) {
             localStorage.setItem("token", response.data.token);
-            if (response.data.branches) {
-                localStorage.setItem("branches", JSON.stringify(response.data.branches));
-            }
-            if (response.data.employeeId) {
-                localStorage.setItem("selectedEmployeeId", response.data.employeeId.toString());
-            }
         }
         return response.data;
     },

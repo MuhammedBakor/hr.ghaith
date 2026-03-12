@@ -161,17 +161,12 @@ public class EmployeeController {
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<?> getEmployeesByUserId(
+    public ResponseEntity<Employee> getEmployeeByUserId(
             @PathVariable Long userId,
             @RequestParam(required = false) Long branchId) {
-        List<Employee> employees = employeeService.getEmployeesByUserIdAndBranch(userId, branchId);
-        if (employees.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-        if (branchId != null) {
-            return ResponseEntity.ok(employees.get(0));
-        }
-        return ResponseEntity.ok(employees);
+        return employeeService.getEmployeeByUserIdAndBranch(userId, branchId)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/{id}/subordinates")

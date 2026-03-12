@@ -122,7 +122,6 @@ public class EmployeeService {
         // Validate: check if this email is already used by an employee IN THE SAME
         // BRANCH
         if (email != null) {
-            email = email.toLowerCase();
             if (branchId != null) {
                 // Branch-scoped check: only reject if same email exists in the same branch
                 if (employeeRepository.findByEmailAndBranchId(email, branchId).isPresent()) {
@@ -140,7 +139,7 @@ public class EmployeeService {
         Employee employee = new Employee();
         employee.setFirstName(firstName);
         employee.setLastName(lastName);
-        employee.setEmail(email != null ? email.toLowerCase() : null);
+        employee.setEmail(email);
         employee.setPhone(phone);
         employee.setEmployeeNumber("EMP" + System.currentTimeMillis());
         employee.setStatus(Employee.EmployeeStatus.inactive);
@@ -171,13 +170,12 @@ public class EmployeeService {
         }
 
         System.out.println("Creating User object for role: " + role);
-        String finalEmail = email != null ? email.toLowerCase() : null;
-        User user = userRepository.findByEmail(finalEmail).orElse(null);
+        User user = userRepository.findByEmail(email).orElse(null);
         if (user != null) {
             // User exists — check if already linked to an employee IN THE SAME BRANCH
             boolean alreadyEmployeeInBranch = branchId != null
                     ? employeeRepository.findByUserIdAndBranchId(user.getId(), branchId).isPresent()
-                    : !employeeRepository.findByUserId(user.getId()).isEmpty();
+                    : !employeeRepository.findAllByUserId(user.getId()).isEmpty();
             if (alreadyEmployeeInBranch) {
                 throw new DuplicateEmailException(
                         "البريد الإلكتروني '" + email + "' مرتبط بموظف موجود بالفعل في هذا الفرع.");
@@ -190,8 +188,8 @@ public class EmployeeService {
         } else {
             System.out.println("Creating new User...");
             user = User.builder()
-                    .username(finalEmail)
-                    .email(finalEmail)
+                    .username(email)
+                    .email(email)
                     .password(passwordEncoder.encode(generateRandomPassword(10)))
                     .role(role)
                     .enabled(false)
@@ -437,24 +435,17 @@ public class EmployeeService {
         // 2. Clean up dependent records to avoid FK violations
         String[] tables = {
                 "attendance_records", "payroll_records", "performance_reviews",
-                "performance_kpis", "performance_goals", "hr_leave_requests",
-                "hr_leave_balances", "training_enrollments", "hr_field_tracking_sessions",
-                "employee_documents"
+                "performance_kpis", "performance_goals", "leave_requests",
+                "leave_balances", "training_enrollments", "field_tracking_sessions",
+                "employee_documents", "violation_records", "onboarding_tasks"
         };
 
         for (String table : tables) {
             try {
-                // Check if table exists before trying to delete (transaction-safe)
-                Number tableExists = (Number) entityManager.createNativeQuery(
-                        "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = :tname")
-                        .setParameter("tname", table).getSingleResult();
-
-                if (tableExists.longValue() > 0) {
-                    entityManager.createNativeQuery("DELETE FROM " + table + " WHERE employee_id = :id")
-                            .setParameter("id", id).executeUpdate();
-                }
+                entityManager.createNativeQuery("DELETE FROM " + table + " WHERE employee_id = :id")
+                        .setParameter("id", id).executeUpdate();
             } catch (Exception e) {
-                // Log and continue
+                // Table might not exist or column name differs, skip gracefully
                 System.out.println("Could not clean up table " + table + ": " + e.getMessage());
             }
         }
@@ -505,17 +496,15 @@ public class EmployeeService {
         return employeeRepository.save(employee);
     }
 
-    public List<Employee> getEmployeesByUserId(Long userId) {
-        return employeeRepository.findByUserId(userId);
+    public Optional<Employee> getEmployeeByUserId(Long userId) {
+        return employeeRepository.findAllByUserId(userId).stream().findFirst();
     }
 
-    public List<Employee> getEmployeesByUserIdAndBranch(Long userId, Long branchId) {
+    public Optional<Employee> getEmployeeByUserIdAndBranch(Long userId, Long branchId) {
         if (branchId != null) {
-            return employeeRepository.findByUserIdAndBranchId(userId, branchId)
-                    .map(List::of)
-                    .orElse(List.of());
+            return employeeRepository.findByUserIdAndBranchId(userId, branchId);
         }
-        return employeeRepository.findByUserId(userId);
+        return employeeRepository.findAllByUserId(userId).stream().findFirst();
     }
 
     public List<Employee> getSubordinates(Long managerId) {

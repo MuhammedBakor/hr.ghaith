@@ -215,11 +215,9 @@ public class AttendanceService {
 
     public AttendanceRecord checkInWithQR(Map<String, Object> payload, Long userId) {
         // Simple implementation: find employee by userId and check in
-        List<Employee> employees = employeeRepository.findByUserId(userId);
-        if (employees.isEmpty()) {
-            throw new RuntimeException("Employee not found for user ID: " + userId);
-        }
-        Employee employee = employees.get(0);
+        Employee employee = employeeRepository.findAllByUserId(userId).stream()
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Employee not found for user ID: " + userId));
 
         AttendanceRecord record = new AttendanceRecord();
         record.setEmployee(employee);

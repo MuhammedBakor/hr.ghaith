@@ -29,15 +29,8 @@ public class FieldTrackingService {
 
     @Transactional
     public FieldTrackingSession startSession(Long userId, Double lat, Double lng) {
-        List<Employee> employees = employeeService.getEmployeesByUserId(userId);
-        Employee employee = employees.stream()
-                .filter(e -> e.getStatus() == Employee.EmployeeStatus.active)
-                .findFirst()
-                .orElse(employees.isEmpty() ? null : employees.get(0));
-
-        if (employee == null) {
-            throw new RuntimeException("Employee not found");
-        }
+        Employee employee = employeeService.getEmployeeByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("Employee not found"));
 
         FieldTrackingSession session = FieldTrackingSession.builder()
                 .employee(employee)
