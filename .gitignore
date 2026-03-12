@@ -119,3 +119,5 @@ uploads/
 ghaith_backups/
 backend/target/
 backend/src/main/resources/application.yml
+backend/target/
+backend/src/main/resources/application.yml
