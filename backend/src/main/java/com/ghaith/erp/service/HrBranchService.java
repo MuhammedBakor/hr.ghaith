@@ -16,6 +16,10 @@ public class HrBranchService {
         return hrBranchRepository.findAll();
     }
 
+    public List<HrBranch> getUserBranches(Long userId) {
+        return hrBranchRepository.findBranchesByUserId(userId);
+    }
+
     public HrBranch getBranchById(Long id) {
         return hrBranchRepository.findById(id).orElse(null);
     }

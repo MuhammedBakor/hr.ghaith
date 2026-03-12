@@ -19,6 +19,10 @@ export const authService = {
         const response = await api.post("/auth/authenticate", loginData);
         if (response.data.token) {
             localStorage.setItem("token", response.data.token);
+            // Clear stale branch/role context on new login
+            localStorage.removeItem("selectedBranchId");
+            localStorage.removeItem("selectedCompanyId");
+            localStorage.removeItem("selectedRole");
         }
         return response.data;
     },

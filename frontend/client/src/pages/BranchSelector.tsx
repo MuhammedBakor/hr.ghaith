@@ -24,16 +24,24 @@ export default function BranchSelector() {
     }
   }, [authLoading, isAuthenticated]);
 
-  // Redirect non-admin/GM users directly to home (check raw server role)
+  // Redirect non-admin/GM users directly to home ONLY if they have 0 or 1 branch
   useEffect(() => {
-    if (!authLoading && isAuthenticated && user?.role) {
+    if (!authLoading && isAuthenticated && !branchesLoading && user?.role) {
       const role = user.role.toLowerCase();
       const isAdminOrGM = role === 'owner' || role === 'admin' || role === 'system_admin' || role === 'general_manager';
+
       if (!isAdminOrGM) {
-        setLocation('/');
+        if (branches.length === 1) {
+          // If only one branch, auto-select it and go home
+          handleBranchEntry(branches[0].id);
+        } else if (branches.length === 0) {
+          // No branches found for this user
+          setLocation('/');
+        }
+        // If more than 1 branch, stay here and let them choose
       }
     }
-  }, [authLoading, isAuthenticated, user?.role]);
+  }, [authLoading, isAuthenticated, branchesLoading, user?.role, branches.length]);
 
   const handleAdminEntry = () => {
     setSelectedBranchId(null);

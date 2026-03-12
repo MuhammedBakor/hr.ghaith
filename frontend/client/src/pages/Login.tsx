@@ -71,7 +71,7 @@ export default function Login() {
   const verifyResetMutation = useResetPassword();
 
   useEffect(() => {
-    if (!authLoading && isAuthenticated) setLocation('/');
+    if (!authLoading && isAuthenticated) setLocation('/select-branch');
   }, [isAuthenticated, authLoading, setLocation]);
 
   const handleLoginSubmit = (e: React.FormEvent) => {

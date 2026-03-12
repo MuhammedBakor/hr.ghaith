@@ -15,7 +15,16 @@ public class HrBranchController {
     private final HrBranchService hrBranchService;
 
     @GetMapping
-    public List<HrBranch> getAllBranches() {
+    public List<HrBranch> getAllBranches(
+            @org.springframework.security.core.annotation.AuthenticationPrincipal com.ghaith.erp.model.User user) {
+        if (user != null) {
+            var role = user.getRole().name().toLowerCase();
+            boolean isAdminOrGM = role.equals("owner") || role.equals("admin") || role.equals("system_admin")
+                    || role.equals("general_manager");
+            if (!isAdminOrGM) {
+                return hrBranchService.getUserBranches(user.getId());
+            }
+        }
         return hrBranchService.getAllBranches();
     }
 
