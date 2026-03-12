@@ -9,4 +9,6 @@ import java.util.List;
 @Repository
 public interface AdminCompanyRepository extends JpaRepository<AdminCompany, Long> {
     List<AdminCompany> findAllByOrderByCreatedAtDesc();
+
+    java.util.Optional<AdminCompany> findByBranchId(Long branchId);
 }

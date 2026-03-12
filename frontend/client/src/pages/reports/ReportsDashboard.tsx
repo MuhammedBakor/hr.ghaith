@@ -204,7 +204,7 @@ export default function ReportsDashboard() {
       </div>
 
       <Tabs defaultValue="generate" className="space-y-4">
-        <TabsList>
+        <TabsList className="flex-wrap">
           <TabsTrigger value="generate" className="gap-2">
             <FileText className="h-4 w-4" />
             إنشاء تقرير

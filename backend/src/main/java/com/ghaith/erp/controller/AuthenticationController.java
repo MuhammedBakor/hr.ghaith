@@ -4,7 +4,6 @@ import com.ghaith.erp.dto.*;
 import com.ghaith.erp.service.AuthenticationService;
 import com.ghaith.erp.service.SessionService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -16,6 +15,7 @@ public class AuthenticationController {
 
     private final AuthenticationService service;
     private final SessionService sessionService;
+
     @PostMapping("/register")
     public ResponseEntity<AuthenticationResponse> register(
             @RequestBody RegisterRequest request) {

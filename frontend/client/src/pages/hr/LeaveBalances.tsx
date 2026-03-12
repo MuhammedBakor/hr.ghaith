@@ -48,7 +48,7 @@ const leaveTypeColors: Record<string, string> = {
 };
 
 export default function LeaveBalancesPage() {
-  const { selectedRole } = useAppContext();
+  const { selectedRole, selectedBranchId } = useAppContext();
   const isHr = selectedRole === 'hr_manager' || selectedRole === 'admin';
   const isGM = selectedRole === 'general_manager';
   const isDeptManager = selectedRole === 'department_manager' || selectedRole === 'supervisor';
@@ -64,9 +64,10 @@ export default function LeaveBalancesPage() {
     totalBalance: '',
   });
 
-  const { data: balancesData, isLoading: loadingBalances } = useLeaveBalances();
-  const { data: employeesData, isLoading: loadingEmployees } = useEmployees();
-  const { data: departmentsData } = useDepartments();
+  // Backend filters by branchId - no client-side filtering needed
+  const { data: balancesData, isLoading: loadingBalances } = useLeaveBalances({ branchId: selectedBranchId });
+  const { data: employeesData, isLoading: loadingEmployees } = useEmployees({ branchId: selectedBranchId });
+  const { data: departmentsData } = useDepartments({ branchId: selectedBranchId });
 
   const setBalanceMut = useSetLeaveBalance();
   const updateBalanceMut = useUpdateLeaveBalance();

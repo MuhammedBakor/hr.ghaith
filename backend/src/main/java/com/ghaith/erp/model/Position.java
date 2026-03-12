@@ -19,4 +19,5 @@ public class Position extends BaseEntity {
     private String title;
     private String description;
     private String status; // active, inactive
+    private Long branchId;
 }

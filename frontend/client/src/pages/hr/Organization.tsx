@@ -44,7 +44,7 @@ export default function Organization() {
   const [showInlineForm, setShowInlineForm] = useState(false);
   const [inlineData, setInlineData] = useState<any>({});
 
-  const { selectedRole: userRole } = useAppContext();
+  const { selectedRole: userRole, selectedBranchId } = useAppContext();
   const canEdit = userRole === "admin" || userRole === "manager";
   const canDelete = userRole === "admin";
 
@@ -61,10 +61,10 @@ export default function Organization() {
   const queryClient = useQueryClient();
 
   // جلب الأقسام
-  const { data: departmentsData, isLoading, isError } = useDepartments();
+  const { data: departmentsData, isLoading, isError } = useDepartments({ branchId: selectedBranchId });
 
   // جلب الموظفين للإحصائيات
-  const { data: employeesData } = useEmployees();
+  const { data: employeesData } = useEmployees({ branchId: selectedBranchId });
 
   // إنشاء قسم جديد
   const createDeptMutation = useCreateDepartment();

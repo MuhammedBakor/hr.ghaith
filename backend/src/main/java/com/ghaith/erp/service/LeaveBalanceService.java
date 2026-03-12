@@ -17,7 +17,10 @@ public class LeaveBalanceService {
     private final LeaveBalanceRepository leaveBalanceRepository;
     private final EmployeeRepository employeeRepository;
 
-    public List<LeaveBalance> getAllBalances() {
+    public List<LeaveBalance> getAllBalances(Long branchId) {
+        if (branchId != null) {
+            return leaveBalanceRepository.findByEmployeeBranchId(branchId);
+        }
         return leaveBalanceRepository.findAll();
     }
 

@@ -92,10 +92,16 @@ export const useBranches = () => useQuery({
     queryFn: () => api.get('/hr/branches').then(res => res.data),
 });
 
-// Roles
+// System roles (enum values from backend)
 export const useRoles = () => useQuery({
-    queryKey: ['roles'],
+    queryKey: ['hr-system-roles'],
     queryFn: () => api.get('/hr/roles').then(res => res.data),
+});
+
+// Custom roles (DB-stored RolePack records)
+export const useCustomRoles = () => useQuery({
+    queryKey: ['custom-roles'],
+    queryFn: () => api.get('/roles').then(res => res.data),
 });
 
 export const useCreateEmployee = () => {
@@ -153,9 +159,9 @@ export const useInviteEmployee = () => {
     });
 };
 
-export const useEmployeeByUserId = (userId: number) => useQuery({
-    queryKey: ['employees', 'user', userId],
-    queryFn: () => api.get(`/hr/employees/user/${userId}`).then(res => res.data),
+export const useEmployeeByUserId = (userId: number, branchId?: number | null) => useQuery({
+    queryKey: ['employees', 'user', userId, branchId],
+    queryFn: () => api.get(`/hr/employees/user/${userId}`, { params: branchId ? { branchId } : undefined }).then(res => res.data),
     enabled: !!userId,
     retry: false,
 });
@@ -167,9 +173,9 @@ export const useSubordinates = (managerId: number) => useQuery({
 });
 
 // Departments
-export const useDepartments = () => useQuery({
-    queryKey: ['departments'],
-    queryFn: () => api.get('/hr/departments').then(res => res.data),
+export const useDepartments = (filters?: { branchId?: number | null }) => useQuery({
+    queryKey: ['departments', filters],
+    queryFn: () => api.get('/hr/departments', { params: filters }).then(res => res.data),
 });
 
 export const useCreateDepartment = () => {
@@ -197,9 +203,9 @@ export const useDeleteDepartment = () => {
 };
 
 // Positions
-export const usePositions = () => useQuery({
-    queryKey: ['positions'],
-    queryFn: () => api.get('/hr/positions').then(res => res.data),
+export const usePositions = (filters?: { branchId?: number | null }) => useQuery({
+    queryKey: ['positions', filters],
+    queryFn: () => api.get('/hr/positions', { params: filters }).then(res => res.data),
 });
 
 export const useCreatePosition = () => {
@@ -227,9 +233,9 @@ export const useDeletePosition = () => {
 };
 
 // Leaves
-export const useLeaves = () => useQuery({
-    queryKey: ['leaves'],
-    queryFn: () => api.get('/hr/leaves').then(res => res.data),
+export const useLeaves = (filters?: { branchId?: number | null }) => useQuery({
+    queryKey: ['leaves', filters],
+    queryFn: () => api.get('/hr/leaves', { params: filters }).then(res => res.data),
 });
 
 export const useCreateLeave = () => {
@@ -265,15 +271,15 @@ export const useLeavesByEmployee = (employeeId: number) => useQuery({
     enabled: !!employeeId,
 });
 
-export const useLeavesByDepartment = (departmentId: number) => useQuery({
-    queryKey: ['leaves', 'department', departmentId],
-    queryFn: () => api.get(`/hr/leaves/department/${departmentId}`).then(res => res.data),
+export const useLeavesByDepartment = (departmentId: number, filters?: { branchId?: number | null }) => useQuery({
+    queryKey: ['leaves', 'department', departmentId, filters],
+    queryFn: () => api.get(`/hr/leaves/department/${departmentId}`, { params: filters }).then(res => res.data),
     enabled: !!departmentId,
 });
 
-export const useLeavesByStage = (stage: string) => useQuery({
-    queryKey: ['leaves', 'stage', stage],
-    queryFn: () => api.get(`/hr/leaves/stage/${stage}`).then(res => res.data),
+export const useLeavesByStage = (stage: string, filters?: { branchId?: number | null }) => useQuery({
+    queryKey: ['leaves', 'stage', stage, filters],
+    queryFn: () => api.get(`/hr/leaves/stage/${stage}`, { params: filters }).then(res => res.data),
     enabled: !!stage,
 });
 
@@ -354,9 +360,9 @@ export const useCancelLeave = () => {
 };
 
 // Leave Balances
-export const useLeaveBalances = () => useQuery({
-    queryKey: ['leave-balances'],
-    queryFn: () => api.get('/hr/leave-balances').then(res => res.data),
+export const useLeaveBalances = (filters?: { branchId?: number | null }) => useQuery({
+    queryKey: ['leave-balances', filters],
+    queryFn: () => api.get('/hr/leave-balances', { params: filters }).then(res => res.data),
 });
 
 export const useLeaveBalancesByEmployee = (employeeId: number) => useQuery({
@@ -391,9 +397,9 @@ export const useDeleteLeaveBalance = () => {
     });
 };
 // Attendance
-export const useAttendance = (date?: string) => useQuery({
-    queryKey: ['attendance', date],
-    queryFn: () => api.get('/hr/attendance', { params: { date } }).then(res => res.data),
+export const useAttendance = (date?: string, branchId?: number | null) => useQuery({
+    queryKey: ['attendance', date, branchId],
+    queryFn: () => api.get('/hr/attendance', { params: { date, branchId } }).then(res => res.data),
 });
 
 export const useAttendanceByEmployee = (employeeId: number) => useQuery({

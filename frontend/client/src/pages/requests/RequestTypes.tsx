@@ -524,8 +524,8 @@ export default function RequestTypes() {
               <p>لا توجد أنواع طلبات</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
+            <div className="overflow-x-auto w-full">
+              <table className="min-w-[600px] w-full">
                 <thead>
                   <tr className="border-b">
                     <th className="text-end p-3 font-medium">

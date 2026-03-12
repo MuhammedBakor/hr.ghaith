@@ -109,7 +109,7 @@ export default function OrganizationStructure() {
   const [inlineData, setInlineData] = useState<any>({});
 
   const [searchTerm, setSearchTerm] = useState('');
-  const { selectedRole: userRole } = useAppContext();
+  const { selectedRole: userRole, selectedBranchId } = useAppContext();
   const canEdit = userRole === "admin" || userRole === "manager";
   const canDelete = userRole === "admin";
 
@@ -138,9 +138,9 @@ export default function OrganizationStructure() {
   const [isDeletePositionOpen, setIsDeletePositionOpen] = useState(false);
 
   // جلب البيانات من API (REST)
-  const { data: employeesData, isError, error } = useEmployees();
-  const { data: departmentsData, isLoading: loadingDepts, refetch: refetchDepts } = useDepartments();
-  const { data: positionsData, isLoading: loadingPositions, refetch: refetchPositions } = usePositions();
+  const { data: employeesData, isError, error } = useEmployees({ branchId: selectedBranchId });
+  const { data: departmentsData, isLoading: loadingDepts, refetch: refetchDepts } = useDepartments({ branchId: selectedBranchId });
+  const { data: positionsData, isLoading: loadingPositions, refetch: refetchPositions } = usePositions({ branchId: selectedBranchId });
 
   // Mutations للأقسام
   const createDeptMutation = useCreateDepartment();

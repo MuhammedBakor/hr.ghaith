@@ -380,6 +380,18 @@ interface AppContextType {
 
   // الأدوار المتاحة للمستخدم الحالي
   allowedRoles: UserRoleType[];
+
+  // الفروع المسموحة للمستخدم الحالي (مستمدة من تسجيل الدخول)
+  allowedBranches: any[];
+
+  // اختيار الموظف يدوياً (عند اختيار الفرع)
+  setSelectedEmployeeId: (employeeId: number | null) => void;
+
+  // كودات أقسام الشركة المختارة (null = لا قيود)
+  companyDeptCodes: string[] | null;
+
+  // بيانات الشركة المختارة
+  selectedCompanyData: any | null;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -392,6 +404,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     return null;
   });
+
+  const [allowedBranches, setAllowedBranches] = useState<any[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('branches');
+      return saved ? JSON.parse(saved) : [];
+    }
+    return [];
+  });
+
+  // Watch for branches in localStorage (updated by authService)
+  useEffect(() => {
+    const checkBranches = () => {
+      const saved = localStorage.getItem('branches');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (JSON.stringify(parsed) !== JSON.stringify(allowedBranches)) {
+          setAllowedBranches(parsed);
+        }
+      }
+    };
+    window.addEventListener('storage', checkBranches);
+    const interval = setInterval(checkBranches, 1000);
+    return () => {
+      window.removeEventListener('storage', checkBranches);
+      clearInterval(interval);
+    };
+  }, [allowedBranches]);
 
   const [selectedCompanyId, setSelectedCompanyIdState] = useState<number | null>(() => {
     if (typeof window !== 'undefined') {
@@ -460,10 +499,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const { data: authData } = useUser();
   const currentUserId = authData?.id || null;
 
-  // جلب الموظف المرتبط بالمستخدم الحالي مباشرةً (بدلاً من جلب كل الموظفين)
+  // جلب الموظف المرتبط بالمستخدم الحالي - مفلتر بالفرع للعزل بين الفروع
   const { data: currentEmployee } = useQuery<any>({
-    queryKey: ['employee', 'me', currentUserId],
-    queryFn: () => api.get(`/hr/employees/user/${currentUserId}`).then(r => r.data).catch(() => null),
+    queryKey: ['employee', 'me', currentUserId, selectedBranchId],
+    queryFn: () => {
+      const params = selectedBranchId ? `?branchId=${selectedBranchId}` : '';
+      return api.get(`/hr/employees/user/${currentUserId}${params}`).then(r => r.data).catch(() => null);
+    },
     enabled: !!currentUserId,
     staleTime: 5 * 60 * 1000,
   });
@@ -533,6 +575,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setSelectedRoleState(role);
     if (typeof window !== 'undefined') {
       localStorage.setItem('selectedRole', role);
+    }
+  };
+
+  const setSelectedEmployeeId = (employeeId: number | null) => {
+    if (typeof window !== 'undefined') {
+      if (employeeId !== null) {
+        localStorage.setItem('selectedEmployeeId', employeeId.toString());
+      } else {
+        localStorage.removeItem('selectedEmployeeId');
+      }
     }
   };
 
@@ -654,6 +706,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       currentEmployeeId,
       currentEmployee: currentEmployee || null,
       allowedRoles,
+      companyDeptCodes,
+      selectedCompanyData: selectedCompanyData ?? null,
+      allowedBranches,
+      setSelectedEmployeeId,
     }}>
       {children}
     </AppContext.Provider>

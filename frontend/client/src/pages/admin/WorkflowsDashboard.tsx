@@ -26,7 +26,7 @@ export default function WorkflowsDashboard() {
   });
   const handleSave = (data?: any) => { if (data?.id) saveMut.mutate(data); else toast.success('تم الحفظ'); };
 
-  const { data: currentUser, isError, error} = useQuery({
+  const { data: currentUser, isError, error } = useQuery({
     queryKey: ['auth', 'me'],
     queryFn: () => api.get('/auth/me').then(r => r.data),
   });
@@ -41,7 +41,7 @@ export default function WorkflowsDashboard() {
   const pageSize = 20;
 
   const [activeTab, setActiveTab] = useState("overview");
-  
+
   // جلب البيانات من API
   const { data: purchaseOrders, isLoading: loadingPO, refetch: refetchPO } = useQuery({
     queryKey: ['admin', 'purchase-orders'],
@@ -65,28 +65,28 @@ export default function WorkflowsDashboard() {
   const calculateStats = () => {
     const pos = purchaseOrders || [];
     const leaves = leaveRequests || [];
-    
+
     // P2P Stats
     const p2pTotal = pos.length;
     const p2pActive = pos.filter((p: any) => ['draft', 'submitted', 'approved'].includes(p.status)).length;
     const p2pPending = pos.filter((p: any) => p.status === 'submitted').length;
     const p2pCompleted = pos.filter((p: any) => p.status === 'completed').length;
     const p2pOverdue = 0; // يمكن حسابه بناءً على تاريخ الاستحقاق
-    
+
     // H2R Stats
     const h2rTotal = leaves.length;
     const h2rActive = leaves.filter((l: any) => l.status === 'pending').length;
     const h2rPending = leaves.filter((l: any) => l.status === 'pending').length;
     const h2rCompleted = leaves.filter((l: any) => l.status === 'approved').length;
     const h2rOverdue = 0;
-    
+
     // Process Instances Stats (من طلبات الشراء والإجازات)
     const processTotal = pos.length + leaves.length;
     const processActive = p2pActive + h2rActive;
     const processPending = p2pPending + h2rPending;
     const processCompleted = p2pCompleted + h2rCompleted;
     const processOverdue = 0;
-    
+
     return {
       workflows: [
         {
@@ -382,7 +382,7 @@ export default function WorkflowsDashboard() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
+          <TabsList className="flex-wrap">
             <TabsTrigger value="overview">نظرة عامة</TabsTrigger>
             <TabsTrigger value="active">المسارات النشطة</TabsTrigger>
             <TabsTrigger value="analytics">التحليلات</TabsTrigger>
@@ -401,7 +401,7 @@ export default function WorkflowsDashboard() {
                         </div>
                         <div>
                           <CardTitle className="text-lg">{workflow.nameAr}</CardTitle>
-              <PrintButton title="{workflow.nameAr}" />
+                          <PrintButton title="{workflow.nameAr}" />
                           <CardDescription>{workflow.name}</CardDescription>
                         </div>
                       </div>
@@ -448,62 +448,62 @@ export default function WorkflowsDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
-<Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>المرجع</TableHead>
-                      <TableHead>النوع</TableHead>
-                      <TableHead>العنوان</TableHead>
-                      <TableHead>الخطوة الحالية</TableHead>
-                      <TableHead>التقدم</TableHead>
-                      <TableHead>الحالة</TableHead>
-                      <TableHead>الأولوية</TableHead>
-                      <TableHead></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {activeWorkflows.length === 0 ? (
+                  <Table>
+                    <TableHeader>
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                          لا توجد مسارات نشطة حالياً
-                        </TableCell>
+                        <TableHead>المرجع</TableHead>
+                        <TableHead>النوع</TableHead>
+                        <TableHead>العنوان</TableHead>
+                        <TableHead>الخطوة الحالية</TableHead>
+                        <TableHead>التقدم</TableHead>
+                        <TableHead>الحالة</TableHead>
+                        <TableHead>الأولوية</TableHead>
+                        <TableHead></TableHead>
                       </TableRow>
-                    ) : (
-                      activeWorkflows.map((workflow) => (
-                        <TableRow key={workflow.id}>
-                          <TableCell className="font-medium">{workflow.reference}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{workflow.typeAr}</Badge>
-                          </TableCell>
-                          <TableCell>{workflow.title}</TableCell>
-                          <TableCell>{workflow.currentStep}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Progress value={workflow.progress} className="w-20" />
-                              <span className="text-sm">{workflow.progress}%</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={getStatusColor(workflow.status)}>
-                              {getStatusText(workflow.status)}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={getPriorityColor(workflow.priority)}>
-                              {String(workflow.priority) === 'urgent' ? 'عاجل' :
-                               String(workflow.priority) === 'high' ? 'عالي' :
-                               String(workflow.priority) === 'medium' ? 'متوسط' : 'منخفض'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Button variant="ghost" onClick={() => toast.info("عرض التفاصيل")}><Eye className="h-4 w-4" /></Button>
+                    </TableHeader>
+                    <TableBody>
+                      {activeWorkflows.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                            لا توجد مسارات نشطة حالياً
                           </TableCell>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-</div>
+                      ) : (
+                        activeWorkflows.map((workflow) => (
+                          <TableRow key={workflow.id}>
+                            <TableCell className="font-medium">{workflow.reference}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{workflow.typeAr}</Badge>
+                            </TableCell>
+                            <TableCell>{workflow.title}</TableCell>
+                            <TableCell>{workflow.currentStep}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Progress value={workflow.progress} className="w-20" />
+                                <span className="text-sm">{workflow.progress}%</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={getStatusColor(workflow.status)}>
+                                {getStatusText(workflow.status)}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={getPriorityColor(workflow.priority)}>
+                                {String(workflow.priority) === 'urgent' ? 'عاجل' :
+                                  String(workflow.priority) === 'high' ? 'عالي' :
+                                    String(workflow.priority) === 'medium' ? 'متوسط' : 'منخفض'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Button variant="ghost" onClick={() => toast.info("عرض التفاصيل")}><Eye className="h-4 w-4" /></Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

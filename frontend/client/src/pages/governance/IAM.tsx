@@ -202,7 +202,7 @@ export default function IAM() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
+        <TabsList className="flex-wrap">
           <TabsTrigger value="users" className="gap-2">
             <Users className="h-4 w-4" />
             المستخدمين

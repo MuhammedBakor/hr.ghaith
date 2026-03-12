@@ -24,7 +24,10 @@ public class LeaveService {
     private final EmployeeRepository employeeRepository;
     private final LeaveBalanceService leaveBalanceService;
 
-    public List<LeaveRequest> getAllLeaveRequests() {
+    public List<LeaveRequest> getAllLeaveRequests(Long branchId) {
+        if (branchId != null) {
+            return leaveRepository.findByEmployeeBranchId(branchId);
+        }
         return leaveRepository.findAll();
     }
 
@@ -36,15 +39,30 @@ public class LeaveService {
         return leaveRepository.findById(id);
     }
 
-    public List<LeaveRequest> getLeaveRequestsByDepartment(Long departmentId) {
+    public List<LeaveRequest> getLeaveRequestsByDepartment(Long departmentId, Long branchId) {
+        if (branchId != null) {
+            return leaveRepository.findByEmployeeDepartmentIdAndBranchId(departmentId, branchId);
+        }
         return leaveRepository.findByEmployeeDepartmentId(departmentId);
     }
 
-    public List<LeaveRequest> getLeaveRequestsByApprovalStage(LeaveRequest.ApprovalStage stage) {
+    public List<LeaveRequest> getLeaveRequestsByApprovalStage(LeaveRequest.ApprovalStage stage, Long branchId) {
+        if (branchId != null) {
+            return leaveRepository.findByEmployeeBranchIdAndApprovalStage(branchId, stage);
+        }
         return leaveRepository.findByApprovalStage(stage);
     }
 
-    public List<LeaveRequest> getLeaveRequestsByDepartmentAndStage(Long departmentId, LeaveRequest.ApprovalStage stage) {
+    public List<LeaveRequest> getLeaveRequestsByDepartmentAndStage(Long departmentId, LeaveRequest.ApprovalStage stage, Long branchId) {
+        if (branchId != null) {
+            // Filter by department + stage + branch
+            return leaveRepository.findByEmployeeDepartmentIdAndApprovalStage(departmentId, stage)
+                .stream()
+                .filter(lr -> lr.getEmployee() != null
+                    && lr.getEmployee().getBranch() != null
+                    && branchId.equals(lr.getEmployee().getBranch().getId()))
+                .collect(java.util.stream.Collectors.toList());
+        }
         return leaveRepository.findByEmployeeDepartmentIdAndApprovalStage(departmentId, stage);
     }
 

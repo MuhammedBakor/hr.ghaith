@@ -105,7 +105,7 @@ export default function Leaves() {
     reason: '',
   });
 
-  const { selectedRole, currentEmployeeId, currentUserId } = useAppContext();
+  const { selectedRole, currentEmployeeId, currentUserId, selectedBranchId } = useAppContext();
 
   // Determine the user's role capabilities
   const isEmployee = selectedRole === 'employee';
@@ -115,10 +115,10 @@ export default function Leaves() {
   const isAdmin = selectedRole === 'admin';
   const canApprove = isDeptManager || isHrManager || isGM || isAdmin;
 
-  // Fetch data
-  const { data: allLeavesData, isLoading: loadingAll } = useLeaves();
+  // Fetch data - filtered by current branch for isolation
+  const { data: allLeavesData, isLoading: loadingAll } = useLeaves({ branchId: selectedBranchId });
   const { data: myLeavesData, isLoading: loadingMy } = useLeavesByEmployee(currentEmployeeId || 0);
-  const { data: employeesData } = useEmployees();
+  const { data: employeesData } = useEmployees({ branchId: selectedBranchId });
   const { data: myBalances } = useLeaveBalancesByEmployee(currentEmployeeId || 0);
   const { data: myStats } = useEmployeeLeaveStats(currentEmployeeId || 0);
 

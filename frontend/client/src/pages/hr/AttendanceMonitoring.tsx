@@ -48,9 +48,9 @@ export default function AttendanceMonitoring() {
     return () => clearInterval(timer);
   }, [isAdminOrGM]);
 
-  const { data: employeesData } = useEmployees();
-  const { data: departmentsData } = useDepartments();
-  const { data: currentEmployee, isError: isEmployeeError, isLoading: isEmployeeLoading } = useEmployeeByUserId(user?.id || 0);
+  const { data: employeesData } = useEmployees({ branchId: selectedBranchId });
+  const { data: departmentsData } = useDepartments({ branchId: selectedBranchId });
+  const { data: currentEmployee, isError: isEmployeeError, isLoading: isEmployeeLoading } = useEmployeeByUserId(user?.id || 0, selectedBranchId);
   const { data: subordinates } = useSubordinates(currentEmployee?.id || 0);
 
   const isTopRole = ['admin', 'general_manager', 'hr_manager'].includes(selectedRole);
@@ -69,8 +69,8 @@ export default function AttendanceMonitoring() {
   }, [isTopRole, employeesData, subordinates]);
 
   const { data: attendanceData, isLoading, refetch } = useQuery({
-    queryKey: ['attendance-monitoring', selectedDate],
-    queryFn: () => api.get('/hr/attendance', { params: { date: selectedDate } }).then(r => r.data),
+    queryKey: ['attendance-monitoring', selectedDate, selectedBranchId],
+    queryFn: () => api.get('/hr/attendance', { params: { date: selectedDate, branchId: selectedBranchId } }).then(r => r.data),
     refetchInterval: 30000,
   });
 
@@ -655,8 +655,8 @@ export default function AttendanceMonitoring() {
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-xl border">
-              <table className="w-full text-sm">
+            <div className="overflow-x-auto w-full rounded-xl border">
+              <table className="w-full min-w-[600px] text-sm">
                 <thead className="bg-gray-50 border-b">
                   <tr>
                     <th className="px-4 py-3 text-end text-xs font-medium text-gray-500">اسم الموظف</th>

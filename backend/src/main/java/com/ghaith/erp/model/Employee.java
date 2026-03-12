@@ -20,11 +20,11 @@ public class Employee extends BaseEntity {
     private String role;
 
     @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler", "password" })
-    @OneToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id")
     private User user;
 
-    @Column(unique = true, nullable = false)
+    @Column(nullable = false)
     private String employeeNumber;
 
     @Column(nullable = false)

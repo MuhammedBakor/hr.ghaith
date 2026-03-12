@@ -47,7 +47,7 @@ const getStatusBadge = (status: string) => {
 };
 
 export default function OnboardingReview() {
-  const { data: currentUser, isError, error} = useUser();
+  const { data: currentUser, isError, error } = useUser();
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -78,8 +78,8 @@ export default function OnboardingReview() {
     onSuccess: () => {
       toast.success(
         reviewAction === 'approve' ? 'تم اعتماد الطلب بنجاح' :
-        reviewAction === 'reject' ? 'تم رفض الطلب' :
-        'تم إرسال الطلب للتعديل'
+          reviewAction === 'reject' ? 'تم رفض الطلب' :
+            'تم إرسال الطلب للتعديل'
       );
       setReviewOpen(false);
       setSelectedRequest(null);
@@ -94,7 +94,7 @@ export default function OnboardingReview() {
 
   const handleReview = async () => {
     if (!selectedRequest) return;
-    
+
     if (reviewAction === 'reject' && !rejectionReason) {
       toast.error('يرجى إدخال سبب الرفض');
       return;
@@ -113,7 +113,7 @@ export default function OnboardingReview() {
     }
   };
 
-  const openReview= (request: OnboardingRequest, action: 'approve' | 'reject' | 'needs_update') => {
+  const openReview = (request: OnboardingRequest, action: 'approve' | 'reject' | 'needs_update') => {
     setSelectedRequest(request);
     setReviewAction(action);
     setReviewOpen(true);
@@ -133,8 +133,8 @@ export default function OnboardingReview() {
     branchName: req.branchName,
   }));
 
-  const filteredRequests = activeTab === 'all' 
-    ? requests 
+  const filteredRequests = activeTab === 'all'
+    ? requests
     : requests.filter(r => r.status === activeTab);
 
   const pendingCount = requests.filter(r => r.status === 'pending_review').length;
@@ -142,7 +142,7 @@ export default function OnboardingReview() {
 
   if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>;
 
-  
+
   return (
     <div className="space-y-6" dir="rtl">
       {/* Header */}
@@ -210,7 +210,7 @@ export default function OnboardingReview() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
+        <TabsList className="flex-wrap">
           <TabsTrigger value="pending_review" className="gap-2">
             <Clock className="h-4 w-4" />
             في انتظار المراجعة
@@ -252,8 +252,8 @@ export default function OnboardingReview() {
               ) : (
                 <div className="space-y-4">
                   {filteredRequests.map((request) => (
-                    <div 
-                      key={request.id} 
+                    <div
+                      key={request.id}
                       className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
                     >
                       <div className="flex items-start justify-between">
@@ -282,16 +282,16 @@ export default function OnboardingReview() {
                           </Button>
                           {request.status === 'pending_review' && (
                             <>
-                              <Button 
-                                size="sm" 
+                              <Button
+                                size="sm"
                                 className="bg-green-600 hover:bg-green-700"
                                 onClick={() => openReview(request, 'approve')}
                               >
                                 <CheckCircle2 className="h-4 w-4 ms-1" />
                                 اعتماد
                               </Button>
-                              <Button 
-                                size="sm" 
+                              <Button
+                                size="sm"
                                 variant="outline"
                                 className="text-orange-600 border-orange-600 hover:bg-orange-50"
                                 onClick={() => openReview(request, 'needs_update')}
@@ -299,8 +299,8 @@ export default function OnboardingReview() {
                                 <Edit className="h-4 w-4 ms-1" />
                                 تعديل
                               </Button>
-                              <Button 
-                                size="sm" 
+                              <Button
+                                size="sm"
                                 variant="outline"
                                 className="text-red-600 border-red-600 hover:bg-red-50"
                                 onClick={() => openReview(request, 'reject')}
@@ -329,94 +329,94 @@ export default function OnboardingReview() {
 
       {/* نافذة المراجعة */}
       {reviewOpen && (<div className="mt-4 p-6 bg-white border rounded-xl shadow-sm animate-in fade-in">
-        
-          <div className="mb-4 border-b pb-3">
-            <h3 className="text-lg font-bold">
-              {reviewAction === 'approve' && <CheckCircle2 className="h-5 w-5 text-green-600" />}
-              {reviewAction === 'reject' && <XCircle className="h-5 w-5 text-red-600" />}
-              {reviewAction === 'needs_update' && <Edit className="h-5 w-5 text-orange-600" />}
-              {reviewAction === 'approve' ? 'اعتماد الطلب' : 
-               reviewAction === 'reject' ? 'رفض الطلب' : 'طلب تعديل'}
-            </h3>
-            <p className="text-sm text-gray-500">
-              {reviewAction === 'approve' && 'سيتم اعتماد طلب التسجيل وتفعيل حساب الموظف.'}
-              {reviewAction === 'reject' && 'سيتم رفض طلب التسجيل وإشعار الموظف.'}
-              {reviewAction === 'needs_update' && 'سيتم إرجاع الطلب للموظف لإجراء التعديلات المطلوبة.'}
-            </p>
-          </div>
 
-          <div className="space-y-4 py-4">
-            {selectedRequest && (
-              <div className="bg-gray-50 rounded-lg p-3">
-                <p className="font-medium">{selectedRequest.employeeName}</p>
-                <p className="text-sm text-gray-500">رقم الطلب: {selectedRequest.requestNumber}</p>
-              </div>
-            )}
+        <div className="mb-4 border-b pb-3">
+          <h3 className="text-lg font-bold">
+            {reviewAction === 'approve' && <CheckCircle2 className="h-5 w-5 text-green-600" />}
+            {reviewAction === 'reject' && <XCircle className="h-5 w-5 text-red-600" />}
+            {reviewAction === 'needs_update' && <Edit className="h-5 w-5 text-orange-600" />}
+            {reviewAction === 'approve' ? 'اعتماد الطلب' :
+              reviewAction === 'reject' ? 'رفض الطلب' : 'طلب تعديل'}
+          </h3>
+          <p className="text-sm text-gray-500">
+            {reviewAction === 'approve' && 'سيتم اعتماد طلب التسجيل وتفعيل حساب الموظف.'}
+            {reviewAction === 'reject' && 'سيتم رفض طلب التسجيل وإشعار الموظف.'}
+            {reviewAction === 'needs_update' && 'سيتم إرجاع الطلب للموظف لإجراء التعديلات المطلوبة.'}
+          </p>
+        </div>
 
-            {reviewAction === 'reject' && (
-              <div className="space-y-2">
-                <Label>سبب الرفض <span className="text-red-500">*</span></Label>
-                <Textarea
-                  value={rejectionReason}
-                  onChange={(e) => setRejectionReason(e.target.value)}
-                  placeholder="أدخل سبب رفض الطلب..."
-                  rows={3}
-                />
-              </div>
-            )}
+        <div className="space-y-4 py-4">
+          {selectedRequest && (
+            <div className="bg-gray-50 rounded-lg p-3">
+              <p className="font-medium">{selectedRequest.employeeName}</p>
+              <p className="text-sm text-gray-500">رقم الطلب: {selectedRequest.requestNumber}</p>
+            </div>
+          )}
 
-            {reviewAction === 'needs_update' && (
-              <div className="space-y-2">
-                <Label>التعديلات المطلوبة</Label>
-                <Textarea
-                  value={reviewNotes}
-                  onChange={(e) => setReviewNotes(e.target.value)}
-                  placeholder="أدخل التعديلات المطلوبة من الموظف..."
-                  rows={3}
-                />
-              </div>
-            )}
+          {reviewAction === 'reject' && (
+            <div className="space-y-2">
+              <Label>سبب الرفض <span className="text-red-500">*</span></Label>
+              <Textarea
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="أدخل سبب رفض الطلب..."
+                rows={3}
+              />
+            </div>
+          )}
 
-            {reviewAction === 'approve' && (
-              <div className="space-y-2">
-                <Label>ملاحظات (اختياري)</Label>
-                <Textarea
-                  value={reviewNotes}
-                  onChange={(e) => setReviewNotes(e.target.value)}
-                  placeholder="أي ملاحظات إضافية..."
-                  rows={2}
-                />
-              </div>
-            )}
+          {reviewAction === 'needs_update' && (
+            <div className="space-y-2">
+              <Label>التعديلات المطلوبة</Label>
+              <Textarea
+                value={reviewNotes}
+                onChange={(e) => setReviewNotes(e.target.value)}
+                placeholder="أدخل التعديلات المطلوبة من الموظف..."
+                rows={3}
+              />
+            </div>
+          )}
 
-            {reviewAction === 'approve' && (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                <p className="text-sm text-green-800">
-                  <strong>ملاحظة:</strong> سيتم إصدار خطاب تعيين رسمي وإشعار الموظف.
-                </p>
-              </div>
-            )}
-          </div>
+          {reviewAction === 'approve' && (
+            <div className="space-y-2">
+              <Label>ملاحظات (اختياري)</Label>
+              <Textarea
+                value={reviewNotes}
+                onChange={(e) => setReviewNotes(e.target.value)}
+                placeholder="أي ملاحظات إضافية..."
+                rows={2}
+              />
+            </div>
+          )}
 
-          <div className="flex gap-2 mt-4 pt-3 border-t justify-end">
-            <Button variant="outline" onClick={() => setReviewOpen(false)}>
-              إلغاء
-            </Button>
-            <Button 
-              onClick={handleReview}
-              disabled={isSubmitting}
-              className={
-                reviewAction === 'approve' ? 'bg-green-600 hover:bg-green-700' :
+          {reviewAction === 'approve' && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+              <p className="text-sm text-green-800">
+                <strong>ملاحظة:</strong> سيتم إصدار خطاب تعيين رسمي وإشعار الموظف.
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-2 mt-4 pt-3 border-t justify-end">
+          <Button variant="outline" onClick={() => setReviewOpen(false)}>
+            إلغاء
+          </Button>
+          <Button
+            onClick={handleReview}
+            disabled={isSubmitting}
+            className={
+              reviewAction === 'approve' ? 'bg-green-600 hover:bg-green-700' :
                 reviewAction === 'reject' ? 'bg-red-600 hover:bg-red-700' :
-                'bg-orange-600 hover:bg-orange-700'
-              }
-            >
-              {isSubmitting ? 'جاري الإرسال...' : 
-               reviewAction === 'approve' ? 'اعتماد' :
-               reviewAction === 'reject' ? 'رفض' : 'إرسال للتعديل'}
-            </Button>
-          </div>
-        
+                  'bg-orange-600 hover:bg-orange-700'
+            }
+          >
+            {isSubmitting ? 'جاري الإرسال...' :
+              reviewAction === 'approve' ? 'اعتماد' :
+                reviewAction === 'reject' ? 'رفض' : 'إرسال للتعديل'}
+          </Button>
+        </div>
+
       </div>)}
 
     </div>

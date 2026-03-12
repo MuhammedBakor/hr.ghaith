@@ -412,8 +412,8 @@ export default function SLADashboard() {
               {loadingBreached ? (
                 <div className="text-center py-8 text-gray-500">جاري التحميل...</div>
               ) : breachedSLAs && breachedSLAs.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
+                <div className="overflow-x-auto w-full">
+                  <table className="min-w-[600px] w-full">
                     <thead>
                       <tr className="border-b">
                         <th className="text-end p-3">النوع</th>

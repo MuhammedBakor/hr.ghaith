@@ -17,8 +17,9 @@ public class LeaveBalanceController {
     private final LeaveBalanceService leaveBalanceService;
 
     @GetMapping
-    public ResponseEntity<List<LeaveBalance>> getAllBalances() {
-        return ResponseEntity.ok(leaveBalanceService.getAllBalances());
+    public ResponseEntity<List<LeaveBalance>> getAllBalances(
+            @RequestParam(required = false) Long branchId) {
+        return ResponseEntity.ok(leaveBalanceService.getAllBalances(branchId));
     }
 
     @GetMapping("/employee/{employeeId}")

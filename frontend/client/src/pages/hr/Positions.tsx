@@ -18,21 +18,21 @@ export default function PositionsPage() {
 
   const [searchTerm, setSearchTerm] = useState('');
 
-  const { selectedRole: userRole } = useAppContext();
+  const { selectedRole: userRole, selectedBranchId } = useAppContext();
   const canEdit = userRole === "admin" || (userRole as string) === "manager";
   const canDelete = userRole === "admin";
 
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
 
-  const { data: listData, isLoading, isError } = usePositions();
+  const { data: listData, isLoading, isError } = usePositions({ branchId: selectedBranchId });
   const list = listData || [];
 
   const createMut = useCreatePosition();
   const updateMut = useUpdatePosition();
   const deleteMut = useDeletePosition();
 
-  const { data: deptsData } = useDepartments();
+  const { data: deptsData } = useDepartments({ branchId: selectedBranchId });
   const departments = deptsData || [];
 
   const [open, setOpen] = useState(false);
@@ -110,8 +110,8 @@ export default function PositionsPage() {
         </div>
 
         <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
+          <div className="overflow-x-auto w-full">
+            <table className="min-w-[600px] w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-end text-xs font-medium text-gray-500">#</th>

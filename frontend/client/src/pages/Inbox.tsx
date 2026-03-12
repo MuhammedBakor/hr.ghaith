@@ -270,7 +270,7 @@ export default function Inbox() {
 
         {/* Tasks Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
+          <TabsList className="flex-wrap">
             <TabsTrigger value="pending">
               معلق ({stats?.approvals || 0})
             </TabsTrigger>

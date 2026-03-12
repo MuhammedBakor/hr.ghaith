@@ -7,6 +7,7 @@
  */
 
 import { useState, useEffect } from "react";
+import { generateNextCode } from '@/lib/generateCode';
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
@@ -597,8 +598,8 @@ export default function SetupWizard() {
                     <Input
                       id="branchCode"
                       value={branchForm.code}
-                      onChange={(e) => setBranchForm({ ...branchForm, code: e.target.value })}
-                      placeholder="HQ"
+                      readOnly
+                      className="bg-muted font-mono"
                       dir="ltr"
                     />
                   </div>
@@ -681,8 +682,8 @@ export default function SetupWizard() {
                     <Input
                       id="deptCode"
                       value={departmentForm.code}
-                      onChange={(e) => setDepartmentForm({ ...departmentForm, code: e.target.value })}
-                      placeholder="GM"
+                      readOnly
+                      className="bg-muted font-mono"
                       dir="ltr"
                     />
                   </div>

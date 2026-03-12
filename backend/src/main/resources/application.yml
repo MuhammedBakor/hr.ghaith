@@ -22,16 +22,18 @@ spring:
       max-file-size: 10MB
       max-request-size: 10MB
   mail:
-    host: ${SMTP_HOST:smtp.gmail.com}
-    port: ${SMTP_PORT:587}
-    username: ${SMTP_USER:assaa1122a@gmail.com}
-    password: ${SMTP_PASS:tepc lqpl zpiy pkvz}
+    host: ${SMTP_HOST:smtp.hostinger.com}
+    port: ${SMTP_PORT:465}
+    username: ${SMTP_USER:door@door.sa}
+    password: ${SMTP_PASS:Barhom@@2064}
     properties:
       mail:
         smtp:
-          auth: true
+          auth: True
           starttls:
-            enable: true
+            enable: False
+          ssl:
+            enable: True
           connectiontimeout: 5000
           timeout: 5000
           writetimeout: 5000

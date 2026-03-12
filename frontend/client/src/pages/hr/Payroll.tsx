@@ -66,8 +66,8 @@ export default function Payroll() {
   const [month, setMonth] = useState('01');
   const [year, setYear] = useState(2026);
 
-  // جلب قائمة الموظفين
-  const { data: employeesData } = useEmployees();
+  // جلب قائمة الموظفين - مفلترة بالفرع الحالي
+  const { data: employeesData } = useEmployees({ branchId: selectedBranchId });
   const employees = employeesData || [];
 
   // جلب كشوف الرواتب

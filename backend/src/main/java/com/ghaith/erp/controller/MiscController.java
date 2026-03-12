@@ -1,5 +1,8 @@
 package com.ghaith.erp.controller;
 
+import com.ghaith.erp.model.RolePack;
+import com.ghaith.erp.repository.RolePackRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.*;
@@ -9,7 +12,10 @@ import java.util.concurrent.atomic.AtomicLong;
 @RestController
 @RequestMapping("/api/v1")
 @CrossOrigin(origins = "*")
+@RequiredArgsConstructor
 public class MiscController {
+
+    private final RolePackRepository rolePackRepository;
 
     private static final List<Map<String, Object>> requests = new CopyOnWriteArrayList<>();
     private static final AtomicLong requestIdCounter = new AtomicLong(1);
@@ -28,7 +34,42 @@ public class MiscController {
 
     @GetMapping("/roles")
     public ResponseEntity<?> getRoles() {
-        return ResponseEntity.ok(Collections.emptyList());
+        return ResponseEntity.ok(rolePackRepository.findAllByOrderByCreatedAtDesc());
+    }
+
+    @PostMapping("/roles")
+    public ResponseEntity<?> createRole(@RequestBody Map<String, Object> body) {
+        RolePack role = RolePack.builder()
+                .code(String.valueOf(body.getOrDefault("name", "")))
+                .name(String.valueOf(body.getOrDefault("name", "")))
+                .nameAr(String.valueOf(body.getOrDefault("nameAr", "")))
+                .description(body.get("description") != null ? String.valueOf(body.get("description")) : null)
+                .permissions(body.get("permissions") != null ? String.valueOf(body.get("permissions")) : null)
+                .category(body.get("level") != null ? String.valueOf(body.get("level")) : null)
+                .isActive(true)
+                .isDefault(false)
+                .build();
+        return ResponseEntity.ok(rolePackRepository.save(role));
+    }
+
+    @PutMapping("/roles/{id}")
+    public ResponseEntity<?> updateRole(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        return rolePackRepository.findById(id).map(role -> {
+            if (body.get("name") != null) { role.setName(String.valueOf(body.get("name"))); role.setCode(String.valueOf(body.get("name"))); }
+            if (body.get("nameAr") != null) role.setNameAr(String.valueOf(body.get("nameAr")));
+            if (body.containsKey("description")) role.setDescription(body.get("description") != null ? String.valueOf(body.get("description")) : null);
+            if (body.get("permissions") != null) role.setPermissions(String.valueOf(body.get("permissions")));
+            if (body.get("level") != null) role.setCategory(String.valueOf(body.get("level")));
+            if (body.get("isActive") != null) role.setIsActive(Boolean.parseBoolean(String.valueOf(body.get("isActive"))));
+            return ResponseEntity.ok(rolePackRepository.save(role));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/roles/{id}")
+    public ResponseEntity<?> deleteRole(@PathVariable Long id) {
+        if (!rolePackRepository.existsById(id)) return ResponseEntity.notFound().build();
+        rolePackRepository.deleteById(id);
+        return ResponseEntity.ok(Map.of("success", true));
     }
 
     @PostMapping("/roles/seed-defaults")

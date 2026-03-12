@@ -12,7 +12,10 @@ import java.util.List;
 public class PositionService {
     private final PositionRepository positionRepository;
 
-    public List<Position> getAllPositions() {
+    public List<Position> getAllPositions(Long branchId) {
+        if (branchId != null) {
+            return positionRepository.findAllByBranchId(branchId);
+        }
         return positionRepository.findAll();
     }
 
@@ -33,6 +36,7 @@ public class PositionService {
             position.setTitle(positionDetails.getTitle());
             position.setDescription(positionDetails.getDescription());
             position.setStatus(positionDetails.getStatus());
+            position.setBranchId(positionDetails.getBranchId());
             return positionRepository.save(position);
         }
         return null;

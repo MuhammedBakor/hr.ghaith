@@ -636,7 +636,7 @@ export default function ExceptionsDashboard() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2">
           <TabsTrigger value="exceptions" className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4" />
             الاستثناءات ({filteredExceptions.length})

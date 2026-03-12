@@ -1,4 +1,5 @@
 import { useAppContext } from '@/contexts/AppContext';
+import { generateNextCode } from '@/lib/generateCode';
 import { useState, useEffect, useRef } from "react";
 import {
   useShifts,
@@ -276,10 +277,10 @@ export default function ShiftsManagement() {
             <Settings className="h-4 w-4 ms-2" />
             تهيئة البيانات الافتراضية
           </Button>
-          <Button onClick={() => { setEditingShift(null); setIsShiftDialogOpen(!isShiftDialogOpen); }}>
+          <Button onClick={() => { setEditingShift(null); if (!isShiftDialogOpen) setShiftForm(f => ({ ...f, code: generateNextCode('SHIFT', shifts || []) })); setIsShiftDialogOpen(!isShiftDialogOpen); }}>
             {isShiftDialogOpen ? 'إغلاق النموذج' : 'إضافة وردية'}
           </Button>
-          <Button variant="secondary" onClick={() => { setEditingPolicy(null); setIsPolicyDialogOpen(!isPolicyDialogOpen); }}>
+          <Button variant="secondary" onClick={() => { setEditingPolicy(null); if (!isPolicyDialogOpen) setPolicyForm(f => ({ ...f, code: generateNextCode('APOL', policies || []) })); setIsPolicyDialogOpen(!isPolicyDialogOpen); }}>
             {isPolicyDialogOpen ? 'إغلاق النموذج' : 'إضافة سياسة'}
           </Button>
         </div>
@@ -360,8 +361,9 @@ export default function ShiftsManagement() {
                     <Label>الكود</Label>
                     <Input
                       value={shiftForm.code}
-                      onChange={(e) => setShiftForm({ ...shiftForm, code: e.target.value })}
-                      placeholder="أدخل..."
+                      readOnly={!editingShift}
+                      className={!editingShift ? "bg-muted font-mono" : "font-mono"}
+                      onChange={(e) => editingShift && setShiftForm({ ...shiftForm, code: e.target.value })}
                     />
                   </div>
                   <div className="space-y-2">
@@ -614,8 +616,9 @@ export default function ShiftsManagement() {
                     <Label>الكود</Label>
                     <Input
                       value={policyForm.code}
-                      onChange={(e) => setPolicyForm({ ...policyForm, code: e.target.value })}
-                      placeholder="أدخل..."
+                      readOnly={!editingPolicy}
+                      className={!editingPolicy ? "bg-muted font-mono" : "font-mono"}
+                      onChange={(e) => editingPolicy && setPolicyForm({ ...policyForm, code: e.target.value })}
                     />
                   </div>
                   <div className="space-y-2">
@@ -695,7 +698,7 @@ export default function ShiftsManagement() {
 
       {/* Tabs Content */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-64 grid-cols-2">
+        <TabsList className="grid w-full sm:w-64 grid-cols-2">
           <TabsTrigger value="shifts">الورديات</TabsTrigger>
           <TabsTrigger value="policies">السياسات</TabsTrigger>
         </TabsList>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { generateNextCode } from '@/lib/generateCode';
 import { useAppContext } from '@/contexts/AppContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
@@ -292,9 +293,9 @@ export default function RolePacks() {
                 <Label>الكود *</Label>
                 <Input
                   value={formData.code}
-                  onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                  placeholder="أدخل..."
-                  className="font-mono"
+                  readOnly={viewMode === 'create'}
+                  className={viewMode === 'create' ? "bg-muted font-mono" : "font-mono"}
+                  onChange={(e) => viewMode !== 'create' && setFormData({ ...formData, code: e.target.value.toUpperCase() })}
                 />
               </div>
               <div>
@@ -405,7 +406,7 @@ export default function RolePacks() {
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
           <PrintButton title="الصفات" />
-          <Button onClick={() => setViewMode('create')}>
+          <Button onClick={() => { resetForm(); setFormData(f => ({ ...f, code: generateNextCode('PACK', rolePacks || []) })); setViewMode('create'); }}>
             <Plus className="h-4 w-4 ms-2" />
             صفة جديدة
           </Button>

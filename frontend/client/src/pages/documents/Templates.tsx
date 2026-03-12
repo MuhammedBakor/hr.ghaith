@@ -288,8 +288,8 @@ export default function Templates() {
               <p>لا توجد قوالب</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
+            <div className="overflow-x-auto w-full">
+              <table className="w-full min-w-[600px]">
                 <thead>
                   <tr className="border-b">
                     <th className="text-end p-3 font-medium">

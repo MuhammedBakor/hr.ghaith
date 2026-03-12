@@ -1,4 +1,5 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
+import { generateNextCode } from '@/lib/generateCode';
 import { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -217,8 +218,8 @@ export default function Policies() {
                   <Label>كود السياسة *</Label>
                   <Input
                     value={newPolicy.code}
-                    onChange={(e) => setNewPolicy({ ...newPolicy, code: e.target.value })}
-                    placeholder="مثال: POL-001"
+                    readOnly
+                    className="bg-muted font-mono"
                   />
                 </div>
                 <div className="space-y-2">
@@ -388,7 +389,7 @@ export default function Policies() {
           <h2 className="text-2xl font-bold">السياسات والإجراءات</h2>
           <p className="text-gray-500">إدارة سياسات وإجراءات المنظمة</p>
         </div>
-        <Button className="gap-2" onClick={() => setViewMode('add')}>
+        <Button className="gap-2" onClick={() => { setNewPolicy(p => ({ ...p, code: generateNextCode('POL', policies) })); setViewMode('add'); }}>
           <Plus className="h-4 w-4" />
           سياسة جديدة
         </Button>

@@ -1,4 +1,5 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
+import { generateNextCode } from '@/lib/generateCode';
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
@@ -415,7 +416,7 @@ export default function SystemAdmin() {
       <Card><CardHeader><CardTitle>بيانات الشركة</CardTitle><PrintButton title="بيانات الشركة" /></CardHeader>
         <CardContent><div className="grid gap-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2"><Label>الكود</Label><Input value={newCompany.code} onChange={e => setNewCompany({ ...newCompany, code: e.target.value })} placeholder="COMP001" /></div>
+            <div className="space-y-2"><Label>الكود</Label><Input value={newCompany.code} readOnly className="bg-muted font-mono" /></div>
             <div className="space-y-2"><Label>المدينة</Label><Input value={newCompany.city} onChange={e => setNewCompany({ ...newCompany, city: e.target.value })} placeholder="الرياض" /></div>
           </div>
           <div className="space-y-2"><Label>اسم الشركة (إنجليزي)</Label><Input value={newCompany.name} onChange={e => setNewCompany({ ...newCompany, name: e.target.value })} placeholder="Company Name" /></div>
@@ -499,7 +500,7 @@ export default function SystemAdmin() {
       <Card><CardHeader><CardTitle>بيانات القاعدة</CardTitle></CardHeader>
         <CardContent><div className="grid gap-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2"><Label>الكود</Label><Input value={newRule.code} onChange={e => setNewRule({ ...newRule, code: e.target.value })} placeholder="RULE001" /></div>
+            <div className="space-y-2"><Label>الكود</Label><Input value={newRule.code} readOnly className="bg-muted font-mono" /></div>
             <div className="space-y-2"><Label>نوع المشغل</Label><Select value={newRule.triggerType} onValueChange={(v: any) => setNewRule({ ...newRule, triggerType: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="event">حدث</SelectItem><SelectItem value="schedule">جدولة</SelectItem><SelectItem value="condition">شرط</SelectItem><SelectItem value="manual">يدوي</SelectItem></SelectContent></Select></div>
           </div>
           <div className="space-y-2"><Label>الاسم (إنجليزي)</Label><Input value={newRule.name} onChange={e => setNewRule({ ...newRule, name: e.target.value })} placeholder="Rule Name" /></div>
@@ -527,7 +528,7 @@ export default function SystemAdmin() {
       <Card><CardHeader><CardTitle>بيانات الحزمة</CardTitle></CardHeader>
         <CardContent><div className="grid gap-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2"><Label>الكود</Label><Input value={newRolePack.code} onChange={e => setNewRolePack({ ...newRolePack, code: e.target.value })} placeholder="PACK001" /></div>
+            <div className="space-y-2"><Label>الكود</Label><Input value={newRolePack.code} readOnly className="bg-muted font-mono" /></div>
             <div className="space-y-2"><Label>التصنيف</Label><Input value={newRolePack.category} onChange={e => setNewRolePack({ ...newRolePack, category: e.target.value })} placeholder="hr" /></div>
           </div>
           <div className="space-y-2"><Label>الاسم (إنجليزي)</Label><Input value={newRolePack.name} onChange={e => setNewRolePack({ ...newRolePack, name: e.target.value })} placeholder="Role Pack Name" /></div>
@@ -584,7 +585,7 @@ export default function SystemAdmin() {
           <Card>
             <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div><CardTitle>إدارة الشركات</CardTitle><CardDescription>إدارة الشركات والكيانات في النظام</CardDescription></div>
-              <Button onClick={() => setViewMode("add-company")} className="shrink-0"><Plus className="h-4 w-4 ms-2" />إضافة شركة</Button>
+              <Button onClick={() => { setNewCompany(p => ({ ...p, code: generateNextCode('COMP', companies) })); setViewMode("add-company"); }} className="shrink-0"><Plus className="h-4 w-4 ms-2" />إضافة شركة</Button>
             </CardHeader>
             <CardContent><div className="overflow-x-auto"><Table>
               <TableHeader><TableRow>
@@ -650,7 +651,7 @@ export default function SystemAdmin() {
           <Card>
             <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div><CardTitle>قواعد الأتمتة</CardTitle><CardDescription>إدارة قواعد الأتمتة والتشغيل التلقائي</CardDescription></div>
-              <Button onClick={() => setViewMode("add-rule")} className="shrink-0"><Plus className="h-4 w-4 ms-2" />إضافة قاعدة</Button>
+              <Button onClick={() => { setNewRule(p => ({ ...p, code: generateNextCode('RULE', rules) })); setViewMode("add-rule"); }} className="shrink-0"><Plus className="h-4 w-4 ms-2" />إضافة قاعدة</Button>
             </CardHeader>
             <CardContent><div className="overflow-x-auto"><Table>
               <TableHeader><TableRow>
@@ -716,7 +717,7 @@ export default function SystemAdmin() {
           <Card>
             <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div><CardTitle>حزم الأدوار</CardTitle><CardDescription>قوالب الأدوار الجاهزة للتعيين</CardDescription></div>
-              <Button onClick={() => setViewMode("add-role-pack")} className="shrink-0"><Plus className="h-4 w-4 ms-2" />إضافة حزمة</Button>
+              <Button onClick={() => { setNewRolePack(p => ({ ...p, code: generateNextCode('PACK', rolePacks) })); setViewMode("add-role-pack"); }} className="shrink-0"><Plus className="h-4 w-4 ms-2" />إضافة حزمة</Button>
             </CardHeader>
             <CardContent><div className="overflow-x-auto"><Table>
               <TableHeader><TableRow>

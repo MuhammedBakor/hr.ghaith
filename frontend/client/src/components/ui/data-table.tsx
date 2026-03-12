@@ -89,7 +89,8 @@ export function DataTable<TData, TValue>({
 
       {/* Table */}
       <div className="rounded-lg border border-border overflow-hidden">
-        <table className="w-full">
+        <div className="overflow-x-auto w-full">
+        <table className="w-full min-w-[600px]">
           <thead className="bg-muted/50">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
@@ -153,12 +154,13 @@ export function DataTable<TData, TValue>({
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Pagination */}
       {showPagination && table.getPageCount() > 1 && (
-        <div className="flex items-center justify-between px-2">
-          <div className="text-sm text-muted-foreground">
+        <div className="flex flex-col sm:flex-row items-center justify-between px-2 gap-2">
+          <div className="text-xs sm:text-sm text-muted-foreground text-center sm:text-start">
             صفحة {table.getState().pagination.pageIndex + 1} من {table.getPageCount()}
             {" | "}
             إجمالي {table.getFilteredRowModel().rows.length} سجل

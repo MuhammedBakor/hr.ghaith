@@ -290,7 +290,7 @@ export default function GovernanceDashboard() {
 
       {/* Tabs for Violations and Audit Trail */}
       <Tabs defaultValue="violations" className="space-y-4">
-        <TabsList>
+        <TabsList className="flex-wrap">
           <TabsTrigger value="violations" className="flex items-center gap-2">
             <AlertCircle className="h-4 w-4" />
             المخالفات

@@ -34,7 +34,7 @@ import { PrintButton } from "@/components/PrintButton";
 type ViewMode = 'list' | 'add' | 'balances';
 
 export default function LeaveManagement() {
-  const { selectedRole, currentEmployeeId, currentUserId } = useAppContext();
+  const { selectedRole, currentEmployeeId, currentUserId, selectedBranchId } = useAppContext();
 
   const isEmployee = selectedRole === 'employee';
   const isDeptManager = selectedRole === 'department_manager' || selectedRole === 'supervisor';
@@ -64,10 +64,10 @@ export default function LeaveManagement() {
   const [balEditId, setBalEditId] = useState<number | null>(null);
   const [balForm, setBalForm] = useState({ employeeId: '', leaveType: 'annual', totalBalance: '' });
 
-  const { data: leavesData, isLoading, isError } = useLeaves();
-  const { data: employeesData } = useEmployees();
-  const { data: departmentsData } = useDepartments();
-  const { data: balancesData } = useLeaveBalances();
+  const { data: leavesData, isLoading, isError } = useLeaves({ branchId: selectedBranchId });
+  const { data: employeesData } = useEmployees({ branchId: selectedBranchId });
+  const { data: departmentsData } = useDepartments({ branchId: selectedBranchId });
+  const { data: balancesData } = useLeaveBalances({ branchId: selectedBranchId });
   const { data: myBalances } = useLeaveBalancesByEmployee(currentEmployeeId || 0);
   const setBalanceMut = useSetLeaveBalance();
   const updateBalanceMut = useUpdateLeaveBalance();

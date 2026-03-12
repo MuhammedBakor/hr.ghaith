@@ -327,7 +327,7 @@ export default function RecruitmentAdvanced() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
+        <TabsList className="flex-wrap">
           <TabsTrigger value="jobs">الوظائف الشاغرة</TabsTrigger>
           <TabsTrigger value="applicants">المتقدمين</TabsTrigger>
           <TabsTrigger value="interviews">المقابلات</TabsTrigger>

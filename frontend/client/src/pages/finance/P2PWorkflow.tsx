@@ -552,7 +552,7 @@ export default function P2PWorkflow() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
+          <TabsList className="flex-wrap">
             <TabsTrigger value="overview">نظرة عامة</TabsTrigger>
             <TabsTrigger value="active">المسارات النشطة</TabsTrigger>
             <TabsTrigger value="pending">بانتظار الاعتماد</TabsTrigger>

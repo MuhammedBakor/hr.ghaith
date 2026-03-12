@@ -318,8 +318,8 @@ export default function Workflows() {
               </Button>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
+            <div className="overflow-x-auto w-full">
+              <table className="min-w-[600px] w-full">
                 <thead>
                   <tr className="border-b">
                     <th className="text-end p-3 font-medium">

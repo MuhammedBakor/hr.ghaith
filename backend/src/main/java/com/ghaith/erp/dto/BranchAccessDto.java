@@ -4,16 +4,15 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import java.util.List;
 
 @Data
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class AuthenticationResponse {
-    private String token;
-    private String error;
-    private String employeeStatus;
+public class BranchAccessDto {
+    private Long branchId;
+    private String branchName;
     private Long employeeId;
-    private List<BranchAccessDto> branches;
+    private String role;
+    private String employeeStatus;
 }

@@ -43,7 +43,7 @@ export default function TrainingAdvanced() {
   const confirmDelete = (fn: () => void) => { if (window.confirm("هل أنت متأكد من الحذف؟")) fn(); };
 
   const [searchTerm, setSearchTerm] = useState('');
-  const { selectedRole: userRole } = useAppContext();
+  const { selectedRole: userRole, selectedBranchId } = useAppContext();
   const canEdit = userRole === "admin" || String(userRole).includes("manager");
   const canDelete = userRole === "admin";
 
@@ -69,7 +69,7 @@ export default function TrainingAdvanced() {
   // Hooks
   const { data: programs = [], isLoading: programsLoading, isError } = useTrainingPrograms();
   const { data: enrollments = [], isLoading: enrollmentsLoading } = useTrainingEnrollments();
-  const { data: employees = [] } = useEmployees();
+  const { data: employees = [] } = useEmployees({ branchId: selectedBranchId });
 
   const createProgramMutation = useCreateTrainingProgram();
   const createEnrollmentMutation = useCreateTrainingEnrollment();
@@ -221,7 +221,7 @@ export default function TrainingAdvanced() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
+        <TabsList className="flex-wrap">
           <TabsTrigger value="courses">الدورات</TabsTrigger>
           <TabsTrigger value="enrollments">التسجيلات</TabsTrigger>
           <TabsTrigger value="certificates">الشهادات</TabsTrigger>

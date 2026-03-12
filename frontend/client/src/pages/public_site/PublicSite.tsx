@@ -354,8 +354,9 @@ export default function PublicSite() {
           </div>
         </CardHeader>
         <CardContent>
+          <div className="overflow-x-auto w-full">
           <div className="rounded-md border">
-            <table className="w-full">
+            <table className="w-full min-w-[600px]">
               <thead className="bg-muted/50">
                 {table.getHeaderGroups().map((headerGroup) => (
                   <tr key={headerGroup.id}>
@@ -387,6 +388,7 @@ export default function PublicSite() {
                 )}
               </tbody>
             </table>
+          </div>
           </div>
         </CardContent>
       </Card>

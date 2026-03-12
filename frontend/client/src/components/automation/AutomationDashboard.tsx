@@ -140,7 +140,7 @@ function EditDialog({ service, open, onClose, onSave }: {
           </DialogTitle>
         </DialogHeader>
         <Tabs defaultValue="schedule">
-          <TabsList className="grid grid-cols-3 w-full">
+          <TabsList className="grid grid-cols-1 sm:grid-cols-3 w-full">
             <TabsTrigger value="schedule">الجدولة</TabsTrigger>
             <TabsTrigger value="window">نافذة التشغيل</TabsTrigger>
             <TabsTrigger value="config">إعدادات متقدمة</TabsTrigger>

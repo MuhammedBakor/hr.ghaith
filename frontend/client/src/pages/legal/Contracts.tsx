@@ -564,8 +564,8 @@ export default function Contracts() {
               <p>لا توجد عقود</p>
             </div>
           ) : (
-            <div className="rounded-md border">
-              <table className="w-full">
+            <div className="overflow-x-auto w-full rounded-md border">
+              <table className="min-w-[600px] w-full">
                 <thead>
                   {table.getHeaderGroups().map((headerGroup) => (
                     <tr key={headerGroup.id} className="border-b bg-muted/50">

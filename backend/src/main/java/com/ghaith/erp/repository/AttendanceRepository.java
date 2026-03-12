@@ -22,4 +22,13 @@ public interface AttendanceRepository extends JpaRepository<AttendanceRecord, Lo
             @org.springframework.data.repository.query.Param("departmentId") Long departmentId,
             @org.springframework.data.repository.query.Param("start") LocalDateTime start,
             @org.springframework.data.repository.query.Param("end") LocalDateTime end);
+
+    @org.springframework.data.jpa.repository.Query("SELECT a FROM AttendanceRecord a WHERE a.employee.branch.id = :branchId")
+    List<AttendanceRecord> findByEmployeeBranchId(@org.springframework.data.repository.query.Param("branchId") Long branchId);
+
+    @org.springframework.data.jpa.repository.Query("SELECT a FROM AttendanceRecord a WHERE a.employee.branch.id = :branchId AND a.date BETWEEN :start AND :end")
+    List<AttendanceRecord> findByEmployeeBranchIdAndDateBetween(
+            @org.springframework.data.repository.query.Param("branchId") Long branchId,
+            @org.springframework.data.repository.query.Param("start") LocalDateTime start,
+            @org.springframework.data.repository.query.Param("end") LocalDateTime end);
 }

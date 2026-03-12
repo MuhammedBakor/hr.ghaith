@@ -25,10 +25,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Star, Plus, Eye, Edit, CheckCircle2, Clock, Award, BarChart3 } from 'lucide-react';
 import { useEmployees, usePerformanceReviews, useGoals, useCreateGoal, useKPIs, useCreatePerformanceReview } from '@/services/hrService';
+import { useAppContext } from '@/contexts/AppContext';
 import { toast } from 'sonner';
 import { PrintButton } from "@/components/PrintButton";
 
 export default function PerformanceAdvanced() {
+  const { selectedBranchId } = useAppContext();
   const confirmDelete = (fn: () => void) => { if (window.confirm("هل أنت متأكد من الحذف؟")) fn(); };
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -55,7 +57,7 @@ export default function PerformanceAdvanced() {
 
   // البيانات من API (REST)
   const { data: reviewsData, isLoading } = usePerformanceReviews();
-  const { data: employeesData } = useEmployees();
+  const { data: employeesData } = useEmployees({ branchId: selectedBranchId });
   const { data: goalsData, refetch: refetchGoals } = useGoals();
   const { data: kpisData } = useKPIs();
 
@@ -286,7 +288,7 @@ export default function PerformanceAdvanced() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
+        <TabsList className="flex-wrap">
           <TabsTrigger value="reviews">التقييمات</TabsTrigger>
           <TabsTrigger value="goals">الأهداف</TabsTrigger>
           <TabsTrigger value="kpis">مؤشرات الأداء</TabsTrigger>

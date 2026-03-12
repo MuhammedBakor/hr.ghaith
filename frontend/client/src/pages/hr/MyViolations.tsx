@@ -66,7 +66,7 @@ const severityColors: Record<string, string> = {
 export default function MyViolations() {
   const confirmDelete = (fn: () => void) => { if (window.confirm("هل أنت متأكد من الحذف؟")) fn(); };
 
-  const { data: currentUser, isError, error} = useUser();
+  const { data: currentUser, isError, error } = useUser();
   const userRole = currentUser?.role || 'user';
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -120,7 +120,7 @@ export default function MyViolations() {
     appealPenalty.mutate({ id: selectedPenaltyId, reason: appealReason });
   };
 
-  const openAppeal= (penaltyId: number) => {
+  const openAppeal = (penaltyId: number) => {
     setSelectedPenaltyId(penaltyId);
     setIsAppealOpen(true);
   };
@@ -137,9 +137,9 @@ export default function MyViolations() {
   if (authLoading) {
     if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>;
 
-    
+
     return (
-    <div className="flex items-center justify-center h-64" dir="rtl">
+      <div className="flex items-center justify-center h-64" dir="rtl">
         <div className="text-muted-foreground">جاري التحميل...</div>
       </div>
     );
@@ -262,14 +262,14 @@ export default function MyViolations() {
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-3">
           <CardTitle>سجل المخالفات والجزاءات</CardTitle>
-              <PrintButton title="سجل المخالفات والجزاءات" />
+          <PrintButton title="سجل المخالفات والجزاءات" />
           <CardDescription>
             يمكنك الاطلاع على تفاصيل المخالفات والجزاءات وتقديم استئناف عند الحاجة
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="mb-4">
+            <TabsList className="mb-4 flex-wrap">
               <TabsTrigger value="violations" className="gap-2">
                 <AlertTriangle className="h-4 w-4" />
                 المخالفات ({stats.totalViolations})
@@ -413,38 +413,38 @@ export default function MyViolations() {
 
       {/* Appeal*/}
       {isAppealOpen && (<div className="mt-4 p-6 bg-white border rounded-xl shadow-sm animate-in fade-in">
-        
-          <div className="mb-4 border-b pb-3">
-            <h3 className="text-lg font-bold">تقديم استئناف</h3>
-            <p className="text-sm text-gray-500">
-              يرجى كتابة سبب الاستئناف بالتفصيل. سيتم مراجعة طلبك من قبل الإدارة.
-            </p>
+
+        <div className="mb-4 border-b pb-3">
+          <h3 className="text-lg font-bold">تقديم استئناف</h3>
+          <p className="text-sm text-gray-500">
+            يرجى كتابة سبب الاستئناف بالتفصيل. سيتم مراجعة طلبك من قبل الإدارة.
+          </p>
+        </div>
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label>سبب الاستئناف</Label>
+            <Textarea
+              placeholder="اكتب سبب الاستئناف هنا..."
+              value={appealReason}
+              onChange={(e) => setAppealReason(e.target.value)}
+              rows={5}
+            />
           </div>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>سبب الاستئناف</Label>
-              <Textarea
-                placeholder="اكتب سبب الاستئناف هنا..."
-                value={appealReason}
-                onChange={(e) => setAppealReason(e.target.value)}
-                rows={5}
-              />
-            </div>
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800">
-              <AlertTriangle className="h-4 w-4 inline ms-2" />
-              ملاحظة: سيتم إرسال الاستئناف للمراجعة وستتلقى إشعاراً بالقرار.
-            </div>
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800">
+            <AlertTriangle className="h-4 w-4 inline ms-2" />
+            ملاحظة: سيتم إرسال الاستئناف للمراجعة وستتلقى إشعاراً بالقرار.
           </div>
-          <div className="flex gap-2 mt-4 pt-3 border-t justify-end">
-            <Button variant="outline" onClick={() => setIsAppealOpen(false)}>
-              إلغاء
-            </Button>
-            <Button onClick={handleAppeal} disabled={appealPenalty.isPending}>
-              <Send className="h-4 w-4 ms-2" />
-              {appealPenalty.isPending ? 'جاري الإرسال...' : 'إرسال الاستئناف'}
-            </Button>
-          </div>
-        
+        </div>
+        <div className="flex gap-2 mt-4 pt-3 border-t justify-end">
+          <Button variant="outline" onClick={() => setIsAppealOpen(false)}>
+            إلغاء
+          </Button>
+          <Button onClick={handleAppeal} disabled={appealPenalty.isPending}>
+            <Send className="h-4 w-4 ms-2" />
+            {appealPenalty.isPending ? 'جاري الإرسال...' : 'إرسال الاستئناف'}
+          </Button>
+        </div>
+
       </div>)}
 
 

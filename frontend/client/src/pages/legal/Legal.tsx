@@ -183,8 +183,8 @@ function ContractsSection() {
       {isLoading ? (
         <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-gray-100 shadow-sm">
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto w-full rounded-xl border border-gray-100 shadow-sm">
+          <table className="min-w-[600px] w-full text-sm">
             <thead className="bg-gray-50 border-b">
               <tr>
                 {['عنوان العقد', 'الطرف الأول', 'الطرف الثاني', 'القيمة', 'تاريخ الانتهاء', 'الحالة', 'إجراءات'].map(h => (
@@ -397,8 +397,8 @@ function CasesSection() {
       {isLoading ? (
         <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-blue-500" /></div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-gray-100 shadow-sm">
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto w-full rounded-xl border border-gray-100 shadow-sm">
+          <table className="min-w-[600px] w-full text-sm">
             <thead className="bg-gray-50 border-b">
               <tr>
                 {['رقم القضية', 'عنوان القضية', 'النوع', 'المحكمة', 'تاريخ الجلسة', 'الحالة', 'إجراءات'].map(h => (
@@ -549,7 +549,7 @@ export default function Legal() {
 
       {/* Tabs */}
       <Tabs defaultValue="contracts" className="space-y-4">
-        <TabsList className="bg-gray-100 p-1 rounded-xl">
+        <TabsList className="bg-gray-100 p-1 rounded-xl flex-wrap">
           <TabsTrigger value="contracts" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
             <FileCheck className="w-4 h-4 ms-2" />العقود
             {stats?.contracts.active ? <Badge className="me-2 bg-green-100 text-green-700 hover:bg-green-100">{stats?.contracts?.active}</Badge> : null}

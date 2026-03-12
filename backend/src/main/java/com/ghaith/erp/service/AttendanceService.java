@@ -21,7 +21,10 @@ public class AttendanceService {
     private final AttendanceRepository attendanceRepository;
     private final EmployeeRepository employeeRepository;
 
-    public List<AttendanceRecord> getAllAttendance() {
+    public List<AttendanceRecord> getAllAttendance(Long branchId) {
+        if (branchId != null) {
+            return attendanceRepository.findByEmployeeBranchId(branchId);
+        }
         return attendanceRepository.findAll();
     }
 
@@ -29,9 +32,12 @@ public class AttendanceService {
         return attendanceRepository.findByEmployee_Id(employeeId);
     }
 
-    public List<AttendanceRecord> getAttendanceByDate(java.time.LocalDate date) {
+    public List<AttendanceRecord> getAttendanceByDate(java.time.LocalDate date, Long branchId) {
         LocalDateTime startOfDay = date.atStartOfDay();
         LocalDateTime endOfDay = date.atTime(23, 59, 59, 999999999);
+        if (branchId != null) {
+            return attendanceRepository.findByEmployeeBranchIdAndDateBetween(branchId, startOfDay, endOfDay);
+        }
         return attendanceRepository.findByDateBetween(startOfDay, endOfDay);
     }
 
@@ -148,15 +154,15 @@ public class AttendanceService {
     public AttendanceRecord requestEarlyLeave(Map<String, Object> payload) {
         String reason = (String) payload.getOrDefault("reason", "");
         java.time.LocalDate today = java.time.LocalDate.now();
-        List<AttendanceRecord> todayRecords = getAttendanceByDate(today);
+        List<AttendanceRecord> todayRecords = getAttendanceByDate(today, null);
 
         Object empIdObj = payload.get("employeeId");
         if (empIdObj != null) {
             Long employeeId = ((Number) empIdObj).longValue();
             AttendanceRecord found = todayRecords.stream()
-                .filter(r -> r.getEmployee() != null && r.getEmployee().getId().equals(employeeId))
-                .findFirst()
-                .orElse(null);
+                    .filter(r -> r.getEmployee() != null && r.getEmployee().getId().equals(employeeId))
+                    .findFirst()
+                    .orElse(null);
 
             if (found != null) {
                 // Mark as pending early leave approval
@@ -209,8 +215,11 @@ public class AttendanceService {
 
     public AttendanceRecord checkInWithQR(Map<String, Object> payload, Long userId) {
         // Simple implementation: find employee by userId and check in
-        Employee employee = employeeRepository.findByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("Employee not found for user ID: " + userId));
+        List<Employee> employees = employeeRepository.findByUserId(userId);
+        if (employees.isEmpty()) {
+            throw new RuntimeException("Employee not found for user ID: " + userId);
+        }
+        Employee employee = employees.get(0);
 
         AttendanceRecord record = new AttendanceRecord();
         record.setEmployee(employee);

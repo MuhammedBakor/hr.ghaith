@@ -12,6 +12,7 @@ import {
   usePositions,
   useCreateSimpleEmployee,
   useRoles,
+  useCustomRoles,
   useEmployees
 } from '@/services/hrService';
 import { toast } from 'sonner';
@@ -55,21 +56,27 @@ export default function AddEmployeeSimple() {
   // Mutation لإضافة موظف مبسط
   const createSimpleEmployeeMutation = useCreateSimpleEmployee();
   const { data: branchesData, isLoading } = useBranches();
-  const { data: departmentsData } = useDepartments();
-  const { data: positionsData } = usePositions();
+  const { data: departmentsData } = useDepartments({ branchId: formData.branchId ? parseInt(formData.branchId) : (selectedBranchId || null) });
+  const { data: positionsData } = usePositions({ branchId: formData.branchId ? parseInt(formData.branchId) : (selectedBranchId || null) });
   const { data: rolesData } = useRoles();
-  const { data: employeesData } = useEmployees();
+  const { data: customRolesData } = useCustomRoles();
+  const { data: employeesData } = useEmployees({ branchId: selectedBranchId });
   const managers = (employeesData || []).filter((e: any) =>
     e.user?.role === 'GENERAL_MANAGER' || e.user?.role === 'DEPARTEMENT_MANAGER'
   );
   const branches = (branchesData || []).filter((b: any) => b.id);
   const departments = departmentsData || [];
   const positions = positionsData || [];
-  const roles = (rolesData || []).filter((r: string) => r && r.trim() !== "").map((r: string) => ({
-    id: r,
-    name: r,
-    nameAr: r === 'OWNER' ? 'مالك' : r === 'GENERAL_MANAGER' ? 'مدير عام' : r === 'DEPARTEMENT_MANAGER' ? 'مدير قسم' : r === 'SUPERVISOR' ? 'مشرف' : r === 'EMPLOYEE' ? 'موظف' : r === 'AGENT' ? 'مندوب' : r
-  }));
+
+  const systemRoleMap: Record<string, string> = {
+    OWNER: 'مالك', GENERAL_MANAGER: 'مدير عام', DEPARTEMENT_MANAGER: 'مدير قسم',
+    SUPERVISOR: 'مشرف', EMPLOYEE: 'موظف', AGENT: 'مندوب',
+  };
+  const systemRoles = (rolesData || [])
+    .filter((r: any) => typeof r === 'string' && r.trim() !== '')
+    .map((r: string) => ({ id: r, nameAr: systemRoleMap[r] || r, isCustom: false }));
+  const customRoles = (customRolesData || [])
+    .map((r: any) => ({ id: r.name || r.code, nameAr: r.nameAr || r.name, isCustom: true }));
 
   const handleSubmit = async () => {
     // التحقق من الحقول المطلوبة
@@ -106,11 +113,16 @@ export default function AddEmployeeSimple() {
         });
         setShowSuccess(true);
         setIsSubmitting(false);
-        toast.success('تم إضافة الموظف بنجاح وإرسال رسالة التفعيل');
+        toast.success('تم إضافة الموظف بنجاح');
       },
       onError: (err: any) => {
         setIsSubmitting(false);
-        toast.error(`فشل الإضافة: ${err.message}`);
+        const apiError = err.response?.data?.message || err.response?.data?.error;
+        if (err.response?.status === 409 || (apiError && apiError.includes('email'))) {
+          toast.error(apiError || 'عذراً، البريد الإلكتروني الذي أدخلته مستخدم بالفعل لموظف آخر.');
+        } else {
+          toast.error(`فشل الإضافة: ${err.message}`);
+        }
       }
     });
   };
@@ -351,18 +363,15 @@ export default function AddEmployeeSimple() {
                   <SelectValue placeholder="اختر الدور" />
                 </SelectTrigger>
                 <SelectContent>
-                  {roles.length > 0 ? roles.map((r: any) => (
-                    <SelectItem key={r.id} value={r.id}>
-                      {r.nameAr || r.name}
-                    </SelectItem>
-                  )) : (
+                  {systemRoles.map((r: any) => (
+                    <SelectItem key={r.id} value={r.id}>{r.nameAr}</SelectItem>
+                  ))}
+                  {customRoles.length > 0 && (
                     <>
-                      <SelectItem value="OWNER">مالك</SelectItem>
-                      <SelectItem value="GENERAL_MANAGER">مدير عام</SelectItem>
-                      <SelectItem value="DEPARTEMENT_MANAGER">مدير قسم</SelectItem>
-                      <SelectItem value="SUPERVISOR">مشرف</SelectItem>
-                      <SelectItem value="EMPLOYEE">موظف</SelectItem>
-                      <SelectItem value="AGENT">مندوب</SelectItem>
+                      <div className="px-2 py-1.5 text-xs font-medium text-gray-400 border-t mt-1">أدوار مخصصة</div>
+                      {customRoles.map((r: any) => (
+                        <SelectItem key={r.id} value={r.id}>{r.nameAr}</SelectItem>
+                      ))}
                     </>
                   )}
                 </SelectContent>

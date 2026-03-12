@@ -216,7 +216,7 @@ export function UnifiedInbox({
         )}
         
         <Tabs defaultValue="all" className="w-full">
-          <TabsList className="w-full justify-start mb-4">
+          <TabsList className="w-full justify-start mb-4 flex-wrap">
             <TabsTrigger value="all">
               الكل ({items.length})
             </TabsTrigger>

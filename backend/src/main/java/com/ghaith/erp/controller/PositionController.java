@@ -15,8 +15,8 @@ public class PositionController {
     private final PositionService positionService;
 
     @GetMapping
-    public List<Position> getAllPositions() {
-        return positionService.getAllPositions();
+    public List<Position> getAllPositions(@RequestParam(required = false) Long branchId) {
+        return positionService.getAllPositions(branchId);
     }
 
     @GetMapping("/{id}")

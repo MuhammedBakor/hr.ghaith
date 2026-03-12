@@ -48,10 +48,10 @@ public class DataInitializer implements CommandLineRunner {
         // Seed default departments
         seedDepartment("HR", "الموارد البشرية", "Human Resources");
         seedDepartment("FIN", "المالية", "Finance");
-        seedDepartment("FLEET", "الاسطول", "Fleet");
-        seedDepartment("PROP", "الاملاك", "Properties");
-        seedDepartment("LEGAL", "القانون", "Legal");
-        seedDepartment("PROJ", "المشاريع", "Projects");
+        seedDepartment("FLEET", "الأسطول", "Fleet");
+        seedDepartment("PROP", "إدارة الأملاك", "Properties");
+        seedDepartment("LEGAL", "الشؤون القانونية", "Legal");
+        seedDepartment("PROJ", "العمليات", "Operations");
         seedDepartment("WH", "المخازن", "Warehouses");
         seedDepartment("UMRAH", "العمرة", "Umrah");
     }

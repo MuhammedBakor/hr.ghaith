@@ -200,7 +200,7 @@ export default function ViolationsManagement() {
   const permissions = rolePermissions[userRole] || rolePermissions.employee;
 
   // Fetch data
-  const { data: violationTypes, isLoading: loadingViolationTypes, isError, error} = useQuery({
+  const { data: violationTypes, isLoading: loadingViolationTypes, isError, error } = useQuery({
     queryKey: ['violationTypes'],
     queryFn: () => api.get('/hr/control-kernel/violation-types').then(res => res.data),
   });
@@ -401,7 +401,7 @@ export default function ViolationsManagement() {
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="mb-4">
+            <TabsList className="mb-4 flex-wrap">
               <TabsTrigger value="violations" className="gap-2">
                 <AlertTriangle className="h-4 w-4" />
                 المخالفات
@@ -411,16 +411,16 @@ export default function ViolationsManagement() {
                 الجزاءات
               </TabsTrigger>
               {permissions.canManageTypes && (
-              <TabsTrigger value="types" className="gap-2">
-                <FileText className="h-4 w-4" />
-                الأنواع
-              </TabsTrigger>
+                <TabsTrigger value="types" className="gap-2">
+                  <FileText className="h-4 w-4" />
+                  الأنواع
+                </TabsTrigger>
               )}
               {permissions.canManageEscalation && (
-              <TabsTrigger value="escalation" className="gap-2">
-                <TrendingUp className="h-4 w-4" />
-                سلم العقوبات
-              </TabsTrigger>
+                <TabsTrigger value="escalation" className="gap-2">
+                  <TrendingUp className="h-4 w-4" />
+                  سلم العقوبات
+                </TabsTrigger>
               )}
             </TabsList>
 
@@ -430,87 +430,87 @@ export default function ViolationsManagement() {
                 <div className="text-sm text-muted-foreground">
                   <Badge variant="outline" className="ms-2">
                     <Shield className="h-3 w-3 ms-1" />
-                    {userRole === 'admin' ? 'مدير النظام' : 
-                     userRole === 'hr_manager' ? 'مدير الموارد البشرية' :
-                     userRole === 'supervisor' ? 'مشرف' : 'موظف'}
+                    {userRole === 'admin' ? 'مدير النظام' :
+                      userRole === 'hr_manager' ? 'مدير الموارد البشرية' :
+                        userRole === 'supervisor' ? 'مشرف' : 'موظف'}
                   </Badge>
                 </div>
                 {permissions.canRegisterViolation && (
-                <Dialog open={isAddViolationOpen} onOpenChange={setIsAddViolationOpen}>
-                  <DialogTrigger asChild>
-                    <Button>
-                      <Plus className="h-4 w-4 ms-2" />
-                      تسجيل مخالفة
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-md">
-                    <DialogHeader>
-                      <DialogTitle>تسجيل مخالفة جديدة</DialogTitle>
-                      <DialogDescription>
-                        أدخل بيانات المخالفة
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div className="space-y-2">
-                        <Label>الموظف</Label>
-                        <Select 
-                          value={newViolation.employeeId ? String(newViolation.employeeId) : ''} 
-                          onValueChange={(v) => setNewViolation({...newViolation, employeeId: Number(v)})}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="اختر الموظف" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="1">أحمد محمد</SelectItem>
-                            <SelectItem value="2">سارة علي</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>نوع المخالفة</Label>
-                        <Select
-                          value={newViolation.violationTypeId ? String(newViolation.violationTypeId) : ''}
-                          onValueChange={(v) => setNewViolation({...newViolation, violationTypeId: Number(v)})}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="اختر نوع المخالفة" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {violationTypes?.map((type) => (
-                              <SelectItem key={type.id} value={String(type.id)}>
-                                {type.nameAr}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>تاريخ المخالفة</Label>
-                        <Input 
-                          type="date" 
-                          value={newViolation.violationDate}
-                          onChange={(e) => setNewViolation({...newViolation, violationDate: e.target.value})}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>الوصف</Label>
-                        <Textarea 
-                          placeholder="وصف المخالفة..." 
-                          value={newViolation.description}
-                          onChange={(e) => setNewViolation({...newViolation, description: e.target.value})}
-                        />
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => setIsAddViolationOpen(false)}>
-                        إلغاء
+                  <Dialog open={isAddViolationOpen} onOpenChange={setIsAddViolationOpen}>
+                    <DialogTrigger asChild>
+                      <Button>
+                        <Plus className="h-4 w-4 ms-2" />
+                        تسجيل مخالفة
                       </Button>
-                      <Button onClick={handleCreateViolation} disabled={createViolation.isPending}>
-                        تسجيل
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>تسجيل مخالفة جديدة</DialogTitle>
+                        <DialogDescription>
+                          أدخل بيانات المخالفة
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                          <Label>الموظف</Label>
+                          <Select
+                            value={newViolation.employeeId ? String(newViolation.employeeId) : ''}
+                            onValueChange={(v) => setNewViolation({ ...newViolation, employeeId: Number(v) })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="اختر الموظف" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="1">أحمد محمد</SelectItem>
+                              <SelectItem value="2">سارة علي</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>نوع المخالفة</Label>
+                          <Select
+                            value={newViolation.violationTypeId ? String(newViolation.violationTypeId) : ''}
+                            onValueChange={(v) => setNewViolation({ ...newViolation, violationTypeId: Number(v) })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="اختر نوع المخالفة" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {violationTypes?.map((type) => (
+                                <SelectItem key={type.id} value={String(type.id)}>
+                                  {type.nameAr}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>تاريخ المخالفة</Label>
+                          <Input
+                            type="date"
+                            value={newViolation.violationDate}
+                            onChange={(e) => setNewViolation({ ...newViolation, violationDate: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>الوصف</Label>
+                          <Textarea
+                            placeholder="وصف المخالفة..."
+                            value={newViolation.description}
+                            onChange={(e) => setNewViolation({ ...newViolation, description: e.target.value })}
+                          />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsAddViolationOpen(false)}>
+                          إلغاء
+                        </Button>
+                        <Button onClick={handleCreateViolation} disabled={createViolation.isPending}>
+                          تسجيل
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
                 )}
               </div>
 
@@ -569,10 +569,10 @@ export default function ViolationsManagement() {
                                 </DropdownMenuItem>
                               )}
                               {permissions.canConfirmViolation && (
-                              <DropdownMenuItem className="text-red-600">
-                                <XCircle className="h-4 w-4 ms-2" />
-                                رفض المخالفة
-                              </DropdownMenuItem>
+                                <DropdownMenuItem className="text-red-600">
+                                  <XCircle className="h-4 w-4 ms-2" />
+                                  رفض المخالفة
+                                </DropdownMenuItem>
                               )}
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -599,66 +599,66 @@ export default function ViolationsManagement() {
                   )}
                 </div>
                 {permissions.canApprovePenalty && (
-                <Dialog open={isAddPenaltyOpen} onOpenChange={setIsAddPenaltyOpen}>
-                  <DialogTrigger asChild>
-                    <Button>
-                      <Plus className="h-4 w-4 ms-2" />
-                      إضافة جزاء
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-md">
-                    <DialogHeader>
-                      <DialogTitle>إضافة جزاء جديد</DialogTitle>
-                      <DialogDescription>
-                        أدخل بيانات الجزاء
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div className="space-y-2">
-                        <Label>الموظف</Label>
-                        <Select>
-                          <SelectTrigger>
-                            <SelectValue placeholder="اختر الموظف" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="1">أحمد محمد</SelectItem>
-                            <SelectItem value="2">سارة علي</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>نوع الجزاء</Label>
-                        <Select>
-                          <SelectTrigger>
-                            <SelectValue placeholder="اختر نوع الجزاء" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {penaltyTypes?.map((type) => (
-                              <SelectItem key={type.id} value={String(type.id)}>
-                                {type.nameAr}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>السبب</Label>
-                        <Textarea placeholder="سبب الجزاء..." />
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => setIsAddPenaltyOpen(false)}>
-                        إلغاء
+                  <Dialog open={isAddPenaltyOpen} onOpenChange={setIsAddPenaltyOpen}>
+                    <DialogTrigger asChild>
+                      <Button>
+                        <Plus className="h-4 w-4 ms-2" />
+                        إضافة جزاء
                       </Button>
-                      <Button onClick={() => {
-                        toast.success('تم إضافة الجزاء');
-                        setIsAddPenaltyOpen(false);
-                      }}>
-                        إضافة
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>إضافة جزاء جديد</DialogTitle>
+                        <DialogDescription>
+                          أدخل بيانات الجزاء
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                          <Label>الموظف</Label>
+                          <Select>
+                            <SelectTrigger>
+                              <SelectValue placeholder="اختر الموظف" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="1">أحمد محمد</SelectItem>
+                              <SelectItem value="2">سارة علي</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>نوع الجزاء</Label>
+                          <Select>
+                            <SelectTrigger>
+                              <SelectValue placeholder="اختر نوع الجزاء" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {penaltyTypes?.map((type) => (
+                                <SelectItem key={type.id} value={String(type.id)}>
+                                  {type.nameAr}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>السبب</Label>
+                          <Textarea placeholder="سبب الجزاء..." />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsAddPenaltyOpen(false)}>
+                          إلغاء
+                        </Button>
+                        <Button onClick={() => {
+                          toast.success('تم إضافة الجزاء');
+                          setIsAddPenaltyOpen(false);
+                        }}>
+                          إضافة
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
                 )}
               </div>
 

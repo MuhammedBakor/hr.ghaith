@@ -383,8 +383,9 @@ export default function Letters() {
             </Button>
           </div>
 
+          <div className="overflow-x-auto w-full">
           <div className="rounded-md border">
-            <table className="w-full">
+            <table className="w-full min-w-[600px]">
               <thead>
                 {table.getHeaderGroups().map((headerGroup) => (
                   <tr key={headerGroup.id} className="border-b bg-muted/50">
@@ -416,6 +417,7 @@ export default function Letters() {
                 )}
               </tbody>
             </table>
+          </div>
           </div>
         </CardContent>
       </Card>

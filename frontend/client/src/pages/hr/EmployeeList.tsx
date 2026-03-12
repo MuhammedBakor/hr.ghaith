@@ -127,8 +127,8 @@ export default function EmployeeList() {
     branchId: selectedBranchId,
     departmentId: deptManagerDeptId,
   });
-  const { data: departmentsData } = useDepartments();
-  const { data: positionsData } = usePositions();
+  const { data: departmentsData } = useDepartments({ branchId: selectedBranchId });
+  const { data: positionsData } = usePositions({ branchId: selectedBranchId });
 
   // Mutations
   const updateEmployeeMutation = useUpdateEmployee();

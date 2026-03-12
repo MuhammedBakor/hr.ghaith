@@ -17,8 +17,9 @@ public class LeaveController {
     private final LeaveService leaveService;
 
     @GetMapping
-    public ResponseEntity<List<LeaveRequest>> getAllLeaveRequests() {
-        return ResponseEntity.ok(leaveService.getAllLeaveRequests());
+    public ResponseEntity<List<LeaveRequest>> getAllLeaveRequests(
+            @RequestParam(required = false) Long branchId) {
+        return ResponseEntity.ok(leaveService.getAllLeaveRequests(branchId));
     }
 
     @GetMapping("/employee/{employeeId}")
@@ -32,21 +33,27 @@ public class LeaveController {
     }
 
     @GetMapping("/department/{departmentId}")
-    public ResponseEntity<List<LeaveRequest>> getLeaveRequestsByDepartment(@PathVariable Long departmentId) {
-        return ResponseEntity.ok(leaveService.getLeaveRequestsByDepartment(departmentId));
+    public ResponseEntity<List<LeaveRequest>> getLeaveRequestsByDepartment(
+            @PathVariable Long departmentId,
+            @RequestParam(required = false) Long branchId) {
+        return ResponseEntity.ok(leaveService.getLeaveRequestsByDepartment(departmentId, branchId));
     }
 
     @GetMapping("/stage/{stage}")
-    public ResponseEntity<List<LeaveRequest>> getLeaveRequestsByStage(@PathVariable String stage) {
+    public ResponseEntity<List<LeaveRequest>> getLeaveRequestsByStage(
+            @PathVariable String stage,
+            @RequestParam(required = false) Long branchId) {
         LeaveRequest.ApprovalStage approvalStage = LeaveRequest.ApprovalStage.valueOf(stage);
-        return ResponseEntity.ok(leaveService.getLeaveRequestsByApprovalStage(approvalStage));
+        return ResponseEntity.ok(leaveService.getLeaveRequestsByApprovalStage(approvalStage, branchId));
     }
 
     @GetMapping("/department/{departmentId}/stage/{stage}")
     public ResponseEntity<List<LeaveRequest>> getByDepartmentAndStage(
-            @PathVariable Long departmentId, @PathVariable String stage) {
+            @PathVariable Long departmentId,
+            @PathVariable String stage,
+            @RequestParam(required = false) Long branchId) {
         LeaveRequest.ApprovalStage approvalStage = LeaveRequest.ApprovalStage.valueOf(stage);
-        return ResponseEntity.ok(leaveService.getLeaveRequestsByDepartmentAndStage(departmentId, approvalStage));
+        return ResponseEntity.ok(leaveService.getLeaveRequestsByDepartmentAndStage(departmentId, approvalStage, branchId));
     }
 
     @GetMapping("/{id}")

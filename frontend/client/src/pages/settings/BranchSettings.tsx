@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { generateNextCode } from '@/lib/generateCode';
 import { useAppContext } from '@/contexts/AppContext';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import api from '@/lib/api';
@@ -139,6 +140,10 @@ export default function BranchSettings() {
           <h2 className="text-2xl font-bold tracking-tight">إدارة الفروع</h2>
           <p className="text-gray-500">إعداد وإدارة فروع المنظمة</p>
         </div>
+        <Button onClick={() => { setEditingBranchId(null); setNewBranch({ code: generateNextCode('BR', branches), name: '', nameAr: '', address: '', city: '', phone: '', email: '' }); setIsDialogOpen(true); }}>
+          فرع جديد
+        </Button>
+      </div>
         {isDialogOpen && (<div className="mt-4 p-6 bg-white border rounded-xl shadow-sm">
 
           <div>
@@ -148,7 +153,7 @@ export default function BranchSettings() {
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label>الكود *</Label>
-                <Input value={newBranch.code} onChange={(e) => setNewBranch({...newBranch, code: e.target.value})} placeholder="مثال: RYD001" />
+                <Input value={newBranch.code} readOnly={!editingBranchId} className={!editingBranchId ? "bg-muted font-mono" : "font-mono"} onChange={(e) => editingBranchId && setNewBranch({...newBranch, code: e.target.value})} />
               </div>
               <div className="space-y-2">
                 <Label>الاسم بالإنجليزية *</Label>
@@ -183,7 +188,6 @@ export default function BranchSettings() {
             </div>
           </div>
         </div>)}
-      </div>
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-3">

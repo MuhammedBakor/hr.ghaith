@@ -483,7 +483,7 @@ export default function HRAutomation() {
 
       {/* تبويبات */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2 max-w-sm">
+        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 max-w-sm">
           <TabsTrigger value="services">الخدمات</TabsTrigger>
           <TabsTrigger value="logs">سجل التشغيل</TabsTrigger>
         </TabsList>

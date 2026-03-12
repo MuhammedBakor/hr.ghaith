@@ -42,9 +42,9 @@ const getStatusColor = (status: string) => {
 };
 
 export default function DepartmentEmployees() {
-  const { currentUserId } = useAppContext();
-  const { data: employees = [], isLoading } = useEmployees();
-  const { data: departments = [] } = useDepartments();
+  const { currentUserId, selectedBranchId } = useAppContext();
+  const { data: employees = [], isLoading } = useEmployees({ branchId: selectedBranchId });
+  const { data: departments = [] } = useDepartments({ branchId: selectedBranchId });
 
   // Find current employee (the manager)
   const currentEmployee = employees.find((emp: any) =>

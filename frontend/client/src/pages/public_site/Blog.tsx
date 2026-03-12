@@ -363,8 +363,9 @@ export default function Blog() {
               <p>لا توجد مقالات</p>
             </div>
           ) : (
+            <div className="overflow-x-auto w-full">
             <div className="rounded-md border">
-              <table className="w-full">
+              <table className="w-full min-w-[600px]">
                 <thead>
                   {table.getHeaderGroups().map((headerGroup) => (
                     <tr key={headerGroup.id} className="border-b bg-muted/50">
@@ -396,6 +397,7 @@ export default function Blog() {
                   ))}
                 </tbody>
               </table>
+            </div>
             </div>
           )}
         </CardContent>

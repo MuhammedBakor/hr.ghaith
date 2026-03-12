@@ -234,7 +234,7 @@ export default function AutomationCenter() {
 
         {/* ── المحتوى الرئيسي ──────────────────────────────────────────── */}
         <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="mb-4">
+          <TabsList className="mb-4 flex-wrap">
             <TabsTrigger value="all">كل الخدمات</TabsTrigger>
             <TabsTrigger value="modules">حسب الوحدة</TabsTrigger>
             <TabsTrigger value="logs">السجلات</TabsTrigger>

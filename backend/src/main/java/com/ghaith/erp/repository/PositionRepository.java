@@ -6,4 +6,7 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface PositionRepository extends JpaRepository<Position, Long> {
+    java.util.List<Position> findAllByBranchId(Long branchId);
+
+    java.util.List<Position> findAllByBranchIdOrBranchIdIsNull(Long branchId);
 }

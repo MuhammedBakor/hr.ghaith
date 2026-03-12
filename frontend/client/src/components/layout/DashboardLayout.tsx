@@ -657,7 +657,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const map: Record<string, string> = {};
   const sectionMap: Record<string, { label: string; path: string }> = {};
   for (const item of allNavItems) {
-    map[item.path] = item.label;
+    if (!map[item.path]) map[item.path] = item.label;
 
     // If it's a department module, its logical parent is the Departments Hub
     if (item.module && departmentModules.includes(item.module)) {
@@ -666,13 +666,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
     if (item.children) {
       for (const child of item.children) {
-        // Child gets its own label in the map.
-        // We allow overwriting the item path label if the child path is the same,
-        // so that the more specific (child) label is used for that path.
-        map[child.path] = child.label;
-
-        // Every child path maps to its parent section
-        sectionMap[child.path] = { label: item.label, path: item.path };
+        // Child gets its own label in the map if it's a distinct path.
+        // If it's the same path as parent (e.g. module home), we prefer the parent's module label.
+        if (child.path !== item.path) {
+          map[child.path] = child.label;
+          // Every distinct child path maps to its parent section
+          sectionMap[child.path] = { label: item.label, path: item.path };
+        }
       }
     }
   }

@@ -37,4 +37,22 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Long
     // Count leave requests for employees in a specific branch
     @Query("SELECT COUNT(lr) FROM LeaveRequest lr WHERE lr.employee.branch.id = :branchId")
     long countByEmployeeBranchId(@Param("branchId") Long branchId);
+
+    // Find all leave requests for employees in a specific branch
+    @Query("SELECT lr FROM LeaveRequest lr WHERE lr.employee.branch.id = :branchId")
+    List<LeaveRequest> findByEmployeeBranchId(@Param("branchId") Long branchId);
+
+    // Find leave requests by branch and approval stage
+    @Query("SELECT lr FROM LeaveRequest lr WHERE lr.employee.branch.id = :branchId AND lr.approvalStage = :stage")
+    List<LeaveRequest> findByEmployeeBranchIdAndApprovalStage(
+        @Param("branchId") Long branchId,
+        @Param("stage") LeaveRequest.ApprovalStage stage
+    );
+
+    // Find leave requests by department filtered by branch
+    @Query("SELECT lr FROM LeaveRequest lr WHERE lr.employee.department.id = :departmentId AND lr.employee.branch.id = :branchId")
+    List<LeaveRequest> findByEmployeeDepartmentIdAndBranchId(
+        @Param("departmentId") Long departmentId,
+        @Param("branchId") Long branchId
+    );
 }

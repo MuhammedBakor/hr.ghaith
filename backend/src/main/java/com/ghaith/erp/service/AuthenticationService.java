@@ -3,6 +3,7 @@ package com.ghaith.erp.service;
 import com.ghaith.erp.dto.*;
 import com.ghaith.erp.model.User;
 import com.ghaith.erp.model.Employee;
+import com.ghaith.erp.model.Role;
 import com.ghaith.erp.repository.UserRepository;
 import com.ghaith.erp.repository.EmployeeRepository;
 import com.ghaith.erp.security.JwtService;
@@ -14,6 +15,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -41,21 +44,37 @@ public class AuthenticationService {
         }
 
         public AuthenticationResponse authenticate(AuthenticationRequest request) {
-                // Check employee status before authentication
-                var userOpt = repository.findByEmail(request.getEmail());
-                if (userOpt.isPresent()) {
-                        var user = userOpt.get();
-                        var empOpt = employeeRepository.findByUserId(user.getId());
-                        if (empOpt.isPresent()) {
-                                var emp = empOpt.get();
-                                if (emp.getStatus() == Employee.EmployeeStatus.suspended) {
-                                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                                        "تم إيقاف حسابك مؤقتاً من قبل الإدارة. لا يمكنك تسجيل الدخول حالياً. يرجى التواصل مع المدير العام.");
-                                }
-                                if (emp.getStatus() == Employee.EmployeeStatus.terminated) {
-                                        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                                        "تم إنهاء خدمتك. لا يمكنك الوصول إلى النظام. يرجى التواصل مع قسم الموارد البشرية.");
-                                }
+                // Find user by email (unique identity)
+                var user = repository.findByEmail(request.getEmail().toLowerCase())
+                                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                                                "خطأ في اسم المستخدم أو كلمة المرور"));
+
+                // Get all employee records across all branches for this user
+                List<Employee> employees = employeeRepository.findByUserId(user.getId());
+
+                // Check roles: OWNER and GENERAL_MANAGER can login without employee record
+                boolean isAdministrative = user.getRole() == Role.OWNER || user.getRole() == Role.GENERAL_MANAGER;
+
+                if (employees.isEmpty() && !isAdministrative) {
+                        // Regular users must have at least one employee record
+                        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "هذا الحساب غير مرتبط بموظف.");
+                }
+
+                // Check if ALL accounts are suspended/terminated
+                // But bypass this check for global administrative roles (OWNER/GM)
+                if (!isAdministrative) {
+                        boolean allSuspended = employees.stream()
+                                        .allMatch(e -> e.getStatus() == Employee.EmployeeStatus.suspended);
+                        boolean allTerminated = employees.stream()
+                                        .allMatch(e -> e.getStatus() == Employee.EmployeeStatus.terminated);
+
+                        if (allSuspended) {
+                                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                                "تم إيقاف حسابك مؤقتاً في جميع الفروع. يرجى التواصل مع الإدارة.");
+                        }
+                        if (allTerminated) {
+                                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                                                "تم إنهاء خدمتك في جميع الفروع. لا يمكنك الوصول إلى النظام.");
                         }
                 }
 
@@ -71,18 +90,35 @@ public class AuthenticationService {
                         throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
                                         "خطأ في اسم المستخدم أو كلمة المرور");
                 }
-                var user = repository.findByEmail(request.getEmail())
-                                .orElseThrow();
+
                 var jwtToken = jwtService.generateToken(user);
 
-                // Include employee status and ID in response
-                var empOptForResponse = employeeRepository.findByUserId(user.getId());
-                var responseBuilder = AuthenticationResponse.builder().token(jwtToken);
-                if (empOptForResponse.isPresent()) {
-                        var empForResponse = empOptForResponse.get();
-                        responseBuilder.employeeStatus(empForResponse.getStatus().name());
-                        responseBuilder.employeeId(empForResponse.getId());
-                }
+                // Build list of accessible branches
+                List<BranchAccessDto> branches = employees.stream()
+                                .map(emp -> BranchAccessDto.builder()
+                                                .branchId(emp.getBranch() != null ? emp.getBranch().getId() : null)
+                                                .branchName(emp.getBranch() != null ? emp.getBranch().getNameAr()
+                                                                : "فرع غير معروف")
+                                                .employeeId(emp.getId())
+                                                .role(emp.getRole())
+                                                .employeeStatus(emp.getStatus().name())
+                                                .build())
+                                .collect(java.util.stream.Collectors.toList());
+
+                var responseBuilder = AuthenticationResponse.builder()
+                                .token(jwtToken)
+                                .branches(branches);
+
+                // For backward compatibility, set the first non-suspended employee if possible
+                employees.stream()
+                                .filter(e -> e.getStatus() != Employee.EmployeeStatus.suspended
+                                                && e.getStatus() != Employee.EmployeeStatus.terminated)
+                                .findFirst()
+                                .ifPresent(emp -> {
+                                        responseBuilder.employeeId(emp.getId());
+                                        responseBuilder.employeeStatus(emp.getStatus().name());
+                                });
+
                 return responseBuilder.build();
         }
 
@@ -123,7 +159,8 @@ public class AuthenticationService {
                 user.setVerificationCode(code);
                 repository.save(user);
 
-                String firstName = employeeRepository.findByUserId(user.getId())
+                String firstName = employeeRepository.findByUserId(user.getId()).stream()
+                                .findFirst()
                                 .map(Employee::getFirstName)
                                 .orElse(request.getEmail());
 
@@ -134,7 +171,8 @@ public class AuthenticationService {
                 User user = repository.findByEmail(request.getEmail())
                                 .orElseThrow(() -> new RuntimeException("لا يوجد حساب مرتبط بهذا البريد الإلكتروني"));
 
-                if (user.getVerificationCode() == null || !user.getVerificationCode().equals(request.getVerificationCode())) {
+                if (user.getVerificationCode() == null
+                                || !user.getVerificationCode().equals(request.getVerificationCode())) {
                         throw new RuntimeException("رمز التحقق غير صحيح");
                 }
 
@@ -143,7 +181,7 @@ public class AuthenticationService {
                 user.setVerificationCode(null);
                 repository.save(user);
 
-                employeeRepository.findByUserId(user.getId()).ifPresent(employee -> {
+                employeeRepository.findByUserId(user.getId()).forEach(employee -> {
                         employee.setStatus(Employee.EmployeeStatus.active);
                         employeeRepository.save(employee);
                 });
@@ -173,7 +211,8 @@ public class AuthenticationService {
                 return response;
         }
 
-        public java.util.Map<String, Object> completeEmployeeInvitation(String employeeNumber, String activationCode, String password) {
+        public java.util.Map<String, Object> completeEmployeeInvitation(String employeeNumber, String activationCode,
+                        String password) {
                 java.util.Map<String, Object> response = new java.util.HashMap<>();
 
                 var employeeOpt = employeeRepository.findByEmployeeNumber(employeeNumber);
@@ -211,13 +250,14 @@ public class AuthenticationService {
         public UserResponse getMe() {
                 var authentication = SecurityContextHolder.getContext().getAuthentication();
                 if (authentication == null || !authentication.isAuthenticated()
-                        || "anonymousUser".equals(authentication.getPrincipal())) {
+                                || "anonymousUser".equals(authentication.getPrincipal())) {
                         throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "غير مفوض");
                 }
 
                 var userEmail = authentication.getName();
                 var user = repository.findByEmail(userEmail)
-                                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "المستخدم غير موجود"));
+                                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                                                "المستخدم غير موجود"));
 
                 return UserResponse.builder()
                                 .id(user.getId())

@@ -1,5 +1,6 @@
 package com.ghaith.erp.controller;
 
+import com.ghaith.erp.exception.DuplicateEmailException;
 import com.ghaith.erp.model.Employee;
 import com.ghaith.erp.service.EmployeeService;
 import lombok.RequiredArgsConstructor;
@@ -85,10 +86,19 @@ public class EmployeeController {
             }
 
             return ResponseEntity
-                    .ok(employeeService.createSimpleEmployee(firstName, lastName, email, phone, branchId, departmentId, positionId, role, managerId));
+                    .ok(employeeService.createSimpleEmployee(firstName, lastName, email, phone, branchId, departmentId,
+                            positionId, role, managerId));
+        } catch (DuplicateEmailException e) {
+            return ResponseEntity.status(409)
+                    .body(java.util.Map.of("error", "EMAIL_EXISTS", "message", e.getMessage()));
+        } catch (RuntimeException e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError()
+                    .body(java.util.Map.of("error", "UNKNOWN", "message", e.getMessage()));
         } catch (Exception e) {
-            e.printStackTrace(); // This will show in the console
-            return ResponseEntity.internalServerError().body("Error: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError()
+                    .body(java.util.Map.of("error", "UNKNOWN", "message", e.getMessage()));
         }
     }
 
@@ -119,7 +129,8 @@ public class EmployeeController {
                 return ResponseEntity.badRequest().body(java.util.Map.of("error", "Status is required"));
             }
             Employee updated = employeeService.changeEmployeeStatus(id, status);
-            System.out.println("[STATUS] changeEmployeeStatus returned. Employee id=" + updated.getId() + ", status=" + updated.getStatus());
+            System.out.println("[STATUS] changeEmployeeStatus returned. Employee id=" + updated.getId() + ", status="
+                    + updated.getStatus());
             java.util.Map<String, Object> response = new java.util.HashMap<>();
             response.put("id", updated.getId());
             response.put("status", updated.getStatus().name());
@@ -138,16 +149,29 @@ public class EmployeeController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteEmployee(@PathVariable Long id) {
-        employeeService.deleteEmployee(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<?> deleteEmployee(@PathVariable Long id) {
+        try {
+            employeeService.deleteEmployee(id);
+            return ResponseEntity.noContent().build();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError()
+                    .body(java.util.Map.of("error", "DELETE_FAILED", "message", e.getMessage()));
+        }
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<Employee> getEmployeeByUserId(@PathVariable Long userId) {
-        return employeeService.getEmployeeByUserId(userId)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<?> getEmployeesByUserId(
+            @PathVariable Long userId,
+            @RequestParam(required = false) Long branchId) {
+        List<Employee> employees = employeeService.getEmployeesByUserIdAndBranch(userId, branchId);
+        if (employees.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        if (branchId != null) {
+            return ResponseEntity.ok(employees.get(0));
+        }
+        return ResponseEntity.ok(employees);
     }
 
     @GetMapping("/{id}/subordinates")

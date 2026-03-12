@@ -368,8 +368,8 @@ export default function NotifyPreferences() {
           <CardDescription>اختر كيف تريد تلقي كل نوع من الإشعارات</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
+          <div className="overflow-x-auto w-full">
+            <table className="w-full min-w-[600px]">
               <thead>
                 <tr className="border-b">
                   <th className="text-end py-3 px-4 font-medium">النوع</th>

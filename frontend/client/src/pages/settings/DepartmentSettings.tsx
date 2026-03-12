@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { generateNextCode } from '@/lib/generateCode';
 import { useAppContext } from '@/contexts/AppContext';
 import { useDepartments, useCreateDepartment, useUpdateDepartment, useBranches } from '@/services/hrService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,7 +29,7 @@ export default function DepartmentSettings() {
 
   const [searchTerm, setSearchTerm] = useState('');
 
-  const { selectedRole: userRole } = useAppContext();
+  const { selectedRole: userRole, selectedBranchId } = useAppContext();
   const canEdit = userRole === "admin" || userRole === "manager";
   const canDelete = userRole === "admin";
 
@@ -41,7 +42,7 @@ export default function DepartmentSettings() {
     name: '', nameAr: '', code: '', branchId: '',
   });
 
-  const { data: departmentsData, isLoading, refetch, isError } = useDepartments();
+  const { data: departmentsData, isLoading, refetch, isError } = useDepartments({ branchId: selectedBranchId });
   const { data: branchesData } = useBranches();
 
   const departments = (departmentsData || []) as Department[];
@@ -116,7 +117,7 @@ export default function DepartmentSettings() {
             <h2 className="text-lg md:text-2xl font-bold tracking-tight">إدارة الأقسام</h2>
             <p className="text-gray-500">إنشاء وتعديل أقسام المنظمة</p>
           </div>
-          <Button onClick={() => { resetForm(); setEditingId(null); setIsDialogOpen(true); }}>
+          <Button onClick={() => { resetForm(); setForm(f => ({ ...f, code: generateNextCode('DEPT', departments) })); setEditingId(null); setIsDialogOpen(true); }}>
             <Plus className="h-4 w-4 ms-2" />
             قسم جديد
           </Button>
@@ -198,7 +199,7 @@ export default function DepartmentSettings() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>كود القسم *</Label>
-                <Input placeholder="مثال: IT" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} />
+                <Input value={form.code} readOnly={!editingId} className={!editingId ? "bg-muted font-mono" : "font-mono"} onChange={(e) => editingId && setForm({ ...form, code: e.target.value })} />
               </div>
               <div className="space-y-2">
                 <Label>الاسم بالعربية *</Label>

@@ -23,4 +23,5 @@ public class Department extends BaseEntity {
     private String status; // active, inactive
     private Long parentId;
     private Long managerId;
+    private Long branchId;
 }

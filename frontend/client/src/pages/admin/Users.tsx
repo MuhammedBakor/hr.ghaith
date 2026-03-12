@@ -28,7 +28,7 @@ type ViewMode = 'list' | 'view' | 'edit';
 
 export default function Users() {
   // v63: قراءة الدور من AppContext بدل hardcoded
-  const { selectedRole } = useAppContext();
+  const { selectedRole, selectedBranchId } = useAppContext();
   const userRole = selectedRole;
   const canEdit = ['admin', 'general_manager', 'hr_manager'].includes(userRole);
   const canDelete = userRole === 'admin';
@@ -42,8 +42,8 @@ export default function Users() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [userToDelete, setUserToDelete] = useState<any>(null);
 
-  // استخدام useEmployees لجلب قائمة الموظفين
-  const { data: employees, isLoading, isError, error } = useEmployees();
+  // استخدام useEmployees لجلب قائمة الموظفين - مفلترة بالفرع الحالي
+  const { data: employees, isLoading, isError, error } = useEmployees({ branchId: selectedBranchId });
 
   // Mutation لتحديث الموظف
   const updateMutation = useUpdateEmployee();

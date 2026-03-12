@@ -15,8 +15,8 @@ public class DepartmentController {
     private final DepartmentService departmentService;
 
     @GetMapping
-    public List<Department> getAllDepartments() {
-        return departmentService.getAllDepartments();
+    public List<Department> getAllDepartments(@RequestParam(required = false) Long branchId) {
+        return departmentService.getAllDepartments(branchId);
     }
 
     @GetMapping("/{id}")

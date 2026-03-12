@@ -26,7 +26,7 @@ export default function AddEmployee() {
 
   const [showInlineForm, setShowInlineForm] = useState(false);
 
-  const { selectedRole: userRole } = useAppContext();
+  const { selectedRole: userRole, selectedBranchId } = useAppContext();
   const isLoadingAuth = false; // Assume auth is handled or get from context
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -38,26 +38,6 @@ export default function AddEmployee() {
   const [inviteMethod, setInviteMethod] = useState<'email' | 'whatsapp' | 'both'>('email');
   const [sendInviteOnCreate, setSendInviteOnCreate] = useState(true);
   const [autoApprove, setAutoApprove] = useState(false);
-
-  // جلب البيانات من API
-  const { data: departmentsData, isLoading: isLoadingDepts } = useDepartments();
-  const departments = departmentsData || [];
-  const { data: branchesData, isLoading: isLoadingBranches } = useBranches();
-  const branches = branchesData || [];
-  const { data: rolesData, isLoading: isLoadingRoles } = useRoles();
-  const roles = (rolesData || []).filter((r: string) => r && r.trim() !== "").map((r: string) => ({
-    id: r,
-    name: r,
-    nameAr: r === 'OWNER' ? 'مالك' : r === 'GENERAL_MANAGER' ? 'مدير عام' : r === 'DEPARTEMENT_MANAGER' ? 'مدير قسم' : r === 'SUPERVISOR' ? 'مشرف' : r === 'EMPLOYEE' ? 'موظف' : r === 'AGENT' ? 'مندوب' : r
-  }));
-  const { data: positionsData, isLoading: isLoadingPositions } = usePositions();
-  const positions = positionsData || [];
-  const { data: employeesData } = useEmployees();
-  const managers = (employeesData || []).filter((e: any) =>
-    e.user?.role === 'GENERAL_MANAGER' || e.user?.role === 'DEPARTEMENT_MANAGER'
-  );
-
-  const isLoading = isLoadingDepts || isLoadingBranches || isLoadingRoles || isLoadingPositions;
 
   // قراءة معاملات URL لتعبئة القسم والدور تلقائياً
   const urlParams = new URLSearchParams(window.location.search);
@@ -73,6 +53,27 @@ export default function AddEmployee() {
     bankName: '', bankAccount: '',
     basicSalary: '', housingAllowance: '', transportAllowance: '',
   });
+
+  // جلب البيانات من API
+  const { data: departmentsData, isLoading: isLoadingDepts } = useDepartments({ branchId: formData.branchId ? parseInt(formData.branchId) : (selectedBranchId || null) });
+  const allDepartments = departmentsData || [];
+  const departments = allDepartments;
+  const { data: branchesData, isLoading: isLoadingBranches } = useBranches();
+  const branches = branchesData || [];
+  const { data: rolesData, isLoading: isLoadingRoles } = useRoles();
+  const roles = (rolesData || []).filter((r: string) => r && r.trim() !== "").map((r: string) => ({
+    id: r,
+    name: r,
+    nameAr: r === 'OWNER' ? 'مالك' : r === 'GENERAL_MANAGER' ? 'مدير عام' : r === 'DEPARTEMENT_MANAGER' ? 'مدير قسم' : r === 'SUPERVISOR' ? 'مشرف' : r === 'EMPLOYEE' ? 'موظف' : r === 'AGENT' ? 'مندوب' : r
+  }));
+  const { data: positionsData, isLoading: isLoadingPositions } = usePositions({ branchId: formData.branchId ? parseInt(formData.branchId) : (selectedBranchId || null) });
+  const positions = positionsData || [];
+  const { data: employeesData } = useEmployees();
+  const managers = (employeesData || []).filter((e: any) =>
+    e.user?.role === 'GENERAL_MANAGER' || e.user?.role === 'DEPARTEMENT_MANAGER'
+  );
+
+  const isLoading = isLoadingDepts || isLoadingBranches || isLoadingRoles || isLoadingPositions;
 
   const updateField = (field: string, value: string) => setFormData(prev => ({ ...prev, [field]: value }));
 
@@ -101,11 +102,16 @@ export default function AddEmployee() {
           if (sendInviteOnCreate && data.id) {
             setCreatedEmployeeId(data.id);
             setShowInviteDialog(true);
-          } else {
-            navigate('/hr/employees');
           }
         },
-        onError: (err: any) => toast.error(`فشل الحفظ: ${err.message}`)
+        onError: (err: any) => {
+          const apiError = err.response?.data?.message || err.response?.data?.error;
+          if (err.response?.status === 409 || (apiError && apiError.includes('email'))) {
+            toast.error(apiError || 'عذراً، البريد الإلكتروني الذي أدخلته مستخدم بالفعل لموظف آخر.');
+          } else {
+            toast.error(`فشل الحفظ: ${err.message}`);
+          }
+        }
       });
     } finally { setIsSubmitting(false); }
   };

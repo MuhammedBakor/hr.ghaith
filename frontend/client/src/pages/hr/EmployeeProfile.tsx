@@ -585,10 +585,10 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
                     {(allEmployeesData || [])
                       .filter((emp: any) => emp.id !== employeeId)
                       .map((emp: any) => (
-                      <SelectItem key={emp.id} value={String(emp.id)}>
-                        {emp.firstName} {emp.lastName}
-                      </SelectItem>
-                    ))}
+                        <SelectItem key={emp.id} value={String(emp.id)}>
+                          {emp.firstName} {emp.lastName}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -1278,48 +1278,48 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
               {attendanceRecords.length === 0 ? (
                 <p className="text-center text-gray-500 py-8">لا توجد سجلات حضور</p>
               ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[600px]">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-end py-3 px-4 font-medium">التاريخ</th>
-                      <th className="text-end py-3 px-4 font-medium">وقت الحضور</th>
-                      <th className="text-end py-3 px-4 font-medium">وقت الانصراف</th>
-                      <th className="text-end py-3 px-4 font-medium">ساعات العمل</th>
-                      <th className="text-end py-3 px-4 font-medium">إضافي</th>
-                      <th className="text-end py-3 px-4 font-medium">الحالة</th>
-                      <th className="text-end py-3 px-4 font-medium">ملاحظات</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {attendanceRecords.map((record) => (
-                      <tr key={record.id} className="border-b hover:bg-gray-50">
-                        <td className="py-3 px-4">{formatDate(record.date)}</td>
-                        <td className="py-3 px-4">{record.checkIn}</td>
-                        <td className="py-3 px-4">{record.checkOut}</td>
-                        <td className="py-3 px-4">{record.workHours} ساعة</td>
-                        <td className="py-3 px-4">{record.overtime > 0 ? `+${record.overtime}` : '-'}</td>
-                        <td className="py-3 px-4">
-                          <Badge className={
-                            record.status === 'present' ? 'bg-green-100 text-green-800' :
-                              record.status === 'late' ? 'bg-yellow-100 text-yellow-800' :
-                                record.status === 'absent' ? 'bg-red-100 text-red-800' :
-                                  record.status === 'early_leave' ? 'bg-orange-100 text-orange-800' :
-                                    'bg-gray-100 text-gray-800'
-                          }>
-                            {record.status === 'present' ? 'حاضر' :
-                              record.status === 'late' ? 'متأخر' :
-                                record.status === 'absent' ? 'غائب' :
-                                  record.status === 'early_leave' ? 'خروج مبكر' :
-                                    'عطلة'}
-                          </Badge>
-                        </td>
-                        <td className="py-3 px-4 text-sm text-gray-500">{record.notes || '-'}</td>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[600px]">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-end py-3 px-4 font-medium">التاريخ</th>
+                        <th className="text-end py-3 px-4 font-medium">وقت الحضور</th>
+                        <th className="text-end py-3 px-4 font-medium">وقت الانصراف</th>
+                        <th className="text-end py-3 px-4 font-medium">ساعات العمل</th>
+                        <th className="text-end py-3 px-4 font-medium">إضافي</th>
+                        <th className="text-end py-3 px-4 font-medium">الحالة</th>
+                        <th className="text-end py-3 px-4 font-medium">ملاحظات</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {attendanceRecords.map((record) => (
+                        <tr key={record.id} className="border-b hover:bg-gray-50">
+                          <td className="py-3 px-4">{formatDate(record.date)}</td>
+                          <td className="py-3 px-4">{record.checkIn}</td>
+                          <td className="py-3 px-4">{record.checkOut}</td>
+                          <td className="py-3 px-4">{record.workHours} ساعة</td>
+                          <td className="py-3 px-4">{record.overtime > 0 ? `+${record.overtime}` : '-'}</td>
+                          <td className="py-3 px-4">
+                            <Badge className={
+                              record.status === 'present' ? 'bg-green-100 text-green-800' :
+                                record.status === 'late' ? 'bg-yellow-100 text-yellow-800' :
+                                  record.status === 'absent' ? 'bg-red-100 text-red-800' :
+                                    record.status === 'early_leave' ? 'bg-orange-100 text-orange-800' :
+                                      'bg-gray-100 text-gray-800'
+                            }>
+                              {record.status === 'present' ? 'حاضر' :
+                                record.status === 'late' ? 'متأخر' :
+                                  record.status === 'absent' ? 'غائب' :
+                                    record.status === 'early_leave' ? 'خروج مبكر' :
+                                      'عطلة'}
+                            </Badge>
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-500">{record.notes || '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </CardContent>
           </Card>
@@ -1355,38 +1355,38 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
               {salaryRecords.length === 0 ? (
                 <p className="text-center text-gray-500 py-8">لا توجد سجلات رواتب لهذا الموظف</p>
               ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[600px]">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-end py-3 px-4 font-medium">الشهر</th>
-                      <th className="text-end py-3 px-4 font-medium">الراتب الأساسي</th>
-                      <th className="text-end py-3 px-4 font-medium">البدلات</th>
-                      <th className="text-end py-3 px-4 font-medium">الخصومات</th>
-                      <th className="text-end py-3 px-4 font-medium">صافي الراتب</th>
-                      <th className="text-end py-3 px-4 font-medium">الحالة</th>
-                      <th className="text-end py-3 px-4 font-medium">تاريخ الصرف</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {salaryRecords.map((record) => (
-                      <tr key={record.id} className="border-b hover:bg-gray-50">
-                        <td className="py-3 px-4 font-medium">{record.month}</td>
-                        <td className="py-3 px-4">{record.basicSalary?.toLocaleString() || 0} ر.س</td>
-                        <td className="py-3 px-4 text-green-600">+{record.allowances?.toLocaleString() || 0} ر.س</td>
-                        <td className="py-3 px-4 text-red-600">{record.deductions > 0 ? `-${record.deductions.toLocaleString()}` : '0'} ر.س</td>
-                        <td className="py-3 px-4 font-bold">{record.netSalary?.toLocaleString() || 0} ر.س</td>
-                        <td className="py-3 px-4">
-                          <Badge className={record.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
-                            {record.status === 'paid' ? 'مصروف' : 'قيد الانتظار'}
-                          </Badge>
-                        </td>
-                        <td className="py-3 px-4">{record.paidDate ? formatDate(record.paidDate) : '-'}</td>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[600px]">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-end py-3 px-4 font-medium">الشهر</th>
+                        <th className="text-end py-3 px-4 font-medium">الراتب الأساسي</th>
+                        <th className="text-end py-3 px-4 font-medium">البدلات</th>
+                        <th className="text-end py-3 px-4 font-medium">الخصومات</th>
+                        <th className="text-end py-3 px-4 font-medium">صافي الراتب</th>
+                        <th className="text-end py-3 px-4 font-medium">الحالة</th>
+                        <th className="text-end py-3 px-4 font-medium">تاريخ الصرف</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {salaryRecords.map((record) => (
+                        <tr key={record.id} className="border-b hover:bg-gray-50">
+                          <td className="py-3 px-4 font-medium">{record.month}</td>
+                          <td className="py-3 px-4">{record.basicSalary?.toLocaleString() || 0} ر.س</td>
+                          <td className="py-3 px-4 text-green-600">+{record.allowances?.toLocaleString() || 0} ر.س</td>
+                          <td className="py-3 px-4 text-red-600">{record.deductions > 0 ? `-${record.deductions.toLocaleString()}` : '0'} ر.س</td>
+                          <td className="py-3 px-4 font-bold">{record.netSalary?.toLocaleString() || 0} ر.س</td>
+                          <td className="py-3 px-4">
+                            <Badge className={record.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
+                              {record.status === 'paid' ? 'مصروف' : 'قيد الانتظار'}
+                            </Badge>
+                          </td>
+                          <td className="py-3 px-4">{record.paidDate ? formatDate(record.paidDate) : '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </CardContent>
           </Card>

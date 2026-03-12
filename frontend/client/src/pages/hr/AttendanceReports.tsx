@@ -58,8 +58,8 @@ export default function AttendanceReports() {
   const [selectedEmployee, setSelectedEmployee] = useState<string>('all');
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
 
-  // جلب الموظفين
-  const { data: employeesData } = useEmployees();
+  // جلب الموظفين - مفلترة بالفرع الحالي
+  const { data: employeesData } = useEmployees({ branchId: selectedBranchId });
 
   // جلب الأقسام - استخدام قائمة فريدة من الموظفين
   const departmentsData = useMemo(() => {
@@ -76,7 +76,7 @@ export default function AttendanceReports() {
   const startDate = new Date(selectedYear, selectedMonth - 1, 1);
   const endDate = new Date(selectedYear, selectedMonth, 0);
 
-  const { data: attendanceData, isLoading } = useAttendance();
+  const { data: attendanceData, isLoading } = useAttendance(undefined, selectedBranchId);
 
   // حساب الإحصائيات لكل موظف
   const employeeReports = useMemo(() => {
@@ -578,8 +578,8 @@ export default function AttendanceReports() {
           ) : employeeReports.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">لا توجد بيانات للفترة المحددة</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
+            <div className="overflow-x-auto w-full">
+              <table className="w-full min-w-[600px] border-collapse">
                 <thead>
                   <tr className="border-b bg-muted/50">
                     <th className="p-3 text-end font-medium">#</th>

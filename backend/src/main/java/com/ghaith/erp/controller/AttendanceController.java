@@ -21,7 +21,8 @@ public class AttendanceController {
     @GetMapping
     public ResponseEntity<List<AttendanceRecord>> getAllAttendance(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) java.time.LocalDate date,
-            @RequestParam(required = false) Long departmentId) {
+            @RequestParam(required = false) Long departmentId,
+            @RequestParam(required = false) Long branchId) {
         if (departmentId != null && date != null) {
             return ResponseEntity.ok(attendanceService.getAttendanceByDepartmentAndDate(departmentId, date));
         }
@@ -29,9 +30,9 @@ public class AttendanceController {
             return ResponseEntity.ok(attendanceService.getAttendanceByDepartment(departmentId));
         }
         if (date != null) {
-            return ResponseEntity.ok(attendanceService.getAttendanceByDate(date));
+            return ResponseEntity.ok(attendanceService.getAttendanceByDate(date, branchId));
         }
-        return ResponseEntity.ok(attendanceService.getAllAttendance());
+        return ResponseEntity.ok(attendanceService.getAllAttendance(branchId));
     }
 
     @GetMapping("/employee/{employeeId}")
