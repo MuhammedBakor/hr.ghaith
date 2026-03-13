@@ -180,6 +180,9 @@ public class AuthenticationService {
                 response.put("valid", true);
                 response.put("employeeName", employee.getFirstName() + " " + employee.getLastName());
                 response.put("email", employee.getEmail());
+                // If user exists and is already enabled (activated in another branch), skip
+                // password setup
+                response.put("userExists", user != null && user.isEnabled());
                 return response;
         }
 
@@ -202,12 +205,19 @@ public class AuthenticationService {
                         return response;
                 }
 
-                user.setPassword(passwordEncoder.encode(password));
+                // Only set password if provided (skip for existing users)
+                if (password != null && !password.isEmpty()) {
+                        user.setPassword(passwordEncoder.encode(password));
+                }
                 user.setEnabled(true);
                 user.setVerificationCode(null);
                 repository.save(user);
 
-                employee.setStatus(Employee.EmployeeStatus.incomplete);
+                // If admin already filled basic info (full add), mark as active instead of
+                // incomplete
+                boolean profileComplete = employee.getNationalId() != null && !employee.getNationalId().isEmpty();
+                employee.setStatus(
+                                profileComplete ? Employee.EmployeeStatus.active : Employee.EmployeeStatus.incomplete);
                 employeeRepository.save(employee);
 
                 // Generate token so employee can proceed to complete profile
@@ -216,6 +226,7 @@ public class AuthenticationService {
                 response.put("success", true);
                 response.put("token", jwtToken);
                 response.put("employeeId", employee.getId());
+                response.put("profileComplete", profileComplete);
                 return response;
         }
 

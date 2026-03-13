@@ -107,7 +107,7 @@ export const useCustomRoles = () => useQuery({
 export const useCreateEmployee = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: (data: any) => api.post('/hr/employees', data),
+        mutationFn: (data: any) => api.post('/hr/employees', data).then(res => res.data),
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ['employees'] }),
     });
 };

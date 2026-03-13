@@ -40,8 +40,21 @@ public class EmployeeController {
     }
 
     @PostMapping
-    public ResponseEntity<Employee> createEmployee(@RequestBody Employee employee) {
-        return ResponseEntity.ok(employeeService.createEmployee(employee));
+    public ResponseEntity<?> createEmployee(@RequestBody Employee employee) {
+        try {
+            return ResponseEntity.ok(employeeService.createEmployee(employee));
+        } catch (DuplicateEmailException e) {
+            return ResponseEntity.status(409)
+                    .body(java.util.Map.of("error", "EMAIL_EXISTS", "message", e.getMessage()));
+        } catch (RuntimeException e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError()
+                    .body(java.util.Map.of("error", "UNKNOWN", "message", e.getMessage()));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError()
+                    .body(java.util.Map.of("error", "UNKNOWN", "message", e.getMessage()));
+        }
     }
 
     @PostMapping("/simple")

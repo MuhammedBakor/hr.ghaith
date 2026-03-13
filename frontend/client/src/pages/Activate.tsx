@@ -14,16 +14,6 @@ import { Dialog } from "@/components/ui/dialog";
 
 
 export default function Activate() {
-  const [showInlineForm, setShowInlineForm] = useState(false);
-  const [inlineData, setInlineData] = useState<any>({});
-
-  const { selectedRole: userRole } = useAppContext();
-  const canEdit = userRole === "admin" || userRole === "manager";
-  const canDelete = userRole === "admin";
-
-  const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 20;
-
   const [, navigate] = useLocation();
   const search = useSearch();
   const params = new URLSearchParams(search);
@@ -45,8 +35,19 @@ export default function Activate() {
       if (result.valid) {
         setEmployeeName(result.employeeName || '');
         setEmployeeEmail(result.email || '');
-        setStep('password');
-        toast.success('تم التحقق من الكود بنجاح');
+
+        // If user already exists (multi-branch), skip password step
+        if (result.userExists) {
+          toast.success('مرحباً بعودتك! جاري تفعيل حسابك في الفرع الجديد...');
+          completeMutation.mutate({
+            employeeNumber,
+            activationCode,
+            password: '' // Backend will skip password update if empty
+          });
+        } else {
+          setStep('password');
+          toast.success('تم التحقق من الكود بنجاح');
+        }
       } else {
         toast.error(result.error || 'كود التفعيل غير صحيح');
       }
@@ -65,9 +66,15 @@ export default function Activate() {
         if (result.token) {
           localStorage.setItem('token', result.token);
         }
-        // Redirect to complete profile instead of showing success
-        navigate(`/complete-profile?employeeId=${result.employeeId}`);
-        toast.success('تم تفعيل حسابك بنجاح! يرجى إكمال بياناتك');
+
+        // Redirect to home if profile is already complete (full add)
+        if (result.profileComplete) {
+          toast.success('تم تفعيل حسابك بنجاح!');
+          navigate('/');
+        } else {
+          toast.success('تم تفعيل حسابك بنجاح! يرجى إكمال بياناتك');
+          navigate(`/complete-profile?employeeId=${result.employeeId}`);
+        }
       } else {
         toast.error(result.error || 'فشل تفعيل الحساب');
       }

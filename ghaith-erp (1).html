@@ -1,0 +1,1343 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام غيث | Ghaith ERP System</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#2F3440",
+                        gold: "#C9A13B",
+                        goldHover: "#A8842F",
+                        appBg: "#F5F7FA",
+                        sidebarBg: "#1F2430",
+                        success: "#22C55E",
+                        warning: "#F59E0B",
+                        error: "#EF4444",
+                        info: "#3B82F6",
+                        darkBg: "#0F172A",
+                        darkCard: "#1E293B",
+                        darkBorder: "#334155",
+                        darkText: "#E2E8F0"
+                    },
+                    backgroundImage: {
+                        'brand-gradient': 'linear-gradient(135deg, #2F3440, #1F2430, #C9A13B)',
+                        'admin-gradient': 'linear-gradient(to left, #2F3440, #4A4E59)',
+                        'employee-gradient': 'linear-gradient(to left, #1e3a8a, #3b82f6)',
+                    },
+                    fontFamily: {
+                        sans: ['Tajawal', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Tajawal', sans-serif; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(228, 231, 236, 0.8);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+        .dark .glass-panel {
+            background: #1E293B;
+            border: 1px solid #334155;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+        }
+        .fade-in { animation: fadeIn 0.35s ease-in-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .chevron-transition { transition: transform 0.3s ease; }
+        .rotate-down { transform: rotate(-90deg); }
+        .submenu-line { border-right: 2px solid rgba(201, 161, 59, 0.3); margin-right: 1.2rem; }
+        .custom-select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: left 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+            padding-left: 2.5rem;
+        }
+        /* Hero animation */
+        @keyframes float {
+            0%, 100% { transform: rotate(3deg) translateY(0); }
+            50% { transform: rotate(3deg) translateY(-8px); }
+        }
+        .hero-card { animation: float 4s ease-in-out infinite; }
+        /* Sidebar active states */
+        .sidebar-btn.active-gold { background: rgba(201,161,59,0.2); border: 1px solid rgba(201,161,59,0.3); color: #C9A13B; font-weight: 700; }
+        .sidebar-btn.active-blue { background: rgba(59,130,246,0.2); border: 1px solid rgba(59,130,246,0.3); color: #93c5fd; font-weight: 700; }
+    </style>
+</head>
+
+<body class="bg-appBg dark:bg-darkBg text-primary dark:text-darkText transition-colors duration-300 font-sans h-screen w-screen overflow-hidden flex flex-col">
+
+    <!-- ===== HEADER ===== -->
+    <header class="glass-panel border-b border-gray-200 dark:border-darkBorder flex-shrink-0 z-50">
+        <div class="max-w-[98%] mx-auto px-4">
+            <div class="flex justify-between items-center h-16">
+                
+                <div class="flex items-center gap-6">
+                    <div class="flex-shrink-0 flex items-center gap-3 cursor-pointer" onclick="switchView('view-landing')">
+                        <div class="w-9 h-9 bg-primary rounded-lg flex items-center justify-center text-gold font-black text-xl shadow-md">غ</div>
+                        <span class="font-black text-2xl text-primary dark:text-white">نظام غيث</span>
+                    </div>
+                    <div id="landing-nav-container" class="hidden">
+                        <nav class="hidden md:flex gap-6 text-sm font-bold text-gray-600 dark:text-gray-300">
+                            <a href="#" onclick="scrollToSection('hero')" class="hover:text-gold transition">الرئيسية</a>
+                            <a href="#" onclick="scrollToSection('about')" class="hover:text-gold transition">من نحن</a>
+                            <a href="#" onclick="scrollToSection('services')" class="hover:text-gold transition">خدماتنا</a>
+                            <a href="#" onclick="scrollToSection('contact')" class="hover:text-gold transition">تواصل معنا</a>
+                        </nav>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3 md:gap-4">
+                    <div id="org-switcher-container" class="relative hidden">
+                        <button onclick="toggleOrgMenu()" class="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-gold transition focus:outline-none">
+                            <span class="text-xs text-gray-500 hidden md:inline">نطاق العمل:</span>
+                            <span class="text-sm font-bold text-primary dark:text-white max-w-[140px] truncate" id="top-org-name">اختر المؤسسة</span>
+                            <svg class="w-4 h-4 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                        <div id="org-dropdown-menu" class="hidden absolute left-0 top-full mt-2 w-64 bg-white dark:bg-darkCard border border-gray-200 dark:border-darkBorder rounded-xl shadow-xl py-2 z-50 max-h-80 overflow-y-auto"></div>
+                    </div>
+
+                    <div class="h-6 w-px bg-gray-300 dark:bg-darkBorder hidden md:block"></div>
+                    
+                    <button id="themeToggle" class="p-2 rounded-full text-primary dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800 transition" title="تبديل الوضع">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                    </button>
+                    
+                    <div id="user-profile" class="hidden relative">
+                        <div class="flex items-center gap-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 px-2 py-1 rounded-lg transition" onclick="toggleOrgMenu()">
+                            <div class="w-8 h-8 rounded-full bg-gold text-white flex items-center justify-center font-bold text-sm shadow-md" id="top-user-initial">م</div>
+                            <span class="hidden md:block text-sm font-bold text-primary dark:text-white" id="top-user-name">المستخدم</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ===== MAIN ===== -->
+    <main class="flex-1 flex flex-col w-full h-full overflow-hidden relative">
+
+        <!-- ============================
+             VIEW: LANDING PAGE
+        ============================= -->
+        <section id="view-landing" class="flex-1 w-full overflow-y-auto fade-in">
+            <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[900px] bg-gold/5 rounded-full filter blur-[120px] pointer-events-none z-0"></div>
+            
+            <!-- Hero -->
+            <div id="hero" class="max-w-7xl mx-auto px-6 py-20 md:py-28 grid grid-cols-1 md:grid-cols-2 gap-12 items-center z-10 relative min-h-[85vh]">
+                <div class="space-y-6">
+                    <div class="inline-flex items-center gap-2 bg-gold/10 border border-gold/30 text-gold px-4 py-1.5 rounded-full text-sm font-bold mb-2">
+                        <span class="w-2 h-2 bg-gold rounded-full animate-pulse"></span>
+                        نظام ERP متكامل للمؤسسات
+                    </div>
+                    <h1 class="text-5xl md:text-6xl font-black text-primary dark:text-white leading-tight">
+                        الإدارة المؤسسية<br><span class="text-gold">برؤية حديثة</span>
+                    </h1>
+                    <p class="text-lg text-gray-600 dark:text-gray-400 leading-relaxed">
+                        يساهم نظام غيث في تنظيم وتسهيل إدارة المؤسسات والشركات من خلال إتاحة خدمات إلكترونية متطورة لتمكين العملاء من إجراء معاملاتهم بكل سهولة وأمان.
+                    </p>
+                    <div class="flex flex-wrap gap-4 pt-2">
+                        <button onclick="switchView('view-login')" class="bg-gold hover:bg-goldHover text-white px-8 py-3.5 rounded-xl font-bold transition shadow-lg shadow-gold/30 flex items-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14"></path></svg>
+                            تسجيل الدخول
+                        </button>
+                        <button onclick="switchView('view-register')" class="bg-white dark:bg-darkCard border-2 border-primary dark:border-darkBorder text-primary dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800 px-8 py-3.5 rounded-xl font-bold transition">
+                            إنشاء حساب جديد
+                        </button>
+                    </div>
+                    <div class="flex items-center gap-8 pt-4">
+                        <div class="text-center"><p class="text-2xl font-black text-gold">5+</p><p class="text-xs text-gray-500 font-bold">مؤسسات</p></div>
+                        <div class="w-px h-10 bg-gray-200 dark:bg-gray-700"></div>
+                        <div class="text-center"><p class="text-2xl font-black text-primary dark:text-white">1,248</p><p class="text-xs text-gray-500 font-bold">موظف</p></div>
+                        <div class="w-px h-10 bg-gray-200 dark:bg-gray-700"></div>
+                        <div class="text-center"><p class="text-2xl font-black text-success">99%</p><p class="text-xs text-gray-500 font-bold">رضا العملاء</p></div>
+                    </div>
+                </div>
+                <div class="hidden md:block relative h-[420px] w-full">
+                    <div class="absolute inset-0 bg-brand-gradient rounded-[3rem] hero-card shadow-2xl opacity-90"></div>
+                    <div class="absolute inset-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-[2.5rem] shadow-xl flex flex-col p-8 gap-4">
+                        <div class="flex gap-4 flex-1">
+                            <div class="flex-1 bg-white/15 rounded-2xl flex flex-col items-center justify-center p-4">
+                                <p class="text-white/60 text-xs font-bold mb-1">الموظفين</p>
+                                <p class="text-white text-3xl font-black">1,248</p>
+                            </div>
+                            <div class="flex-1 bg-gold/30 rounded-2xl flex flex-col items-center justify-center p-4">
+                                <p class="text-white/70 text-xs font-bold mb-1">الرصيد</p>
+                                <p class="text-white text-3xl font-black">45.2M</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-4 flex-1">
+                            <div class="flex-1 bg-white/10 rounded-2xl flex flex-col items-center justify-center p-4">
+                                <p class="text-white/60 text-xs font-bold mb-1">المركبات</p>
+                                <p class="text-white text-3xl font-black">340</p>
+                            </div>
+                            <div class="flex-1 bg-white/20 rounded-2xl flex flex-col items-center justify-center p-4">
+                                <p class="text-white/60 text-xs font-bold mb-1">المشاريع</p>
+                                <p class="text-white text-3xl font-black">18</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- About -->
+            <div id="about" class="bg-white dark:bg-darkCard py-20 border-y border-gray-200 dark:border-darkBorder relative z-10">
+                <div class="max-w-7xl mx-auto px-6">
+                    <div class="text-center mb-12">
+                        <h2 class="text-3xl md:text-4xl font-black text-primary dark:text-white mb-4">من نحن</h2>
+                        <p class="max-w-3xl mx-auto text-gray-600 dark:text-gray-400 text-lg leading-relaxed">
+                            نحن منصة رقمية متكاملة تهدف إلى رقمنة وأتمتة العمليات الإدارية والتشغيلية للمؤسسات. نقدم حلولاً مبتكرة تجمع بين القوة والمرونة لتناسب قطاعات الأعمال المختلفة، ونسعى لنكون الشريك الاستراتيجي الأول في رحلة التحول الرقمي.
+                        </p>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="text-center p-6 glass-panel rounded-2xl">
+                            <div class="w-14 h-14 rounded-2xl bg-gold/10 text-gold flex items-center justify-center mx-auto mb-4">
+                                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                            </div>
+                            <h3 class="font-black text-xl text-primary dark:text-white mb-2">سريع وفعّال</h3>
+                            <p class="text-gray-500 text-sm leading-relaxed">أداء فائق وسرعة في معالجة البيانات والتقارير اللحظية.</p>
+                        </div>
+                        <div class="text-center p-6 glass-panel rounded-2xl">
+                            <div class="w-14 h-14 rounded-2xl bg-info/10 text-info flex items-center justify-center mx-auto mb-4">
+                                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                            </div>
+                            <h3 class="font-black text-xl text-primary dark:text-white mb-2">آمن وموثوق</h3>
+                            <p class="text-gray-500 text-sm leading-relaxed">أعلى معايير الأمان وحماية البيانات بتقنيات تشفير متقدمة.</p>
+                        </div>
+                        <div class="text-center p-6 glass-panel rounded-2xl">
+                            <div class="w-14 h-14 rounded-2xl bg-success/10 text-success flex items-center justify-center mx-auto mb-4">
+                                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                            </div>
+                            <h3 class="font-black text-xl text-primary dark:text-white mb-2">متكامل ومرن</h3>
+                            <p class="text-gray-500 text-sm leading-relaxed">وحدات متنوعة تتكامل بسلاسة مع احتياجات كل مؤسسة.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Services -->
+            <div id="services" class="py-20 max-w-7xl mx-auto px-6 relative z-10">
+                <div class="flex items-end justify-between mb-10">
+                    <h2 class="text-3xl md:text-4xl font-black text-primary dark:text-white">خدماتنا الرئيسية</h2>
+                    <p class="text-gray-500 text-sm hidden md:block">مرر للاستكشاف →</p>
+                </div>
+                <div id="services-carousel" class="flex overflow-x-auto gap-6 pb-8 hide-scrollbar cursor-grab active:cursor-grabbing w-full">
+                    <div class="glass-panel w-[300px] md:w-[320px] p-8 rounded-3xl flex-shrink-0 border-t-4 border-t-gold hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+                        <div class="w-12 h-12 bg-gold/10 rounded-2xl flex items-center justify-center text-gold mb-4">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m3-4h1m-1 4h1m-5 8h8"></path></svg>
+                        </div>
+                        <h3 class="text-xl font-black mb-3 text-primary dark:text-white">إدارة العقارات</h3>
+                        <p class="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">نظام متكامل لإدارة الأملاك، ومتابعة المستأجرين، وتحصيل الإيجارات بفعالية.</p>
+                    </div>
+                    <div class="glass-panel w-[300px] md:w-[320px] p-8 rounded-3xl flex-shrink-0 border-t-4 border-t-primary hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+                        <div class="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary dark:text-gray-300 mb-4">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+                        </div>
+                        <h3 class="text-xl font-black mb-3 text-primary dark:text-white">تأجير السيارات</h3>
+                        <p class="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">إدارة الحجوزات، تتبع العقود، وإدارة الأسطول والفحوصات الدورية.</p>
+                    </div>
+                    <div class="glass-panel w-[300px] md:w-[320px] p-8 rounded-3xl flex-shrink-0 border-t-4 border-t-info hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+                        <div class="w-12 h-12 bg-info/10 rounded-2xl flex items-center justify-center text-info mb-4">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        </div>
+                        <h3 class="text-xl font-black mb-3 text-primary dark:text-white">أسطول التريلات</h3>
+                        <p class="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">تتبع مسارات الشحنات، وإدارة السائقين والصيانة والوقود.</p>
+                    </div>
+                    <div class="glass-panel w-[300px] md:w-[320px] p-8 rounded-3xl flex-shrink-0 border-t-4 border-t-success hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+                        <div class="w-12 h-12 bg-success/10 rounded-2xl flex items-center justify-center text-success mb-4">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0"></path></svg>
+                        </div>
+                        <h3 class="text-xl font-black mb-3 text-primary dark:text-white">العمرة والحج</h3>
+                        <p class="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">إدارة التفويج، الحجوزات، والسكن للإعاشة للمعتمرين والحجاج.</p>
+                    </div>
+                    <div class="glass-panel w-[300px] md:w-[320px] p-8 rounded-3xl flex-shrink-0 border-t-4 border-t-gold hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+                        <div class="w-12 h-12 bg-gold/10 rounded-2xl flex items-center justify-center text-gold mb-4">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                        </div>
+                        <h3 class="text-xl font-black mb-3 text-primary dark:text-white">إدارة المشاريع</h3>
+                        <p class="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">تتبع إنجاز المشاريع وتوزيع المهام بدقة عالية وفعالية.</p>
+                    </div>
+                    <div class="glass-panel w-[300px] md:w-[320px] p-8 rounded-3xl flex-shrink-0 border-t-4 border-t-primary hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+                        <div class="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary dark:text-gray-300 mb-4">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                        </div>
+                        <h3 class="text-xl font-black mb-3 text-primary dark:text-white">ذكاء الأعمال</h3>
+                        <p class="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">تقارير وإحصائيات مفصلة لدعم اتخاذ القرارات السريعة والدقيقة.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contact -->
+            <div id="contact" class="py-20 max-w-7xl mx-auto px-6 mb-8 relative z-10">
+                <div class="glass-panel rounded-3xl p-10 max-w-3xl mx-auto shadow-xl">
+                    <div class="text-center mb-8">
+                        <h2 class="text-3xl font-black text-primary dark:text-white mb-3">تواصل معنا</h2>
+                        <p class="text-gray-500">نحن هنا للإجابة على جميع استفساراتك ومساعدتك في البدء.</p>
+                    </div>
+                    <form class="space-y-4 text-right" onsubmit="return false;">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">الاسم الكريم</label>
+                                <input type="text" class="w-full bg-white dark:bg-darkBg border border-gray-200 dark:border-darkBorder rounded-xl px-4 py-3 focus:outline-none focus:border-gold transition" placeholder="الاسم الكريم">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">البريد الإلكتروني</label>
+                                <input type="email" class="w-full bg-white dark:bg-darkBg border border-gray-200 dark:border-darkBorder rounded-xl px-4 py-3 focus:outline-none focus:border-gold transition" placeholder="email@domain.com">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">رسالتك</label>
+                            <textarea rows="4" class="w-full bg-white dark:bg-darkBg border border-gray-200 dark:border-darkBorder rounded-xl px-4 py-3 focus:outline-none focus:border-gold transition resize-none" placeholder="كيف يمكننا مساعدتك؟"></textarea>
+                        </div>
+                        <button type="button" onclick="alert('تم إرسال رسالتك بنجاح!')" class="w-full bg-gold hover:bg-goldHover text-white font-bold py-3.5 rounded-xl transition shadow-lg">إرسال الرسالة</button>
+                    </form>
+                </div>
+            </div>
+            
+            <footer class="bg-primary py-8 text-center text-gray-400 text-sm w-full">
+                <p>جميع الحقوق محفوظة لنظام غيث &copy; 2026</p>
+            </footer>
+        </section>
+
+        <!-- ============================
+             VIEW: LOGIN
+        ============================= -->
+        <section id="view-login" class="flex-1 w-full overflow-y-auto fade-in hidden">
+            <div class="min-h-full flex items-center justify-center py-20 px-4">
+                <div class="max-w-md w-full glass-panel rounded-3xl p-10 shadow-2xl">
+                    <div class="text-center mb-8">
+                        <div class="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center text-gold font-black text-3xl shadow-lg mx-auto mb-4">غ</div>
+                        <h2 class="text-3xl font-black text-primary dark:text-white mb-2">تسجيل الدخول</h2>
+                        <p class="text-gray-500">أدخل بياناتك للوصول إلى النظام</p>
+                    </div>
+                    <form onsubmit="handleLogin(event)" class="space-y-5">
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">البريد الإلكتروني</label>
+                            <input type="email" id="login-email" required class="w-full bg-white dark:bg-darkBg border border-gray-200 dark:border-darkBorder rounded-xl px-4 py-3 focus:outline-none focus:border-gold transition" placeholder="admin@domain.com">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">كلمة المرور</label>
+                            <input type="password" required class="w-full bg-white dark:bg-darkBg border border-gray-200 dark:border-darkBorder rounded-xl px-4 py-3 focus:outline-none focus:border-gold transition" placeholder="••••••••">
+                        </div>
+                        <button type="submit" class="w-full bg-gold hover:bg-goldHover text-white font-bold py-3.5 rounded-xl transition shadow-lg shadow-gold/20 mt-2">دخول إلى النظام</button>
+                        <p class="text-center text-sm text-gray-500">ليس لديك حساب؟ <button type="button" onclick="switchView('view-register')" class="text-gold font-bold hover:underline">إنشاء حساب جديد</button></p>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================
+             VIEW: REGISTER
+        ============================= -->
+        <section id="view-register" class="flex-1 w-full overflow-y-auto fade-in hidden">
+            <div class="min-h-full flex items-center justify-center py-16 px-4">
+                <div class="max-w-lg w-full glass-panel rounded-3xl p-10 shadow-2xl">
+                    <div class="text-center mb-8">
+                        <div class="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center text-gold font-black text-3xl shadow-lg mx-auto mb-4">غ</div>
+                        <h2 class="text-3xl font-black text-primary dark:text-white mb-2">إنشاء حساب جديد</h2>
+                        <p class="text-gray-500">سجّل بياناتك للبدء في استخدام النظام</p>
+                    </div>
+                    <form onsubmit="handleRegister(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-bold mb-1 text-gray-700 dark:text-gray-300">الاسم الكامل</label>
+                            <input type="text" id="reg-name" required class="w-full bg-white dark:bg-darkBg border border-gray-200 dark:border-darkBorder rounded-xl px-4 py-3 focus:outline-none focus:border-gold transition">
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-bold mb-1 text-gray-700 dark:text-gray-300">البريد الإلكتروني</label>
+                                <input type="email" required class="w-full bg-white dark:bg-darkBg border border-gray-200 dark:border-darkBorder rounded-xl px-4 py-3 focus:outline-none focus:border-gold transition">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold mb-1 text-gray-700 dark:text-gray-300">تأكيد البريد</label>
+                                <input type="email" required class="w-full bg-white dark:bg-darkBg border border-gray-200 dark:border-darkBorder rounded-xl px-4 py-3 focus:outline-none focus:border-gold transition">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-bold mb-1 text-gray-700 dark:text-gray-300">الرمز السري</label>
+                                <input type="password" required class="w-full bg-white dark:bg-darkBg border border-gray-200 dark:border-darkBorder rounded-xl px-4 py-3 focus:outline-none focus:border-gold transition">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold mb-1 text-gray-700 dark:text-gray-300">تأكيد الرمز</label>
+                                <input type="password" required class="w-full bg-white dark:bg-darkBg border border-gray-200 dark:border-darkBorder rounded-xl px-4 py-3 focus:outline-none focus:border-gold transition">
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full bg-gold hover:bg-goldHover text-white font-bold py-3.5 rounded-xl transition shadow-lg mt-2">تسجيل الحساب</button>
+                        <p class="text-center text-sm text-gray-500">لديك حساب بالفعل؟ <button type="button" onclick="switchView('view-login')" class="text-gold font-bold hover:underline">تسجيل الدخول</button></p>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================
+             VIEW: ORGANIZATIONS
+        ============================= -->
+        <section id="view-orgs" class="flex-1 w-full overflow-y-auto fade-in hidden">
+            <div class="py-12 px-4 bg-appBg dark:bg-darkBg min-h-full">
+                <div class="max-w-5xl mx-auto mt-4 pb-20">
+                    <div class="text-center mb-10">
+                        <h2 class="text-4xl font-black mb-2 text-primary dark:text-white">مرحباً بك، <span id="greeting-name" class="text-gold"></span></h2>
+                        <p class="text-gray-500 dark:text-gray-400 text-lg">يرجى اختيار لوحة التحكم أو الفرع المطلوب</p>
+                    </div>
+                    
+                    <!-- Admin Card -->
+                    <div class="mb-4">
+                        <div onclick="selectOrganization('لوحة تحكم المدير (شاملة)')" class="cursor-pointer flex flex-col md:flex-row md:items-center justify-between p-6 bg-admin-gradient text-white rounded-2xl shadow-xl hover:shadow-gold/20 hover:scale-[1.01] transition-all duration-300 border border-gray-600">
+                            <div class="flex items-center gap-5">
+                                <div class="w-16 h-16 rounded-full border border-gold bg-black/20 flex items-center justify-center text-gold flex-shrink-0">
+                                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                                </div>
+                                <div>
+                                    <h4 class="font-black text-2xl mb-1">لوحة تحكم المدير (كافة المؤسسات)</h4>
+                                    <p class="text-sm text-gray-300">نظرة عامة وتقارير شاملة لجميع الكيانات والأفرع التابعة.</p>
+                                </div>
+                            </div>
+                            <button class="mt-4 md:mt-0 px-8 py-3 bg-gold hover:bg-goldHover text-white font-bold rounded-xl shadow-lg transition flex-shrink-0">دخول الإدارة</button>
+                        </div>
+                    </div>
+
+                    <!-- Employee Portal Card -->
+                    <div class="mb-10">
+                        <div onclick="selectOrganization('لوحة تحكم الموظف (شاملة)')" class="cursor-pointer flex flex-col md:flex-row md:items-center justify-between p-6 bg-employee-gradient text-white rounded-2xl shadow-xl hover:shadow-blue-500/20 hover:scale-[1.01] transition-all duration-300 border border-blue-400">
+                            <div class="flex items-center gap-5">
+                                <div class="w-16 h-16 rounded-full border border-blue-300 bg-white/10 flex items-center justify-center text-blue-100 flex-shrink-0">
+                                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                                </div>
+                                <div>
+                                    <h4 class="font-black text-2xl mb-1">بوابة الموظف الموحدة</h4>
+                                    <p class="text-sm text-blue-100">بوابة الموظف لعرض المهام والصلاحيات في جميع الفروع.</p>
+                                </div>
+                            </div>
+                            <button class="mt-4 md:mt-0 px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl shadow-lg transition flex-shrink-0">دخول البوابة</button>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-4 mb-6">
+                        <div class="h-px bg-gray-300 dark:bg-darkBorder flex-1"></div>
+                        <span class="text-gray-500 font-bold text-sm whitespace-nowrap">أو اختر فرعاً محدداً للعمل عليه</span>
+                        <div class="h-px bg-gray-300 dark:bg-darkBorder flex-1"></div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="org-list"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================
+             VIEW: DASHBOARD
+        ============================= -->
+        <section id="view-dashboard" class="flex-1 w-full hidden fade-in overflow-hidden">
+            <div class="flex h-full w-full">
+                
+                <!-- SIDEBAR -->
+                <aside class="w-72 bg-sidebarBg border-l border-gray-800 flex flex-col h-full flex-shrink-0 text-white shadow-2xl relative z-10">
+                    
+                    <div class="p-5 border-b border-gray-700/50 bg-black/20">
+                        <h3 class="font-bold text-xs text-gray-400 uppercase tracking-wider mb-2">نطاق العمل الحالي:</h3>
+                        <p class="font-black text-gold mt-1 line-clamp-2 text-base leading-tight" id="sidebar-org-name">اسم المؤسسة</p>
+                    </div>
+
+                    <!-- Admin Navigation -->
+                    <nav id="admin-nav" class="hidden flex-1 px-3 py-4 space-y-1 overflow-y-auto hide-scrollbar">
+                        <button onclick="switchModule('main', this)" data-target="main" class="sidebar-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl transition text-gray-300 hover:bg-white/5 hover:text-white font-bold">
+                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                            الرئيسية (شاملة)
+                        </button>
+                        
+                        <p class="text-xs font-bold text-gray-500 mb-1 px-4 mt-4 uppercase tracking-wider">التحليلات</p>
+                        <button onclick="switchModule('comparison', this)" class="sidebar-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition text-gray-300 hover:bg-white/5 hover:text-white font-bold">
+                            <svg class="w-4 h-4 flex-shrink-0 text-info" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                            <span class="text-info">مقارنة المؤسسات</span>
+                        </button>
+                        
+                        <p class="text-xs font-bold text-gray-500 mb-1 px-4 mt-4 uppercase tracking-wider">الأقسام الأساسية</p>
+                        
+                        <div class="accordion-item mb-1">
+                            <button onclick="toggleAccordion('menu-hr', this)" class="w-full flex items-center justify-between px-4 py-3 text-gray-300 hover:bg-white/5 hover:text-white rounded-xl transition">
+                                <div class="flex items-center gap-3">
+                                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                                    <span class="font-bold">الموارد البشرية</span>
+                                </div>
+                                <svg class="chevron-icon w-4 h-4 chevron-transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                            </button>
+                            <div id="menu-hr" class="submenu hidden flex-col pr-6 py-1 space-y-1 submenu-line mr-6 mt-1">
+                                <button onclick="switchModule('hr-employees', this, true)" data-target="hr-employees" class="sub-btn w-full text-right block px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/10 transition">الموظفين الشامل</button>
+                                <button onclick="switchModule('generic', this, true)" class="sub-btn w-full text-right block px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/10 transition">الحضور والانصراف</button>
+                                <button onclick="switchModule('generic', this, true)" class="sub-btn w-full text-right block px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/10 transition">الإجازات</button>
+                                <button onclick="switchModule('generic', this, true)" class="sub-btn w-full text-right block px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/10 transition">الرواتب والمسيرات</button>
+                                <button onclick="switchModule('generic', this, true)" class="sub-btn w-full text-right block px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/10 transition">تقييم الأداء</button>
+                                <button onclick="switchModule('generic', this, true)" class="sub-btn w-full text-right block px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/10 transition">التدريبات والعلاوات</button>
+                                <button onclick="switchModule('generic', this, true)" class="sub-btn w-full text-right block px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/10 transition">المخالفات والجزاءات</button>
+                            </div>
+                        </div>
+
+                        <button onclick="switchModule('generic', this)" class="sidebar-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition text-gray-300 hover:bg-white/5 hover:text-white font-bold">
+                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            المالية والمحاسبة
+                        </button>
+                        <button onclick="switchModule('generic', this)" class="sidebar-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition text-gray-300 hover:bg-white/5 hover:text-white font-bold">
+                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m3-4h1m-1 4h1m-5 8h8"></path></svg>
+                            إدارة العقارات
+                        </button>
+                        <button onclick="switchModule('generic', this)" class="sidebar-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition text-gray-300 hover:bg-white/5 hover:text-white font-bold">
+                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+                            الحركة والنقل
+                        </button>
+                        <button onclick="switchModule('generic', this)" class="sidebar-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition text-gray-300 hover:bg-white/5 hover:text-white font-bold">
+                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                            إدارة المشاريع
+                        </button>
+
+                        <div class="accordion-item mb-1">
+                            <button onclick="toggleAccordion('menu-comm', this)" class="w-full flex items-center justify-between px-4 py-2.5 text-gray-300 hover:bg-white/5 hover:text-white rounded-xl transition">
+                                <div class="flex items-center gap-3">
+                                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                                    <span class="font-bold">التواصل والمراسلات</span>
+                                </div>
+                                <svg class="chevron-icon w-4 h-4 chevron-transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                            </button>
+                            <div id="menu-comm" class="submenu hidden flex-col pr-6 py-1 space-y-1 submenu-line mr-6 mt-1">
+                                <button onclick="switchModule('generic', this, true)" class="sub-btn w-full text-right block px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/10 transition">البريد ونظام المراسلات</button>
+                                <button onclick="switchModule('generic', this, true)" class="sub-btn w-full text-right block px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/10 transition">الصادر والوارد والمعاملات</button>
+                            </div>
+                        </div>
+
+                        <div class="accordion-item mb-1">
+                            <button onclick="toggleAccordion('menu-docs', this)" class="w-full flex items-center justify-between px-4 py-2.5 text-gray-300 hover:bg-white/5 hover:text-white rounded-xl transition">
+                                <div class="flex items-center gap-3">
+                                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                    <span class="font-bold">المستندات والتقارير</span>
+                                </div>
+                                <svg class="chevron-icon w-4 h-4 chevron-transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                            </button>
+                            <div id="menu-docs" class="submenu hidden flex-col pr-6 py-1 space-y-1 submenu-line mr-6 mt-1">
+                                <button onclick="switchModule('generic', this, true)" class="sub-btn w-full text-right block px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/10 transition">المجلدات والأرشيف</button>
+                                <button onclick="switchModule('generic', this, true)" class="sub-btn w-full text-right block px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/10 transition">التقارير الشاملة</button>
+                            </div>
+                        </div>
+
+                        <p class="text-xs font-bold text-gold mb-1 px-4 mt-4 uppercase tracking-wider">لوحة تحكم النظام</p>
+                        <div class="accordion-item mb-1">
+                            <button onclick="toggleAccordion('menu-roles', this)" class="w-full flex items-center justify-between px-4 py-2.5 text-gray-300 hover:bg-white/5 hover:text-white rounded-xl transition">
+                                <div class="flex items-center gap-3">
+                                    <svg class="w-4 h-4 flex-shrink-0 text-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                                    <span class="font-bold text-gold">الصلاحيات والأدوار</span>
+                                </div>
+                                <svg class="chevron-icon w-4 h-4 chevron-transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                            </button>
+                            <div id="menu-roles" class="submenu hidden flex-col pr-6 py-1 space-y-1 submenu-line mr-6 mt-1 border-gold/50">
+                                <button onclick="switchModule('permissions', this, true)" data-target="permissions" class="sub-btn w-full text-right block px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/10 transition font-bold">إعدادات الصلاحيات</button>
+                                <button onclick="switchModule('generic', this, true)" class="sub-btn w-full text-right block px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/10 transition">نقل واستقالات</button>
+                            </div>
+                        </div>
+                    </nav>
+
+                    <!-- Org Navigation -->
+                    <nav id="org-nav" class="hidden flex-1 px-3 py-4 space-y-2 overflow-y-auto hide-scrollbar">
+                        <p class="text-xs font-bold text-gray-500 mb-2 px-4 mt-2 uppercase tracking-wider">القائمة المخصصة</p>
+                        <button onclick="switchModule('main', this)" data-target="main-org" class="sidebar-btn w-full text-right block px-4 py-3 rounded-xl transition text-gray-300 hover:bg-white/5 hover:text-white font-bold">الرئيسية للفرع</button>
+                        <button onclick="switchModule('generic', this)" class="sidebar-btn w-full text-right block px-4 py-3 rounded-xl transition text-gray-300 hover:bg-white/5 hover:text-white font-bold">الموظفين</button>
+                        <button onclick="switchModule('generic', this)" class="sidebar-btn w-full text-right block px-4 py-3 rounded-xl transition text-gray-300 hover:bg-white/5 hover:text-white font-bold">المشاريع</button>
+                        <button onclick="switchModule('generic', this)" class="sidebar-btn w-full text-right block px-4 py-3 rounded-xl transition text-gray-300 hover:bg-white/5 hover:text-white font-bold">الصادرات والواردات</button>
+                        <button onclick="switchModule('generic', this)" class="sidebar-btn w-full text-right block px-4 py-3 rounded-xl transition text-gray-300 hover:bg-white/5 hover:text-white font-bold">المعاملات والمراسلات</button>
+                        <button onclick="switchModule('generic', this)" class="sidebar-btn w-full text-right block px-4 py-3 rounded-xl transition text-gray-300 hover:bg-white/5 hover:text-white font-bold">التقارير والإعدادات</button>
+                    </nav>
+
+                    <!-- Employee Navigation -->
+                    <nav id="employee-nav" class="hidden flex-1 px-3 py-4 space-y-2 overflow-y-auto hide-scrollbar">
+                        <p class="text-xs font-bold text-blue-300 mb-2 px-4 mt-2 uppercase tracking-wider">بوابة الموظف</p>
+                        <button onclick="switchModule('emp-main', this)" data-target="emp-main" class="sidebar-btn w-full text-right block px-4 py-3 rounded-xl transition text-gray-300 hover:bg-white/5 hover:text-white font-bold">
+                            <span class="flex items-center gap-3">
+                                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                                نظرة عامة على مهامي
+                            </span>
+                        </button>
+                        <button onclick="switchModule('emp-permissions', this)" class="sidebar-btn w-full text-right block px-4 py-3 rounded-xl transition text-gray-300 hover:bg-white/5 hover:text-white font-bold">الصلاحيات الممنوحة لي</button>
+                        <button onclick="switchModule('generic', this)" class="sidebar-btn w-full text-right block px-4 py-3 rounded-xl transition text-gray-300 hover:bg-white/5 hover:text-white font-bold">سجل الحضور والغياب</button>
+                        <button onclick="switchModule('generic', this)" class="sidebar-btn w-full text-right block px-4 py-3 rounded-xl transition text-gray-300 hover:bg-white/5 hover:text-white font-bold">طلباتي (إجازات/سلف)</button>
+                        <button onclick="switchModule('generic', this)" class="sidebar-btn w-full text-right block px-4 py-3 rounded-xl transition text-gray-300 hover:bg-white/5 hover:text-white font-bold">التعاميم والإشعارات</button>
+                    </nav>
+
+                    <div class="p-4 border-t border-gray-700/50 bg-black/10 flex-shrink-0">
+                        <button onclick="switchView('view-landing')" class="flex items-center justify-center gap-3 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white w-full px-4 py-3 rounded-xl transition font-bold">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                            <span>تسجيل الخروج</span>
+                        </button>
+                    </div>
+                </aside>
+
+                <!-- MAIN CONTENT AREA -->
+                <div class="flex-1 overflow-y-auto bg-appBg dark:bg-darkBg relative h-full">
+                    
+                    <!-- Admin Global Filter Bar -->
+                    <div id="admin-global-filter" class="hidden px-8 pt-6 pb-0">
+                        <div class="glass-panel rounded-2xl border border-gray-200 dark:border-darkBorder shadow-sm fade-in overflow-hidden">
+                            
+                            <!-- Filter Header -->
+                            <div class="flex items-center justify-between px-5 py-3 border-b border-gray-100 dark:border-darkBorder bg-gray-50/80 dark:bg-gray-800/50">
+                                <div class="flex items-center gap-2 text-gold">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
+                                    <span class="font-black text-sm">شريط الفرز المتعدد</span>
+                                    <span id="filter-count-badge" class="bg-gold text-white text-xs font-black px-2 py-0.5 rounded-full">1</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <button onclick="addFilterRow()" class="flex items-center gap-1.5 bg-gold/10 hover:bg-gold/20 text-gold border border-gold/30 px-3 py-1.5 rounded-lg text-xs font-black transition">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
+                                        إضافة فرز
+                                    </button>
+                                    <button onclick="resetAllFilters()" class="flex items-center gap-1.5 text-gray-500 hover:text-error border border-gray-200 dark:border-gray-700 hover:border-error px-3 py-1.5 rounded-lg text-xs font-bold transition">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                                        إعادة تعيين
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Filter Rows Container -->
+                            <div id="filter-rows-container" class="px-5 py-4 space-y-3"></div>
+
+                            <!-- Apply Button -->
+                            <div class="px-5 pb-4 flex items-center justify-between gap-4 border-t border-gray-100 dark:border-darkBorder pt-3 bg-gray-50/50 dark:bg-gray-800/30">
+                                <p id="filter-summary" class="text-xs text-gray-500 font-bold"></p>
+                                <button onclick="applyAllFilters()" class="flex items-center gap-2 bg-gold hover:bg-goldHover text-white px-6 py-2.5 rounded-xl text-sm font-black transition shadow-md shadow-gold/20">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                    تطبيق الفرز
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-4 md:p-8">
+
+                        <!-- Module: Main (Admin Overview) -->
+                        <div id="module-main" class="module-section fade-in hidden">
+                            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+                                <h2 class="text-3xl font-black text-primary dark:text-white">الإحصائيات العامة</h2>
+                                <button class="bg-white dark:bg-darkCard border border-gray-200 dark:border-darkBorder text-gray-600 dark:text-gray-300 px-4 py-2 rounded-lg text-sm font-bold shadow-sm hover:border-gold transition">تصدير التقرير</button>
+                            </div>
+                            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-5 mb-8">
+                                <div class="glass-panel p-5 rounded-2xl border-b-4 border-info hover:shadow-md transition">
+                                    <h3 class="text-xs font-bold text-gray-500 mb-2">الموظفين</h3>
+                                    <p class="text-2xl md:text-3xl font-black text-primary dark:text-white">1,248</p>
+                                    <p class="text-xs text-success mt-1 font-bold">↑ +12 هذا الشهر</p>
+                                </div>
+                                <div class="glass-panel p-5 rounded-2xl border-b-4 border-gold hover:shadow-md transition">
+                                    <h3 class="text-xs font-bold text-gray-500 mb-2">الرصيد المالي</h3>
+                                    <p class="text-2xl md:text-3xl font-black text-gold">45.2M</p>
+                                    <p class="text-xs text-success mt-1 font-bold">↑ +3.2M هذا الشهر</p>
+                                </div>
+                                <div class="glass-panel p-5 rounded-2xl border-b-4 border-primary hover:shadow-md transition">
+                                    <h3 class="text-xs font-bold text-gray-500 mb-2">إجمالي المركبات</h3>
+                                    <p class="text-2xl md:text-3xl font-black text-primary dark:text-white">340</p>
+                                    <p class="text-xs text-warning mt-1 font-bold">8 في الصيانة</p>
+                                </div>
+                                <div class="glass-panel p-5 rounded-2xl border-b-4 border-warning hover:shadow-md transition">
+                                    <h3 class="text-xs font-bold text-gray-500 mb-2">الطلبات المعلقة</h3>
+                                    <p class="text-2xl md:text-3xl font-black text-warning">42</p>
+                                    <p class="text-xs text-gray-500 mt-1 font-bold">تحتاج مراجعة</p>
+                                </div>
+                                <div class="glass-panel p-5 rounded-2xl border-b-4 border-red-500 hover:shadow-md transition">
+                                    <h3 class="text-xs font-bold text-gray-500 mb-2">تذاكر الصيانة</h3>
+                                    <p class="text-2xl md:text-3xl font-black text-red-600 dark:text-red-400">28</p>
+                                    <p class="text-xs text-error mt-1 font-bold">5 عاجلة</p>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <div class="glass-panel p-6 rounded-2xl shadow-sm">
+                                    <h3 class="font-black text-lg text-primary dark:text-white mb-4">توزيع الموظفين حسب المؤسسة</h3>
+                                    <div class="space-y-3">
+                                        <div><div class="flex justify-between text-sm mb-1"><span class="font-bold">مؤسسة الدور الحديثة</span><span class="text-gray-500">45 موظف</span></div><div class="h-2 bg-gray-100 dark:bg-gray-700 rounded-full"><div class="h-2 bg-gold rounded-full" style="width: 36%"></div></div></div>
+                                        <div><div class="flex justify-between text-sm mb-1"><span class="font-bold">مؤسسة الضياء والبيان</span><span class="text-gray-500">120 موظف</span></div><div class="h-2 bg-gray-100 dark:bg-gray-700 rounded-full"><div class="h-2 bg-info rounded-full" style="width: 96%"></div></div></div>
+                                        <div><div class="flex justify-between text-sm mb-1"><span class="font-bold">شركة وفد الحديثة</span><span class="text-gray-500">35 موظف</span></div><div class="h-2 bg-gray-100 dark:bg-gray-700 rounded-full"><div class="h-2 bg-success rounded-full" style="width: 28%"></div></div></div>
+                                        <div><div class="flex justify-between text-sm mb-1"><span class="font-bold">مؤسسة عابد للنقل</span><span class="text-gray-500">88 موظف</span></div><div class="h-2 bg-gray-100 dark:bg-gray-700 rounded-full"><div class="h-2 bg-warning rounded-full" style="width: 70%"></div></div></div>
+                                    </div>
+                                </div>
+                                <div class="glass-panel p-6 rounded-2xl shadow-sm">
+                                    <h3 class="font-black text-lg text-primary dark:text-white mb-4">آخر الأنشطة</h3>
+                                    <div class="space-y-3">
+                                        <div class="flex items-center gap-3 py-2 border-b border-gray-100 dark:border-gray-800"><div class="w-2 h-2 rounded-full bg-success flex-shrink-0"></div><div><p class="text-sm font-bold">إضافة موظف جديد - أحمد السالم</p><p class="text-xs text-gray-500">قبل 2 ساعة</p></div></div>
+                                        <div class="flex items-center gap-3 py-2 border-b border-gray-100 dark:border-gray-800"><div class="w-2 h-2 rounded-full bg-warning flex-shrink-0"></div><div><p class="text-sm font-bold">طلب إجازة - فهد المطيري</p><p class="text-xs text-gray-500">قبل 4 ساعات</p></div></div>
+                                        <div class="flex items-center gap-3 py-2 border-b border-gray-100 dark:border-gray-800"><div class="w-2 h-2 rounded-full bg-info flex-shrink-0"></div><div><p class="text-sm font-bold">تحديث عقد - مركبة B-2341</p><p class="text-xs text-gray-500">قبل 6 ساعات</p></div></div>
+                                        <div class="flex items-center gap-3 py-2"><div class="w-2 h-2 rounded-full bg-error flex-shrink-0"></div><div><p class="text-sm font-bold">تذكرة صيانة عاجلة - شاحنة T-12</p><p class="text-xs text-gray-500">قبل 8 ساعات</p></div></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Module: HR Employees -->
+                        <div id="module-hr-employees" class="module-section fade-in hidden">
+                            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+                                <div>
+                                    <h2 class="text-3xl font-black text-primary dark:text-white mb-2">إدارة الموظفين (نظرة شاملة)</h2>
+                                    <p class="text-gray-500">استعراض وإدارة بيانات الموظفين مقسمة حسب الفروع والمؤسسات.</p>
+                                </div>
+                                <button class="bg-gold hover:bg-goldHover text-white px-6 py-3 rounded-xl font-bold shadow-lg transition flex items-center gap-2">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                    إضافة موظف جديد
+                                </button>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                                <div class="glass-panel p-6 rounded-2xl shadow-lg border-t-4 border-gold flex flex-col">
+                                    <div class="flex items-center gap-4 mb-5">
+                                        <div class="w-12 h-12 rounded-xl bg-gold/10 text-gold flex items-center justify-center shrink-0"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m3-4h1m-1 4h1m-5 8h8"></path></svg></div>
+                                        <div><h3 class="font-black text-base text-primary dark:text-white">مؤسسة الدور الحديثة</h3><p class="text-sm text-gray-500 mt-0.5">فرع العمرة</p></div>
+                                    </div>
+                                    <div class="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 mb-5 flex-1">
+                                        <div class="flex justify-between items-center mb-3"><span class="text-sm font-bold text-gray-600 dark:text-gray-400">إجمالي الموظفين</span><span class="text-2xl font-black text-primary dark:text-white">45</span></div>
+                                        <div class="flex justify-between text-sm border-t border-gray-200 dark:border-gray-700 pt-3"><span>متاح: <span class="text-success font-bold">40</span></span><span>إجازة: <span class="text-warning font-bold">5</span></span></div>
+                                    </div>
+                                    <div class="flex flex-col gap-2 mt-auto">
+                                        <button class="w-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-primary dark:text-white py-2.5 rounded-lg text-sm font-bold transition">استعراض القائمة</button>
+                                        <div class="flex gap-2">
+                                            <button class="flex-1 bg-gold text-white py-2 rounded-lg text-sm font-bold hover:bg-goldHover transition">+ إضافة</button>
+                                            <button class="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm font-bold hover:bg-blue-500 transition">صلاحية</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="glass-panel p-6 rounded-2xl shadow-lg border-t-4 border-info flex flex-col">
+                                    <div class="flex items-center gap-4 mb-5">
+                                        <div class="w-12 h-12 rounded-xl bg-info/10 text-info flex items-center justify-center shrink-0"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg></div>
+                                        <div><h3 class="font-black text-base text-primary dark:text-white">مؤسسة الضياء والبيان</h3><p class="text-sm text-gray-500 mt-0.5">فرع الحركة</p></div>
+                                    </div>
+                                    <div class="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 mb-5 flex-1">
+                                        <div class="flex justify-between items-center mb-3"><span class="text-sm font-bold text-gray-600 dark:text-gray-400">إجمالي الموظفين</span><span class="text-2xl font-black text-primary dark:text-white">120</span></div>
+                                        <div class="flex justify-between text-sm border-t border-gray-200 dark:border-gray-700 pt-3"><span>متاح: <span class="text-success font-bold">112</span></span><span>إجازة: <span class="text-warning font-bold">8</span></span></div>
+                                    </div>
+                                    <div class="flex flex-col gap-2 mt-auto">
+                                        <button class="w-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-primary dark:text-white py-2.5 rounded-lg text-sm font-bold transition">استعراض القائمة</button>
+                                        <div class="flex gap-2">
+                                            <button class="flex-1 bg-gold text-white py-2 rounded-lg text-sm font-bold hover:bg-goldHover transition">+ إضافة</button>
+                                            <button class="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm font-bold hover:bg-blue-500 transition">صلاحية</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="glass-panel p-6 rounded-2xl shadow-lg border-t-4 border-success flex flex-col">
+                                    <div class="flex items-center gap-4 mb-5">
+                                        <div class="w-12 h-12 rounded-xl bg-success/10 text-success flex items-center justify-center shrink-0"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg></div>
+                                        <div><h3 class="font-black text-base text-primary dark:text-white">شركة وفد الحديثة</h3><p class="text-sm text-gray-500 mt-0.5">فرع الفنادق</p></div>
+                                    </div>
+                                    <div class="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 mb-5 flex-1">
+                                        <div class="flex justify-between items-center mb-3"><span class="text-sm font-bold text-gray-600 dark:text-gray-400">إجمالي الموظفين</span><span class="text-2xl font-black text-primary dark:text-white">35</span></div>
+                                        <div class="flex justify-between text-sm border-t border-gray-200 dark:border-gray-700 pt-3"><span>متاح: <span class="text-success font-bold">32</span></span><span>إجازة: <span class="text-warning font-bold">3</span></span></div>
+                                    </div>
+                                    <div class="flex flex-col gap-2 mt-auto">
+                                        <button class="w-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-primary dark:text-white py-2.5 rounded-lg text-sm font-bold transition">استعراض القائمة</button>
+                                        <div class="flex gap-2">
+                                            <button class="flex-1 bg-gold text-white py-2 rounded-lg text-sm font-bold hover:bg-goldHover transition">+ إضافة</button>
+                                            <button class="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm font-bold hover:bg-blue-500 transition">صلاحية</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Module: Permissions -->
+                        <div id="module-permissions" class="module-section fade-in hidden">
+                            <div class="flex justify-between items-center mb-8">
+                                <div>
+                                    <h2 class="text-3xl font-black text-primary dark:text-white mb-2">إدارة الصلاحيات والأدوار</h2>
+                                    <p class="text-gray-500">توزيع صلاحيات المشاهدة والتحكم على الفروع والموظفين</p>
+                                </div>
+                                <button class="bg-gold hover:bg-goldHover text-white px-6 py-2.5 rounded-xl font-bold shadow-lg transition flex items-center gap-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                    إضافة دور جديد
+                                </button>
+                            </div>
+                            <div class="glass-panel rounded-2xl p-2 overflow-x-auto border-t-4 border-gold shadow-lg">
+                                <table class="w-full text-right text-sm">
+                                    <thead>
+                                        <tr class="text-gray-500 dark:text-gray-400 border-b dark:border-darkBorder bg-gray-50/50 dark:bg-gray-800/50">
+                                            <th class="p-4 font-bold rounded-tr-xl min-w-[150px]">اسم الموظف</th>
+                                            <th class="p-4 font-bold min-w-[200px]">المؤسسة / الفرع</th>
+                                            <th class="p-4 font-bold min-w-[150px]">الدور الوظيفي</th>
+                                            <th class="p-4 font-bold text-center">إدارة الموارد</th>
+                                            <th class="p-4 font-bold text-center">المالية</th>
+                                            <th class="p-4 font-bold text-center">العقارات والأسطول</th>
+                                            <th class="p-4 font-bold rounded-tl-xl text-center">الإجراء</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr class="border-b dark:border-darkBorder hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
+                                            <td class="p-3"><select class="custom-select bg-white dark:bg-darkBg border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 w-full font-bold focus:border-gold outline-none"><option>أحمد السالم</option><option>فهد المطيري</option></select></td>
+                                            <td class="p-3"><select class="custom-select bg-white dark:bg-darkBg border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 w-full focus:border-gold outline-none"><option>مؤسسة الدور الحديثة</option><option>مؤسسة الضياء للنقليات</option></select></td>
+                                            <td class="p-3"><select class="custom-select bg-white dark:bg-darkBg border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 w-full focus:border-gold outline-none"><option>مدير فرع</option><option>محاسب</option></select></td>
+                                            <td class="p-3 text-center"><input type="checkbox" checked class="w-5 h-5 rounded focus:ring-gold accent-gold cursor-pointer"></td>
+                                            <td class="p-3 text-center"><input type="checkbox" class="w-5 h-5 rounded focus:ring-gold accent-gold cursor-pointer"></td>
+                                            <td class="p-3 text-center"><input type="checkbox" checked class="w-5 h-5 rounded focus:ring-gold accent-gold cursor-pointer"></td>
+                                            <td class="p-3 text-center"><button class="text-blue-600 font-bold hover:underline">حفظ</button></td>
+                                        </tr>
+                                        <tr class="border-b dark:border-darkBorder hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
+                                            <td class="p-3"><select class="custom-select bg-white dark:bg-darkBg border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 w-full font-bold focus:border-gold outline-none"><option selected>فهد المطيري</option><option>أحمد السالم</option></select></td>
+                                            <td class="p-3"><select class="custom-select bg-white dark:bg-darkBg border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 w-full focus:border-gold outline-none"><option selected>شركة وفد الحديثة</option><option>مؤسسة الدور الحديثة</option></select></td>
+                                            <td class="p-3"><select class="custom-select bg-white dark:bg-darkBg border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 w-full focus:border-gold outline-none"><option selected>مشرف عمليات</option><option>مدير فرع</option></select></td>
+                                            <td class="p-3 text-center"><input type="checkbox" class="w-5 h-5 rounded focus:ring-gold accent-gold cursor-pointer"></td>
+                                            <td class="p-3 text-center"><input type="checkbox" checked class="w-5 h-5 rounded focus:ring-gold accent-gold cursor-pointer"></td>
+                                            <td class="p-3 text-center"><input type="checkbox" class="w-5 h-5 rounded focus:ring-gold accent-gold cursor-pointer"></td>
+                                            <td class="p-3 text-center"><button class="text-blue-600 font-bold hover:underline">حفظ</button></td>
+                                        </tr>
+                                        <tr class="bg-gold/5 dark:bg-gold/10">
+                                            <td class="p-4 font-black text-gold" colspan="3">الإدارة العليا (شاملة كل المؤسسات)</td>
+                                            <td class="p-4 text-center"><input type="checkbox" checked disabled class="w-5 h-5 rounded text-gray-400"></td>
+                                            <td class="p-4 text-center"><input type="checkbox" checked disabled class="w-5 h-5 rounded text-gray-400"></td>
+                                            <td class="p-4 text-center"><input type="checkbox" checked disabled class="w-5 h-5 rounded text-gray-400"></td>
+                                            <td class="p-4 text-center"><span class="text-gray-400 text-xs font-bold">ثابت</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Module: Comparison -->
+                        <div id="module-comparison" class="module-section fade-in hidden">
+                            <h2 class="text-3xl font-black text-primary dark:text-white mb-6">مقارنة أداء المؤسسات</h2>
+                            <div class="glass-panel p-6 rounded-2xl mb-6 flex flex-col lg:flex-row gap-4 items-end border-t-4 border-info shadow-lg">
+                                <div class="flex-1 w-full"><label class="block text-sm font-bold mb-2">المؤسسة الأولى</label><select class="custom-select w-full bg-white dark:bg-darkBg border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3 font-bold focus:border-gold outline-none"><option>مؤسسة الدور الحديثة</option><option>مؤسسة الضياء للنقليات</option><option>مؤسسة عابد للنقل</option></select></div>
+                                <div class="flex items-center justify-center pb-3 hidden lg:flex"><div class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500 font-black">VS</div></div>
+                                <div class="flex-1 w-full"><label class="block text-sm font-bold mb-2">المؤسسة الثانية</label><select class="custom-select w-full bg-white dark:bg-darkBg border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3 font-bold focus:border-gold outline-none"><option>شركة وفد الحديثة</option><option>مؤسسة الدور الحديثة</option><option>مؤسسة عابد للنقل</option></select></div>
+                                <button class="bg-info hover:bg-blue-600 text-white px-8 py-3 rounded-lg font-bold w-full lg:w-auto transition">عرض المقارنة</button>
+                            </div>
+                            <div class="glass-panel p-6 rounded-2xl shadow-sm">
+                                <p class="text-center text-gray-500 py-8">اختر مؤسستين وانقر "عرض المقارنة" لرؤية النتائج.</p>
+                            </div>
+                        </div>
+
+                        <!-- Module: Employee Main -->
+                        <div id="module-emp-main" class="module-section fade-in hidden">
+                            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+                                <h2 class="text-3xl font-black text-primary dark:text-white">نظرة عامة على مهامي</h2>
+                                <span class="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 px-4 py-2 rounded-lg text-sm font-bold">بوابة الموظف الموحدة</span>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+                                <div class="glass-panel p-5 rounded-2xl border-r-4 border-blue-500 hover:shadow-md transition"><h3 class="text-sm font-bold text-gray-500 mb-2">المهام المفتوحة</h3><p class="text-3xl font-black text-blue-600">14</p><p class="text-xs text-gray-500 mt-1">3 مستعجلة</p></div>
+                                <div class="glass-panel p-5 rounded-2xl border-r-4 border-success hover:shadow-md transition"><h3 class="text-sm font-bold text-gray-500 mb-2">نسبة الحضور (الشهر)</h3><p class="text-3xl font-black text-success">98%</p><p class="text-xs text-success mt-1">ممتاز</p></div>
+                                <div class="glass-panel p-5 rounded-2xl border-r-4 border-warning hover:shadow-md transition"><h3 class="text-sm font-bold text-gray-500 mb-2">رصيد الإجازات المتاح</h3><p class="text-3xl font-black text-warning">21 يوم</p><p class="text-xs text-gray-500 mt-1">من أصل 30 يوم</p></div>
+                                <div class="glass-panel p-5 rounded-2xl border-r-4 border-gray-400 hover:shadow-md transition"><h3 class="text-sm font-bold text-gray-500 mb-2">الطلبات قيد المراجعة</h3><p class="text-3xl font-black text-gray-700 dark:text-gray-300">1</p><p class="text-xs text-warning mt-1">طلب إجازة</p></div>
+                            </div>
+                            <div class="glass-panel p-6 rounded-2xl shadow-sm">
+                                <h3 class="font-black text-lg text-primary dark:text-white mb-4">مهامي الأخيرة</h3>
+                                <div class="space-y-3">
+                                    <div class="flex items-center gap-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl"><div class="w-2.5 h-2.5 rounded-full bg-warning flex-shrink-0"></div><div class="flex-1"><p class="font-bold text-sm">مراجعة تقرير الحضور الأسبوعي</p><p class="text-xs text-gray-500">موعد التسليم: غداً</p></div><span class="bg-warning/10 text-warning text-xs font-bold px-3 py-1 rounded-full">قيد التنفيذ</span></div>
+                                    <div class="flex items-center gap-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl"><div class="w-2.5 h-2.5 rounded-full bg-success flex-shrink-0"></div><div class="flex-1"><p class="font-bold text-sm">تحديث بيانات العقد الجديد</p><p class="text-xs text-gray-500">مكتملة بتاريخ أمس</p></div><span class="bg-success/10 text-success text-xs font-bold px-3 py-1 rounded-full">مكتمل</span></div>
+                                    <div class="flex items-center gap-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl"><div class="w-2.5 h-2.5 rounded-full bg-info flex-shrink-0"></div><div class="flex-1"><p class="font-bold text-sm">الاجتماع الأسبوعي للفريق</p><p class="text-xs text-gray-500">بعد 3 أيام</p></div><span class="bg-info/10 text-info text-xs font-bold px-3 py-1 rounded-full">قادم</span></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Module: Employee Permissions -->
+                        <div id="module-emp-permissions" class="module-section fade-in hidden">
+                            <h2 class="text-3xl font-black text-primary dark:text-white mb-2">الصلاحيات الممنوحة لي</h2>
+                            <p class="text-gray-500 mb-8">هنا يمكنك الإطلاع على أدوارك وصلاحياتك في الفروع التابعة للمجموعة.</p>
+                            <div class="glass-panel rounded-2xl p-2 overflow-x-auto border-t-4 border-blue-500 shadow-lg">
+                                <table class="w-full text-right text-sm">
+                                    <thead>
+                                        <tr class="text-gray-500 dark:text-gray-400 border-b dark:border-darkBorder bg-gray-50/50 dark:bg-gray-800/50">
+                                            <th class="p-4 font-bold rounded-tr-xl">المؤسسة / الفرع</th>
+                                            <th class="p-4 font-bold">الدور الوظيفي</th>
+                                            <th class="p-4 font-bold text-center">الموارد البشرية</th>
+                                            <th class="p-4 font-bold text-center">المالية</th>
+                                            <th class="p-4 font-bold text-center">المشاريع</th>
+                                            <th class="p-4 font-bold rounded-tl-xl text-center">الحالة</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr class="border-b dark:border-darkBorder hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
+                                            <td class="p-4 font-bold text-primary dark:text-white">مؤسسة الدور الحديثة</td>
+                                            <td class="p-4 text-blue-600 font-bold">مدير مبيعات</td>
+                                            <td class="p-4 text-center"><span class="text-success font-bold text-xs bg-success/10 px-2 py-1 rounded">✓ قراءة</span></td>
+                                            <td class="p-4 text-center"><span class="text-error font-bold text-xs bg-error/10 px-2 py-1 rounded">✗ لا يوجد</span></td>
+                                            <td class="p-4 text-center"><span class="text-success font-bold text-xs bg-success/10 px-2 py-1 rounded">✓ إدارة</span></td>
+                                            <td class="p-4 text-center"><span class="bg-success/10 text-success px-3 py-1 rounded-full text-xs font-bold">نشط</span></td>
+                                        </tr>
+                                        <tr class="border-b dark:border-darkBorder hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
+                                            <td class="p-4 font-bold text-primary dark:text-white">مؤسسة الضياء للنقليات</td>
+                                            <td class="p-4 text-blue-600 font-bold">مشرف عمليات</td>
+                                            <td class="p-4 text-center"><span class="text-error font-bold text-xs bg-error/10 px-2 py-1 rounded">✗ لا يوجد</span></td>
+                                            <td class="p-4 text-center"><span class="text-error font-bold text-xs bg-error/10 px-2 py-1 rounded">✗ لا يوجد</span></td>
+                                            <td class="p-4 text-center"><span class="text-success font-bold text-xs bg-success/10 px-2 py-1 rounded">✓ إدارة</span></td>
+                                            <td class="p-4 text-center"><span class="bg-success/10 text-success px-3 py-1 rounded-full text-xs font-bold">نشط</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Module: Generic (Under Development) -->
+                        <div id="module-generic" class="module-section fade-in hidden">
+                            <div class="flex flex-col items-center justify-center min-h-[500px] glass-panel rounded-3xl border-dashed border-2 border-gray-300 dark:border-darkBorder">
+                                <div class="w-24 h-24 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center text-gold mb-6 shadow-inner">
+                                    <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><circle cx="12" cy="12" r="3" stroke-linecap="round" stroke-linejoin="round"></circle></svg>
+                                </div>
+                                <h2 id="generic-title" class="text-3xl font-black text-primary dark:text-white mb-3">اسم القسم</h2>
+                                <p class="text-gray-500 dark:text-gray-400 text-lg text-center max-w-md">هذا القسم قيد التطوير حالياً وسيتم إضافته قريباً.</p>
+                                <div class="mt-6 flex items-center gap-2 bg-gold/10 border border-gold/20 text-gold px-5 py-2.5 rounded-full text-sm font-bold">
+                                    <span class="w-2 h-2 bg-gold rounded-full animate-pulse"></span>
+                                    Coming Soon
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ===== JAVASCRIPT ===== -->
+    <script>
+        let currentUserName = "مدير النظام";
+        const organizations = [
+            "مؤسسة الدور الحديثة",
+            "مؤسسة الضياء والبيان للنقليات",
+            "مؤسسة عابد للنقل البريد",
+            "شركة وفد الحديثة",
+            "مؤسسة الضياء والبيان للمقاولات"
+        ];
+
+        // ── Carousel ──────────────────────────────
+        function initCarousel() {
+            const carousel = document.getElementById('services-carousel');
+            if (!carousel) return;
+            let isHovered = false;
+            let isDragging = false, startX = 0, scrollStart = 0;
+            carousel.addEventListener('mouseenter', () => isHovered = true);
+            carousel.addEventListener('mouseleave', () => { isHovered = false; isDragging = false; });
+            carousel.addEventListener('mousedown', (e) => { isDragging = true; startX = e.pageX - carousel.offsetLeft; scrollStart = carousel.scrollLeft; carousel.style.cursor = 'grabbing'; });
+            carousel.addEventListener('mousemove', (e) => { if (!isDragging) return; const x = e.pageX - carousel.offsetLeft; carousel.scrollLeft = scrollStart - (x - startX); });
+            carousel.addEventListener('mouseup', () => { isDragging = false; carousel.style.cursor = 'grab'; });
+            setInterval(() => {
+                if (!isHovered && !isDragging && document.getElementById('view-landing').classList.contains('block') || 
+                    !isHovered && !isDragging && !document.getElementById('view-landing').classList.contains('hidden')) {
+                    const before = carousel.scrollLeft;
+                    carousel.scrollLeft -= 1.5;
+                    if (carousel.scrollLeft === before) carousel.scrollLeft = 0;
+                }
+            }, 30);
+        }
+
+        // ── Auth Handlers ─────────────────────────
+        function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            if (email) currentUserName = email.split('@')[0].replace(/\./g, ' ').toUpperCase();
+            switchView('view-orgs');
+        }
+
+        function handleRegister(e) {
+            e.preventDefault();
+            const name = document.getElementById('reg-name').value;
+            if (name) currentUserName = name;
+            switchView('view-orgs');
+        }
+
+        // ── Org Menu ──────────────────────────────
+        function toggleOrgMenu() {
+            const dropdown = document.getElementById('org-dropdown-menu');
+            const isHidden = dropdown.classList.contains('hidden') || dropdown.style.display === 'none';
+            dropdown.classList.toggle('hidden', !isHidden);
+            if (!isHidden) dropdown.style.display = '';
+        }
+
+        document.addEventListener('click', function(event) {
+            const orgContainer = document.getElementById('org-switcher-container');
+            const orgDropdown = document.getElementById('org-dropdown-menu');
+            const userProfile = document.getElementById('user-profile');
+            if (orgContainer && !orgContainer.contains(event.target) && userProfile && !userProfile.contains(event.target)) {
+                orgDropdown.classList.add('hidden');
+            }
+        });
+
+        // ── Accordion ────────────────────────────
+        function toggleAccordion(menuId, btnElement) {
+            const submenu = document.getElementById(menuId);
+            const chevron = btnElement.querySelector('.chevron-icon');
+            const isOpen = submenu.style.display === 'flex';
+            submenu.style.display = isOpen ? 'none' : 'flex';
+            if (chevron) chevron.classList.toggle('rotate-down', !isOpen);
+        }
+
+        // ── Module Switching ─────────────────────
+        function switchModule(moduleId, btnElement = null, isSubMenu = false) {
+            // Hide all module sections
+            document.querySelectorAll('.module-section').forEach(sec => {
+                sec.classList.add('hidden');
+                sec.classList.remove('block');
+            });
+
+            // Find/show target module
+            let target = document.getElementById('module-' + moduleId);
+            if (!target) {
+                target = document.getElementById('module-generic');
+                if (btnElement) document.getElementById('generic-title').innerText = btnElement.innerText.trim();
+            }
+            target.classList.remove('hidden');
+            target.classList.add('block');
+
+            // Reset all button styles
+            document.querySelectorAll('.sidebar-btn').forEach(btn => {
+                btn.classList.remove('bg-gold/20', 'border', 'border-gold/30', 'text-gold', 'font-bold',
+                    'bg-blue-500/20', 'border-blue-500/30', 'text-blue-300');
+                btn.classList.add('text-gray-300');
+            });
+            document.querySelectorAll('.sub-btn').forEach(btn => {
+                btn.classList.remove('text-white', 'font-bold', 'bg-white/10');
+                btn.classList.add('text-gray-400');
+            });
+
+            // Apply active style
+            if (btnElement) {
+                const isEmpMode = document.getElementById('sidebar-org-name')?.innerText === 'لوحة تحكم الموظف (شاملة)';
+                if (isSubMenu) {
+                    btnElement.classList.remove('text-gray-400');
+                    btnElement.classList.add('text-white', 'font-bold', 'bg-white/10');
+                } else {
+                    btnElement.classList.remove('text-gray-300');
+                    if (isEmpMode) {
+                        btnElement.classList.add('bg-blue-500/20', 'border', 'border-blue-500/30', 'text-blue-300', 'font-bold');
+                    } else {
+                        btnElement.classList.add('bg-gold/20', 'border', 'border-gold/30', 'text-gold', 'font-bold');
+                    }
+                }
+            }
+        }
+
+        // ── View Switching ────────────────────────
+        function switchView(targetViewId) {
+            const allViews = ['view-landing', 'view-login', 'view-register', 'view-orgs', 'view-dashboard'];
+            allViews.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) { el.classList.add('hidden'); el.classList.remove('block', 'flex'); }
+            });
+
+            document.getElementById('landing-nav-container').classList.add('hidden');
+            document.getElementById('user-profile').style.display = 'none';
+            document.getElementById('org-switcher-container').classList.add('hidden');
+
+            // Update user display
+            if (document.getElementById('greeting-name')) document.getElementById('greeting-name').innerText = currentUserName;
+            if (document.getElementById('top-user-name')) {
+                document.getElementById('top-user-name').innerText = currentUserName;
+                document.getElementById('top-user-initial').innerText = currentUserName.charAt(0);
+            }
+
+            const el = document.getElementById(targetViewId);
+            if (!el) return;
+
+            if (targetViewId === 'view-landing') {
+                el.classList.remove('hidden'); el.classList.add('block');
+                document.getElementById('landing-nav-container').classList.remove('hidden');
+                document.getElementById('landing-nav-container').style.display = 'flex';
+            } else if (targetViewId === 'view-login' || targetViewId === 'view-register') {
+                el.classList.remove('hidden'); el.classList.add('block');
+            } else if (targetViewId === 'view-orgs') {
+                el.classList.remove('hidden'); el.classList.add('block');
+                document.getElementById('user-profile').style.display = 'block';
+                renderOrgsList();
+            } else if (targetViewId === 'view-dashboard') {
+                el.classList.remove('hidden'); el.classList.add('flex');
+                document.getElementById('user-profile').style.display = 'block';
+                document.getElementById('org-switcher-container').classList.remove('hidden');
+            }
+        }
+
+        // ── Org Selection ──────────────────────────
+        function selectOrganization(orgName) {
+            document.getElementById('sidebar-org-name').innerText = orgName;
+            document.getElementById('top-org-name').innerText = orgName;
+
+            const adminNav = document.getElementById('admin-nav');
+            const orgNav = document.getElementById('org-nav');
+            const empNav = document.getElementById('employee-nav');
+            const globalFilter = document.getElementById('admin-global-filter');
+
+            adminNav.style.display = 'none';
+            orgNav.style.display = 'none';
+            empNav.style.display = 'none';
+            globalFilter.classList.add('hidden');
+
+            if (orgName === 'لوحة تحكم المدير (شاملة)') {
+                adminNav.style.display = 'block';
+                globalFilter.classList.remove('hidden');
+                switchModule('main', adminNav.querySelector('[data-target="main"]'));
+            } else if (orgName === 'لوحة تحكم الموظف (شاملة)') {
+                empNav.style.display = 'block';
+                switchModule('emp-main', empNav.querySelector('[data-target="emp-main"]'));
+            } else {
+                orgNav.style.display = 'block';
+                switchModule('main', orgNav.querySelector('[data-target="main-org"]'));
+            }
+
+            // Build dropdown
+            const dropdown = document.getElementById('org-dropdown-menu');
+            dropdown.innerHTML = `
+                <div class="px-4 py-2 border-b border-gray-100 dark:border-gray-800 mb-1">
+                    <p class="text-xs text-gray-500 font-bold">تبديل النطاق</p>
+                </div>
+                <button onclick="selectOrganization('لوحة تحكم المدير (شاملة)'); document.getElementById('org-dropdown-menu').classList.add('hidden');" class="w-full text-right px-4 py-3 text-sm bg-gold/10 hover:bg-gold/20 text-gold transition font-bold border-b border-gold/10">
+                    🏛️ الإدارة الشاملة
+                </button>
+                <button onclick="selectOrganization('لوحة تحكم الموظف (شاملة)'); document.getElementById('org-dropdown-menu').classList.add('hidden');" class="w-full text-right px-4 py-3 text-sm bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 transition font-bold border-b border-blue-500/10 mb-1">
+                    👤 بوابة الموظف
+                </button>
+            `;
+            organizations.forEach(org => {
+                const isActive = org === orgName;
+                dropdown.innerHTML += `<button onclick="selectOrganization('${org}'); document.getElementById('org-dropdown-menu').classList.add('hidden');" class="w-full text-right px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 flex justify-between items-center"><span class="${isActive ? 'text-gold font-bold' : 'text-gray-700 dark:text-gray-300'}">${org}</span>${isActive ? '<span class="text-gold text-xs">●</span>' : ''}</button>`;
+            });
+            dropdown.innerHTML += `
+                <div class="border-t border-gray-200 dark:border-gray-700 mt-2 pt-2">
+                    <button onclick="switchView('view-landing'); document.getElementById('org-dropdown-menu').classList.add('hidden');" class="w-full text-right px-4 py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition font-bold flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7"></path></svg>
+                        تسجيل الخروج
+                    </button>
+                </div>
+            `;
+
+            switchView('view-dashboard');
+        }
+
+        // ── Render Orgs List ───────────────────────
+        function renderOrgsList() {
+            const container = document.getElementById('org-list');
+            container.innerHTML = '';
+            organizations.forEach(org => {
+                container.innerHTML += `
+                    <div class="flex flex-col md:flex-row md:items-center justify-between p-5 bg-white dark:bg-darkCard rounded-xl border border-gray-200 dark:border-darkBorder hover:border-gold hover:shadow-md transition duration-200 group">
+                        <div class="flex items-center gap-4 mb-4 md:mb-0">
+                            <div class="w-12 h-12 rounded-xl border border-gray-200 dark:border-darkBorder flex items-center justify-center text-gold bg-appBg dark:bg-darkBg group-hover:bg-gold/10 transition">
+                                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
+                            </div>
+                            <div>
+                                <h4 class="font-black text-primary dark:text-white group-hover:text-gold transition">${org}</h4>
+                                <p class="text-xs text-gray-500 mt-0.5">رقم العميل: 7033${Math.floor(1000 + Math.random() * 9000)}</p>
+                            </div>
+                        </div>
+                        <button onclick="selectOrganization('${org}')" class="px-6 py-2.5 border-2 border-gold text-gold hover:bg-gold hover:text-white font-bold rounded-xl transition text-sm">دخول النظام</button>
+                    </div>`;
+            });
+        }
+
+        // ── Scroll to section ─────────────────────
+        function scrollToSection(id) {
+            const el = document.getElementById(id);
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+            return false;
+        }
+
+        // ── Theme Toggle ──────────────────────────
+        document.getElementById('themeToggle').addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+            document.documentElement.classList.toggle('light');
+        });
+
+        // ── Multi-Filter System ───────────────────
+        const filterOrgs = [
+            'عرض كل المؤسسات',
+            'مؤسسة الدور الحديثة',
+            'مؤسسة الضياء والبيان للنقليات',
+            'مؤسسة عابد للنقل البريد',
+            'شركة وفد الحديثة',
+            'مؤسسة الضياء والبيان للمقاولات'
+        ];
+        const filterBranches = [
+            'كافة الفروع',
+            'فرع العمرة',
+            'فرع الفنادق',
+            'فرع الحركة',
+            'فرع الصيانة',
+            'فرع التنفيذية'
+        ];
+
+        let filterRowCount = 0;
+        const rowColors = [
+            { border: 'border-gold/40', badge: 'bg-gold/10 text-gold border-gold/30', dot: 'bg-gold' },
+            { border: 'border-info/40', badge: 'bg-info/10 text-info border-info/30', dot: 'bg-info' },
+            { border: 'border-success/40', badge: 'bg-success/10 text-success border-success/30', dot: 'bg-success' },
+            { border: 'border-warning/40', badge: 'bg-warning/10 text-warning border-warning/30', dot: 'bg-warning' },
+            { border: 'border-error/40', badge: 'bg-error/10 text-error border-error/30', dot: 'bg-error' },
+        ];
+
+        function buildOrgOptions(selectedVal = 'all') {
+            return filterOrgs.map((org, i) => {
+                const val = i === 0 ? 'all' : org;
+                return `<option value="${val}" ${selectedVal === val ? 'selected' : ''}>${org}</option>`;
+            }).join('');
+        }
+
+        function buildBranchOptions(selectedVal = 'all') {
+            return filterBranches.map((br, i) => {
+                const val = i === 0 ? 'all' : br;
+                return `<option value="${val}" ${selectedVal === val ? 'selected' : ''}>${br}</option>`;
+            }).join('');
+        }
+
+        function addFilterRow(orgVal = 'all', branchVal = 'all') {
+            const container = document.getElementById('filter-rows-container');
+            const rowId = ++filterRowCount;
+            const color = rowColors[(rowId - 1) % rowColors.length];
+            const isFirst = container.children.length === 0;
+
+            const row = document.createElement('div');
+            row.id = `filter-row-${rowId}`;
+            row.className = `filter-row flex flex-col md:flex-row items-start md:items-center gap-3 p-3 rounded-xl border ${color.border} bg-white/50 dark:bg-gray-800/30 transition-all duration-200 fade-in`;
+            row.innerHTML = `
+                <!-- Row label -->
+                <div class="flex items-center gap-2 min-w-[80px]">
+                    <span class="w-2 h-2 rounded-full ${color.dot} flex-shrink-0"></span>
+                    <span class="text-xs font-black text-gray-500 whitespace-nowrap">فرز ${rowId}</span>
+                </div>
+
+                <!-- Org select -->
+                <div class="flex flex-col gap-1 flex-1 min-w-0">
+                    <label class="text-xs font-bold text-gray-400 px-1">المؤسسة</label>
+                    <select id="filter-org-${rowId}" onchange="onOrgChange(${rowId})"
+                        class="custom-select w-full bg-white dark:bg-darkBg border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-2 text-sm font-bold focus:border-gold outline-none transition">
+                        ${buildOrgOptions(orgVal)}
+                    </select>
+                </div>
+
+                <!-- Arrow -->
+                <div class="hidden md:flex items-end pb-1">
+                    <svg class="w-4 h-4 text-gray-400 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                    </svg>
+                </div>
+
+                <!-- Branch select -->
+                <div class="flex flex-col gap-1 flex-1 min-w-0">
+                    <label class="text-xs font-bold text-gray-400 px-1">الفرع</label>
+                    <select id="filter-branch-${rowId}"
+                        class="custom-select w-full bg-white dark:bg-darkBg border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-2 text-sm font-bold focus:border-gold outline-none transition">
+                        ${buildBranchOptions(branchVal)}
+                    </select>
+                </div>
+
+                <!-- Remove button (hidden for first row) -->
+                <div class="flex items-end pb-1 flex-shrink-0">
+                    ${!isFirst ? `
+                    <button onclick="removeFilterRow(${rowId})" title="حذف هذا الفرز"
+                        class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-error hover:bg-error/10 border border-gray-200 dark:border-gray-700 hover:border-error/40 transition mt-5 md:mt-0">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>` : `<div class="w-8 mt-5 md:mt-0"></div>`}
+                </div>
+            `;
+            container.appendChild(row);
+            updateFilterMeta();
+        }
+
+        function removeFilterRow(rowId) {
+            const row = document.getElementById(`filter-row-${rowId}`);
+            if (row) {
+                row.style.opacity = '0';
+                row.style.transform = 'translateX(10px)';
+                row.style.transition = 'all 0.2s ease';
+                setTimeout(() => { row.remove(); updateFilterMeta(); }, 200);
+            }
+        }
+
+        function onOrgChange(rowId) {
+            // When org changes, reset branch to "all"
+            const branchSel = document.getElementById(`filter-branch-${rowId}`);
+            if (branchSel) branchSel.value = 'all';
+            updateFilterMeta();
+        }
+
+        function updateFilterMeta() {
+            const rows = document.querySelectorAll('.filter-row');
+            const count = rows.length;
+            document.getElementById('filter-count-badge').innerText = count;
+
+            // Build summary text
+            const summaryParts = [];
+            rows.forEach(row => {
+                const rowId = row.id.replace('filter-row-', '');
+                const orgSel = document.getElementById(`filter-org-${rowId}`);
+                const branchSel = document.getElementById(`filter-branch-${rowId}`);
+                if (!orgSel) return;
+                const orgLabel = orgSel.options[orgSel.selectedIndex]?.text || 'الكل';
+                const branchLabel = branchSel?.options[branchSel.selectedIndex]?.text || 'كافة الفروع';
+                if (orgSel.value === 'all' && branchSel?.value === 'all') {
+                    summaryParts.push('كل المؤسسات');
+                } else {
+                    summaryParts.push(`${orgLabel} — ${branchLabel}`);
+                }
+            });
+            const summaryEl = document.getElementById('filter-summary');
+            if (summaryEl) {
+                summaryEl.innerText = summaryParts.length > 0 ? `الفرز الحالي: ${summaryParts.join(' | ')}` : '';
+            }
+        }
+
+        function resetAllFilters() {
+            const container = document.getElementById('filter-rows-container');
+            container.innerHTML = '';
+            filterRowCount = 0;
+            addFilterRow();
+        }
+
+        function applyAllFilters() {
+            const rows = document.querySelectorAll('.filter-row');
+            const results = [];
+            rows.forEach(row => {
+                const rowId = row.id.replace('filter-row-', '');
+                const orgSel = document.getElementById(`filter-org-${rowId}`);
+                const branchSel = document.getElementById(`filter-branch-${rowId}`);
+                results.push({
+                    org: orgSel?.value || 'all',
+                    orgLabel: orgSel?.options[orgSel.selectedIndex]?.text,
+                    branch: branchSel?.value || 'all',
+                    branchLabel: branchSel?.options[branchSel.selectedIndex]?.text
+                });
+            });
+
+            // Visual feedback on the button
+            const btn = document.querySelector('[onclick="applyAllFilters()"]');
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg> تم التطبيق`;
+            btn.classList.add('bg-success');
+            btn.classList.remove('bg-gold', 'hover:bg-goldHover');
+            setTimeout(() => {
+                btn.innerHTML = originalHTML;
+                btn.classList.remove('bg-success');
+                btn.classList.add('bg-gold', 'hover:bg-goldHover');
+            }, 1500);
+
+            console.log('Applied filters:', results);
+        }
+
+        function initFilterBar() {
+            filterRowCount = 0;
+            const container = document.getElementById('filter-rows-container');
+            if (container) container.innerHTML = '';
+            addFilterRow();
+        }
+
+        // ── Init ──────────────────────────────────
+        window.addEventListener('DOMContentLoaded', () => {
+            initCarousel();
+            initFilterBar();
+            switchView('view-landing');
+        });
+    </script>
+</body>
+</html>

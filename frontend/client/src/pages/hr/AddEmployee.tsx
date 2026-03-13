@@ -18,7 +18,7 @@ import {
   useInviteEmployee
 } from '@/services/hrService';
 import { toast } from 'sonner';
-import { Dialog } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useAppContext } from '@/contexts/AppContext';
 
 export default function AddEmployee() {
@@ -46,12 +46,13 @@ export default function AddEmployee() {
 
   const [formData, setFormData] = useState({
     firstName: '', lastName: '', email: '', phone: '',
-    departmentId: preDeptId, branchId: '', positionId: '', roleCode: preRole,
+    departmentId: preDeptId, branchId: String(selectedBranchId || ''), positionId: '', roleCode: preRole,
     managerId: '', joinDate: new Date().toISOString().split('T')[0], workType: 'full_time',
     nationalId: '', nationality: '', dateOfBirth: '', gender: '', maritalStatus: '', address: '',
     emergencyName: '', emergencyRelation: '', emergencyPhone: '',
     bankName: '', bankAccount: '',
     basicSalary: '', housingAllowance: '', transportAllowance: '',
+    city: '', iban: '',
   });
 
   // جلب البيانات من API
@@ -85,7 +86,7 @@ export default function AddEmployee() {
     if (!formData.departmentId) { toast.error('يرجى تحديد القسم'); setActiveTab('work'); return; }
     setIsSubmitting(true);
     try {
-      createEmployeeMutation.mutate({
+      const data = await createEmployeeMutation.mutateAsync({
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
@@ -96,24 +97,39 @@ export default function AddEmployee() {
         salary: formData.basicSalary ? parseFloat(formData.basicSalary) : undefined,
         role: formData.roleCode,
         status: 'active',
-      }, {
-        onSuccess: (data: any) => {
-          toast.success('تم إضافة الموظف بنجاح');
-          if (sendInviteOnCreate && data.id) {
-            setCreatedEmployeeId(data.id);
-            setShowInviteDialog(true);
-          }
-        },
-        onError: (err: any) => {
-          const apiError = err.response?.data?.message || err.response?.data?.error;
-          if (err.response?.status === 409 || (apiError && apiError.includes('email'))) {
-            toast.error(apiError || 'عذراً، البريد الإلكتروني الذي أدخلته مستخدم بالفعل لموظف آخر.');
-          } else {
-            toast.error(`فشل الحفظ: ${err.message}`);
-          }
-        }
+        // Also include full profile data if provided
+        nationalId: formData.nationalId,
+        nationality: formData.nationality,
+        dateOfBirth: formData.dateOfBirth,
+        gender: formData.gender,
+        maritalStatus: formData.maritalStatus,
+        address: formData.address,
+        city: formData.city,
+        emergencyName: formData.emergencyName,
+        emergencyRelation: formData.emergencyRelation,
+        emergencyPhone: formData.emergencyPhone,
+        bankName: formData.bankName,
+        bankAccount: formData.bankAccount,
+        iban: formData.iban,
       });
-    } finally { setIsSubmitting(false); }
+
+      toast.success('تم إضافة الموظف بنجاح');
+      if (sendInviteOnCreate && data.id) {
+        setCreatedEmployeeId(data.id);
+        setShowInviteDialog(true);
+      } else {
+        navigate('/hr/employees');
+      }
+    } catch (err: any) {
+      const apiError = err.response?.data?.message || err.response?.data?.error;
+      if (err.response?.status === 409 || (apiError && apiError.includes('email'))) {
+        toast.error(apiError || 'عذراً، البريد الإلكتروني الذي أدخلته مستخدم بالفعل لموظف آخر.');
+      } else {
+        toast.error(`فشل الحفظ: ${err.message}`);
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (isLoadingAuth) return <div className="p-8 text-center">جاري التحميل...</div>;
@@ -410,12 +426,18 @@ export default function AddEmployee() {
         </TabsContent>
       </Tabs>
 
-      {showInviteDialog && (<div className="mt-4 p-6 bg-white border rounded-xl shadow-sm">
-        <div>
-          <div className="mb-4 border-b pb-3">
-            <h3 className="text-lg font-bold"><CheckCircle2 className="h-5 w-5 text-green-500" />تم إضافة الموظف بنجاح</h3>
-            <p className="text-sm text-gray-500">{autoApprove ? 'الموظف مُفعّل تلقائياً.' : 'سيتم إرسال دعوة للموظف. بعد التفعيل ستحتاج للمراجعة.'}</p>
-          </div>
+      <Dialog open={showInviteDialog} onOpenChange={(open) => { if (!open) { setShowInviteDialog(false); navigate('/hr/employees'); } }}>
+        <DialogContent className="sm:max-w-md" showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-green-500" />
+              تم إضافة الموظف بنجاح
+            </DialogTitle>
+            <DialogDescription>
+              {autoApprove ? 'الموظف مُفعّل تلقائياً.' : 'سيتم إرسال دعوة للموظف. بعد التفعيل ستحتاج للمراجعة.'}
+            </DialogDescription>
+          </DialogHeader>
+
           <div className="space-y-4 py-4">
             <Label>طريقة الإرسال</Label>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -426,7 +448,8 @@ export default function AddEmployee() {
               ))}
             </div>
           </div>
-          <div className="flex gap-2 mt-4 pt-3 border-t justify-end">
+
+          <div className="flex gap-2 pt-3 border-t justify-end">
             <Button variant="outline" onClick={() => { setShowInviteDialog(false); navigate('/hr/employees'); }}>تخطي</Button>
             <Button
               onClick={() => createdEmployeeId && sendInviteMutation.mutate({ employeeId: createdEmployeeId, method: inviteMethod }, {
@@ -441,8 +464,8 @@ export default function AddEmployee() {
               {sendInviteMutation.isPending ? 'جاري الإرسال...' : 'إرسال الدعوة'}
             </Button>
           </div>
-        </div>
-      </div>)}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

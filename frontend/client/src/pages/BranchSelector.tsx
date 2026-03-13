@@ -24,21 +24,18 @@ export default function BranchSelector() {
     }
   }, [authLoading, isAuthenticated]);
 
-  // Redirect non-admin/GM users directly to home ONLY if they have 0 or 1 branch
+  // Redirect non-admin/GM users directly to home ONLY if they have 0 branches
   useEffect(() => {
     if (!authLoading && isAuthenticated && !branchesLoading && user?.role) {
       const role = user.role.toLowerCase();
       const isAdminOrGM = role === 'owner' || role === 'admin' || role === 'system_admin' || role === 'general_manager';
 
       if (!isAdminOrGM) {
-        if (branches.length === 1) {
-          // If only one branch, auto-select it and go home
-          handleBranchEntry(branches[0].id);
-        } else if (branches.length === 0) {
+        if (branches.length === 0) {
           // No branches found for this user
           setLocation('/');
         }
-        // If more than 1 branch, stay here and let them choose
+        // Always stay here for 1 or more branches to show the portal choice
       }
     }
   }, [authLoading, isAuthenticated, branchesLoading, user?.role, branches.length]);
@@ -69,190 +66,113 @@ export default function BranchSelector() {
 
   const displayName = (user?.username || user?.email || 'المستخدم').toUpperCase();
 
+  const role = user?.role?.toLowerCase();
+  const isAdminOrOwner = role === 'owner' || role === 'admin' || role === 'system_admin' || role === 'general_manager';
+  const isEmployeeType = role === 'employee' || role === 'departement_manager' || role === 'agent' || role === 'supervisor';
+
   return (
     <div
       dir="rtl"
-      style={{
-        minHeight: '100vh',
-        backgroundColor: '#f3f4f6',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        padding: '60px 24px',
-        fontFamily: 'inherit',
-      }}
+      className="min-h-screen bg-[#f5f7fa] dark:bg-[#0f172a] flex flex-col items-center px-4 py-16 font-sans transition-colors duration-300"
     >
       {/* Welcome Header */}
-      <div style={{ textAlign: 'center', marginBottom: '44px' }}>
-        <h1 style={{ fontSize: '2rem', fontWeight: '700', color: '#1a202c', margin: 0 }}>
-          مرحباً بك يا{' '}
-          <span style={{ color: '#C9A84C' }}>{displayName}</span>
+      <div className="text-center mb-12 animate-fade-in">
+        <h1 className="text-4xl font-black text-[#1a202c] dark:text-white mb-2">
+          مرحباً بك،{' '}
+          <span className="text-[#C9A13B]">{displayName}</span>
         </h1>
-        <p style={{ color: '#6b7280', marginTop: '10px', fontSize: '1rem' }}>
-          يرجى اختيار لوحة التحكم المطلوبة للبدء
+        <p className="text-[#6b7280] dark:text-gray-400 text-lg">
+          يرجى اختيار لوحة التحكم أو الفرع المطلوب للبدء
         </p>
       </div>
 
-      {/* Admin Panel Card */}
-      <div
-        style={{
-          width: '100%',
-          maxWidth: '900px',
-          backgroundColor: '#3d4554',
-          borderRadius: '16px',
-          padding: '28px 32px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '44px',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.18)',
-          gap: '16px',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '18px', flex: 1 }}>
+      <div className="w-full max-w-4xl space-y-6">
+        {/* Admin Panel Card */}
+        {isAdminOrOwner && (
           <div
-            style={{
-              width: '52px',
-              height: '52px',
-              borderRadius: '50%',
-              backgroundColor: 'rgba(201, 168, 76, 0.15)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: '2px solid #C9A84C',
-              flexShrink: 0,
-            }}
+            onClick={handleAdminEntry}
+            className="cursor-pointer group flex flex-col md:flex-row md:items-center justify-between p-8 rounded-2xl shadow-xl hover:shadow-[#C9A13B]/20 hover:scale-[1.01] transition-all duration-300 border border-gray-600 bg-gradient-to-l from-[#2F3440] to-[#4A4E59] text-white"
           >
-            <Shield size={24} style={{ color: '#C9A84C' }} />
+            <div className="flex items-center gap-6">
+              <div className="w-16 h-16 rounded-full border border-[#C9A13B] bg-black/20 flex items-center justify-center text-[#C9A13B] flex-shrink-0">
+                <Shield size={32} />
+              </div>
+              <div>
+                <h2 className="font-black text-2xl mb-1">لوحة تحكم المدير (كافة المؤسسات)</h2>
+                <p className="text-sm text-gray-300">نظرة عامة وتقارير شاملة لجميع الكيانات والأفرع التابعة.</p>
+              </div>
+            </div>
+            <button className="mt-6 md:mt-0 px-10 py-3.5 bg-[#C9A13B] hover:bg-[#A8842F] text-white font-black rounded-xl shadow-lg transition flex-shrink-0">
+              دخول الإدارة
+            </button>
           </div>
-          <div>
-            <h2 style={{ color: 'white', fontSize: '1.15rem', fontWeight: '700', margin: 0 }}>
-              لوحة تحكم المدير (كافة المؤسسات)
-            </h2>
-            <p style={{ color: '#9ca3af', marginTop: '5px', fontSize: '0.88rem', margin: '5px 0 0 0' }}>
-              نظرة عامة وتقارير شاملة لجميع الكيانات والأفرع التابعة.
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={handleAdminEntry}
-          style={{
-            backgroundColor: '#C9A84C',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            padding: '11px 26px',
-            fontWeight: '700',
-            cursor: 'pointer',
-            fontSize: '0.95rem',
-            whiteSpace: 'nowrap',
-            flexShrink: 0,
-            transition: 'background-color 0.2s',
-          }}
-          onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#b8972f')}
-          onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#C9A84C')}
-        >
-          دخول الإدارة
-        </button>
-      </div>
+        )}
 
-      {/* Divider */}
-      <div
-        style={{
-          width: '100%',
-          maxWidth: '900px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '16px',
-          marginBottom: '32px',
-        }}
-      >
-        <div style={{ flex: 1, height: '1px', backgroundColor: '#d1d5db' }} />
-        <span style={{ color: '#9ca3af', fontSize: '0.88rem', whiteSpace: 'nowrap' }}>
-          أو اختر فرعاً محدداً
-        </span>
-        <div style={{ flex: 1, height: '1px', backgroundColor: '#d1d5db' }} />
+        {/* Employee Portal Card */}
+        {isEmployeeType && (
+          <div
+            onClick={handleAdminEntry}
+            className="cursor-pointer group flex flex-col md:flex-row md:items-center justify-between p-8 rounded-2xl shadow-xl hover:shadow-blue-500/20 hover:scale-[1.01] transition-all duration-300 border border-blue-400 bg-gradient-to-l from-[#1e3a8a] to-[#3b82f6] text-white"
+          >
+            <div className="flex items-center gap-6">
+              <div className="w-16 h-16 rounded-full border border-blue-300 bg-white/10 flex items-center justify-center text-blue-100 flex-shrink-0">
+                <User size={32} />
+              </div>
+              <div>
+                <h2 className="font-black text-2xl mb-1">بوابة الموظف الموحدة</h2>
+                <p className="text-sm text-blue-100">بوابة الموظف لعرض المهام والصلاحيات في جميع الفروع.</p>
+              </div>
+            </div>
+            <button className="mt-6 md:mt-0 px-10 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl shadow-lg transition flex-shrink-0">
+              دخول البوابة
+            </button>
+          </div>
+        )}
+
+        {/* Divider */}
+        <div className="flex items-center gap-6 py-6 transition-opacity duration-500">
+          <div className="flex-1 h-px bg-gray-300 dark:bg-gray-700" />
+          <span className="text-[#9ca3af] font-bold text-sm whitespace-nowrap">
+            أو اختر فرعاً محدداً للعمل عليه
+          </span>
+          <div className="flex-1 h-px bg-gray-300 dark:bg-gray-700" />
+        </div>
       </div>
 
       {/* Branches Grid */}
       {branches.length === 0 ? (
-        <p style={{ color: '#9ca3af', fontSize: '0.9rem' }}>لا توجد فروع متاحة</p>
+        <p className="text-[#9ca3af] dark:text-gray-500 font-bold">لا توجد فروع متاحة حالياً</p>
       ) : (
-        <div
-          style={{
-            width: '100%',
-            maxWidth: '900px',
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))',
-            gap: '16px',
-          }}
-        >
+        <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-6 mt-4 pb-20">
           {branches.map(branch => (
             <div
               key={branch.id}
-              style={{
-                backgroundColor: 'white',
-                border: '1px solid #e5e7eb',
-                borderRadius: '12px',
-                padding: '18px 24px',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-                gap: '12px',
-              }}
+              onClick={() => handleBranchEntry(branch.id)}
+              className="group cursor-pointer bg-white dark:bg-[#1e293b] border border-gray-200 dark:border-gray-700 rounded-2xl p-6 flex items-center justify-between shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border-t-4 border-t-[#C9A13B]/40 hover:border-t-[#C9A13B]"
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                <div
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '50%',
-                    backgroundColor: '#f3f4f6',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                  }}
-                >
-                  <User size={20} style={{ color: '#9ca3af' }} />
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-[#9ca3af] group-hover:text-[#C9A13B] transition-colors duration-300">
+                  <User size={28} />
                 </div>
                 <div>
-                  <span style={{ fontWeight: '600', fontSize: '1rem', color: '#1a202c' }}>
+                  <h3 className="font-black text-lg text-[#1a202c] dark:text-white group-hover:text-[#C9A13B] transition-colors">
                     {branch.name}
-                  </span>
+                  </h3>
                   {(branch.nameAr || branch.city) && (
-                    <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: '#6b7280' }}>
-                      {branch.nameAr}{branch.nameAr && branch.city ? ' — ' : ''}{branch.city}
+                    <p className="text-sm text-[#6b7280] dark:text-gray-400 mt-1">
+                      {branch.nameAr || branch.city}
                     </p>
                   )}
                 </div>
               </div>
               <button
-                onClick={() => handleBranchEntry(branch.id)}
-                style={{
-                  backgroundColor: 'white',
-                  color: '#C9A84C',
-                  border: '2px solid #C9A84C',
-                  borderRadius: '8px',
-                  padding: '7px 18px',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  fontSize: '0.88rem',
-                  whiteSpace: 'nowrap',
-                  flexShrink: 0,
-                  transition: 'all 0.2s',
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleBranchEntry(branch.id);
                 }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.backgroundColor = '#C9A84C';
-                  e.currentTarget.style.color = 'white';
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.backgroundColor = 'white';
-                  e.currentTarget.style.color = '#C9A84C';
-                }}
+                className="bg-white dark:bg-transparent text-[#C9A13B] border-2 border-[#C9A13B] px-6 py-2 rounded-xl font-bold hover:bg-[#C9A13B] hover:text-white transition-all duration-300 opacity-0 group-hover:opacity-100 transform translate-x-4 group-hover:translate-x-0"
               >
-                دخول النظام
+                دخول
               </button>
             </div>
           ))}

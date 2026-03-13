@@ -17,14 +17,18 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
 
     Optional<Employee> findByEmail(String email);
 
+    Optional<Employee> findByEmailIgnoreCase(String email);
+
     // Branch-scoped lookups for isolation
-    Optional<Employee> findByEmailAndBranchId(String email, Long branchId);
+    Optional<Employee> findByEmailAndBranch_Id(String email, Long branchId);
 
-    Optional<Employee> findByUserIdAndBranchId(Long userId, Long branchId);
+    Optional<Employee> findByEmailIgnoreCaseAndBranch_Id(String email, Long branchId);
 
-    List<Employee> findByBranchId(Long branchId);
+    Optional<Employee> findByUser_IdAndBranch_Id(Long userId, Long branchId);
 
-    List<Employee> findByBranchIdAndDepartmentId(Long branchId, Long departmentId);
+    List<Employee> findByBranch_Id(Long branchId);
+
+    List<Employee> findByBranch_IdAndDepartment_Id(Long branchId, Long departmentId);
 
     List<Employee> findByDepartmentId(Long departmentId);
 }

@@ -40,11 +40,11 @@ public class EmployeeService {
     }
 
     public List<Employee> getAllEmployeesByBranch(Long branchId) {
-        return employeeRepository.findByBranchId(branchId);
+        return employeeRepository.findByBranch_Id(branchId);
     }
 
     public List<Employee> getAllEmployeesByBranchAndDepartment(Long branchId, Long departmentId) {
-        return employeeRepository.findByBranchIdAndDepartmentId(branchId, departmentId);
+        return employeeRepository.findByBranch_IdAndDepartment_Id(branchId, departmentId);
     }
 
     public List<Employee> getAllEmployeesByDepartment(Long departmentId) {
@@ -69,11 +69,17 @@ public class EmployeeService {
             String email = employee.getEmail();
             Long branchId = employee.getBranch() != null ? employee.getBranch().getId() : null;
 
-            // Branch-scoped duplicate check
+            // Duplicate check
             if (branchId != null) {
-                if (employeeRepository.findByEmailAndBranchId(email, branchId).isPresent()) {
+                // Branch-scoped check
+                if (employeeRepository.findByEmailIgnoreCaseAndBranch_Id(email, branchId).isPresent()) {
                     throw new DuplicateEmailException(
                             "البريد الإلكتروني '" + email + "' مسجل لموظف آخر في نفس الفرع بالفعل.");
+                }
+            } else {
+                // Global fallback check (manual add without branch context)
+                if (employeeRepository.findByEmailIgnoreCase(email).isPresent()) {
+                    throw new DuplicateEmailException("البريد الإلكتروني '" + email + "' مسجل لموظف آخر بالفعل.");
                 }
             }
 
@@ -124,13 +130,13 @@ public class EmployeeService {
         if (email != null) {
             if (branchId != null) {
                 // Branch-scoped check: only reject if same email exists in the same branch
-                if (employeeRepository.findByEmailAndBranchId(email, branchId).isPresent()) {
+                if (employeeRepository.findByEmailIgnoreCaseAndBranch_Id(email, branchId).isPresent()) {
                     throw new DuplicateEmailException(
                             "البريد الإلكتروني '" + email + "' مسجل لموظف آخر في نفس الفرع بالفعل.");
                 }
             } else {
                 // No branch context: global check (legacy behavior)
-                if (employeeRepository.findByEmail(email).isPresent()) {
+                if (employeeRepository.findByEmailIgnoreCase(email).isPresent()) {
                     throw new DuplicateEmailException("البريد الإلكتروني '" + email + "' مسجل لموظف آخر بالفعل.");
                 }
             }
@@ -174,7 +180,7 @@ public class EmployeeService {
         if (user != null) {
             // User exists — check if already linked to an employee IN THE SAME BRANCH
             boolean alreadyEmployeeInBranch = branchId != null
-                    ? employeeRepository.findByUserIdAndBranchId(user.getId(), branchId).isPresent()
+                    ? employeeRepository.findByUser_IdAndBranch_Id(user.getId(), branchId).isPresent()
                     : !employeeRepository.findAllByUserId(user.getId()).isEmpty();
             if (alreadyEmployeeInBranch) {
                 throw new DuplicateEmailException(
@@ -185,6 +191,8 @@ public class EmployeeService {
                     .println("Reusing existing user ID: " + user.getId() + " for new employee in branch: " + branchId);
             user.setVerificationCode(verificationCode);
             userRepository.save(user);
+            // Evict cache to ensure Spring Security picks up the new verification code
+            com.ghaith.erp.config.ApplicationConfig.evictUserCache(email);
         } else {
             System.out.println("Creating new User...");
             user = User.builder()
@@ -422,41 +430,74 @@ public class EmployeeService {
         return employeeRepository.save(employee);
     }
 
+    @Transactional
     public void deleteEmployee(Long id) {
         Employee employee = employeeRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("الموظف غير موجود"));
 
         Long userId = employee.getUser() != null ? employee.getUser().getId() : null;
 
-        // 1. Unlink subordinates
+        // 1. Unlink manager/reviewer/author roles to avoid blocking deletion
+        // Employees table (subordinates)
         entityManager.createNativeQuery("UPDATE employees SET manager_id = NULL WHERE manager_id = :id")
                 .setParameter("id", id).executeUpdate();
 
-        // 2. Clean up dependent records to avoid FK violations
-        String[] tables = {
-                "attendance_records", "payroll_records", "performance_reviews",
-                "performance_kpis", "performance_goals", "leave_requests",
-                "leave_balances", "training_enrollments", "field_tracking_sessions",
-                "employee_documents", "violation_records", "onboarding_tasks"
+        // Departments table (department manager)
+        entityManager.createNativeQuery("UPDATE departments SET manager_id = NULL WHERE manager_id = :id")
+                .setParameter("id", id).executeUpdate();
+
+        // Performance reviews (reviewer role)
+        entityManager.createNativeQuery("UPDATE performance_reviews SET reviewer_id = NULL WHERE reviewer_id = :id")
+                .setParameter("id", id).executeUpdate();
+
+        // Tickets (author and assigned agent)
+        entityManager.createNativeQuery("UPDATE tickets SET author_id = NULL WHERE author_id = :id")
+                .setParameter("id", id).executeUpdate();
+        entityManager.createNativeQuery("UPDATE tickets SET assigned_to_id = NULL WHERE assigned_to_id = :id")
+                .setParameter("id", id).executeUpdate();
+
+        // Ticket comments (comment author)
+        entityManager.createNativeQuery("UPDATE ticket_comments SET author_id = NULL WHERE author_id = :id")
+                .setParameter("id", id).executeUpdate();
+
+        // 2. Manual cascade cleanup for Field Tracking (Point -> Session)
+        // Native SQL doesn't trigger JPA CascadeType.ALL
+        entityManager.createNativeQuery(
+                "DELETE FROM hr_field_tracking_points WHERE session_id IN (SELECT id FROM hr_field_tracking_sessions WHERE employee_id = :id)")
+                .setParameter("id", id).executeUpdate();
+
+        // 3. Clean up all primary dependent records
+        String[][] tableInfos = {
+                { "attendance_records", "employee_id" },
+                { "payroll_records", "employee_id" },
+                { "performance_reviews", "employee_id" },
+                { "performance_kpis", "employee_id" },
+                { "performance_goals", "employee_id" },
+                { "hr_leave_requests", "employee_id" },
+                { "hr_leave_balances", "employee_id" },
+                { "training_enrollments", "employee_id" },
+                { "hr_field_tracking_sessions", "employee_id" },
+                { "employee_documents", "employee_id" },
+                { "expenses", "employee_id" }
         };
 
-        for (String table : tables) {
+        for (String[] info : tableInfos) {
+            String tableName = info[0];
+            String columnName = info[1];
             try {
-                entityManager.createNativeQuery("DELETE FROM " + table + " WHERE employee_id = :id")
+                entityManager.createNativeQuery("DELETE FROM " + tableName + " WHERE " + columnName + " = :id")
                         .setParameter("id", id).executeUpdate();
             } catch (Exception e) {
-                // Table might not exist or column name differs, skip gracefully
-                System.out.println("Could not clean up table " + table + ": " + e.getMessage());
+                System.out.println("Could not clean up table " + tableName + ": " + e.getMessage());
             }
         }
 
-        // 3. Delete the employee record itself
+        // 4. Delete the employee record itself
         entityManager.createNativeQuery("DELETE FROM employees WHERE id = :id")
                 .setParameter("id", id).executeUpdate();
 
-        // 4. Handle shared user account
+        // 5. Handle shared user account
         if (userId != null) {
-            // Check if ANY employee record still points to this user across any branch
             Number count = (Number) entityManager
                     .createNativeQuery("SELECT COUNT(*) FROM employees WHERE user_id = :uid")
                     .setParameter("uid", userId)
@@ -502,7 +543,7 @@ public class EmployeeService {
 
     public Optional<Employee> getEmployeeByUserIdAndBranch(Long userId, Long branchId) {
         if (branchId != null) {
-            return employeeRepository.findByUserIdAndBranchId(userId, branchId);
+            return employeeRepository.findByUser_IdAndBranch_Id(userId, branchId);
         }
         return employeeRepository.findAllByUserId(userId).stream().findFirst();
     }
