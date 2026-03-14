@@ -60,6 +60,12 @@ public class Employee extends BaseEntity {
     @Column(precision = 15, scale = 2)
     private BigDecimal salary;
 
+    @Column(precision = 15, scale = 2)
+    private BigDecimal housingAllowance;
+
+    @Column(precision = 15, scale = 2)
+    private BigDecimal transportAllowance;
+
     // Personal Info
     private String nationalId;
     private String nationality;

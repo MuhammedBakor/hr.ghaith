@@ -39,4 +39,10 @@ public class PayrollController {
     public ResponseEntity<PayrollRecord> updateStatus(@PathVariable Long id, @RequestBody Map<String, String> payload) {
         return ResponseEntity.ok(payrollService.updateStatus(id, payload.get("status")));
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deletePayroll(@PathVariable Long id) {
+        payrollService.deletePayroll(id);
+        return ResponseEntity.noContent().build();
+    }
 }

@@ -47,6 +47,9 @@ export default function AddEmployeeSimple() {
     positionId: '',
     role: preRole,
     managerId: '',
+    salary: '',
+    housingAllowance: '',
+    transportAllowance: '',
   });
 
   const updateField = (field: string, value: string) => {
@@ -104,6 +107,9 @@ export default function AddEmployeeSimple() {
       positionId: formData.positionId ? parseInt(formData.positionId) : undefined,
       role: formData.role,
       managerId: formData.managerId && formData.managerId !== 'none' ? parseInt(formData.managerId) : undefined,
+      salary: formData.salary ? parseFloat(formData.salary) : undefined,
+      housingAllowance: formData.housingAllowance ? parseFloat(formData.housingAllowance) : undefined,
+      transportAllowance: formData.transportAllowance ? parseFloat(formData.transportAllowance) : undefined,
     }, {
       onSuccess: (data: any) => {
         setCreatedEmployee({
@@ -182,6 +188,9 @@ export default function AddEmployeeSimple() {
                   positionId: '',
                   role: 'EMPLOYEE',
                   managerId: '',
+                  salary: '',
+                  housingAllowance: '',
+                  transportAllowance: '',
                 });
               }}>
                 <UserPlus className="h-4 w-4 ms-2" />
@@ -398,6 +407,49 @@ export default function AddEmployeeSimple() {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* الراتب والبدلات */}
+          <div className="border-t pt-4">
+            <h4 className="text-sm font-semibold text-gray-700 mb-3">الراتب والبدلات (اختياري)</h4>
+            <div className="grid md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>الراتب الأساسي</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={formData.salary}
+                  onChange={(e) => updateField('salary', e.target.value)}
+                  dir="ltr"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>بدل السكن</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={formData.housingAllowance}
+                  onChange={(e) => updateField('housingAllowance', e.target.value)}
+                  dir="ltr"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>بدل النقل</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={formData.transportAllowance}
+                  onChange={(e) => updateField('transportAllowance', e.target.value)}
+                  dir="ltr"
+                />
+              </div>
+            </div>
           </div>
 
           {/* معلومات */}

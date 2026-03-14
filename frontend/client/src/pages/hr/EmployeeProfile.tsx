@@ -1,5 +1,5 @@
 import { formatDate, formatDateTime } from '@/lib/formatDate';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import React from 'react';
 import { Link, useParams } from 'wouter';
 import { Button } from '@/components/ui/button';
@@ -141,6 +141,7 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
 
   const deleteMutation = useDeleteEmployee();
   const updateMutation = useUpdateEmployee();
+  const editFormInitialized = useRef(false);
 
   // حالة الموظف المحلية للعرض والتعديل
   const [employee, setEmployee] = useState<any>({
@@ -166,10 +167,9 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
     totalSalary: 0
   });
 
-  // تحديث حالة الموظف عند اكتمال التحميل
+  // تحديث حالة عرض الموظف عند كل تغيير في البيانات (refetch)
   useEffect(() => {
     if (employeeData) {
-      const salary = employeeData.salary || 0;
       setEmployee({
         ...employeeData,
         firstName: employeeData.firstName || '',
@@ -184,33 +184,41 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
         manager: employeeData.manager ? `${employeeData.manager.firstName} ${employeeData.manager.lastName}` : '',
         userRole: employeeData.userRole || employeeData.user?.role || employeeData.role || '',
         joinDate: employeeData.hireDate || employeeData.createdAt || '',
-        basicSalary: salary,
+        basicSalary: employeeData.salary || 0,
+        housingAllowance: employeeData.housingAllowance || 0,
+        transportAllowance: employeeData.transportAllowance || 0,
       });
-      setEditForm({
-        firstName: employeeData.firstName || '',
-        lastName: employeeData.lastName || '',
-        email: employeeData.email || '',
-        phone: employeeData.phone || '',
-        departmentId: (typeof employeeData.department === 'object' ? String(employeeData.department?.id || '') : ''),
-        positionId: (typeof employeeData.position === 'object' ? String(employeeData.position?.id || '') : ''),
-        branchId: (typeof employeeData.branch === 'object' ? String(employeeData.branch?.id || '') : ''),
-        managerId: employeeData.manager ? String(employeeData.manager.id || '') : '',
-        roles: employeeData.userRoles || (employeeData.user?.allRoles) || (employeeData.userRole ? [employeeData.userRole] : (employeeData.user?.role ? [employeeData.user.role] : [])),
-        salary: employeeData.salary ? String(employeeData.salary) : '',
-        nationalId: employeeData.nationalId || '',
-        nationality: employeeData.nationality || '',
-        dateOfBirth: employeeData.dateOfBirth || '',
-        gender: employeeData.gender || '',
-        maritalStatus: employeeData.maritalStatus || '',
-        address: employeeData.address || '',
-        city: employeeData.city || '',
-        emergencyName: employeeData.emergencyName || '',
-        emergencyRelation: employeeData.emergencyRelation || '',
-        emergencyPhone: employeeData.emergencyPhone || '',
-        bankName: employeeData.bankName || '',
-        bankAccount: employeeData.bankAccount || '',
-        iban: employeeData.iban || '',
-      });
+      // تهيئة نموذج التعديل مرة واحدة فقط عند أول تحميل للبيانات
+      if (!editFormInitialized.current) {
+        editFormInitialized.current = true;
+        setEditForm({
+          firstName: employeeData.firstName || '',
+          lastName: employeeData.lastName || '',
+          email: employeeData.email || '',
+          phone: employeeData.phone || '',
+          departmentId: (typeof employeeData.department === 'object' ? String(employeeData.department?.id || '') : ''),
+          positionId: (typeof employeeData.position === 'object' ? String(employeeData.position?.id || '') : ''),
+          branchId: (typeof employeeData.branch === 'object' ? String(employeeData.branch?.id || '') : ''),
+          managerId: employeeData.manager ? String(employeeData.manager.id || '') : '',
+          roles: employeeData.userRoles || (employeeData.user?.allRoles) || (employeeData.userRole ? [employeeData.userRole] : (employeeData.user?.role ? [employeeData.user.role] : [])),
+          salary: employeeData.salary ? String(employeeData.salary) : '',
+          housingAllowance: employeeData.housingAllowance ? String(employeeData.housingAllowance) : '',
+          transportAllowance: employeeData.transportAllowance ? String(employeeData.transportAllowance) : '',
+          nationalId: employeeData.nationalId || '',
+          nationality: employeeData.nationality || '',
+          dateOfBirth: employeeData.dateOfBirth || '',
+          gender: employeeData.gender || '',
+          maritalStatus: employeeData.maritalStatus || '',
+          address: employeeData.address || '',
+          city: employeeData.city || '',
+          emergencyName: employeeData.emergencyName || '',
+          emergencyRelation: employeeData.emergencyRelation || '',
+          emergencyPhone: employeeData.emergencyPhone || '',
+          bankName: employeeData.bankName || '',
+          bankAccount: employeeData.bankAccount || '',
+          iban: employeeData.iban || '',
+        });
+      }
     }
   }, [employeeData]);
 
@@ -226,6 +234,8 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
     managerId: '',
     roles: [] as string[],
     salary: '',
+    housingAllowance: '',
+    transportAllowance: '',
     nationalId: '',
     nationality: '',
     dateOfBirth: '',
@@ -265,6 +275,12 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
     if (editForm.salary) {
       updateData.salary = parseFloat(editForm.salary);
     }
+    if (editForm.housingAllowance) {
+      updateData.housingAllowance = parseFloat(editForm.housingAllowance);
+    }
+    if (editForm.transportAllowance) {
+      updateData.transportAllowance = parseFloat(editForm.transportAllowance);
+    }
     if (editForm.departmentId) {
       updateData.department = { id: parseInt(editForm.departmentId) };
     }
@@ -282,7 +298,23 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
     }
 
     updateMutation.mutate(updateData, {
-      onSuccess: () => {
+      onSuccess: (response: any) => {
+        const saved = response?.data || response;
+        // تحديث حالة العرض فوراً من البيانات المحفوظة دون انتظار إعادة الجلب
+        if (saved && saved.id) {
+          setEmployee((prev: any) => ({
+            ...prev,
+            basicSalary: saved.salary || 0,
+            housingAllowance: saved.housingAllowance || 0,
+            transportAllowance: saved.transportAllowance || 0,
+            firstName: saved.firstName || prev.firstName,
+            lastName: saved.lastName || prev.lastName,
+            email: saved.email || prev.email,
+            phone: saved.phone || prev.phone,
+          }));
+          // السماح بإعادة تهيئة النموذج بعد الحفظ ليعكس القيم الصحيحة
+          editFormInitialized.current = false;
+        }
         toast.success('تم حفظ التعديلات بنجاح');
         setViewMode("profile");
       },
@@ -636,6 +668,30 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
                   value={editForm.salary}
                   onChange={(e) => setEditForm(prev => ({ ...prev, salary: e.target.value }))}
                   placeholder="أدخل الراتب"
+                  dir="ltr"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>بدل السكن</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={editForm.housingAllowance}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, housingAllowance: e.target.value }))}
+                  placeholder="0.00"
+                  dir="ltr"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>بدل النقل</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={editForm.transportAllowance}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, transportAllowance: e.target.value }))}
+                  placeholder="0.00"
                   dir="ltr"
                 />
               </div>

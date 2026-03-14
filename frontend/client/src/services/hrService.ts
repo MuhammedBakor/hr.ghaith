@@ -468,6 +468,14 @@ export const useUpdatePayrollStatus = () => {
     });
 };
 
+export const useDeletePayroll = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (id: number) => api.delete(`/hr/payroll/${id}`),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['payroll'] }),
+    });
+};
+
 // QR Scanner
 export const useCheckInWithQR = () => {
     const queryClient = useQueryClient();

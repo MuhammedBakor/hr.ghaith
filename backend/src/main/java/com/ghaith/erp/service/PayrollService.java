@@ -73,6 +73,13 @@ public class PayrollService {
                 return payrollRepository.save(record);
         }
 
+        public void deletePayroll(Long id) {
+                if (!payrollRepository.existsById(id)) {
+                        throw new RuntimeException("كشف الراتب غير موجود");
+                }
+                payrollRepository.deleteById(id);
+        }
+
         // ── helpers ──────────────────────────────────────────────────────────────
 
         private BigDecimal toBigDecimal(Object value) {

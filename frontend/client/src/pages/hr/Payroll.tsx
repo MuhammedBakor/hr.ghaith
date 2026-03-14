@@ -5,6 +5,22 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   DollarSign,
   Download,
   Calculator,
@@ -12,14 +28,15 @@ import {
   TrendingUp,
   FileText,
   Plus,
-  ArrowRight
+  ArrowRight,
+  Trash2,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { useAppContext } from '@/contexts/AppContext';
-import { useEmployees, usePayroll, useCreatePayroll } from '@/services/hrService';
+import { useEmployees, usePayroll, useCreatePayroll, useDeletePayroll, useBranches, useDepartments } from '@/services/hrService';
 import { useQueryClient } from '@tanstack/react-query';
 
 
@@ -28,6 +45,7 @@ interface PayrollRecord {
   employeeId: number;
   employeeName?: string;
   department?: string;
+  branch?: string;
   basicSalary: number;
   housingAllowance: number;
   transportAllowance: number;
@@ -41,6 +59,12 @@ interface PayrollRecord {
 
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR' }).format(amount);
+};
+
+const MONTH_NAMES: Record<string, string> = {
+  '01': 'يناير', '02': 'فبراير', '03': 'مارس', '04': 'أبريل',
+  '05': 'مايو', '06': 'يونيو', '07': 'يوليو', '08': 'أغسطس',
+  '09': 'سبتمبر', '10': 'أكتوبر', '11': 'نوفمبر', '12': 'ديسمبر',
 };
 
 const getStatusBadge = (status: string) => {
@@ -60,76 +84,188 @@ type ViewMode = "list" | "new-payroll";
 
 export default function Payroll() {
   const queryClient = useQueryClient();
-  const { selectedRole: userRole, selectedBranchId } = useAppContext();
+  const { selectedBranchId } = useAppContext();
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [selectedEmployee, setSelectedEmployee] = useState<string>('');
   const [month, setMonth] = useState('01');
   const [year, setYear] = useState(2026);
+  const [basicSalary, setBasicSalary] = useState('');
+  const [housingAllowance, setHousingAllowance] = useState('');
+  const [transportAllowance, setTransportAllowance] = useState('');
+  const [otherAllowances, setOtherAllowances] = useState('');
+  const [deductions, setDeductions] = useState('');
 
-  // جلب قائمة الموظفين - مفلترة بالفرع الحالي
+  const [filterBranchId, setFilterBranchId] = useState<string>('');
+  const [filterDeptId, setFilterDeptId] = useState<string>('');
+
+  const [detailsRecord, setDetailsRecord] = useState<PayrollRecord | null>(null);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [showCalculateDialog, setShowCalculateDialog] = useState(false);
+  const [calcMonth, setCalcMonth] = useState(() => String(new Date().getMonth() + 1).padStart(2, '0'));
+  const [calcYear, setCalcYear] = useState(() => new Date().getFullYear());
+  const [isCalculating, setIsCalculating] = useState(false);
+
   const { data: employeesData } = useEmployees({ branchId: selectedBranchId });
   const employees = employeesData || [];
+  const { data: branchesData } = useBranches();
+  const branches = (branchesData || []).filter((b: any) => b.id);
+  const { data: departmentsData } = useDepartments({ branchId: filterBranchId ? parseInt(filterBranchId) : null });
+  const departments = departmentsData || [];
+  const filteredEmployees = employees.filter((e: any) => {
+    if (filterBranchId && String(e.branch?.id) !== filterBranchId) return false;
+    if (filterDeptId && String(e.department?.id) !== filterDeptId) return false;
+    return true;
+  });
 
-  // جلب كشوف الرواتب
   const { data: payrollData, isLoading } = usePayroll(selectedBranchId || undefined);
   const records: PayrollRecord[] = (payrollData || []).map((p: any) => ({
     ...p,
     employeeName: p.employee ? `${p.employee.firstName} ${p.employee.lastName}` : `موظف #${p.employeeId}`,
-    department: p.employee?.department?.nameAr || p.employee?.department?.name || '-'
+    department: p.employee?.department?.nameAr || p.employee?.department?.name || '-',
+    branch: p.employee?.branch?.nameAr || p.employee?.branch?.name || '-',
   }));
 
-  // إنشاء كشف راتب جديد
   const createPayrollMutation = useCreatePayroll();
+  const deletePayrollMutation = useDeletePayroll();
+
+  const handleEmployeeChange = (empId: string) => {
+    setSelectedEmployee(empId);
+    const emp = employees.find((e: any) => e.id.toString() === empId);
+    if (emp) {
+      setBasicSalary(emp.salary != null ? String(emp.salary) : '0');
+      setHousingAllowance(emp.housingAllowance != null ? String(emp.housingAllowance) : '0');
+      setTransportAllowance(emp.transportAllowance != null ? String(emp.transportAllowance) : '0');
+      setOtherAllowances('');
+      setDeductions('');
+    }
+  };
 
   const handleCreatePayroll = () => {
     if (!selectedEmployee) {
       toast.error('يرجى اختيار موظف');
       return;
     }
-
-    const employee = employees.find((e: any) => e.id.toString() === selectedEmployee);
-    if (!employee) return;
-
     createPayrollMutation.mutate({
       employeeId: parseInt(selectedEmployee),
-      basicSalary: parseFloat(employee.salary) || 5000,
-      housingAllowance: (parseFloat(employee.salary) || 5000) * 0.25,
-      transportAllowance: 500,
-      otherAllowances: 0,
-      deductions: 0,
-      month: month,
-      year: year,
-      status: 'draft'
+      basicSalary: parseFloat(basicSalary) || 0,
+      housingAllowance: parseFloat(housingAllowance) || 0,
+      transportAllowance: parseFloat(transportAllowance) || 0,
+      otherAllowances: parseFloat(otherAllowances) || 0,
+      deductions: parseFloat(deductions) || 0,
+      month,
+      year,
+      status: 'draft',
     }, {
       onSuccess: () => {
         toast.success('تم إنشاء كشف الراتب بنجاح');
         queryClient.invalidateQueries({ queryKey: ['payroll'] });
         setViewMode("list");
         setSelectedEmployee('');
+        setBasicSalary('');
+        setHousingAllowance('');
+        setTransportAllowance('');
+        setOtherAllowances('');
+        setDeductions('');
       },
       onError: (error: any) => {
         toast.error('فشل في إنشاء كشف الراتب: ' + error.message);
-      }
+      },
     });
   };
 
-  // حساب الإجماليات
-  const totals = records.reduce((acc, record) => ({
-    totalSalaries: acc.totalSalaries + (record.basicSalary || 0),
-    totalAllowances: acc.totalAllowances + (record.housingAllowance || 0) + (record.transportAllowance || 0) + (record.otherAllowances || 0),
-    totalDeductions: acc.totalDeductions + (record.deductions || 0),
-    totalNet: acc.totalNet + (record.netSalary || 0),
+  const handleDelete = (id: number) => {
+    deletePayrollMutation.mutate(id, {
+      onSuccess: () => {
+        toast.success('تم حذف كشف الراتب بنجاح');
+        setDeleteId(null);
+      },
+      onError: (error: any) => {
+        toast.error('فشل في الحذف: ' + (error.response?.data?.message || error.message));
+        setDeleteId(null);
+      },
+    });
+  };
+
+  const handleCalculateSalaries = async () => {
+    const activeEmployees = employees.filter((e: any) => e.status === 'active' || e.status === 'Active');
+    const alreadyCreated = new Set(
+      records
+        .filter((r) => r.month === calcMonth && r.year === calcYear)
+        .map((r) => r.employeeId)
+    );
+    const toCreate = activeEmployees.filter((e: any) => !alreadyCreated.has(e.id) && (e.salary || e.housingAllowance || e.transportAllowance));
+    if (toCreate.length === 0) {
+      toast.info('جميع الموظفين لديهم كشف راتب لهذا الشهر بالفعل');
+      setShowCalculateDialog(false);
+      return;
+    }
+    setIsCalculating(true);
+    let created = 0;
+    for (const emp of toCreate) {
+      try {
+        await new Promise<void>((resolve, reject) => {
+          createPayrollMutation.mutate({
+            employeeId: emp.id,
+            basicSalary: Number(emp.salary) || 0,
+            housingAllowance: Number(emp.housingAllowance) || 0,
+            transportAllowance: Number(emp.transportAllowance) || 0,
+            otherAllowances: 0,
+            deductions: 0,
+            month: calcMonth,
+            year: calcYear,
+            status: 'draft',
+          }, { onSuccess: () => { created++; resolve(); }, onError: () => resolve() });
+        });
+      } catch { /* continue */ }
+    }
+    setIsCalculating(false);
+    setShowCalculateDialog(false);
+    queryClient.invalidateQueries({ queryKey: ['payroll'] });
+    toast.success(`تم إنشاء ${created} كشف راتب بنجاح`);
+  };
+
+  const handleExport = () => {
+    if (records.length === 0) {
+      toast.info('لا توجد سجلات للتصدير');
+      return;
+    }
+    const headers = ['الموظف', 'الفرع', 'القسم', 'الراتب الأساسي', 'بدل السكن', 'بدل النقل', 'بدلات أخرى', 'الخصومات', 'صافي الراتب', 'الشهر', 'السنة', 'الحالة'];
+    const rows = records.map((r) => [
+      r.employeeName || '',
+      r.branch || '',
+      r.department || '',
+      r.basicSalary || 0,
+      r.housingAllowance || 0,
+      r.transportAllowance || 0,
+      r.otherAllowances || 0,
+      r.deductions || 0,
+      r.netSalary || 0,
+      MONTH_NAMES[r.month] || r.month,
+      r.year,
+      r.status === 'draft' ? 'مسودة' : r.status === 'approved' ? 'معتمد' : 'تم الصرف',
+    ]);
+    const csv = [headers, ...rows].map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `payroll_${calcYear}_${calcMonth}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('تم تصدير البيانات بنجاح');
+  };
+
+  const totals = records.reduce((acc, r) => ({
+    totalSalaries: acc.totalSalaries + (r.basicSalary || 0),
+    totalAllowances: acc.totalAllowances + (r.housingAllowance || 0) + (r.transportAllowance || 0) + (r.otherAllowances || 0),
+    totalDeductions: acc.totalDeductions + (r.deductions || 0),
+    totalNet: acc.totalNet + (r.netSalary || 0),
   }), { totalSalaries: 0, totalAllowances: 0, totalDeductions: 0, totalNet: 0 });
 
   const columns: ColumnDef<PayrollRecord>[] = [
-    {
-      accessorKey: 'employeeName',
-      header: 'الموظف',
-    },
-    {
-      accessorKey: 'department',
-      header: 'القسم',
-    },
+    { accessorKey: 'employeeName', header: 'الموظف' },
+    { accessorKey: 'branch', header: 'الفرع' },
+    { accessorKey: 'department', header: 'القسم' },
     {
       accessorKey: 'basicSalary',
       header: 'الراتب الأساسي',
@@ -141,7 +277,7 @@ export default function Payroll() {
       cell: ({ row }) => {
         const total = (row.original.housingAllowance || 0) + (row.original.transportAllowance || 0) + (row.original.otherAllowances || 0);
         return <span className="text-green-600">{formatCurrency(total)}</span>;
-      }
+      },
     },
     {
       accessorKey: 'deductions',
@@ -156,7 +292,7 @@ export default function Payroll() {
     {
       accessorKey: 'month',
       header: 'الشهر',
-      cell: ({ row }) => `${row.original.month}/${row.original.year}`,
+      cell: ({ row }) => `${MONTH_NAMES[row.original.month] || row.original.month} ${row.original.year}`,
     },
     {
       accessorKey: 'status',
@@ -168,14 +304,29 @@ export default function Payroll() {
       header: '',
       enableSorting: false,
       cell: ({ row }) => (
-        <Button size="sm" variant="outline">
-          <FileText className="h-4 w-4" />
-        </Button>
+        <div className="flex gap-1">
+          <Button
+            size="sm"
+            variant="outline"
+            title="عرض التفاصيل"
+            onClick={() => setDetailsRecord(row.original)}
+          >
+            <FileText className="h-4 w-4" />
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            title="حذف"
+            className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+            onClick={() => setDeleteId(row.original.id)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       ),
     },
   ];
 
-  // Render New Payroll Form
   const renderNewPayrollForm = () => (
     <div className="space-y-6" dir="rtl">
       <div className="flex items-center gap-4">
@@ -190,46 +341,62 @@ export default function Payroll() {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>بيانات كشف الراتب</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle>بيانات كشف الراتب</CardTitle></CardHeader>
         <CardContent>
           <div className="grid gap-6">
-            <div className="space-y-2">
-              <Label>الموظف</Label>
-              <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-                <SelectTrigger>
-                  <SelectValue placeholder="اختر الموظف" />
-                </SelectTrigger>
-                <SelectContent>
-                  {employees?.map((emp: any) => (
-                    <SelectItem key={emp.id} value={emp.id.toString()}>
-                      {emp.firstName} {emp.lastName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>الفرع (تصفية)</Label>
+                <Select value={filterBranchId} onValueChange={(v) => { const val = v === 'all' ? '' : v; setFilterBranchId(val); setFilterDeptId(''); setSelectedEmployee(''); }}>
+                  <SelectTrigger><SelectValue placeholder="جميع الفروع" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">جميع الفروع</SelectItem>
+                    {branches.map((b: any) => (
+                      <SelectItem key={b.id} value={String(b.id)}>
+                        {b.nameAr || b.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>القسم (تصفية)</Label>
+                <Select value={filterDeptId} onValueChange={(v) => { setFilterDeptId(v === 'all' ? '' : v); setSelectedEmployee(''); }}>
+                  <SelectTrigger><SelectValue placeholder="جميع الأقسام" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">جميع الأقسام</SelectItem>
+                    {departments.map((d: any) => (
+                      <SelectItem key={d.id} value={String(d.id)}>
+                        {d.nameAr || d.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>الموظف</Label>
+                <Select value={selectedEmployee} onValueChange={handleEmployeeChange}>
+                  <SelectTrigger><SelectValue placeholder="اختر الموظف" /></SelectTrigger>
+                  <SelectContent>
+                    {filteredEmployees.map((emp: any) => (
+                      <SelectItem key={emp.id} value={emp.id.toString()}>
+                        {emp.firstName} {emp.lastName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>الشهر</Label>
                 <Select value={month} onValueChange={setMonth}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="01">يناير</SelectItem>
-                    <SelectItem value="02">فبراير</SelectItem>
-                    <SelectItem value="03">مارس</SelectItem>
-                    <SelectItem value="04">أبريل</SelectItem>
-                    <SelectItem value="05">مايو</SelectItem>
-                    <SelectItem value="06">يونيو</SelectItem>
-                    <SelectItem value="07">يوليو</SelectItem>
-                    <SelectItem value="08">أغسطس</SelectItem>
-                    <SelectItem value="09">سبتمبر</SelectItem>
-                    <SelectItem value="10">أكتوبر</SelectItem>
-                    <SelectItem value="11">نوفمبر</SelectItem>
-                    <SelectItem value="12">ديسمبر</SelectItem>
+                    {Object.entries(MONTH_NAMES).map(([val, label]) => (
+                      <SelectItem key={val} value={val}>{label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -242,12 +409,54 @@ export default function Payroll() {
                 />
               </div>
             </div>
+
+            <div className="border-t pt-4">
+              <h4 className="text-sm font-semibold text-gray-700 mb-3">تفاصيل الراتب</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>بدلات أخرى</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={otherAllowances}
+                    onChange={(e) => setOtherAllowances(e.target.value)}
+                    dir="ltr"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>الخصومات</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={deductions}
+                    onChange={(e) => setDeductions(e.target.value)}
+                    dir="ltr"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>صافي الراتب (تلقائي)</Label>
+                  <Input
+                    readOnly
+                    dir="ltr"
+                    className="bg-gray-50 font-bold"
+                    value={formatCurrency(
+                      (parseFloat(basicSalary) || 0) +
+                      (parseFloat(housingAllowance) || 0) +
+                      (parseFloat(transportAllowance) || 0) +
+                      (parseFloat(otherAllowances) || 0) -
+                      (parseFloat(deductions) || 0)
+                    )}
+                  />
+                </div>
+              </div>
+            </div>
             <div className="flex gap-3 pt-4">
               <Button variant="outline" onClick={() => setViewMode("list")}>إلغاء</Button>
-              <Button
-                onClick={handleCreatePayroll}
-                disabled={createPayrollMutation.isPending}
-              >
+              <Button onClick={handleCreatePayroll} disabled={createPayrollMutation.isPending}>
                 {createPayrollMutation.isPending ? 'جاري الإنشاء...' : 'إنشاء كشف الراتب'}
               </Button>
             </div>
@@ -257,7 +466,6 @@ export default function Payroll() {
     </div>
   );
 
-  // Render List View
   const renderListView = () => (
     <div className="space-y-6" dir="rtl">
       <div className="flex items-center justify-between">
@@ -266,11 +474,11 @@ export default function Payroll() {
           <p className="text-gray-500">كشوف الرواتب والمستحقات الشهرية</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="gap-2">
+          <Button variant="outline" className="gap-2" onClick={() => setShowCalculateDialog(true)}>
             <Calculator className="h-4 w-4" />
             احتساب الرواتب
           </Button>
-          <Button variant="outline" className="gap-2">
+          <Button variant="outline" className="gap-2" onClick={handleExport}>
             <Download className="h-4 w-4" />
             تصدير
           </Button>
@@ -281,13 +489,10 @@ export default function Payroll() {
         </div>
       </div>
 
-      {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-full bg-blue-50">
-              <DollarSign className="h-6 w-6 text-blue-600" />
-            </div>
+            <div className="p-3 rounded-full bg-blue-50"><DollarSign className="h-6 w-6 text-blue-600" /></div>
             <div>
               <p className="text-sm text-muted-foreground">إجمالي الرواتب</p>
               <p className="text-xl font-bold">{formatCurrency(totals.totalSalaries)}</p>
@@ -296,9 +501,7 @@ export default function Payroll() {
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-full bg-green-50">
-              <TrendingUp className="h-6 w-6 text-green-600" />
-            </div>
+            <div className="p-3 rounded-full bg-green-50"><TrendingUp className="h-6 w-6 text-green-600" /></div>
             <div>
               <p className="text-sm text-muted-foreground">إجمالي البدلات</p>
               <p className="text-xl font-bold">{formatCurrency(totals.totalAllowances)}</p>
@@ -307,9 +510,7 @@ export default function Payroll() {
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-full bg-red-50">
-              <Wallet className="h-6 w-6 text-red-600" />
-            </div>
+            <div className="p-3 rounded-full bg-red-50"><Wallet className="h-6 w-6 text-red-600" /></div>
             <div>
               <p className="text-sm text-muted-foreground">إجمالي الخصومات</p>
               <p className="text-xl font-bold">{formatCurrency(totals.totalDeductions)}</p>
@@ -318,9 +519,7 @@ export default function Payroll() {
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-4">
-            <div className="p-3 rounded-full bg-purple-50">
-              <DollarSign className="h-6 w-6 text-purple-600" />
-            </div>
+            <div className="p-3 rounded-full bg-purple-50"><DollarSign className="h-6 w-6 text-purple-600" /></div>
             <div>
               <p className="text-sm text-muted-foreground">صافي المستحقات</p>
               <p className="text-xl font-bold">{formatCurrency(totals.totalNet)}</p>
@@ -329,7 +528,6 @@ export default function Payroll() {
         </Card>
       </div>
 
-      {/* Payroll Table */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -351,10 +549,142 @@ export default function Payroll() {
           )}
         </CardContent>
       </Card>
+
+      {/* Details Dialog */}
+      <Dialog open={!!detailsRecord} onOpenChange={(open) => { if (!open) setDetailsRecord(null); }}>
+        <DialogContent className="max-w-lg" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              تفاصيل كشف الراتب
+            </DialogTitle>
+          </DialogHeader>
+          {detailsRecord && (
+            <div className="space-y-4">
+              <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">الموظف</span>
+                  <span className="font-medium">{detailsRecord.employeeName}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">الفرع</span>
+                  <span className="font-medium">{detailsRecord.branch}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">القسم</span>
+                  <span className="font-medium">{detailsRecord.department}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">الفترة</span>
+                  <span className="font-medium">{MONTH_NAMES[detailsRecord.month] || detailsRecord.month} {detailsRecord.year}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">الحالة</span>
+                  <span>{getStatusBadge(detailsRecord.status)}</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <h4 className="font-semibold text-sm text-gray-700">تفاصيل الراتب</h4>
+                <div className="border rounded-lg divide-y">
+                  <div className="flex justify-between px-4 py-2 text-sm">
+                    <span className="text-gray-600">الراتب الأساسي</span>
+                    <span className="font-medium">{formatCurrency(detailsRecord.basicSalary || 0)}</span>
+                  </div>
+                  <div className="flex justify-between px-4 py-2 text-sm">
+                    <span className="text-gray-600">بدل السكن</span>
+                    <span className="text-green-600">{formatCurrency(detailsRecord.housingAllowance || 0)}</span>
+                  </div>
+                  <div className="flex justify-between px-4 py-2 text-sm">
+                    <span className="text-gray-600">بدل النقل</span>
+                    <span className="text-green-600">{formatCurrency(detailsRecord.transportAllowance || 0)}</span>
+                  </div>
+                  <div className="flex justify-between px-4 py-2 text-sm">
+                    <span className="text-gray-600">بدلات أخرى</span>
+                    <span className="text-green-600">{formatCurrency(detailsRecord.otherAllowances || 0)}</span>
+                  </div>
+                  <div className="flex justify-between px-4 py-2 text-sm">
+                    <span className="text-gray-600">الخصومات</span>
+                    <span className="text-red-600">({formatCurrency(detailsRecord.deductions || 0)})</span>
+                  </div>
+                  <div className="flex justify-between px-4 py-3 font-bold bg-gray-50 rounded-b-lg">
+                    <span>صافي الراتب</span>
+                    <span className="text-primary">{formatCurrency(detailsRecord.netSalary || 0)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Calculate Salaries Dialog */}
+      <AlertDialog open={showCalculateDialog} onOpenChange={setShowCalculateDialog}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Calculator className="h-5 w-5" />
+              احتساب الرواتب التلقائي
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              سيتم إنشاء كشوف راتب تلقائياً لجميع الموظفين النشطين الذين لا يملكون كشفاً لهذا الشهر.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="grid grid-cols-2 gap-4 py-2">
+            <div className="space-y-2">
+              <Label>الشهر</Label>
+              <Select value={calcMonth} onValueChange={setCalcMonth}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(MONTH_NAMES).map(([val, label]) => (
+                    <SelectItem key={val} value={val}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>السنة</Label>
+              <Input
+                type="number"
+                value={calcYear}
+                onChange={(e) => setCalcYear(parseInt(e.target.value))}
+                dir="ltr"
+              />
+            </div>
+          </div>
+          <AlertDialogFooter className="flex-row-reverse gap-2">
+            <AlertDialogCancel disabled={isCalculating}>إلغاء</AlertDialogCancel>
+            <AlertDialogAction onClick={handleCalculateSalaries} disabled={isCalculating}>
+              {isCalculating ? 'جاري الاحتساب...' : 'احتساب'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Confirm Dialog */}
+      <AlertDialog open={deleteId !== null} onOpenChange={(open) => { if (!open) setDeleteId(null); }}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
+            <AlertDialogDescription>
+              هل أنت متأكد من حذف كشف الراتب؟ لا يمكن التراجع عن هذا الإجراء.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row-reverse gap-2">
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => deleteId !== null && handleDelete(deleteId)}
+              disabled={deletePayrollMutation.isPending}
+            >
+              {deletePayrollMutation.isPending ? 'جاري الحذف...' : 'حذف'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 
-  // Main render
   switch (viewMode) {
     case "new-payroll":
       return renderNewPayrollForm();

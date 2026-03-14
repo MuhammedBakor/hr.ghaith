@@ -301,7 +301,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
     // جدول مطابقة مسارات HR بصلاحياتها الفرعية (الأطول أولاً لتفادي التطابق المبكر)
     const hrPathToSubPage: Array<[string, string]> = [
-      ['/hr/employees/add', 'add-employee'],
       ['/hr/employees', 'employees'],
       ['/hr/attendance-monitoring', 'attendance-monitoring'],
       ['/hr/attendance-reports', 'reports'],

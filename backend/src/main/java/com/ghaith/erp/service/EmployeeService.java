@@ -126,7 +126,8 @@ public class EmployeeService {
     }
 
     public java.util.Map<String, String> createSimpleEmployee(String firstName, String lastName, String email,
-            String phone, Long branchId, Long departmentId, Long positionId, String roleStr, Long managerId) {
+            String phone, Long branchId, Long departmentId, Long positionId, String roleStr, Long managerId,
+            java.math.BigDecimal salary, java.math.BigDecimal housingAllowance, java.math.BigDecimal transportAllowance) {
         System.out.println("Starting createSimpleEmployee for email: " + email);
 
         // Validate: check if this email is already used by an employee IN THE SAME
@@ -165,6 +166,15 @@ public class EmployeeService {
         }
         if (managerId != null) {
             employee.setManager(employeeRepository.findById(managerId).orElse(null));
+        }
+        if (salary != null) {
+            employee.setSalary(salary);
+        }
+        if (housingAllowance != null) {
+            employee.setHousingAllowance(housingAllowance);
+        }
+        if (transportAllowance != null) {
+            employee.setTransportAllowance(transportAllowance);
         }
 
         // Create User Account
@@ -279,6 +289,12 @@ public class EmployeeService {
         }
         if (employeeDetails.getSalary() != null) {
             employee.setSalary(employeeDetails.getSalary());
+        }
+        if (employeeDetails.getHousingAllowance() != null) {
+            employee.setHousingAllowance(employeeDetails.getHousingAllowance());
+        }
+        if (employeeDetails.getTransportAllowance() != null) {
+            employee.setTransportAllowance(employeeDetails.getTransportAllowance());
         }
         if (employeeDetails.getStatus() != null) {
             employee.setStatus(employeeDetails.getStatus());
