@@ -57,6 +57,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             response.setContentType("application/json");
             response.getWriter()
                     .write("{\"error\": \"Invalid or expired token\", \"message\": \"" + e.getMessage() + "\"}");
+        } catch (org.springframework.security.core.userdetails.UsernameNotFoundException e) {
+            // User was deleted after token was issued — treat as unauthenticated and continue
+            filterChain.doFilter(request, response);
         }
     }
 }

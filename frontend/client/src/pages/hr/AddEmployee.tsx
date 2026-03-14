@@ -13,6 +13,7 @@ import {
   useDepartments,
   useBranches,
   useRoles,
+  useCustomRoles,
   usePositions,
   useCreateEmployee,
   useInviteEmployee
@@ -62,11 +63,20 @@ export default function AddEmployee() {
   const { data: branchesData, isLoading: isLoadingBranches } = useBranches();
   const branches = branchesData || [];
   const { data: rolesData, isLoading: isLoadingRoles } = useRoles();
-  const roles = (rolesData || []).filter((r: string) => r && r.trim() !== "").map((r: string) => ({
+  const { data: customRolesData } = useCustomRoles();
+  const systemRoles = (rolesData || []).filter((r: string) => r && r.trim() !== "").map((r: string) => ({
     id: r,
     name: r,
-    nameAr: r === 'OWNER' ? 'مالك' : r === 'GENERAL_MANAGER' ? 'مدير عام' : r === 'DEPARTEMENT_MANAGER' ? 'مدير قسم' : r === 'SUPERVISOR' ? 'مشرف' : r === 'EMPLOYEE' ? 'موظف' : r === 'AGENT' ? 'مندوب' : r
+    nameAr: r === 'OWNER' ? 'مالك' : r === 'GENERAL_MANAGER' ? 'مدير عام' : r === 'DEPARTEMENT_MANAGER' ? 'مدير قسم' : r === 'SUPERVISOR' ? 'مشرف' : r === 'EMPLOYEE' ? 'موظف' : r === 'AGENT' ? 'مندوب' : r,
+    isCustom: false,
   }));
+  const customRoles = (customRolesData || []).map((r: any) => ({
+    id: r.code,
+    name: r.code,
+    nameAr: r.nameAr || r.name || r.code,
+    isCustom: true,
+  }));
+  const roles = [...systemRoles, ...customRoles];
   const { data: positionsData, isLoading: isLoadingPositions } = usePositions({ branchId: formData.branchId ? parseInt(formData.branchId) : (selectedBranchId || null) });
   const positions = positionsData || [];
   const { data: employeesData } = useEmployees();
@@ -271,18 +281,27 @@ export default function AddEmployee() {
                   <Select value={formData.roleCode} onValueChange={(v) => updateField('roleCode', v)}>
                     <SelectTrigger><SelectValue placeholder="اختر الدور" /></SelectTrigger>
                     <SelectContent>
-                      {roles.length > 0 ? roles.map((r: any) => (
+                      {systemRoles.map((r: any) => (
                         <SelectItem key={r.id} value={r.id}>
-                          <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: '#6b7280' }} />{r.nameAr || r.name}</span>
+                          <span className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: '#6b7280' }} />
+                            {r.nameAr}
+                          </span>
                         </SelectItem>
-                      )) : <>
-                        <SelectItem value="OWNER">مالك</SelectItem>
-                        <SelectItem value="GENERAL_MANAGER">مدير عام</SelectItem>
-                        <SelectItem value="DEPARTEMENT_MANAGER">مدير قسم</SelectItem>
-                        <SelectItem value="SUPERVISOR">مشرف</SelectItem>
-                        <SelectItem value="EMPLOYEE">موظف</SelectItem>
-                        <SelectItem value="AGENT">مندوب</SelectItem>
-                      </>}
+                      ))}
+                      {customRoles.length > 0 && (
+                        <>
+                          <div className="px-2 py-1 text-xs text-gray-400 border-t mt-1 pt-2">أدوار مخصصة</div>
+                          {customRoles.map((r: any) => (
+                            <SelectItem key={r.id} value={r.id}>
+                              <span className="flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: '#C9A84C' }} />
+                                {r.nameAr}
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </>
+                      )}
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-gray-500">الدور يحدد صلاحيات الموظف (موظف، مشرف، مدير قسم...)</p>

@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { Link } from 'wouter';
+import { useMemo } from 'react';
+import { Link, useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { useAppContext } from '@/contexts/AppContext';
@@ -103,7 +103,7 @@ const departments: Department[] = [
     borderColor: 'border-blue-200',
     description: 'إدارة شؤون الموظفين والحضور والرواتب والتوظيف',
     items: [
-      { label: 'الموظفين', path: '/hr', icon: Users },
+      { label: 'الموظفين', path: '/hr/employees', icon: Users },
       { label: 'الحضور والانصراف', path: '/hr/attendance-monitoring', icon: Clock },
       { label: 'الإجازات', path: '/hr/leave-management', icon: Calendar },
       { label: 'الرواتب', path: '/hr/payroll', icon: DollarSign },
@@ -413,7 +413,18 @@ const departments: Department[] = [
 ];
 
 export default function DepartmentsHub() {
-  const [selectedDept, setSelectedDept] = useState<string | null>(null);
+  const [location, navigate] = useLocation();
+
+  // Parse selected dept from URL:
+  // /departments/hr -> 'hr', /departments -> null
+  // /hr (direct module route) -> 'hr'
+  const pathParts = location.split('/').filter(Boolean);
+  const deptIds = departments.map(d => d.id);
+  const selectedDept =
+    pathParts.length >= 2 && pathParts[0] === 'departments' ? pathParts[1] :
+    pathParts.length === 1 && deptIds.includes(pathParts[0]) ? pathParts[0] :
+    null;
+
   const { selectedCompanyId, selectedBranchId } = useAppContext();
 
   // Fetch company data to get its assigned departments (only when in a company context)
@@ -446,9 +457,17 @@ export default function DepartmentsHub() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">الأقسام</h1>
-        <p className="text-gray-500 mt-1">اختر القسم للوصول إلى خدماته وأدواته</p>
+      <div className="bg-gradient-to-r from-[#0f172a] via-[#1e293b] to-[#0f172a] rounded-2xl p-6 text-white shadow-xl mb-8 overflow-hidden relative border border-white/5">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-[#C9A84C]/5 rounded-full translate-x-32 -translate-y-32 blur-3xl" />
+        <div className="relative flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-black mb-1">الأقسام المركزية</h1>
+            <p className="text-slate-300/80 text-sm">اختر القسم للوصول إلى خدماته وأدواته وإدارة العمليات اليومية</p>
+          </div>
+          <div className="hidden sm:flex w-12 h-12 bg-white/5 rounded-xl items-center justify-center backdrop-blur-md border border-white/10 shadow-inner">
+            <LayoutDashboard className="w-6 h-6 text-[#C9A84C]" />
+          </div>
+        </div>
       </div>
 
       {!selectedDept ? (
@@ -459,24 +478,26 @@ export default function DepartmentsHub() {
             return (
               <button
                 key={dept.id}
-                onClick={() => setSelectedDept(dept.id)}
-                className={`group relative p-5 rounded-xl border-2 ${dept.borderColor} ${dept.bgColor} hover:shadow-lg transition-all duration-200 text-right w-full hover:scale-[1.02]`}
+                onClick={() => navigate('/departments/' + dept.id)}
+                className={`group relative p-5 rounded-xl border border-white/5 bg-gradient-to-br from-[#1e293b] to-[#0f172a] shadow-lg hover:shadow-[#C9A84C]/10 transition-all duration-300 text-right w-full hover:scale-[1.03] overflow-hidden`}
               >
-                <div className="flex items-start gap-4">
+                {/* Decorative background element with gold tint */}
+                <div className="absolute top-0 left-0 w-32 h-32 bg-[#C9A84C]/5 rounded-full -translate-x-12 -translate-y-12 blur-2xl group-hover:bg-[#C9A84C]/10 transition-colors" />
+
+                <div className="relative flex items-start gap-4">
                   <div
-                    className="shrink-0 w-12 h-12 rounded-xl flex items-center justify-center shadow-sm"
-                    style={{ backgroundColor: `${dept.color}15`, border: `1.5px solid ${dept.color}30` }}
+                    className="shrink-0 w-12 h-12 rounded-xl flex items-center justify-center bg-white/5 border border-white/10 backdrop-blur-sm shadow-inner group-hover:scale-110 group-hover:border-[#C9A84C]/30 transition-all duration-300"
                   >
-                    <Icon className="h-6 w-6" style={{ color: dept.color }} />
+                    <Icon className="h-6 w-6 text-[#C9A84C]" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-gray-900 text-base">{dept.label}</h3>
-                    <p className="text-xs text-gray-500 mt-1 line-clamp-2">{dept.description}</p>
-                    <div className="flex items-center gap-1 mt-2">
-                      <span className="text-xs font-medium" style={{ color: dept.color }}>
+                    <h3 className="font-black text-slate-100 text-base mb-1 group-hover:text-white transition-colors">{dept.label}</h3>
+                    <p className="text-[10px] text-slate-400 leading-relaxed line-clamp-2 group-hover:text-slate-300 transition-colors">{dept.description}</p>
+                    <div className="flex items-center gap-1 mt-3">
+                      <span className="text-xs font-bold text-[#C9A84C]/80 group-hover:text-[#C9A84C] transition-colors">
                         {dept.items.length} خدمة
                       </span>
-                      <ChevronLeft className="h-3 w-3 group-hover:-translate-x-1 transition-transform" style={{ color: dept.color }} />
+                      <ChevronLeft className="h-3.5 w-3.5 text-[#C9A84C]/60 group-hover:text-[#C9A84C] group-hover:-translate-x-1.5 transition-all" />
                     </div>
                   </div>
                 </div>
@@ -486,30 +507,37 @@ export default function DepartmentsHub() {
         </div>
       ) : (
         /* Department Detail View */
-        <div className="space-y-4">
+        <div className="space-y-6">
           {/* Back button + Department header */}
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => setSelectedDept(null)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-sm font-medium text-gray-700 transition-colors"
-            >
-              <ArrowRight className="h-4 w-4" />
-              رجوع للأقسام
-            </button>
-            {activeDept && (
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center"
-                  style={{ backgroundColor: `${activeDept.color}15` }}
-                >
-                  <activeDept.icon className="h-5 w-5" style={{ color: activeDept.color }} />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-[#1e293b] to-[#0f172a] p-4 rounded-xl border border-white/5">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => navigate('/departments')}
+                className="flex items-center justify-center w-10 h-10 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-[#C9A84C] transition-all group"
+                title="رجوع للأقسام"
+              >
+                <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+              </button>
+              {activeDept && (
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-12 h-12 rounded-xl flex items-center justify-center bg-white/5 border border-white/10 shadow-inner"
+                  >
+                    <activeDept.icon className="h-6 w-6 text-[#C9A84C]" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-black text-white">{activeDept.label}</h2>
+                    <p className="text-xs text-slate-400">{activeDept.description}</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-lg font-bold text-gray-900">{activeDept.label}</h2>
-                  <p className="text-xs text-gray-500">{activeDept.description}</p>
-                </div>
-              </div>
-            )}
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#C9A84C]/10 border border-[#C9A84C]/20">
+              <span className="text-xs font-bold text-[#C9A84C]">
+                {activeDept?.items.length || 0} خدمة مفعلة
+              </span>
+            </div>
           </div>
 
           {/* Items Grid */}
@@ -520,19 +548,18 @@ export default function DepartmentsHub() {
                 return (
                   <Link
                     key={item.path}
-                    href={item.path}
-                    className={`group flex items-center gap-3 p-4 rounded-xl border ${activeDept.borderColor} bg-white hover:${activeDept.bgColor} hover:shadow-md transition-all duration-200`}
+                    href={'/departments' + item.path}
+                    className={`group flex items-center gap-3 p-4 rounded-xl border border-white/5 bg-gradient-to-br from-[#1e293b] to-[#0f172a] hover:border-[#C9A84C]/30 hover:shadow-lg hover:shadow-[#C9A84C]/5 transition-all duration-300`}
                   >
                     <div
-                      className="shrink-0 w-10 h-10 rounded-lg flex items-center justify-center"
-                      style={{ backgroundColor: `${activeDept.color}10` }}
+                      className="shrink-0 w-10 h-10 rounded-lg flex items-center justify-center bg-white/5 border border-white/10 group-hover:border-[#C9A84C]/20 transition-colors"
                     >
-                      <ItemIcon className="h-5 w-5" style={{ color: activeDept.color }} />
+                      <ItemIcon className="h-5 w-5 text-[#C9A84C]/80 group-hover:text-[#C9A84C] transition-colors" />
                     </div>
-                    <span className="font-medium text-gray-700 group-hover:text-gray-900 text-sm">
+                    <span className="font-bold text-slate-200 group-hover:text-white text-sm transition-colors">
                       {item.label}
                     </span>
-                    <ChevronLeft className="h-4 w-4 text-gray-300 group-hover:text-gray-500 mr-auto group-hover:-translate-x-1 transition-transform" />
+                    <ChevronLeft className="h-4 w-4 text-[#C9A84C]/40 group-hover:text-[#C9A84C] mr-auto group-hover:-translate-x-1.5 transition-all" />
                   </Link>
                 );
               })}

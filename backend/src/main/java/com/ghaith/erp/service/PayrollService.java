@@ -22,6 +22,10 @@ public class PayrollService {
                 return payrollRepository.findAll();
         }
 
+        public List<PayrollRecord> getAllPayrollByBranch(Long branchId) {
+                return payrollRepository.findByEmployee_BranchId(branchId);
+        }
+
         public List<PayrollRecord> getPayrollByEmployee(Long employeeId) {
                 return payrollRepository.findByEmployeeId(employeeId);
         }

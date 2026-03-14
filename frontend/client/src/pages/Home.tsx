@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'wouter';
+import { Link } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
 import {
@@ -9,7 +9,7 @@ import {
 } from '@/services/dashboardService';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { useAppContext, roleLabels, UserRoleType } from '@/contexts/AppContext';
-import { Users, FileText, Car, Shield, AlertTriangle, CheckCircle2, TrendingUp, Building2, DollarSign, Scale, MessageSquare, FolderKanban, ChevronRight, Calendar, UserCheck, BarChart3, Loader2, X, AlertCircle, Inbox, ClipboardList, CheckSquare, TrendingDown, Gauge, Radio, MapPin, Globe } from 'lucide-react';
+import { Users, FileText, Car, Shield, AlertTriangle, CheckCircle2, TrendingUp, Building2, DollarSign, Scale, MessageSquare, FolderKanban, ChevronRight, Calendar, UserCheck, BarChart3, Loader2, X, AlertCircle, Inbox, ClipboardList, CheckSquare, TrendingDown, Gauge, Radio } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
@@ -107,13 +107,39 @@ function AlertBanner({ message, module, link, severity }: {
 // ═══════════════════════════════════════════════════════════
 export default function Home() {
   const { user } = useAuth();
-  const { selectedRole, currentEmployee, selectedBranchId, setSelectedBranchId, setSelectedCompanyId, canAccessModule } = useAppContext();
-  const [, setLocation] = useLocation();
+  const { selectedRole, currentEmployee, selectedBranchId, canAccessModule } = useAppContext();
   const isAdminEntry = (selectedRole === 'admin' || selectedRole === 'general_manager') && selectedBranchId === null;
 
   const { data: adminCompanies } = useQuery<any[]>({
     queryKey: ['admin', 'companies'],
     queryFn: () => api.get('/admin/companies').then(r => Array.isArray(r.data) ? r.data : []).catch(() => []),
+    enabled: isAdminEntry,
+    staleTime: 2 * 60 * 1000,
+  });
+
+  // ─── Real data for admin global dashboard ─────────────────────────────────
+  const { data: allEmployees = [] } = useQuery<any[]>({
+    queryKey: ['admin', 'all-employees-home'],
+    queryFn: () => api.get('/hr/employees').then(r => Array.isArray(r.data) ? r.data : []).catch(() => []),
+    enabled: isAdminEntry,
+    staleTime: 5 * 60 * 1000,
+  });
+  const { data: allLeaves = [] } = useQuery<any[]>({
+    queryKey: ['admin', 'all-leaves-home'],
+    queryFn: () => api.get('/hr/leaves').then(r => Array.isArray(r.data) ? r.data : []).catch(() => []),
+    enabled: isAdminEntry,
+    staleTime: 3 * 60 * 1000,
+  });
+  const { data: allInvoices = [] } = useQuery<any[]>({
+    queryKey: ['admin', 'all-invoices-home'],
+    queryFn: () => api.get('/finance/invoices').then(r => Array.isArray(r.data) ? r.data : []).catch(() => []),
+    enabled: isAdminEntry,
+    staleTime: 5 * 60 * 1000,
+  });
+  const todayStr = new Date().toISOString().split('T')[0];
+  const { data: todayAttendance = [] } = useQuery<any[]>({
+    queryKey: ['admin', 'today-att-home', todayStr],
+    queryFn: () => api.get('/hr/attendance', { params: { date: todayStr } }).then(r => Array.isArray(r.data) ? r.data : []).catch(() => []),
     enabled: isAdminEntry,
     staleTime: 2 * 60 * 1000,
   });
@@ -140,90 +166,124 @@ export default function Home() {
 
   // Determine which dashboard to show
   const renderDashboard = () => {
-    // Admin entry (no branch selected) — show companies overview
+    // Admin entry (no branch selected) — global overview + companies
     if (isAdminEntry) {
+      // ── Derived stats from real data ─────────────────────────────────────
+      const activeEmpCount = allEmployees.filter((e: any) => e.status === 'active' || e.status === 'ACTIVE').length;
+      const pendingLeavesCount = allLeaves.filter((l: any) =>
+        ['PENDING', 'PENDING_DEPT_MANAGER', 'PENDING_HR_MANAGER', 'PENDING_GM'].some(s => l.status === s || l.overallStatus === s)
+      ).length;
+      const presentTodayCount = todayAttendance.filter((a: any) => a.checkIn || a.status === 'PRESENT').length;
+
+      // Employees per branch
+      const branchDist = (adminCompanies || []).map((c: any) => {
+        const bId = String(c.branchId || c.id);
+        const cnt = allEmployees.filter((e: any) => String(e.branch?.id) === bId).length;
+        return { name: c.nameAr || c.name, count: cnt };
+      });
+      const maxBranchEmp = Math.max(...branchDist.map((b: any) => b.count), 1);
+
+      // Recent activities from leave requests
+      const recentActs = [...allLeaves]
+        .sort((a: any, b: any) => new Date(b.createdAt || b.startDate || 0).getTime() - new Date(a.createdAt || a.startDate || 0).getTime())
+        .slice(0, 5);
+
+      const STAT_COLORS: Record<string, string> = { info: '#3B82F6', success: '#22C55E', warning: '#F59E0B', primary: '#2F3440', gold: '#C9A13B' };
+      const BRANCH_COLORS = ['#C9A13B', '#3B82F6', '#22C55E', '#F59E0B', '#8B5CF6', '#EF4444'];
+      const STATUS_DOT: Record<string, string> = {
+        APPROVED: '#22C55E', REJECTED: '#EF4444',
+        PENDING: '#F59E0B', PENDING_DEPT_MANAGER: '#F59E0B', PENDING_HR_MANAGER: '#F59E0B', PENDING_GM: '#F59E0B',
+      };
+
       return (
         <div className="space-y-6">
-          <div>
-            <h2 className="text-lg md:text-xl font-bold" style={{ color: '#1a2035' }}>المؤسسات والشركات</h2>
-            <p className="text-xs md:text-sm mt-1" style={{ color: '#6b7280' }}>نظرة عامة على جميع الكيانات التابعة للمنصة</p>
+
+          {/* ── Page title ─────────────────────────────────────────────────── */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl md:text-3xl font-black" style={{ color: '#2F3440' }}>الإحصائيات العامة</h2>
+              <p className="text-sm mt-1" style={{ color: '#6b7280' }}>نظرة شاملة على أداء جميع المؤسسات والكيانات</p>
+            </div>
           </div>
-          {(!adminCompanies || adminCompanies.length === 0) ? (
-            <div className="flex flex-col items-center justify-center py-24 rounded-2xl" style={{ backgroundColor: '#ffffff', boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
-              <Building2 className="w-14 h-14 mb-4" style={{ color: '#d1d5db' }} />
-              <p className="text-base font-medium" style={{ color: '#9ca3af' }}>لا توجد شركات مضافة بعد</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-              {adminCompanies.map((company: any) => (
-                <div
-                  key={company.id}
-                  className="rounded-2xl p-4 md:p-5 cursor-pointer group transition-all duration-200"
-                  style={{
-                    backgroundColor: '#ffffff',
-                    border: '1px solid #f0f0f0',
-                    boxShadow: '0 4px 20px rgba(30,58,95,0.08)',
-                  }}
-                  onClick={() => {
-                    // Use company's associated branchId (HrBranch) to enter company context
-                    setSelectedCompanyId(company.id);
-                    setSelectedBranchId(company.branchId ?? company.id);
-                    setLocation('/');
-                  }}
-                  onMouseEnter={e => {
-                    (e.currentTarget as HTMLElement).style.transform = 'translateY(-4px)';
-                    (e.currentTarget as HTMLElement).style.boxShadow = '0 12px 40px rgba(30,58,95,0.15)';
-                    (e.currentTarget as HTMLElement).style.borderColor = 'rgb(201,168,76)';
-                  }}
-                  onMouseLeave={e => {
-                    (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
-                    (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 20px rgba(30,58,95,0.08)';
-                    (e.currentTarget as HTMLElement).style.borderColor = '#f0f0f0';
-                  }}
-                >
-                  {/* Company icon */}
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style={{ backgroundColor: 'rgba(201,168,76,0.1)' }}>
-                    <Building2 className="w-6 h-6" style={{ color: 'rgb(201,168,76)' }} />
-                  </div>
-                  {/* Name */}
-                  <h3 className="font-bold text-base mb-1 truncate" style={{ color: '#1a2035' }}>
-                    {company.nameAr || company.name}
-                  </h3>
-                  {company.nameEn && company.nameEn !== company.nameAr && (
-                    <p className="text-xs mb-2 truncate" style={{ color: '#9ca3af' }}>{company.nameEn}</p>
-                  )}
-                  {/* Meta */}
-                  <div className="space-y-1 mt-3">
-                    {company.city && (
-                      <div className="flex items-center gap-1.5 text-xs" style={{ color: '#6b7280' }}>
-                        <MapPin className="w-3.5 h-3.5" />
-                        <span>{company.city}</span>
+
+          {/* ── 5 stat tiles (real data) ────────────────────────────────────── */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            {[
+              { label: 'الموظفين',          value: allEmployees.length,        sub: `${activeEmpCount} نشط`,                 color: 'info' },
+              { label: 'موظفون نشطون',      value: activeEmpCount,             sub: `${allEmployees.length - activeEmpCount} غير نشط`, color: 'success' },
+              { label: 'الطلبات المعلقة',   value: pendingLeavesCount,         sub: `${allLeaves.length} إجمالي الطلبات`,    color: 'warning' },
+              { label: 'حضور اليوم',        value: presentTodayCount,          sub: todayStr,                                 color: 'primary' },
+              { label: 'الشركات المسجلة',   value: adminCompanies?.length || 0, sub: 'كيانات مسجلة',                         color: 'gold' },
+            ].map((s, i) => (
+              <div key={i} className="rounded-2xl p-5 hover:shadow-md transition" style={{
+                background: '#ffffff',
+                border: `1px solid rgba(228,231,236,0.8)`,
+                borderBottom: `4px solid ${STAT_COLORS[s.color]}`,
+                boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
+              }}>
+                <h3 className="text-xs font-bold mb-2" style={{ color: '#6b7280' }}>{s.label}</h3>
+                <p className="text-2xl md:text-3xl font-black" style={{ color: s.color === 'gold' ? '#C9A13B' : '#2F3440' }}>
+                  {s.value.toLocaleString('ar-SA')}
+                </p>
+                <p className="text-xs mt-1 font-bold" style={{ color: '#9ca3af' }}>{s.sub}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* ── Branch distribution + Recent activities ─────────────────────── */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="rounded-2xl p-6" style={{ background: '#fff', border: '1px solid rgba(228,231,236,0.8)', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+              <h3 className="font-black text-lg mb-4" style={{ color: '#2F3440' }}>توزيع الموظفين حسب المؤسسة</h3>
+              {branchDist.length === 0 ? (
+                <p className="text-sm text-center py-8" style={{ color: '#9ca3af' }}>لا توجد بيانات</p>
+              ) : (
+                <div className="space-y-3">
+                  {branchDist.map((b: any, i: number) => (
+                    <div key={i}>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="font-bold truncate max-w-[60%]">{b.name}</span>
+                        <span style={{ color: '#6b7280' }}>{b.count} موظف</span>
                       </div>
-                    )}
-                    {company.website && (
-                      <div className="flex items-center gap-1.5 text-xs" style={{ color: '#6b7280' }}>
-                        <Globe className="w-3.5 h-3.5" />
-                        <span className="truncate">{company.website}</span>
+                      <div className="h-2 rounded-full" style={{ background: '#f3f4f6' }}>
+                        <div className="h-2 rounded-full transition-all duration-700"
+                          style={{ width: `${maxBranchEmp > 0 ? (b.count / maxBranchEmp) * 100 : 0}%`, background: BRANCH_COLORS[i % BRANCH_COLORS.length] }} />
                       </div>
-                    )}
-                    {company.status && (
-                      <div className="mt-3">
-                        <span
-                          className="text-xs px-2 py-0.5 rounded-full font-medium"
-                          style={{
-                            backgroundColor: company.status === 'active' ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
-                            color: company.status === 'active' ? '#16a34a' : '#dc2626',
-                          }}
-                        >
-                          {company.status === 'active' ? 'نشط' : 'غير نشط'}
-                        </span>
-                      </div>
-                    )}
-                  </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
-          )}
+
+            <div className="rounded-2xl p-6" style={{ background: '#fff', border: '1px solid rgba(228,231,236,0.8)', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+              <h3 className="font-black text-lg mb-4" style={{ color: '#2F3440' }}>آخر الأنشطة</h3>
+              {recentActs.length === 0 ? (
+                <p className="text-sm text-center py-8" style={{ color: '#9ca3af' }}>لا توجد أنشطة حديثة</p>
+              ) : (
+                <div className="space-y-0">
+                  {recentActs.map((act: any, i: number) => {
+                    const status = act.overallStatus || act.status || 'PENDING';
+                    const dot = STATUS_DOT[status] || '#6b7280';
+                    const empName = [act.employee?.firstName, act.employee?.lastName].filter(Boolean).join(' ') || 'موظف';
+                    const typeLabel = act.leaveType || act.type || 'إجازة';
+                    const dateStr = act.createdAt
+                      ? new Date(act.createdAt).toLocaleDateString('ar-SA')
+                      : (act.startDate || '');
+                    return (
+                      <div key={i} className="flex items-center gap-3 py-2.5"
+                        style={{ borderBottom: i < recentActs.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
+                        <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: dot }} />
+                        <div>
+                          <p className="text-sm font-bold" style={{ color: '#2F3440' }}>طلب {typeLabel} — {empName}</p>
+                          <p className="text-xs" style={{ color: '#9ca3af' }}>{dateStr}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
         </div>
       );
     }

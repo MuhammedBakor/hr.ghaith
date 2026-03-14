@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { generateNextCode } from '@/lib/generateCode';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -10,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
-import { Shield, Settings, Loader2, Edit, Trash2, Key, Lock, ChevronDown, ChevronUp, X, Save } from 'lucide-react';
+import { Shield, Settings, Loader2, Edit, ChevronDown, ChevronUp, X, Save } from 'lucide-react';
 import { modulePermissions, hrSubPermissions, roleLevels, roleLabels, UserRoleType } from '@/contexts/AppContext';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -126,7 +125,6 @@ export default function RoleSettings() {
   const [editingIsSystem, setEditingIsSystem] = useState(false);
   const [form, setForm] = useState<RoleFormState>(emptyForm());
   const [showHrSub, setShowHrSub] = useState(false);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   // DB custom roles
   const { data: dbRoles = [], isLoading } = useQuery<any[]>({
@@ -153,47 +151,12 @@ export default function RoleSettings() {
     };
   });
 
-  // Custom roles = DB roles that are NOT system role keys
-  const customRoles: DisplayRole[] = dbRoles
-    .filter((r: any) => !SYSTEM_ROLE_KEYS.includes(r.name as UserRoleType) && !SYSTEM_ROLE_KEYS.includes(r.code as UserRoleType))
-    .map((r: any) => ({
-      id: r.id,
-      code: r.name || r.code,
-      nameAr: r.nameAr,
-      level: parseInt(r.category || '50') || 50,
-      permissions: parsePermissions(r.permissions),
-      isSystem: false,
-      isActive: r.isActive !== false,
-      description: r.description,
-    }));
-
   // Mutations
-  const createMutation = useMutation({
-    mutationFn: (data: any) => api.post('/roles', data).then(r => r.data),
-    onSuccess: () => { toast.success('تم إنشاء الدور بنجاح'); qc.invalidateQueries({ queryKey: ['custom-roles'] }); closeForm(); },
-    onError: (e: any) => toast.error('خطأ: ' + e.message),
-  });
-
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: any }) => api.put(`/roles/${id}`, data).then(r => r.data),
     onSuccess: () => { toast.success('تم حفظ التعديلات'); qc.invalidateQueries({ queryKey: ['custom-roles'] }); closeForm(); },
     onError: (e: any) => toast.error('خطأ: ' + e.message),
   });
-
-  const deleteMutation = useMutation({
-    mutationFn: (id: number) => api.delete(`/roles/${id}`).then(r => r.data),
-    onSuccess: () => { toast.success('تم حذف الدور'); qc.invalidateQueries({ queryKey: ['custom-roles'] }); setDeletingId(null); },
-    onError: (e: any) => toast.error('خطأ: ' + e.message),
-  });
-
-  const openCreate = () => {
-    setEditingId(null);
-    setEditingIsSystem(false);
-    const next = generateNextCode('ROLE', dbRoles);
-    setForm({ ...emptyForm(), name: next });
-    setShowHrSub(false);
-    setShowForm(true);
-  };
 
   const openEdit = (role: DisplayRole) => {
     setEditingId(role.id);
@@ -232,6 +195,7 @@ export default function RoleSettings() {
 
   const handleSave = () => {
     if (!form.nameAr) { toast.error('يرجى إدخال اسم الدور بالعربية'); return; }
+    if (!editingId) { toast.error('لا يمكن الحفظ بدون تحديد دور'); return; }
     const payload = {
       name: form.name,
       nameAr: form.nameAr,
@@ -239,18 +203,17 @@ export default function RoleSettings() {
       level: form.level,
       permissions: JSON.stringify(form.permissions),
     };
-    // If editing a system role that doesn't have a DB entry yet, create it; otherwise update
-    if (editingIsSystem && typeof editingId === 'string') {
-      // No DB entry yet for this system role — create one
-      createMutation.mutate(payload);
-    } else if (editingId && typeof editingId === 'number') {
+    if (typeof editingId === 'number') {
       updateMutation.mutate({ id: editingId as number, data: payload });
     } else {
-      createMutation.mutate(payload);
+      // System role without DB entry — create a DB override
+      const createOverride = api.post('/roles', payload).then(r => r.data);
+      createOverride.then(() => { toast.success('تم حفظ التعديلات'); qc.invalidateQueries({ queryKey: ['custom-roles'] }); closeForm(); })
+        .catch((e: any) => toast.error('خطأ: ' + e.message));
     }
   };
 
-  const isSaving = createMutation.isPending || updateMutation.isPending;
+  const isSaving = updateMutation.isPending;
 
   if (isLoading) return <div className="flex items-center justify-center h-64" dir="rtl"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
@@ -263,22 +226,13 @@ export default function RoleSettings() {
           <h2 className="text-2xl font-bold tracking-tight">إدارة الأدوار والصلاحيات</h2>
           <p className="text-gray-500">تعريف الأدوار وتعيين الصلاحيات للمستخدمين</p>
         </div>
-        <Button onClick={openCreate}>+ دور جديد</Button>
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-1">
         <Card><CardContent className="p-4 flex items-center gap-4">
           <div className="p-3 rounded-xl bg-blue-50"><Shield className="h-6 w-6 text-blue-600" /></div>
           <div><p className="text-sm text-gray-500">الأدوار المدمجة</p><p className="text-2xl font-bold">{systemRoles.length}</p></div>
-        </CardContent></Card>
-        <Card><CardContent className="p-4 flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-green-50"><Key className="h-6 w-6 text-green-600" /></div>
-          <div><p className="text-sm text-gray-500">أدوار مخصصة</p><p className="text-2xl font-bold">{customRoles.length}</p></div>
-        </CardContent></Card>
-        <Card><CardContent className="p-4 flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-purple-50"><Lock className="h-6 w-6 text-purple-600" /></div>
-          <div><p className="text-sm text-gray-500">إجمالي الأدوار</p><p className="text-2xl font-bold">{systemRoles.length + customRoles.length}</p></div>
         </CardContent></Card>
       </div>
 
@@ -288,7 +242,7 @@ export default function RoleSettings() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg">
-                {editingId ? (editingIsSystem ? `تعديل صلاحيات: ${form.nameAr}` : 'تعديل الدور') : 'إنشاء دور جديد'}
+                {editingIsSystem ? `تعديل صلاحيات: ${form.nameAr}` : 'تعديل الدور'}
               </CardTitle>
               <Button size="icon" variant="ghost" onClick={closeForm}><X className="h-4 w-4" /></Button>
             </div>
@@ -378,7 +332,7 @@ export default function RoleSettings() {
             <div className="flex gap-3 pt-2">
               <Button onClick={handleSave} disabled={isSaving} className="gap-2">
                 {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                {editingId ? 'حفظ التعديلات' : 'إنشاء الدور'}
+                حفظ التعديلات
               </Button>
               <Button variant="outline" onClick={closeForm}>إلغاء</Button>
             </div>
@@ -393,24 +347,10 @@ export default function RoleSettings() {
           <CardDescription>أدوار ثابتة مدمجة في النظام — يمكن تعديل صلاحياتها المعروضة هنا</CardDescription>
         </CardHeader>
         <CardContent>
-          <RolesTable roles={systemRoles} onEdit={openEdit} onDelete={null} deletingId={deletingId} setDeletingId={setDeletingId} deleteMutation={null} />
+          <RolesTable roles={systemRoles} onEdit={openEdit} />
         </CardContent>
       </Card>
 
-      {/* Custom Roles Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Key className="h-5 w-5 text-green-600" />الأدوار المخصصة</CardTitle>
-          <CardDescription>أدوار أنشأتها بنفسك</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {customRoles.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">لا توجد أدوار مخصصة بعد — اضغط "+ دور جديد" لإنشاء دور</div>
-          ) : (
-            <RolesTable roles={customRoles} onEdit={openEdit} onDelete={(id) => setDeletingId(id as number)} deletingId={deletingId} setDeletingId={setDeletingId} deleteMutation={deleteMutation} />
-          )}
-        </CardContent>
-      </Card>
 
       {/* Info */}
       <Card>
@@ -434,13 +374,9 @@ export default function RoleSettings() {
 
 // ─── Roles Table sub-component ────────────────────────────────────────────────
 
-function RolesTable({ roles, onEdit, onDelete, deletingId, setDeletingId, deleteMutation }: {
+function RolesTable({ roles, onEdit }: {
   roles: DisplayRole[];
   onEdit: (r: DisplayRole) => void;
-  onDelete: ((id: number | string) => void) | null;
-  deletingId: number | null;
-  setDeletingId: (id: number | null) => void;
-  deleteMutation: any;
 }) {
   return (
     <Table>
@@ -497,25 +433,9 @@ function RolesTable({ roles, onEdit, onDelete, deletingId, setDeletingId, delete
               </TableCell>
               {/* Actions */}
               <TableCell>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" onClick={() => onEdit(role)}>
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  {!role.isSystem && onDelete && (
-                    deletingId === role.id ? (
-                      <div className="flex gap-1">
-                        <Button size="sm" variant="destructive" onClick={() => deleteMutation?.mutate(role.id as number)} disabled={deleteMutation?.isPending}>
-                          {deleteMutation?.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : 'تأكيد'}
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => setDeletingId(null)}>لا</Button>
-                      </div>
-                    ) : (
-                      <Button size="sm" variant="destructive" onClick={() => setDeletingId(role.id as number)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )
-                  )}
-                </div>
+                <Button size="sm" variant="outline" onClick={() => onEdit(role)}>
+                  <Edit className="h-4 w-4" />
+                </Button>
               </TableCell>
             </TableRow>
           );

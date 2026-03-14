@@ -85,12 +85,14 @@ public class EmployeeService {
 
             String verificationCode = String.valueOf(100000 + random.nextInt(900000));
             Role role = Role.EMPLOYEE;
+            String customRoleCode = null;
             try {
                 if (employee.getRole() != null) {
                     role = Role.valueOf(employee.getRole().toUpperCase());
                 }
             } catch (IllegalArgumentException e) {
-                // Fallback to EMPLOYEE
+                // Not an enum role — treat as a custom RolePack code
+                customRoleCode = employee.getRole();
             }
 
             // Reuse existing user account if email already exists (user may be employee in
@@ -98,6 +100,7 @@ public class EmployeeService {
             User existingUser = userRepository.findByEmail(email).orElse(null);
             if (existingUser != null) {
                 existingUser.setVerificationCode(verificationCode);
+                if (customRoleCode != null) existingUser.setRoles(customRoleCode);
                 userRepository.save(existingUser);
                 employee.setUser(existingUser);
             } else {
@@ -106,6 +109,7 @@ public class EmployeeService {
                         .email(email)
                         .password(passwordEncoder.encode(generateRandomPassword(10)))
                         .role(role)
+                        .roles(customRoleCode) // store custom RolePack code here
                         .enabled(false)
                         .verificationCode(verificationCode)
                         .build();
@@ -235,8 +239,25 @@ public class EmployeeService {
     }
 
     public void inviteEmployee(Long id, String method) {
-        // Implement invitation logic (email/sms)
-        System.out.println("Inviting employee " + id + " via " + method);
+        Employee employee = employeeRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("الموظف غير موجود"));
+        User user = employee.getUser();
+        if (user == null) {
+            throw new RuntimeException("لا يوجد حساب مستخدم مرتبط بهذا الموظف");
+        }
+
+        // Regenerate a fresh verification code each time invite is resent
+        String verificationCode = String.valueOf(100000 + new java.util.Random().nextInt(900000));
+        user.setVerificationCode(verificationCode);
+        userRepository.save(user);
+
+        if ("email".equals(method) || "both".equals(method)) {
+            emailService.sendVerificationCode(
+                    employee.getEmail(),
+                    employee.getFirstName(),
+                    verificationCode,
+                    employee.getEmployeeNumber());
+        }
     }
 
     public Employee updateEmployee(Long id, Employee employeeDetails) {

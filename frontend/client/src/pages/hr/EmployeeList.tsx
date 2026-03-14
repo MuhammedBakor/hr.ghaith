@@ -45,6 +45,8 @@ interface Employee {
   id: string;
   firstName: string;
   lastName: string;
+  firstNameAr: string;
+  lastNameAr: string;
   email: string;
   phone: string;
   position: string;
@@ -54,6 +56,7 @@ interface Employee {
   status: string;
   joinDate: string;
   branchId: number | null;
+  branchName: string;
 }
 
 const getStatusBadge = (status: string) => {
@@ -114,7 +117,7 @@ export default function EmployeeList() {
   const [editDepartmentId, setEditDepartmentId] = useState<string>('');
 
   // Get branch from AppContext
-  const { selectedBranchId, currentBranch, currentEmployee, selectedRole } = useAppContext();
+  const { selectedBranchId, currentBranch, currentEmployee, selectedRole, branches } = useAppContext();
 
   // For generic department managers: also filter by their own department
   // Specialist managers (hr_manager, legal_manager, etc.) can see all employees in their branch
@@ -142,20 +145,27 @@ export default function EmployeeList() {
   const createPosMutation = useCreatePosition();
   const updatePosMutation = useUpdatePosition();
   const deletePosMutation = useDeletePosition();
-  const employees: Employee[] = (employeesData || []).map((emp: any) => ({
-    id: String(emp.id),
-    firstName: emp.firstName || '',
-    lastName: emp.lastName || '',
-    email: emp.email || '',
-    phone: emp.phone || '',
-    position: (typeof emp.position === 'object' ? emp.position?.title : emp.position) || '',
-    positionId: (typeof emp.position === 'object' ? emp.position?.id : null),
-    department: (typeof emp.department === 'object' ? (emp.department?.nameAr || emp.department?.name) : emp.department) || '',
-    departmentId: (typeof emp.department === 'object' ? emp.department?.id : null),
-    status: emp.status || 'active',
-    joinDate: emp.hireDate ? new Date(emp.hireDate).toISOString() : (emp.createdAt ? new Date(emp.createdAt).toISOString() : ''),
-    branchId: typeof emp.branch === 'object' ? emp.branch?.id : emp.branchId,
-  }));
+  const employees: Employee[] = (employeesData || []).map((emp: any) => {
+    const branchId = typeof emp.branch === 'object' ? emp.branch?.id : emp.branchId;
+    const branchName = branches.find(b => b.id === branchId)?.name || (typeof emp.branch === 'object' ? emp.branch?.name : '') || '';
+    return {
+      id: String(emp.id),
+      firstName: emp.firstName || '',
+      lastName: emp.lastName || '',
+      firstNameAr: emp.firstNameAr || emp.firstName || '',
+      lastNameAr: emp.lastNameAr || emp.lastName || '',
+      email: emp.email || '',
+      phone: emp.phone || '',
+      position: (typeof emp.position === 'object' ? emp.position?.title : emp.position) || '',
+      positionId: (typeof emp.position === 'object' ? emp.position?.id : null),
+      department: (typeof emp.department === 'object' ? (emp.department?.nameAr || emp.department?.name) : emp.department) || '',
+      departmentId: (typeof emp.department === 'object' ? emp.department?.id : null),
+      status: emp.status || 'active',
+      joinDate: emp.hireDate ? new Date(emp.hireDate).toISOString() : (emp.createdAt ? new Date(emp.createdAt).toISOString() : ''),
+      branchId,
+      branchName,
+    };
+  });
 
   // الحصول على اسم الفرع المختار
   const branchName = currentBranch?.name || 'جميع الفروع';
@@ -329,18 +339,38 @@ export default function EmployeeList() {
     });
   };
 
+  // إظهار عمود الفرع فقط في الوضع الشامل (جميع الفروع)
+  const isGlobalView = selectedBranchId === null;
+
   // تعريف الأعمدة داخل المكون للوصول إلى الدوال
   const columns: ColumnDef<Employee>[] = [
     {
       accessorKey: 'firstName',
-      header: 'الاسم',
+      header: 'الموظف',
       cell: ({ row }) => (
-        <div className="min-w-[140px]">
-          <p className="font-medium whitespace-nowrap">{row.original.firstName} {row.original.lastName}</p>
-          <p className="text-sm text-gray-500 truncate max-w-[200px]">{row.original.email}</p>
+        <div className="min-w-[160px]">
+          <p className="font-semibold whitespace-nowrap">
+            {(row.original.firstNameAr && row.original.lastNameAr)
+              ? `${row.original.firstNameAr} ${row.original.lastNameAr}`
+              : `${row.original.firstName} ${row.original.lastName}`}
+          </p>
+          <p className="text-xs text-gray-400 truncate max-w-[200px]">{row.original.email}</p>
+          {row.original.phone && (
+            <p className="text-xs text-gray-400">{row.original.phone}</p>
+          )}
         </div>
       ),
     },
+    ...(isGlobalView ? [{
+      accessorKey: 'branchName',
+      header: 'الفرع',
+      cell: ({ row }: any) => (
+        <span className="whitespace-nowrap text-sm px-2 py-0.5 rounded-full"
+          style={{ backgroundColor: 'rgba(41,128,185,0.1)', color: '#2980B9' }}>
+          {row.original.branchName || '-'}
+        </span>
+      ),
+    }] : []),
     {
       accessorKey: 'department',
       header: 'القسم',
@@ -350,7 +380,7 @@ export default function EmployeeList() {
     },
     {
       accessorKey: 'position',
-      header: 'المنصب',
+      header: 'المسمى الوظيفي',
       cell: ({ row }) => (
         <span className="whitespace-nowrap">{row.original.position || '-'}</span>
       ),
@@ -359,7 +389,7 @@ export default function EmployeeList() {
       accessorKey: 'joinDate',
       header: 'تاريخ الانضمام',
       cell: ({ row }) => (
-        <span className="whitespace-nowrap">{formatDate(row.original.joinDate)}</span>
+        <span className="whitespace-nowrap text-sm text-gray-600">{formatDate(row.original.joinDate)}</span>
       ),
     },
     {

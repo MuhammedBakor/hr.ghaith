@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'wouter';
 import { useNavigationHistory } from '@/hooks/useNavigationHistory';
+import { departmentsData, labelByPath, deptByPath } from '@/data/departmentsData';
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -259,6 +260,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     if (loading || !isAuthenticated) return;
 
+    const topAdmin = selectedRole === 'admin' || selectedRole === 'general_manager';
+
     // تحديد الوحدة من المسار الحالي
     const pathToModule: Record<string, ModuleType> = {
       '/hr': 'hr',
@@ -287,20 +290,109 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       '/logs': 'admin',
     };
 
+    // خريطة تحويل معرف القسم إلى وحدة النظام (لمسارات /departments/...)
+    const deptIdToModule: Record<string, ModuleType> = {
+      hr: 'hr', finance: 'finance', fleet: 'fleet', property: 'property',
+      operations: 'projects', governance: 'governance', bi: 'bi',
+      legal: 'legal', marketing: 'marketing', store: 'store',
+      requests: 'requests', documents: 'documents', reports: 'reports',
+      comms: 'comms', workflow: 'workflow', integrations: 'integrations',
+    };
+
+    // جدول مطابقة مسارات HR بصلاحياتها الفرعية (الأطول أولاً لتفادي التطابق المبكر)
+    const hrPathToSubPage: Array<[string, string]> = [
+      ['/hr/employees/add', 'add-employee'],
+      ['/hr/employees', 'employees'],
+      ['/hr/attendance-monitoring', 'attendance-monitoring'],
+      ['/hr/attendance-reports', 'reports'],
+      ['/hr/attendance', 'attendance'],
+      ['/hr/leave-management', 'leaves'],
+      ['/hr/leave-balances', 'leave-balances'],
+      ['/hr/payroll', 'payroll'],
+      ['/hr/performance-advanced', 'performance'],
+      ['/hr/training-advanced', 'training'],
+      ['/hr/organization-structure', 'organization'],
+      ['/hr/recruitment-advanced', 'recruitment'],
+      ['/hr/violations', 'violations'],
+      ['/hr/my-violations', 'my_violations'],
+      ['/hr/shifts', 'shifts'],
+      ['/hr/field-tracking', 'tracking'],
+      ['/hr/qr-scanner', 'qr'],
+      ['/hr/approval-chains', 'approvals'],
+      ['/hr/official-letters', 'letters'],
+      ['/hr/onboarding-review', 'onboarding'],
+      ['/hr/penalty-escalation', 'escalation'],
+      ['/hr/automation', 'automation'],
+      ['/hr/salary-components', 'salary'],
+    ];
+
+    const getHrSubPage = (path: string): string | undefined => {
+      for (const [p, sub] of hrPathToSubPage) {
+        if (path === p || path.startsWith(p + '/')) return sub;
+      }
+      return undefined;
+    };
+
     // الصفحات المسموح بها للجميع
-    const publicPaths = ['/', '/profile', '/inbox', '/departments'];
+    const publicPaths = ['/', '/profile', '/inbox'];
     if (publicPaths.includes(location)) return;
 
-    // البحث عن الوحدة المطابقة
+    // صفحة الأقسام الرئيسية - للمدير العام ومدير النظام فقط
+    if (location === '/departments') {
+      if (!topAdmin) setLocation('/');
+      return;
+    }
+
+    // مسارات /departments/{deptId}/... - تحقق من صلاحية الوحدة والصفحة الفرعية
+    if (location.startsWith('/departments/')) {
+      const deptMatch = location.match(/^\/departments\/([^/]+)(\/.*)?$/);
+      if (deptMatch) {
+        const deptId = deptMatch[1];
+        const subPath = deptMatch[2] || '';
+        const mod = deptIdToModule[deptId];
+        if (mod && !canAccessModule(mod)) {
+          setLocation('/');
+          return;
+        }
+        // للوحدة hr: تحقق إضافي من صلاحية الصفحة الفرعية
+        if (mod === 'hr' && subPath) {
+          const sub = getHrSubPage(`/${deptId}${subPath}`);
+          if (sub && !canAccessHrSubPage(sub)) {
+            setLocation('/');
+            return;
+          }
+        }
+      }
+      return;
+    }
+
+    // صفحات مركز الخدمات (hub) - /hr و /departments/hr بدون صفحة فرعية
+    // لا يُسمح للموظف العادي برؤية مركز خدمات القسم
+    if (location === '/hr' || location === '/departments/hr') {
+      if (!canAccessHrSubPage('employees')) {
+        setLocation('/');
+      }
+      return;
+    }
+
+    // البحث عن الوحدة المطابقة للمسارات المباشرة
     for (const [prefix, mod] of Object.entries(pathToModule)) {
       if (location.startsWith(prefix)) {
         if (!canAccessModule(mod)) {
           setLocation('/');
+          return;
+        }
+        // للوحدة hr: تحقق إضافي من صلاحية الصفحة الفرعية
+        if (mod === 'hr') {
+          const sub = getHrSubPage(location);
+          if (sub && !canAccessHrSubPage(sub)) {
+            setLocation('/');
+          }
         }
         return;
       }
     }
-  }, [loading, isAuthenticated, location, canAccessModule, setLocation]);
+  }, [loading, isAuthenticated, location, canAccessModule, canAccessHrSubPage, setLocation, selectedRole]);
 
   // إغلاق الشريط الجانبي عند التنقل على الموبايل
   useEffect(() => {
@@ -317,7 +409,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   // جميع عناصر القائمة مع تحديد الوحدة لكل عنصر
   const allNavItems: NavItem[] = [
-    { label: 'الرئيسية', path: '/', icon: LayoutDashboard, module: 'home' },
+    // الرئيسية - مجمّعة في القائمة الشاملة، ومفردة عند دخول فرع
+    ...(isTopAdmin && selectedBranchId === null ? [{
+      label: 'الرئيسية',
+      path: '/',
+      icon: LayoutDashboard,
+      module: 'home' as ModuleType,
+      children: [
+        { label: 'الإحصائيات الشاملة', path: '/', icon: BarChart3, module: 'home' as ModuleType },
+        { label: 'الأقسام والفروع', path: '/departments', icon: Grid3X3, module: 'home' as ModuleType },
+        { label: 'المؤسسات والشركات', path: '/admin/companies-overview', icon: Building2, module: 'home' as ModuleType },
+        { label: 'أدارة الشركات', path: '/admin/system', icon: Building2, module: 'home' as ModuleType },
+        { label: 'مقارنة المؤسسات', path: '/admin/comparison', icon: ArrowRightLeft, module: 'home' as ModuleType },
+      ],
+    }] : []),
+    // عند دخول فرع: عرض عناصر الرئيسية مباشرةً بدون تجميع
+    ...(isTopAdmin && selectedBranchId !== null ? [
+      { label: 'الإحصائيات الشاملة', path: '/', icon: BarChart3, module: 'home' as ModuleType },
+      { label: 'الأقسام', path: '/departments', icon: Grid3X3, module: 'home' as ModuleType },
+    ] : []),
+    // للأدوار الأخرى: رابط بسيط للرئيسية
+    ...(!isTopAdmin ? [{ label: 'الرئيسية', path: '/', icon: LayoutDashboard, module: 'home' as ModuleType }] : []),
     // عنصر موظفي القسم - يظهر فقط لمدراء الأقسام
     ...(isDeptManager ? [{
       label: `موظفي القسم (${deptEmployeeCount})`,
@@ -330,18 +442,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       label: 'مراقبة الحضور',
       path: '/hr/attendance-monitoring',
       icon: ClipboardCheck,
-      module: 'home' as ModuleType,
-    }] : []),
-    // عنصر الأقسام - يظهر فقط لمدير النظام والمدير العام
-    ...(isTopAdmin ? [{
-      label: 'الأقسام',
-      path: '/departments',
-      icon: Grid3X3,
-      module: 'home' as ModuleType,
-    }, {
-      label: 'الشركات',
-      path: '/admin/system',
-      icon: Building2,
       module: 'home' as ModuleType,
     }] : []),
     // مراقبة الحضور - وصول سريع للمدير العام ومدير النظام (فقط عند دخول فرع)
@@ -364,8 +464,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       icon: Users,
       module: 'hr',
       children: [
-        { label: 'الموظفين', path: '/hr', icon: Users, hrSubPage: 'employees' },
-        { label: 'الحضور', path: '/hr/attendance', icon: ClipboardCheck, hrSubPage: 'attendance' },
+        { label: 'الموظفون', path: '/hr/employees', icon: Users, hrSubPage: 'employees' },
+        { label: 'الحضور والانصراف', path: '/hr/attendance', icon: ClipboardCheck, hrSubPage: 'attendance' },
         { label: 'إضافة موظف', path: '/hr/employees/add', icon: UserPlus, hrSubPage: 'add-employee' },
         { label: 'الإجازات', path: '/hr/leave-management', icon: Calendar, hrSubPage: 'leaves' },
         { label: 'الرواتب', path: '/hr/payroll', icon: DollarSign, hrSubPage: 'payroll' },
@@ -376,8 +476,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         { label: 'المخالفات والجزاءات', path: '/hr/violations', icon: Scale, hrSubPage: 'violations' },
         { label: 'مخالفاتي', path: '/hr/my-violations', icon: AlertTriangle, hrSubPage: 'my_violations' },
         { label: 'الورديات والسياسات', path: '/hr/shifts', icon: CalendarClock, hrSubPage: 'shifts' },
-        { label: 'الموظفين', path: '/hr/employees', icon: Users, hrSubPage: 'employees-list' },
-        { label: 'الإجازات', path: '/hr/leaves', icon: CalendarOff, hrSubPage: 'leaves-list' },
         { label: 'أرصدة الإجازات', path: '/hr/leave-balances', icon: Calendar, hrSubPage: 'leave-balances' },
         { label: 'التتبع الميداني', path: '/hr/field-tracking', icon: MapPin, hrSubPage: 'tracking' },
         { label: 'ماسح QR', path: '/hr/qr-scanner', icon: Scan, hrSubPage: 'qr' },
@@ -504,11 +602,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         { label: 'سجل التحليلات', path: '/bi/audit', icon: ScrollText },
       ]
     },
-    {
+    ...(!isTopAdmin || selectedBranchId === null ? [{
       label: 'مدير النظام',
       path: '/admin',
       icon: Shield,
-      module: 'admin',
+      module: 'admin' as ModuleType,
       children: [
         { label: 'نظرة عامة', path: '/admin', icon: Shield },
         { label: 'الاشتراكات', path: '/admin/subscriptions', icon: Building2 },
@@ -534,7 +632,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         { label: 'سجل الوظائف', path: '/platform/jobs', icon: Cpu },
         { label: 'الكليشة', path: '/settings/branding', icon: FileText },
       ]
-    },
+    }] : []),
     {
       label: 'الشؤون القانونية',
       path: '/legal',
@@ -564,11 +662,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         { label: 'الطلبات', path: '/store/orders', icon: ShoppingCart },
       ]
     },
-    {
+    ...(!isTopAdmin || selectedBranchId === null ? [{
       label: 'أدوات المنصة',
       path: '/platform/calendar',
       icon: Cog,
-      module: 'platform',
+      module: 'platform' as ModuleType,
       children: [
         { label: 'التقويم', path: '/platform/calendar', icon: Calendar },
         { label: 'مركز الإشعارات', path: '/platform/notifications', icon: BellRing },
@@ -583,12 +681,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         { label: 'تفضيلات الإشعارات', path: '/platform/notify-prefs', icon: Bell },
         { label: 'قواعد الإشعارات', path: '/platform/notify-rules', icon: Zap },
       ]
-    },
-    {
+    }] : []),
+    ...(!isTopAdmin || selectedBranchId === null ? [{
       label: 'الإعدادات',
       path: '/settings',
       icon: Settings,
-      module: 'settings',
+      module: 'settings' as ModuleType,
       children: [
         { label: 'عام', path: '/settings', icon: Settings },
         { label: 'إعدادات النظام', path: '/settings/system', icon: Cog },
@@ -613,7 +711,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         { label: 'بادئات الترقيم', path: '/settings/code-prefixes', icon: Hash },
         { label: 'سجل الرسائل', path: '/logs/messages', icon: ScrollText },
       ]
-    },
+    }] : []),
   ];
 
   // فلترة عناصر القائمة بناءً على صلاحيات المستخدم
@@ -677,21 +775,60 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }
 
-  // Robust mapping for unlisted pages:
-  // If a path starts with a module path (e.g. /hr/anything), and isn't in sectionMap,
-  // make it a child of the module's main path.
-  const currentPath = location;
-  if (!sectionMap[currentPath]) {
-    for (const item of allNavItems) {
-      if (item.module && currentPath.startsWith(item.path + '/') && currentPath !== item.path) {
-        sectionMap[currentPath] = { label: item.label, path: item.path };
-        break;
-      }
+  // Fixed root labels
+  map['/'] = 'الرئيسية';
+  map['/departments'] = 'الأقسام المركزية';
+  sectionMap['/departments'] = { label: 'الرئيسية', path: '/' };
+
+  // Build comprehensive breadcrumb maps from all department service paths.
+  // This covers both /hr/employees and /departments/hr/employees patterns.
+  for (const dept of departmentsData) {
+    const deptDirectPath = `/${dept.id}`;          // e.g. /hr
+    const deptHubPath = `/departments/${dept.id}`; // e.g. /departments/hr
+
+    // Dept hub path → label + parent
+    map[deptHubPath] = dept.label;
+    sectionMap[deptHubPath] = { label: 'الأقسام المركزية', path: '/departments' };
+
+    // Direct dept path (e.g. /hr) → label + parent is departments
+    if (!map[deptDirectPath]) map[deptDirectPath] = dept.label;
+    if (!sectionMap[deptDirectPath]) sectionMap[deptDirectPath] = { label: 'الأقسام المركزية', path: '/departments' };
+
+    for (const item of dept.items) {
+      // /hr/employees → label + parent /hr
+      map[item.path] = item.label;
+      sectionMap[item.path] = { label: dept.label, path: deptDirectPath };
+
+      // /departments/hr/employees → label + parent /departments/hr
+      const hubItemPath = '/departments' + item.path;
+      map[hubItemPath] = item.label;
+      sectionMap[hubItemPath] = { label: dept.label, path: deptHubPath };
     }
   }
 
-  // Explicitly ensure /departments parent is home
-  sectionMap['/departments'] = { label: 'الرئيسية', path: '/' };
+  const currentPath = location;
+
+  // Fallback for any path not in the data: walk up the URL segments to find a parent
+  if (!map[currentPath] && currentPath !== '/') {
+    const segments = currentPath.split('/').filter(Boolean);
+    // Use last segment as a readable label fallback
+    map[currentPath] = segments[segments.length - 1].replace(/-/g, ' ');
+  }
+  if (!sectionMap[currentPath] && currentPath !== '/') {
+    // Try to find closest known ancestor by trimming last segment
+    const parentPath = '/' + currentPath.split('/').filter(Boolean).slice(0, -1).join('/');
+    if (parentPath !== '/' && map[parentPath]) {
+      sectionMap[currentPath] = { label: map[parentPath], path: parentPath };
+    } else {
+      // Robust fallback: find the longest nav item prefix that matches
+      for (const item of allNavItems) {
+        if (item.module && currentPath.startsWith(item.path + '/') && currentPath !== item.path) {
+          sectionMap[currentPath] = { label: item.label, path: item.path };
+          break;
+        }
+      }
+    }
+  }
 
   const { history, navigateTo } = useNavigationHistory(map, sectionMap);
 
@@ -1165,22 +1302,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                             }}
                           >
                             <div className={cn(
-                              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs sm:text-sm font-medium transition-all group",
-                              meta.bgColor,
-                              meta.borderColor,
-                              "hover:shadow-sm hover:scale-[1.02]"
-                            )} style={{ color: meta.color }}>
+                              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs sm:text-sm font-bold transition-all group",
+                              "bg-gradient-to-br from-[#1e293b] to-[#0f172a] border-white/5",
+                              "hover:border-[#C9A84C]/30 hover:shadow-[#C9A84C]/5 hover:scale-[1.03]"
+                            )} style={{ color: '#C9A84C' }}>
                               {Icon && <Icon className="h-3.5 w-3.5" />}
-                              <span>{entry.label}</span>
+                              <span className="text-slate-200 group-hover:text-white transition-colors">{entry.label}</span>
                             </div>
                           </BreadcrumbLink>
                         ) : (
                           <BreadcrumbPage className="transition-all duration-200">
                             <div className={cn(
-                              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold shadow-sm border",
-                              "text-white"
-                            )} style={{ backgroundColor: meta.color, borderColor: meta.color }}>
-                              {Icon && <Icon className="h-3.5 w-3.5" />}
+                              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-black shadow-lg border",
+                              "bg-gradient-to-r from-[#C9A84C] to-[#b89740] border-[#C9A84C]/20 text-slate-900"
+                            )}>
+                              {Icon && <Icon className="h-4 w-4" />}
                               <span>{entry.label}</span>
                             </div>
                           </BreadcrumbPage>

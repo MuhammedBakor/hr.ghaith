@@ -10,4 +10,6 @@ public interface PayrollRepository extends JpaRepository<PayrollRecord, Long> {
     List<PayrollRecord> findByEmployeeId(Long employeeId);
 
     List<PayrollRecord> findByMonthAndYear(String month, Integer year);
+
+    List<PayrollRecord> findByEmployee_BranchId(Long branchId);
 }

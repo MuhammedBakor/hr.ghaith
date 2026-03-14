@@ -17,7 +17,11 @@ public class PayrollController {
     private final PayrollService payrollService;
 
     @GetMapping
-    public ResponseEntity<List<PayrollRecord>> getAllPayroll() {
+    public ResponseEntity<List<PayrollRecord>> getAllPayroll(
+            @RequestParam(required = false) Long branchId) {
+        if (branchId != null) {
+            return ResponseEntity.ok(payrollService.getAllPayrollByBranch(branchId));
+        }
         return ResponseEntity.ok(payrollService.getAllPayroll());
     }
 

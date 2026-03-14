@@ -130,6 +130,8 @@ const WorkflowsDashboard = lazy(() => import("@/pages/admin/WorkflowsDashboard")
 const ExceptionsDashboard = lazy(() => import("@/pages/admin/ExceptionsDashboard"));
 const DecisionsDashboard = lazy(() => import("@/pages/admin/DecisionsDashboard"));
 const Subscriptions = lazy(() => import("@/pages/admin/Subscriptions"));
+const BranchComparison = lazy(() => import("@/pages/admin/BranchComparison"));
+const CompaniesOverview = lazy(() => import("@/pages/admin/CompaniesOverview"));
 const LetterheadSettings = lazy(() => import("@/pages/admin/LetterheadSettings"));
 const Inbox = lazy(() => import("@/pages/Inbox"));
 const FleetLive = lazy(() => import("@/pages/fleet/FleetLive"));
@@ -336,13 +338,135 @@ function Router() {
         </DashboardLayout>
       </Route>
 
+      {/* Department detail (services list) - /departments/hr, /departments/finance, etc. */}
+      <Route path="/departments/:dept">
+        <DashboardLayout>
+          <DepartmentsHub />
+        </DashboardLayout>
+      </Route>
+
+      {/* Department service sub-pages */}
+      <Route path="/departments/hr/employees">
+        <DashboardLayout>
+          <EmployeeList />
+        </DashboardLayout>
+      </Route>
+      <Route path="/departments/hr/attendance-monitoring">
+        <DashboardLayout>
+          <AttendanceMonitoring />
+        </DashboardLayout>
+      </Route>
+      <Route path="/departments/hr/attendance">
+        <DashboardLayout>
+          <AttendanceMonitoring />
+        </DashboardLayout>
+      </Route>
+      <Route path="/departments/hr/leave-management">
+        <DashboardLayout>
+          <LeaveManagement />
+        </DashboardLayout>
+      </Route>
+      <Route path="/departments/hr/payroll">
+        <DashboardLayout>
+          <Payroll />
+        </DashboardLayout>
+      </Route>
+      <Route path="/departments/hr/performance-advanced">
+        <DashboardLayout>
+          <PerformanceAdvanced />
+        </DashboardLayout>
+      </Route>
+      <Route path="/departments/hr/training-advanced">
+        <DashboardLayout>
+          <TrainingAdvanced />
+        </DashboardLayout>
+      </Route>
+      <Route path="/departments/hr/organization-structure">
+        <DashboardLayout>
+          <OrganizationStructure />
+        </DashboardLayout>
+      </Route>
+      <Route path="/departments/hr/recruitment-advanced">
+        <DashboardLayout>
+          <RecruitmentAdvanced />
+        </DashboardLayout>
+      </Route>
+      <Route path="/departments/hr/violations">
+        <DashboardLayout>
+          <ViolationsManagement />
+        </DashboardLayout>
+      </Route>
+      <Route path="/departments/hr/my-violations">
+        <DashboardLayout>
+          <MyViolations />
+        </DashboardLayout>
+      </Route>
+      <Route path="/departments/hr/shifts">
+        <DashboardLayout>
+          <ShiftsManagement />
+        </DashboardLayout>
+      </Route>
+      <Route path="/departments/hr/field-tracking">
+        <DashboardLayout>
+          <FieldTracking />
+        </DashboardLayout>
+      </Route>
+      <Route path="/departments/hr/qr-scanner">
+        <DashboardLayout>
+          <QRScanner />
+        </DashboardLayout>
+      </Route>
+      <Route path="/departments/hr/approval-chains">
+        <DashboardLayout>
+          <ApprovalChains />
+        </DashboardLayout>
+      </Route>
+      <Route path="/departments/hr/official-letters">
+        <DashboardLayout>
+          <OfficialLetters />
+        </DashboardLayout>
+      </Route>
+      <Route path="/departments/hr/attendance-reports">
+        <DashboardLayout>
+          <AttendanceReports />
+        </DashboardLayout>
+      </Route>
+      <Route path="/departments/hr/onboarding-review">
+        <DashboardLayout>
+          <OnboardingReview />
+        </DashboardLayout>
+      </Route>
+      <Route path="/departments/hr/penalty-escalation">
+        <DashboardLayout>
+          <PenaltyEscalation />
+        </DashboardLayout>
+      </Route>
+      <Route path="/departments/hr/automation">
+        <DashboardLayout>
+          <HRAutomation />
+        </DashboardLayout>
+      </Route>
+      <Route path="/departments/hr/salary-components">
+        <DashboardLayout>
+          <SalaryComponents />
+        </DashboardLayout>
+      </Route>
+      <Route path="/departments/hr/leave-balances">
+        <DashboardLayout>
+          <LeaveManagement />
+        </DashboardLayout>
+      </Route>
+      <Route path="/departments/hr/employees/add">
+        <DashboardLayout>
+          <AddEmployeeSimple />
+        </DashboardLayout>
+      </Route>
+
       {/* HR Module Routes */}
       <Route path="/hr">
-        <RoleProtectedRoute module="hr" hrSubPage="employees">
-          <DashboardLayout>
-            <EmployeeList />
-          </DashboardLayout>
-        </RoleProtectedRoute>
+        <DashboardLayout>
+          <DepartmentsHub />
+        </DashboardLayout>
       </Route>
 
       <Route path="/hr/attendance">
@@ -466,7 +590,7 @@ function Router() {
       </Route>
 
       <Route path="/hr/employees">
-        <RoleProtectedRoute module="hr" hrSubPage="employees-list">
+        <RoleProtectedRoute module="hr" hrSubPage="employees">
           <DashboardLayout>
             <EmployeeList />
           </DashboardLayout>
@@ -1208,6 +1332,18 @@ function Router() {
       <Route path="/admin/subscriptions">
         <DashboardLayout>
           <Subscriptions />
+        </DashboardLayout>
+      </Route>
+
+      <Route path="/admin/comparison">
+        <DashboardLayout>
+          <BranchComparison />
+        </DashboardLayout>
+      </Route>
+
+      <Route path="/admin/companies-overview">
+        <DashboardLayout>
+          <CompaniesOverview />
         </DashboardLayout>
       </Route>
 

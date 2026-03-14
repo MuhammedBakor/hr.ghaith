@@ -466,6 +466,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const { data: authData } = useUser();
   const currentUserId = authData?.id || null;
 
+  // جلب الأدوار المخصصة (RolePack) لتطبيق صلاحياتها عند تعيينها للموظف
+  const { data: allRolePacks } = useQuery<any[]>({
+    queryKey: ['custom-roles'],
+    queryFn: () => api.get('/roles').then(r => r.data).catch(() => []),
+    staleTime: 5 * 60 * 1000,
+    enabled: !!localStorage.getItem('token'),
+  });
+
+  // ابحث عن RolePack مطابق لأحد أدوار المستخدم (authData.roles)
+  const activeRolePack = (() => {
+    if (!allRolePacks || !authData?.roles) return null;
+    const userRoleCodes = (authData.roles as string[]).map((r: string) => r.toLowerCase());
+    return allRolePacks.find((rp: any) =>
+      rp.code && userRoleCodes.includes(rp.code.toLowerCase())
+    ) || null;
+  })();
+
   // جلب الموظف المرتبط بالمستخدم الحالي - مفلتر بالفرع للعزل بين الفروع
   const { data: currentEmployee } = useQuery<any>({
     queryKey: ['employee', 'me', currentUserId, selectedBranchId],
@@ -607,8 +624,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return result.size > 0 ? Array.from(result) : ['employee'];
   })();
 
-  const allowedModules = modulePermissions[selectedRole];
-  const allowedHrSubPages = hrSubPermissions[selectedRole];
+  // إذا كان للمستخدم دور مخصص (RolePack)، استخدم صلاحياته بدلاً من الصلاحيات الافتراضية
+  const rolePackPermissions = (() => {
+    if (!activeRolePack?.permissions) return null;
+    try {
+      const parsed = typeof activeRolePack.permissions === 'string'
+        ? JSON.parse(activeRolePack.permissions)
+        : activeRolePack.permissions;
+      return parsed as { modules?: string[]; hrSubPages?: string[] };
+    } catch {
+      return null;
+    }
+  })();
+
+  const allowedModules: ModuleType[] = rolePackPermissions?.modules
+    ? (rolePackPermissions.modules as ModuleType[])
+    : modulePermissions[selectedRole];
+
+  const allowedHrSubPages: string[] = rolePackPermissions?.hrSubPages
+    ? rolePackPermissions.hrSubPages
+    : hrSubPermissions[selectedRole];
 
   // التحقق من أن الدور المختار لا يزال ضمن الأدوار المسموحة (فقط بعد تحميل بيانات المستخدم)
   useEffect(() => {

@@ -1,6 +1,5 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useState } from 'react';
-import { useAppContext } from '@/contexts/AppContext';
 import { useLocation, useSearch } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -9,8 +8,7 @@ import { Label } from '@/components/ui/label';
 import { useMutation } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { toast } from 'sonner';
-import { CheckCircle2, Loader2, KeyRound, User, Lock, Eye, EyeOff } from 'lucide-react';
-import { Dialog } from "@/components/ui/dialog";
+import { Loader2, KeyRound, User, Lock, Eye, EyeOff } from 'lucide-react';
 
 
 export default function Activate() {
@@ -18,14 +16,18 @@ export default function Activate() {
   const search = useSearch();
   const params = new URLSearchParams(search);
 
+  const empFromUrl = params.get('emp') || '';
+  const codeFromUrl = params.get('code') || '';
+
   const [step, setStep] = useState<'verify' | 'password'>('verify');
-  const [employeeNumber, setEmployeeNumber] = useState(params.get('emp') || '');
-  const [activationCode, setActivationCode] = useState(params.get('code') || '');
+  const [employeeNumber, setEmployeeNumber] = useState(empFromUrl);
+  const [activationCode, setActivationCode] = useState(codeFromUrl);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [employeeName, setEmployeeName] = useState('');
   const [employeeEmail, setEmployeeEmail] = useState('');
+  const [isAutoVerifying, setIsAutoVerifying] = useState(false);
 
   // Mutation للتحقق من الكود
   const verifyMutation = useMutation({
@@ -84,6 +86,18 @@ export default function Activate() {
     },
   });
 
+  // Auto-verify when both emp and code are pre-filled from URL (direct email link)
+  useEffect(() => {
+    if (empFromUrl && codeFromUrl && step === 'verify') {
+      setIsAutoVerifying(true);
+      verifyMutation.mutate(
+        { employeeNumber: empFromUrl, activationCode: codeFromUrl },
+        { onSettled: () => setIsAutoVerifying(false) }
+      );
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleVerify = () => {
     if (!employeeNumber || !activationCode) {
       toast.error('يرجى إدخال الرقم الوظيفي وكود التفعيل');
@@ -109,9 +123,6 @@ export default function Activate() {
   };
 
 
-  const [dialogOpen, setDialogOpen] = React.useState(false);
-  const [editItem, setEditItem] = React.useState<any>(null);
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-primary/10 p-4" dir="rtl">
       <Card className="w-full max-w-md">
@@ -132,49 +143,47 @@ export default function Activate() {
         <CardContent className="space-y-6">
           {step === 'verify' && (
             <>
-              <div className="space-y-2">
-                <Label>الرقم الوظيفي</Label>
-                <div className="relative">
-                  <User className="absolute end-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="أدخل..."
-                    value={employeeNumber}
-                    onChange={(e) => setEmployeeNumber(e.target.value)}
-                    className="pe-10"
-                    dir="ltr"
-                  />
+              {isAutoVerifying || verifyMutation.isPending ? (
+                <div className="flex flex-col items-center gap-3 py-4 text-gray-500">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <p className="text-sm">جاري التحقق من الكود...</p>
                 </div>
-              </div>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <Label>الرقم الوظيفي</Label>
+                    <div className="relative">
+                      <User className="absolute end-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        placeholder="أدخل..."
+                        value={employeeNumber}
+                        onChange={(e) => setEmployeeNumber(e.target.value)}
+                        className="pe-10"
+                        dir="ltr"
+                      />
+                    </div>
+                  </div>
 
-              <div className="space-y-2">
-                <Label>كود التفعيل</Label>
-                <div className="relative">
-                  <KeyRound className="absolute end-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="أدخل..."
-                    value={activationCode}
-                    onChange={(e) => setActivationCode(e.target.value.toUpperCase())}
-                    className="pe-10 font-mono tracking-widest"
-                    dir="ltr"
-                    maxLength={8}
-                  />
-                </div>
-              </div>
+                  <div className="space-y-2">
+                    <Label>كود التفعيل</Label>
+                    <div className="relative">
+                      <KeyRound className="absolute end-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        placeholder="أدخل..."
+                        value={activationCode}
+                        onChange={(e) => setActivationCode(e.target.value)}
+                        className="pe-10 font-mono tracking-widest"
+                        dir="ltr"
+                        maxLength={10}
+                      />
+                    </div>
+                  </div>
 
-              <Button
-                className="w-full"
-                onClick={handleVerify}
-                disabled={verifyMutation.isPending}
-              >
-                {verifyMutation.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 ms-2 animate-spin" />
-                    جاري التحقق...
-                  </>
-                ) : (
-                  'تحقق من الكود'
-                )}
-              </Button>
+                  <Button className="w-full" onClick={handleVerify} disabled={verifyMutation.isPending}>
+                    تحقق من الكود
+                  </Button>
+                </>
+              )}
             </>
           )}
 
@@ -235,25 +244,6 @@ export default function Activate() {
 
         </CardContent>
       </Card>
-
-      {/* Dialog for Create/Edit */}
-      {dialogOpen && (<div className="mt-4 p-6 bg-white border rounded-xl shadow-sm">
-        <div>
-          <div className="mb-4 border-b pb-3">
-            <h3 className="text-lg font-bold">{editItem ? "تعديل" : "إضافة جديد"}</h3>
-          </div>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">الاسم / الوصف</label>
-              <input className="w-full border rounded-md px-3 py-2" placeholder="أدخل البيانات..." />
-            </div>
-          </div>
-          <div className="flex gap-2 mt-4 pt-3 border-t justify-end">
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>إلغاء</Button>
-            <Button onClick={() => { setDialogOpen(false); }}>حفظ</Button>
-          </div>
-        </div>
-      </div>)}
     </div>
   );
 }
