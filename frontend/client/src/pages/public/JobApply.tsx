@@ -116,7 +116,7 @@ export default function JobApply() {
       setSubmitted(true);
     } catch (err: any) {
       if (err.response?.status === 409) {
-        setError('لقد تقدمت لهذه الوظيفة من قبل بنفس البريد الإلكتروني');
+        setError('لقد تقدمت لهذه الوظيفة من قبل');
       } else {
         setError(err.response?.data?.message || 'حدث خطأ، يرجى المحاولة مرة أخرى');
       }

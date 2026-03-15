@@ -73,7 +73,7 @@ public class PublicRecruitmentController {
         // Reject duplicate application (same email + same job position)
         if (applicationRepository.existsByEmailIgnoreCaseAndPosition(application.getEmail(), position)) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(Map.of("message", "لقد تقدمت لهذه الوظيفة من قبل بنفس البريد الإلكتروني"));
+                    .body(Map.of("message", "لقد تقدمت لهذه الوظيفة من قبل"));
         }
 
         return ResponseEntity.ok(recruitmentService.createApplication(application));
