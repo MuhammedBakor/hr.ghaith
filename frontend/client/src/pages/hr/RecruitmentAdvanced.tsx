@@ -51,12 +51,14 @@ import {
   useDeleteRecruitmentJob,
   useRecruitmentApplications,
   useUpdateApplicationStatus,
+  useDeleteApplication,
   useRecruitmentInterviews,
-  useCreateInterview
+  useCreateInterview,
+  useUpdateInterview
 } from "@/services/recruitmentService";
 
 function ApplicantsTable({
-  title, description, rows, loading, emptyText, getStatusBadge, onView, onInterview
+  title, description, rows, loading, emptyText, getStatusBadge, onView, onInterview, onEditInterview, onDelete, interviews
 }: {
   title: string;
   description: string;
@@ -66,6 +68,9 @@ function ApplicantsTable({
   getStatusBadge: (s: string) => React.ReactNode;
   onView: (a: any) => void;
   onInterview: (a: any) => void;
+  onEditInterview: (interview: any, applicant: any) => void;
+  onDelete: (a: any) => void;
+  interviews: any[];
 }) {
   return (
     <Card className="border-0 shadow-sm">
@@ -97,7 +102,11 @@ function ApplicantsTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rows.map((applicant: any) => (
+              {rows.map((applicant: any) => {
+                const existingInterview = interviews.find(
+                  (i: any) => Number(i.application?.id) === Number(applicant.id)
+                );
+                return (
                 <TableRow key={applicant.id}>
                   <TableCell className="font-medium">{applicant.applicantName}</TableCell>
                   <TableCell>{applicant.email}</TableCell>
@@ -106,17 +115,31 @@ function ApplicantsTable({
                   <TableCell>{formatDate(applicant.createdAt)}</TableCell>
                   <TableCell>{getStatusBadge(applicant.status)}</TableCell>
                   <TableCell>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 items-center">
                       <Button variant="ghost" size="icon" onClick={() => onView(applicant)} title="عرض التفاصيل">
                         <Eye className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => onInterview(applicant)} title="جدولة مقابلة">
-                        <Calendar className="h-4 w-4 text-purple-600" />
+                      <div className="relative">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => existingInterview ? onEditInterview(existingInterview, applicant) : onInterview(applicant)}
+                          title={existingInterview ? 'عرض/تعديل المقابلة' : 'جدولة مقابلة'}
+                        >
+                          <Calendar className="h-4 w-4 text-purple-600" />
+                        </Button>
+                        {existingInterview && (
+                          <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border border-white" title="تم جدولة مقابلة" />
+                        )}
+                      </div>
+                      <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => onDelete(applicant)} title="حذف المتقدم">
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
             </TableBody>
           </Table>
         )}
@@ -132,10 +155,14 @@ export default function RecruitmentAdvanced() {
   const [activeTab, setActiveTab] = useState('jobs');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<any>(null);
+  const [deleteApplicantDialogOpen, setDeleteApplicantDialogOpen] = useState(false);
+  const [applicantToDelete, setApplicantToDelete] = useState<any>(null);
   const [showNewJob, setShowNewJob] = useState(false);
   const [showEditJob, setShowEditJob] = useState(false);
   const [showApplicantDetails, setShowApplicantDetails] = useState(false);
   const [showScheduleInterview, setShowScheduleInterview] = useState(false);
+  const [showEditInterview, setShowEditInterview] = useState(false);
+  const [editingInterview, setEditingInterview] = useState<any>(null);
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [selectedApplicant, setSelectedApplicant] = useState<any>(null);
   const [shareJob, setShareJob] = useState<any>(null);
@@ -173,7 +200,9 @@ export default function RecruitmentAdvanced() {
   const updateJobMutation = useUpdateRecruitmentJob();
   const deleteJobMutation = useDeleteRecruitmentJob();
   const updateApplicationStatusMutation = useUpdateApplicationStatus();
+  const deleteApplicationMutation = useDeleteApplication();
   const createInterviewMutation = useCreateInterview();
+  const updateInterviewMutation = useUpdateInterview();
 
   const handlePublishJob = (id: number) => {
     updateJobMutation.mutate({ id, status: 'open' }, {
@@ -204,6 +233,24 @@ export default function RecruitmentAdvanced() {
         }
       });
     }
+  };
+
+  const confirmDeleteApplicant = () => {
+    if (applicantToDelete) {
+      deleteApplicationMutation.mutate(applicantToDelete.id, {
+        onSuccess: () => {
+          toast.success('تم حذف المتقدم بنجاح');
+          setDeleteApplicantDialogOpen(false);
+          setApplicantToDelete(null);
+        },
+        onError: () => toast.error('فشل حذف المتقدم')
+      });
+    }
+  };
+
+  const handleDeleteApplicant = (applicant: any) => {
+    setApplicantToDelete(applicant);
+    setDeleteApplicantDialogOpen(true);
   };
 
   const handleCreateJob = () => {
@@ -269,11 +316,53 @@ export default function RecruitmentAdvanced() {
       meetingLink: interviewData.meetingLink
     }, {
       onSuccess: () => {
-        toast.success('تم جدولة المقابلة بنجاح');
+        toast.success('تم جدولة المقابلة وإرسال بريد إلكتروني للمتقدم');
         setShowScheduleInterview(false);
         setInterviewData({ interviewType: 'phone', scheduledAt: '', duration: 60, location: '', meetingLink: '' });
       },
       onError: (err: any) => toast.error(`فشل الجدولة: ${err.message}`)
+    });
+  };
+
+  const handleEditInterview = (interview: any, applicant: any) => {
+    setSelectedApplicant(applicant);
+    setEditingInterview(interview);
+    // Pre-fill interviewData from existing interview
+    const scheduledStr = interview.scheduledAt
+      ? new Date(interview.scheduledAt).toISOString().slice(0, 16)
+      : interview.interviewDate
+        ? new Date(interview.interviewDate).toISOString().slice(0, 16)
+        : '';
+    setInterviewData({
+      interviewType: interview.interviewType || 'phone',
+      scheduledAt: scheduledStr,
+      duration: interview.duration || 60,
+      location: interview.location || '',
+      meetingLink: interview.meetingLink || ''
+    });
+    setShowEditInterview(true);
+  };
+
+  const handleUpdateInterview = () => {
+    if (!editingInterview || !interviewData.scheduledAt) {
+      toast.error('يرجى تحديد موعد المقابلة');
+      return;
+    }
+    updateInterviewMutation.mutate({
+      id: editingInterview.id,
+      interviewType: interviewData.interviewType,
+      scheduledAt: new Date(interviewData.scheduledAt).toISOString(),
+      duration: interviewData.duration,
+      location: interviewData.location,
+      meetingLink: interviewData.meetingLink
+    }, {
+      onSuccess: () => {
+        toast.success('تم تحديث المقابلة وإرسال بريد إلكتروني للمتقدم');
+        setShowEditInterview(false);
+        setEditingInterview(null);
+        setInterviewData({ interviewType: 'phone', scheduledAt: '', duration: 60, location: '', meetingLink: '' });
+      },
+      onError: (err: any) => toast.error(`فشل التحديث: ${err.message}`)
     });
   };
 
@@ -528,8 +617,11 @@ export default function RecruitmentAdvanced() {
             loading={applicationsLoading}
             emptyText="لا يوجد متقدمون جدد"
             getStatusBadge={getStatusBadge}
+            interviews={interviews as any[]}
             onView={(a) => { setSelectedApplicant(a); setShowApplicantDetails(true); }}
             onInterview={(a) => { setSelectedApplicant(a); setShowScheduleInterview(true); }}
+            onEditInterview={handleEditInterview}
+            onDelete={handleDeleteApplicant}
           />
         </TabsContent>
 
@@ -542,8 +634,11 @@ export default function RecruitmentAdvanced() {
             loading={applicationsLoading}
             emptyText="لا يوجد متقدمون في مرحلة المقابلة"
             getStatusBadge={getStatusBadge}
+            interviews={interviews as any[]}
             onView={(a) => { setSelectedApplicant(a); setShowApplicantDetails(true); }}
             onInterview={(a) => { setSelectedApplicant(a); setShowScheduleInterview(true); }}
+            onEditInterview={handleEditInterview}
+            onDelete={handleDeleteApplicant}
           />
         </TabsContent>
 
@@ -556,8 +651,11 @@ export default function RecruitmentAdvanced() {
             loading={applicationsLoading}
             emptyText="لا يوجد متقدمون في مرحلة التقييم"
             getStatusBadge={getStatusBadge}
+            interviews={interviews as any[]}
             onView={(a) => { setSelectedApplicant(a); setShowApplicantDetails(true); }}
             onInterview={(a) => { setSelectedApplicant(a); setShowScheduleInterview(true); }}
+            onEditInterview={handleEditInterview}
+            onDelete={handleDeleteApplicant}
           />
         </TabsContent>
 
@@ -570,8 +668,11 @@ export default function RecruitmentAdvanced() {
             loading={applicationsLoading}
             emptyText="لا يوجد موظفون جدد بعد"
             getStatusBadge={getStatusBadge}
+            interviews={interviews as any[]}
             onView={(a) => { setSelectedApplicant(a); setShowApplicantDetails(true); }}
             onInterview={(a) => { setSelectedApplicant(a); setShowScheduleInterview(true); }}
+            onEditInterview={handleEditInterview}
+            onDelete={handleDeleteApplicant}
           />
         </TabsContent>
 
@@ -584,8 +685,11 @@ export default function RecruitmentAdvanced() {
             loading={applicationsLoading}
             emptyText="لا يوجد متقدمون مرفوضون"
             getStatusBadge={getStatusBadge}
+            interviews={interviews as any[]}
             onView={(a) => { setSelectedApplicant(a); setShowApplicantDetails(true); }}
             onInterview={(a) => { setSelectedApplicant(a); setShowScheduleInterview(true); }}
+            onEditInterview={handleEditInterview}
+            onDelete={handleDeleteApplicant}
           />
         </TabsContent>
       </Tabs>
@@ -933,6 +1037,58 @@ export default function RecruitmentAdvanced() {
         </DialogContent>
       </Dialog>
 
+      {/* Edit Interview Dialog */}
+      <Dialog open={showEditInterview} onOpenChange={(open) => { if (!open) { setShowEditInterview(false); setEditingInterview(null); } }}>
+        <DialogContent className="max-w-lg" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit className="h-5 w-5 text-purple-500" />
+              تعديل المقابلة
+              {selectedApplicant && <span className="text-sm font-normal text-gray-500">— {selectedApplicant.applicantName}</span>}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>نوع المقابلة</Label>
+              <Select value={interviewData.interviewType} onValueChange={(v: any) => setInterviewData({ ...interviewData, interviewType: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="phone">هاتفية</SelectItem>
+                  <SelectItem value="video">فيديو</SelectItem>
+                  <SelectItem value="in_person">حضورية</SelectItem>
+                  <SelectItem value="technical">تقنية</SelectItem>
+                  <SelectItem value="hr">موارد بشرية</SelectItem>
+                  <SelectItem value="final">نهائية</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>الموعد <span className="text-red-500">*</span></Label>
+              <Input type="datetime-local" value={interviewData.scheduledAt} onChange={(e) => setInterviewData({ ...interviewData, scheduledAt: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>المدة (بالدقائق)</Label>
+              <Input type="number" min="15" step="15" value={interviewData.duration} onChange={(e) => setInterviewData({ ...interviewData, duration: parseInt(e.target.value) || 60 })} />
+            </div>
+            <div className="space-y-2">
+              <Label>المكان (للمقابلات الحضورية)</Label>
+              <Input value={interviewData.location} onChange={(e) => setInterviewData({ ...interviewData, location: e.target.value })} placeholder="مثال: غرفة الاجتماعات 1" />
+            </div>
+            <div className="space-y-2">
+              <Label>رابط الاجتماع (للمقابلات عن بعد)</Label>
+              <Input value={interviewData.meetingLink} onChange={(e) => setInterviewData({ ...interviewData, meetingLink: e.target.value })} placeholder="مثال: https://meet.google.com/..." />
+            </div>
+          </div>
+          <DialogFooter className="flex-row-reverse gap-2">
+            <Button variant="outline" onClick={() => { setShowEditInterview(false); setEditingInterview(null); }}>إلغاء</Button>
+            <Button onClick={handleUpdateInterview} disabled={updateInterviewMutation.isPending}>
+              {updateInterviewMutation.isPending && <Loader2 className="h-4 w-4 ms-2 animate-spin" />}
+              حفظ وإرسال بريد تحديث
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Share Job Link Dialog */}
       <Dialog open={!!shareJob} onOpenChange={(open) => { if (!open) setShareJob(null); }}>
         <DialogContent className="max-w-md" dir="rtl">
@@ -978,7 +1134,23 @@ export default function RecruitmentAdvanced() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation */}
+      {/* Delete Applicant Confirmation */}
+      <AlertDialog open={deleteApplicantDialogOpen} onOpenChange={setDeleteApplicantDialogOpen}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>تأكيد حذف المتقدم</AlertDialogTitle>
+            <AlertDialogDescription>
+              هل أنت متأكد من حذف المتقدم "{applicantToDelete?.applicantName}"؟ لا يمكن التراجع عن هذا الإجراء.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row-reverse gap-2">
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteApplicant} className="bg-red-600 hover:bg-red-700">حذف</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Job Confirmation */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent dir="rtl">
           <AlertDialogHeader>

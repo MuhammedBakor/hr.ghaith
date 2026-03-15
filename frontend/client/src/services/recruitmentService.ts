@@ -83,8 +83,10 @@ export const recruitmentService = {
         const response = await api.get<Interview[]>("/recruitment/interviews");
         return response.data;
     },
-    createInterview: async (data: Partial<Interview>) => {
-        const response = await api.post<Interview>("/recruitment/interviews", data);
+    createInterview: async (data: Partial<Interview> & { applicationId?: number }) => {
+        const { applicationId, ...rest } = data as any;
+        const payload = { ...rest, ...(applicationId ? { application: { id: applicationId } } : {}) };
+        const response = await api.post<Interview>("/recruitment/interviews", payload);
         return response.data;
     }
 };

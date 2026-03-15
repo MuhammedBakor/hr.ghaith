@@ -19,6 +19,7 @@ public class RecruitmentService {
     private final RecruitmentJobRepository jobRepository;
     private final JobApplicationRepository applicationRepository;
     private final InterviewRepository interviewRepository;
+    private final EmailService emailService;
 
     // Jobs
     public List<RecruitmentJob> getAllJobs() {
@@ -93,9 +94,24 @@ public class RecruitmentService {
         return interviewRepository.findAll();
     }
 
+    public List<Interview> getInterviewsByApplicationId(Long applicationId) {
+        return interviewRepository.findByApplicationId(applicationId);
+    }
+
     @Transactional
     public Interview createInterview(Interview interview) {
-        return interviewRepository.save(interview);
+        Interview saved = interviewRepository.save(interview);
+        if (saved.getApplication() != null) {
+            JobApplication app = saved.getApplication();
+            String scheduledAt = saved.getScheduledAt() != null
+                    ? saved.getScheduledAt().toString()
+                    : (saved.getInterviewDate() != null ? saved.getInterviewDate().toString() : "");
+            emailService.sendInterviewScheduled(
+                    app.getEmail(), app.getApplicantName(), app.getPosition(),
+                    saved.getInterviewType(), scheduledAt,
+                    saved.getDuration(), saved.getLocation(), saved.getMeetingLink());
+        }
+        return saved;
     }
 
     @Transactional
@@ -149,7 +165,18 @@ public class RecruitmentService {
             interview.setStatus(interviewDetails.getStatus());
         if (interviewDetails.getNotes() != null)
             interview.setNotes(interviewDetails.getNotes());
-        return interviewRepository.save(interview);
+        Interview saved = interviewRepository.save(interview);
+        if (saved.getApplication() != null) {
+            JobApplication app = saved.getApplication();
+            String scheduledAt = saved.getScheduledAt() != null
+                    ? saved.getScheduledAt().toString()
+                    : (saved.getInterviewDate() != null ? saved.getInterviewDate().toString() : "");
+            emailService.sendInterviewUpdated(
+                    app.getEmail(), app.getApplicantName(), app.getPosition(),
+                    saved.getInterviewType(), scheduledAt,
+                    saved.getDuration(), saved.getLocation(), saved.getMeetingLink());
+        }
+        return saved;
     }
 
     @Transactional

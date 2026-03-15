@@ -77,6 +77,11 @@ public class RecruitmentController {
         return ResponseEntity.ok(recruitmentService.getAllInterviews());
     }
 
+    @GetMapping("/interviews/by-application/{applicationId}")
+    public ResponseEntity<List<Interview>> getInterviewsByApplication(@PathVariable Long applicationId) {
+        return ResponseEntity.ok(recruitmentService.getInterviewsByApplicationId(applicationId));
+    }
+
     @PostMapping("/interviews")
     public ResponseEntity<Interview> createInterview(@RequestBody Interview interview) {
         return ResponseEntity.ok(recruitmentService.createInterview(interview));

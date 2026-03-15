@@ -86,6 +86,82 @@ public class EmailService {
         }
     }
 
+    public void sendInterviewScheduled(String to, String applicantName, String position,
+                                       String interviewType, String scheduledAt,
+                                       Integer duration, String location, String meetingLink) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromEmail);
+            message.setTo(to);
+            message.setSubject("دعوة لمقابلة عمل - " + position);
+
+            String typeLabel = switch (interviewType != null ? interviewType : "") {
+                case "phone" -> "هاتفية";
+                case "video" -> "فيديو";
+                case "in_person" -> "حضورية";
+                case "technical" -> "تقنية";
+                case "hr" -> "موارد بشرية";
+                case "final" -> "نهائية";
+                default -> interviewType != null ? interviewType : "غير محدد";
+            };
+
+            StringBuilder content = new StringBuilder();
+            content.append(String.format("مرحباً %s،\n\n", applicantName));
+            content.append(String.format("يسعدنا إبلاغك بأنه تم جدولة مقابلة عمل لوظيفة: %s\n\n", position));
+            content.append("تفاصيل المقابلة:\n");
+            content.append(String.format("- نوع المقابلة: %s\n", typeLabel));
+            content.append(String.format("- الموعد: %s\n", scheduledAt));
+            if (duration != null) content.append(String.format("- المدة: %d دقيقة\n", duration));
+            if (location != null && !location.isBlank()) content.append(String.format("- المكان: %s\n", location));
+            if (meetingLink != null && !meetingLink.isBlank()) content.append(String.format("- رابط الاجتماع: %s\n", meetingLink));
+            content.append("\nنتمنى لك التوفيق.\n\nمع تحيات،\nفريق التوظيف - منصة غيث");
+
+            message.setText(content.toString());
+            mailSender.send(message);
+            log.info("Interview scheduled email sent to {}", to);
+        } catch (Exception e) {
+            log.error("Failed to send interview scheduled email to {}: {}", to, e.getMessage());
+        }
+    }
+
+    public void sendInterviewUpdated(String to, String applicantName, String position,
+                                     String interviewType, String scheduledAt,
+                                     Integer duration, String location, String meetingLink) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromEmail);
+            message.setTo(to);
+            message.setSubject("تحديث موعد المقابلة - " + position);
+
+            String typeLabel = switch (interviewType != null ? interviewType : "") {
+                case "phone" -> "هاتفية";
+                case "video" -> "فيديو";
+                case "in_person" -> "حضورية";
+                case "technical" -> "تقنية";
+                case "hr" -> "موارد بشرية";
+                case "final" -> "نهائية";
+                default -> interviewType != null ? interviewType : "غير محدد";
+            };
+
+            StringBuilder content = new StringBuilder();
+            content.append(String.format("مرحباً %s،\n\n", applicantName));
+            content.append(String.format("نود إبلاغك بأنه تم تعديل موعد مقابلتك لوظيفة: %s\n\n", position));
+            content.append("التفاصيل المحدّثة للمقابلة:\n");
+            content.append(String.format("- نوع المقابلة: %s\n", typeLabel));
+            content.append(String.format("- الموعد الجديد: %s\n", scheduledAt));
+            if (duration != null) content.append(String.format("- المدة: %d دقيقة\n", duration));
+            if (location != null && !location.isBlank()) content.append(String.format("- المكان: %s\n", location));
+            if (meetingLink != null && !meetingLink.isBlank()) content.append(String.format("- رابط الاجتماع: %s\n", meetingLink));
+            content.append("\nنتمنى لك التوفيق.\n\nمع تحيات،\nفريق التوظيف - منصة غيث");
+
+            message.setText(content.toString());
+            mailSender.send(message);
+            log.info("Interview updated email sent to {}", to);
+        } catch (Exception e) {
+            log.error("Failed to send interview updated email to {}: {}", to, e.getMessage());
+        }
+    }
+
     public void sendPasswordResetCode(String to, String firstName, String code) {
         try {
             SimpleMailMessage message = new SimpleMailMessage();
