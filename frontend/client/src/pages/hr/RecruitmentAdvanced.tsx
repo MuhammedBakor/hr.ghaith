@@ -239,7 +239,12 @@ export default function RecruitmentAdvanced() {
       location: selectedJob.location,
       description: selectedJob.description,
       requirements: selectedJob.requirements,
-      status: selectedJob.status
+      benefits: selectedJob.benefits,
+      status: selectedJob.status,
+      employmentType: selectedJob.employmentType,
+      experienceLevel: selectedJob.experienceLevel,
+      openings: selectedJob.openings,
+      applicationDeadline: selectedJob.applicationDeadline,
     }, {
       onSuccess: () => {
         toast.success('تم تحديث الوظيفة بنجاح');
@@ -708,6 +713,42 @@ export default function RecruitmentAdvanced() {
                   </Select>
                 </div>
               </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>نوع الدوام</Label>
+                  <Select value={selectedJob.employmentType || 'full_time'} onValueChange={(v) => setSelectedJob({ ...selectedJob, employmentType: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="full_time">دوام كامل</SelectItem>
+                      <SelectItem value="part_time">دوام جزئي</SelectItem>
+                      <SelectItem value="contract">عقد</SelectItem>
+                      <SelectItem value="remote">عن بُعد</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>مستوى الخبرة</Label>
+                  <Select value={selectedJob.experienceLevel || 'mid'} onValueChange={(v) => setSelectedJob({ ...selectedJob, experienceLevel: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="entry">مبتدئ</SelectItem>
+                      <SelectItem value="mid">متوسط</SelectItem>
+                      <SelectItem value="senior">متقدم</SelectItem>
+                      <SelectItem value="lead">قيادي</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>عدد الشواغر</Label>
+                  <Input type="number" min={1} value={selectedJob.openings || 1} onChange={(e) => setSelectedJob({ ...selectedJob, openings: parseInt(e.target.value) || 1 })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>آخر موعد للتقديم</Label>
+                  <Input type="date" value={selectedJob.applicationDeadline ? selectedJob.applicationDeadline.split('T')[0] : ''} onChange={(e) => setSelectedJob({ ...selectedJob, applicationDeadline: e.target.value })} />
+                </div>
+              </div>
               <div className="space-y-2">
                 <Label>وصف الوظيفة</Label>
                 <Textarea value={selectedJob.description || ''} onChange={(e) => setSelectedJob({ ...selectedJob, description: e.target.value })} rows={3} />
@@ -715,6 +756,10 @@ export default function RecruitmentAdvanced() {
               <div className="space-y-2">
                 <Label>المتطلبات</Label>
                 <Textarea value={selectedJob.requirements || ''} onChange={(e) => setSelectedJob({ ...selectedJob, requirements: e.target.value })} rows={3} />
+              </div>
+              <div className="space-y-2">
+                <Label>المزايا</Label>
+                <Textarea value={selectedJob.benefits || ''} onChange={(e) => setSelectedJob({ ...selectedJob, benefits: e.target.value })} rows={2} />
               </div>
             </div>
           )}
@@ -777,7 +822,7 @@ export default function RecruitmentAdvanced() {
                   <div className="flex items-center gap-2 text-sm">
                     <FileText className="h-4 w-4 text-blue-500" />
                     <a
-                      href={`${import.meta.env.VITE_API_URL?.replace('/api/v1', '') || 'http://localhost:8080'}${selectedApplicant.resumeUrl}`}
+                      href={`${import.meta.env.VITE_API_URL?.replace('/api/v1', '') || (import.meta.env.DEV ? 'http://localhost:8080' : window.location.origin)}${selectedApplicant.resumeUrl}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-600 hover:underline font-medium"
