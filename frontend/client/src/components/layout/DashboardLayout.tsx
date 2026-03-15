@@ -315,13 +315,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       ['/hr/violations', 'violations'],
       ['/hr/my-violations', 'my_violations'],
       ['/hr/shifts', 'shifts'],
-      ['/hr/field-tracking', 'tracking'],
-      ['/hr/qr-scanner', 'qr'],
       ['/hr/approval-chains', 'approvals'],
       ['/hr/official-letters', 'letters'],
-      ['/hr/onboarding-review', 'onboarding'],
       ['/hr/penalty-escalation', 'escalation'],
-      ['/hr/automation', 'automation'],
       ['/hr/salary-components', 'salary'],
     ];
 
@@ -476,14 +472,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         { label: 'مخالفاتي', path: '/hr/my-violations', icon: AlertTriangle, hrSubPage: 'my_violations' },
         { label: 'الورديات والسياسات', path: '/hr/shifts', icon: CalendarClock, hrSubPage: 'shifts' },
         { label: 'أرصدة الإجازات', path: '/hr/leave-balances', icon: Calendar, hrSubPage: 'leave-balances' },
-        { label: 'التتبع الميداني', path: '/hr/field-tracking', icon: MapPin, hrSubPage: 'tracking' },
-        { label: 'ماسح QR', path: '/hr/qr-scanner', icon: Scan, hrSubPage: 'qr' },
         { label: 'سلاسل الموافقات', path: '/hr/approval-chains', icon: GitBranch, hrSubPage: 'approvals' },
         { label: 'الخطابات الرسمية', path: '/hr/official-letters', icon: FileText, hrSubPage: 'letters' },
         { label: 'تقارير الحضور', path: '/hr/attendance-reports', icon: BarChart3, hrSubPage: 'reports' },
-        { label: 'مراجعة الانضمام', path: '/hr/onboarding-review', icon: UserCheck, hrSubPage: 'onboarding' },
         { label: 'تصعيد الجزاءات', path: '/hr/penalty-escalation', icon: TrendingUp, hrSubPage: 'escalation' },
-        { label: 'أتمتة HR', path: '/hr/automation', icon: Zap, hrSubPage: 'automation' },
         { label: 'بنود الراتب', path: '/hr/salary-components', icon: DollarSign, hrSubPage: 'salary' },
       ]
     },

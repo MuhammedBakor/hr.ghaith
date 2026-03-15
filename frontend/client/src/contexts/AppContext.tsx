@@ -217,7 +217,7 @@ export const hrSubPermissions: Record<UserRoleType, string[]> = {
   store_manager: ['attendance', 'attendance-monitoring'],
   supervisor: ['attendance', 'attendance-monitoring', 'leaves', 'my_violations'],
   employee: ['attendance', 'attendance-monitoring', 'leaves', 'my_violations'],
-  department_manager: ['attendance', 'attendance-monitoring', 'leaves', 'leaves-list', 'my_violations', 'employees-list'],
+  department_manager: ['attendance', 'attendance-monitoring', 'leaves', 'leaves-list', 'violations', 'employees-list'],
   agent: ['attendance', 'attendance-monitoring', 'my_violations'],
 };
 

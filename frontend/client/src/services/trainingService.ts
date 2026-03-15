@@ -158,3 +158,13 @@ export const useUpdateTrainingEnrollment = () => {
         },
     });
 };
+
+export const useDeleteTrainingEnrollment = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (id: number) => trainingService.deleteEnrollment(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["training", "enrollments"] });
+        },
+    });
+};

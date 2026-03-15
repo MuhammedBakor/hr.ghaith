@@ -1,5 +1,6 @@
 package com.ghaith.erp.controller;
 
+import com.ghaith.erp.model.PayrollDeduction;
 import com.ghaith.erp.model.PayrollRecord;
 import com.ghaith.erp.service.PayrollService;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +44,27 @@ public class PayrollController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletePayroll(@PathVariable Long id) {
         payrollService.deletePayroll(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** GET /api/v1/hr/payroll/{id}/deductions */
+    @GetMapping("/{id}/deductions")
+    public ResponseEntity<List<PayrollDeduction>> getDeductions(@PathVariable Long id) {
+        return ResponseEntity.ok(payrollService.getDeductions(id));
+    }
+
+    /** POST /api/v1/hr/payroll/{id}/deductions */
+    @PostMapping("/{id}/deductions")
+    public ResponseEntity<PayrollDeduction> addDeduction(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> payload) {
+        return ResponseEntity.ok(payrollService.addDeduction(id, payload));
+    }
+
+    /** DELETE /api/v1/hr/payroll/deductions/{deductionId} */
+    @DeleteMapping("/deductions/{deductionId}")
+    public ResponseEntity<Void> deleteDeduction(@PathVariable Long deductionId) {
+        payrollService.deleteDeduction(deductionId);
         return ResponseEntity.noContent().build();
     }
 }

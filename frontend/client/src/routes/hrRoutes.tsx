@@ -18,19 +18,15 @@ const AddEmployee = lazy(() => import("@/pages/hr/AddEmployee"));
 const AddEmployeeSimple = lazy(() => import("@/pages/hr/AddEmployeeSimple"));
 const EmployeeActivation = lazy(() => import("@/pages/hr/EmployeeActivation"));
 const EmployeeDocs = lazy(() => import("@/pages/hr/EmployeeDocs"));
-const OnboardingReview = lazy(() => import("@/pages/hr/OnboardingReview"));
 const LeaveManagement = lazy(() => import("@/pages/hr/LeaveManagement"));
 const PerformanceAdvanced = lazy(() => import("@/pages/hr/PerformanceAdvanced"));
 const TrainingAdvanced = lazy(() => import("@/pages/hr/TrainingAdvanced"));
-const HRAutomation = lazy(() => import("@/pages/hr/HRAutomation"));
 const RecruitmentAdvanced = lazy(() => import("@/pages/hr/RecruitmentAdvanced"));
 const OrganizationStructure = lazy(() => import("@/pages/hr/OrganizationStructure"));
 const ViolationsManagement = lazy(() => import("@/pages/hr/ViolationsManagement"));
 const PenaltyEscalation = lazy(() => import("@/pages/hr/PenaltyEscalation"));
 const MyViolations = lazy(() => import("@/pages/hr/MyViolations"));
 const AttendanceReports = lazy(() => import("@/pages/hr/AttendanceReports"));
-const FieldTracking = lazy(() => import("@/pages/hr/FieldTracking"));
-const QRScanner = lazy(() => import("@/pages/hr/QRScanner"));
 const AttendanceEmailReports = lazy(() => import("@/pages/hr/AttendanceEmailReports"));
 const ShiftsManagement = lazy(() => import("@/pages/hr/ShiftsManagement"));
 const OfficialLetters = lazy(() => import("@/pages/hr/OfficialLetters"));
@@ -62,16 +58,6 @@ export function HrRoutes() {
     <Route path="/hr/attendance-reports">
     <DashboardLayout>
     <AttendanceReports />
-    </DashboardLayout>
-    </Route>
-    <Route path="/hr/field-tracking">
-    <DashboardLayout>
-    <FieldTracking />
-    </DashboardLayout>
-    </Route>
-    <Route path="/hr/qr-scanner">
-    <DashboardLayout>
-    <QRScanner />
     </DashboardLayout>
     </Route>
     <Route path="/hr/email-reports">
@@ -154,11 +140,6 @@ export function HrRoutes() {
     <EmployeeDocs />
     </DashboardLayout>
     </Route>
-    <Route path="/hr/onboarding-review">
-    <DashboardLayout>
-    <OnboardingReview />
-    </DashboardLayout>
-    </Route>
     <Route path="/hr/leave-management" /* MERGED: supervisor tab in /hr/leaves */>
     <DashboardLayout>
     <LeaveManagement />
@@ -172,11 +153,6 @@ export function HrRoutes() {
     <Route path="/hr/training-advanced">
     <DashboardLayout>
     <TrainingAdvanced />
-    </DashboardLayout>
-    </Route>
-    <Route path="/hr/automation">
-    <DashboardLayout>
-    <HRAutomation />
     </DashboardLayout>
     </Route>
     <Route path="/hr/recruitment-advanced" /* MERGED: tab في /hr/recruitment?tab=advanced */>

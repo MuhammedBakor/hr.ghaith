@@ -1,4 +1,4 @@
-import { formatDate, formatDateTime } from '@/lib/formatDate';
+import { formatDate } from '@/lib/formatDate';
 import { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { Button } from '@/components/ui/button';
@@ -21,35 +21,42 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Dialog } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
-import { GraduationCap, BookOpen, Award, Plus, Eye, Edit, Users, CheckCircle2, Video, Loader2, Inbox } from 'lucide-react';
+import { GraduationCap, BookOpen, Award, Plus, Eye, Trash2, Users, CheckCircle2, Loader2, Inbox } from 'lucide-react';
 import { toast } from 'sonner';
 import { PrintButton } from "@/components/PrintButton";
 import {
   useTrainingPrograms,
   useCreateTrainingProgram,
-  useUpdateTrainingProgram,
   useDeleteTrainingProgram,
   useTrainingEnrollments,
   useCreateTrainingEnrollment,
-  useUpdateTrainingEnrollment
+  useDeleteTrainingEnrollment,
 } from "@/services/trainingService";
-import { useEmployees } from "@/services/hrService";
+import { useEmployees, useBranches, useDepartments } from "@/services/hrService";
 
 export default function TrainingAdvanced() {
-  const confirmDelete = (fn: () => void) => { if (window.confirm("هل أنت متأكد من الحذف؟")) fn(); };
-
-  const [searchTerm, setSearchTerm] = useState('');
   const { selectedRole: userRole, selectedBranchId } = useAppContext();
-  const canEdit = userRole === "admin" || String(userRole).includes("manager");
-  const canDelete = userRole === "admin";
 
   const [activeTab, setActiveTab] = useState('courses');
   const [showNewCourse, setShowNewCourse] = useState(false);
   const [showEnrollDialog, setShowEnrollDialog] = useState(false);
+  const [selectedProgram, setSelectedProgram] = useState<any>(null);
+  const [showViewProgram, setShowViewProgram] = useState(false);
+
   const [newCourse, setNewCourse] = useState({
     name: '',
     description: '',
@@ -59,29 +66,52 @@ export default function TrainingAdvanced() {
     maxParticipants: '',
     startDate: '',
     endDate: '',
-    type: 'classroom'
   });
 
-  const [selectedProgram, setSelectedProgram] = useState<any>(null);
-  const [showEditProgram, setShowEditProgram] = useState(false);
+  const [enrollFilterBranch, setEnrollFilterBranch] = useState('');
+  const [enrollFilterDept, setEnrollFilterDept] = useState('');
   const [enrollmentData, setEnrollmentData] = useState({ employeeId: '', programId: '' });
+  const [deleteProgramId, setDeleteProgramId] = useState<number | null>(null);
+  const [deleteEnrollmentId, setDeleteEnrollmentId] = useState<number | null>(null);
 
-  // Hooks
+  // Data hooks
   const { data: programs = [], isLoading: programsLoading, isError } = useTrainingPrograms();
-  const { data: enrollments = [], isLoading: enrollmentsLoading } = useTrainingEnrollments();
-  const { data: employees = [] } = useEmployees({ branchId: selectedBranchId });
+  const { data: allEnrollments = [], isLoading: enrollmentsLoading } = useTrainingEnrollments();
+  const { data: employeesData = [] } = useEmployees({ branchId: selectedBranchId });
+  const { data: branchesData = [] } = useBranches();
+  const { data: departmentsData = [] } = useDepartments({
+    branchId: selectedBranchId || (enrollFilterBranch ? parseInt(enrollFilterBranch) : null),
+  });
 
   const createProgramMutation = useCreateTrainingProgram();
+  const deleteProgramMutation = useDeleteTrainingProgram();
   const createEnrollmentMutation = useCreateTrainingEnrollment();
+  const deleteEnrollmentMutation = useDeleteTrainingEnrollment();
 
-  // حساب الإحصائيات من البيانات الفعلية
+  const branches = (branchesData as any[]).filter((b: any) => b.id);
+  const departments = departmentsData as any[];
+  const employees = employeesData as any[];
+
+  // Filter employees in enroll dialog by branch/dept filters
+  const filteredEnrollEmployees = employees.filter((e: any) => {
+    if (enrollFilterBranch && String(e.branch?.id) !== enrollFilterBranch) return false;
+    if (enrollFilterDept && String(e.department?.id) !== enrollFilterDept) return false;
+    return true;
+  });
+
+  // Filter enrollments by current branch
+  const enrollments = selectedBranchId
+    ? (allEnrollments as any[]).filter((e: any) => e.employee?.branch?.id === selectedBranchId)
+    : (allEnrollments as any[]);
+
+  // Stats
   const trainingStats = {
     totalCourses: programs.length,
-    activeCourses: programs.filter((p: any) => p.status === 'active').length,
+    activeCourses: (programs as any[]).filter((p: any) => p.status === 'active').length,
     totalEnrollments: enrollments.length,
     completionRate: enrollments.length > 0
       ? Math.round((enrollments.filter((e: any) => e.status === 'completed').length / enrollments.length) * 100)
-      : 0
+      : 0,
   };
 
   const handleCreateCourse = () => {
@@ -102,46 +132,52 @@ export default function TrainingAdvanced() {
       onSuccess: () => {
         toast.success('تم إنشاء الدورة بنجاح');
         setShowNewCourse(false);
-        setNewCourse({
-          name: '',
-          description: '',
-          category: '',
-          instructor: '',
-          duration: '',
-          maxParticipants: '',
-          startDate: '',
-          endDate: '',
-          type: 'classroom'
-        });
+        setNewCourse({ name: '', description: '', category: '', instructor: '', duration: '', maxParticipants: '', startDate: '', endDate: '' });
       },
       onError: (error: any) => {
         toast.error(error.response?.data?.message || error.message || 'حدث خطأ أثناء إنشاء الدورة');
-      }
+      },
+    });
+  };
+
+  const handleEnroll = () => {
+    if (!enrollmentData.employeeId || !enrollmentData.programId) {
+      toast.error('يرجى اختيار الموظف والدورة');
+      return;
+    }
+    createEnrollmentMutation.mutate({
+      employeeId: parseInt(enrollmentData.employeeId),
+      programId: parseInt(enrollmentData.programId),
+    }, {
+      onSuccess: () => {
+        toast.success('تم تسجيل الموظف بنجاح');
+        setShowEnrollDialog(false);
+        setEnrollmentData({ employeeId: '', programId: '' });
+        setEnrollFilterBranch('');
+        setEnrollFilterDept('');
+      },
+      onError: (error: any) => {
+        toast.error(error.response?.data?.message || error.message || 'حدث خطأ أثناء التسجيل');
+      },
     });
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'active':
-      case 'in_progress':
+      case 'active': case 'in_progress':
         return <Badge className="bg-green-100 text-green-700">نشط</Badge>;
-      case 'upcoming':
-      case 'planned':
+      case 'upcoming': case 'planned': case 'draft':
         return <Badge className="bg-blue-100 text-blue-700">قادم</Badge>;
       case 'completed':
         return <Badge className="bg-gray-100 text-gray-700">مكتمل</Badge>;
       case 'enrolled':
         return <Badge className="bg-purple-100 text-purple-700">مسجل</Badge>;
+      case 'withdrawn':
+        return <Badge className="bg-red-100 text-red-700">منسحب</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
   };
-
-  const getTypeIcon = (type: string) => {
-    return type === 'online' ? <Video className="h-4 w-4" /> : <Users className="h-4 w-4" />;
-  };
-
-  // Remove early return
 
   return (
     <div className="space-y-6" dir="rtl">
@@ -242,7 +278,7 @@ export default function TrainingAdvanced() {
                 </div>
               ) : isError ? (
                 <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>
-              ) : programs.length === 0 ? (
+              ) : (programs as any[]).length === 0 ? (
                 <div className="text-center py-12 text-gray-500">
                   <Inbox className="h-16 w-16 mx-auto mb-4 text-gray-300" />
                   <p className="text-lg font-medium mb-2">لا توجد دورات تدريبية</p>
@@ -266,29 +302,23 @@ export default function TrainingAdvanced() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {programs.map((program: any) => (
+                    {(programs as any[]).map((program: any) => (
                       <TableRow key={program.id}>
                         <TableCell className="font-medium">{program.name}</TableCell>
                         <TableCell>
                           <Badge variant="outline">{program.category || '-'}</Badge>
                         </TableCell>
                         <TableCell>{program.instructor || '-'}</TableCell>
-                        <TableCell>{program.duration || '-'}</TableCell>
+                        <TableCell>{program.duration ? `${program.duration} ${program.durationUnit || 'ساعة'}` : '-'}</TableCell>
                         <TableCell>{program.startDate ? formatDate(program.startDate) : '-'}</TableCell>
                         <TableCell>{getStatusBadge(program.status)}</TableCell>
                         <TableCell>
                           <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => {
-                              setSelectedProgram(program);
-                              setShowEditProgram(true);
-                            }}>
+                            <Button variant="ghost" size="icon" onClick={() => { setSelectedProgram(program); setShowViewProgram(true); }}>
                               <Eye className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={() => {
-                              setSelectedProgram(program);
-                              setShowEditProgram(true);
-                            }}>
-                              <Edit className="h-4 w-4" />
+                            <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => setDeleteProgramId(program.id)}>
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         </TableCell>
@@ -324,25 +354,38 @@ export default function TrainingAdvanced() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>الموظف</TableHead>
+                      <TableHead>الفرع</TableHead>
+                      <TableHead>القسم</TableHead>
                       <TableHead>الدورة</TableHead>
                       <TableHead>تاريخ التسجيل</TableHead>
-                      <TableHead>التقدم</TableHead>
                       <TableHead>الحالة</TableHead>
+                      <TableHead>الإجراءات</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {enrollments.map((enrollment: any) => (
                       <TableRow key={enrollment.id}>
-                        <TableCell className="font-medium">{enrollment.employeeName || '-'}</TableCell>
-                        <TableCell>{enrollment.programName || '-'}</TableCell>
-                        <TableCell>{enrollment.enrolledAt ? formatDate(enrollment.enrolledAt) : '-'}</TableCell>
+                        <TableCell className="font-medium">
+                          {enrollment.employee
+                            ? `${enrollment.employee.firstName} ${enrollment.employee.lastName}`
+                            : '-'}
+                        </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Progress value={enrollment.progress || 0} className="w-20" />
-                            <span className="text-sm">{enrollment.progress || 0}%</span>
-                          </div>
+                          {enrollment.employee?.branch?.nameAr || enrollment.employee?.branch?.name || '-'}
+                        </TableCell>
+                        <TableCell>
+                          {enrollment.employee?.department?.nameAr || enrollment.employee?.department?.name || '-'}
+                        </TableCell>
+                        <TableCell>{enrollment.program?.name || '-'}</TableCell>
+                        <TableCell>
+                          {enrollment.enrollmentDate ? formatDate(enrollment.enrollmentDate) : '-'}
                         </TableCell>
                         <TableCell>{getStatusBadge(enrollment.status)}</TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => setDeleteEnrollmentId(enrollment.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -360,27 +403,58 @@ export default function TrainingAdvanced() {
               <CardDescription>شهادات إتمام الدورات التدريبية</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-12 text-gray-500">
-                <Award className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                <p className="text-lg font-medium mb-2">لا توجد شهادات</p>
-                <p className="text-sm">سيتم عرض الشهادات عند إتمام الموظفين للدورات التدريبية</p>
-              </div>
+              {enrollments.filter((e: any) => e.status === 'completed' && e.certificate).length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  <Award className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+                  <p className="text-lg font-medium mb-2">لا توجد شهادات</p>
+                  <p className="text-sm">سيتم عرض الشهادات عند إتمام الموظفين للدورات التدريبية</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>الموظف</TableHead>
+                      <TableHead>الدورة</TableHead>
+                      <TableHead>تاريخ الإتمام</TableHead>
+                      <TableHead>الشهادة</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {enrollments.filter((e: any) => e.status === 'completed').map((enrollment: any) => (
+                      <TableRow key={enrollment.id}>
+                        <TableCell className="font-medium">
+                          {enrollment.employee ? `${enrollment.employee.firstName} ${enrollment.employee.lastName}` : '-'}
+                        </TableCell>
+                        <TableCell>{enrollment.program?.name || '-'}</TableCell>
+                        <TableCell>{enrollment.completionDate ? formatDate(enrollment.completionDate) : '-'}</TableCell>
+                        <TableCell>
+                          {enrollment.certificate
+                            ? <Badge className="bg-green-100 text-green-700">متاحة</Badge>
+                            : <Badge variant="secondary">غير متاحة</Badge>}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
 
       {/* New Course Dialog */}
-      {showNewCourse && (<div className="mt-4 p-6 bg-white border rounded-xl shadow-sm">
-        <div>
-          <div className="mb-4 border-b pb-3">
-            <h3 className="text-lg font-bold">إنشاء دورة تدريبية جديدة</h3>
-            <p className="text-sm text-gray-500">أدخل تفاصيل الدورة التدريبية</p>
-          </div>
-          <div className="grid gap-4 py-4">
+      <Dialog open={showNewCourse} onOpenChange={(open) => { if (!open) setShowNewCourse(false); }}>
+        <DialogContent className="max-w-2xl" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BookOpen className="h-5 w-5 text-blue-500" />
+              إنشاء دورة تدريبية جديدة
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>اسم الدورة *</Label>
+                <Label>اسم الدورة <span className="text-red-500">*</span></Label>
                 <Input
                   value={newCourse.name}
                   onChange={(e) => setNewCourse({ ...newCourse, name: e.target.value })}
@@ -390,9 +464,7 @@ export default function TrainingAdvanced() {
               <div className="space-y-2">
                 <Label>التصنيف</Label>
                 <Select value={newCourse.category} onValueChange={(v) => setNewCourse({ ...newCourse, category: v })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="اختر التصنيف" />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="اختر التصنيف" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="إدارية">إدارية</SelectItem>
                     <SelectItem value="تقنية">تقنية</SelectItem>
@@ -408,6 +480,7 @@ export default function TrainingAdvanced() {
                 value={newCourse.description}
                 onChange={(e) => setNewCourse({ ...newCourse, description: e.target.value })}
                 placeholder="وصف الدورة التدريبية..."
+                rows={3}
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -420,30 +493,23 @@ export default function TrainingAdvanced() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>المدة</Label>
+                <Label>المدة (ساعات)</Label>
                 <Input
+                  type="number"
                   value={newCourse.duration}
                   onChange={(e) => setNewCourse({ ...newCourse, duration: e.target.value })}
-                  placeholder="مثال: 16 ساعة"
+                  placeholder="مثال: 16"
                 />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>تاريخ البدء *</Label>
-                <Input
-                  type="date"
-                  value={newCourse.startDate}
-                  onChange={(e) => setNewCourse({ ...newCourse, startDate: e.target.value })}
-                />
+                <Label>تاريخ البدء <span className="text-red-500">*</span></Label>
+                <Input type="date" value={newCourse.startDate} onChange={(e) => setNewCourse({ ...newCourse, startDate: e.target.value })} />
               </div>
               <div className="space-y-2">
                 <Label>تاريخ الانتهاء</Label>
-                <Input
-                  type="date"
-                  value={newCourse.endDate}
-                  onChange={(e) => setNewCourse({ ...newCourse, endDate: e.target.value })}
-                />
+                <Input type="date" value={newCourse.endDate} onChange={(e) => setNewCourse({ ...newCourse, endDate: e.target.value })} />
               </div>
             </div>
             <div className="space-y-2">
@@ -456,81 +522,206 @@ export default function TrainingAdvanced() {
               />
             </div>
           </div>
-          <div className="flex gap-2 mt-4 pt-3 border-t justify-end">
+          <DialogFooter className="flex-row-reverse gap-2">
             <Button variant="outline" onClick={() => setShowNewCourse(false)}>إلغاء</Button>
             <Button onClick={handleCreateCourse} disabled={createProgramMutation.isPending}>
-              {createProgramMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin ms-2" /> : null}
+              {createProgramMutation.isPending && <Loader2 className="h-4 w-4 ms-2 animate-spin" />}
               إنشاء الدورة
             </Button>
-          </div>
-        </div>
-      </div>)}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Enroll Dialog */}
-      {showEnrollDialog && (<div className="mt-4 p-6 bg-white border rounded-xl shadow-sm">
-        <div>
-          <div className="mb-4 border-b pb-3">
-            <h3 className="text-lg font-bold">تسجيل موظف في دورة</h3>
-            <p className="text-sm text-gray-500">اختر الموظف والدورة التدريبية</p>
-          </div>
-          <div className="grid gap-4 py-4">
+      <Dialog open={showEnrollDialog} onOpenChange={(open) => { if (!open) { setShowEnrollDialog(false); setEnrollFilterBranch(''); setEnrollFilterDept(''); setEnrollmentData({ employeeId: '', programId: '' }); } }}>
+        <DialogContent className="max-w-lg" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-purple-500" />
+              تسجيل موظف في دورة
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {/* Branch + Dept filters — branch hidden when in specific branch */}
+            <div className={`grid gap-4 ${selectedBranchId ? 'grid-cols-1' : 'grid-cols-2'}`}>
+              {!selectedBranchId && (
+                <div className="space-y-2">
+                  <Label>الفرع (تصفية)</Label>
+                  <Select value={enrollFilterBranch} onValueChange={(v) => { setEnrollFilterBranch(v === 'all' ? '' : v); setEnrollFilterDept(''); setEnrollmentData(d => ({ ...d, employeeId: '' })); }}>
+                    <SelectTrigger><SelectValue placeholder="جميع الفروع" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">جميع الفروع</SelectItem>
+                      {branches.map((b: any) => (
+                        <SelectItem key={b.id} value={String(b.id)}>{b.nameAr || b.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              <div className="space-y-2">
+                <Label>القسم (تصفية)</Label>
+                <Select value={enrollFilterDept} onValueChange={(v) => { setEnrollFilterDept(v === 'all' ? '' : v); setEnrollmentData(d => ({ ...d, employeeId: '' })); }}>
+                  <SelectTrigger><SelectValue placeholder="جميع الأقسام" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">جميع الأقسام</SelectItem>
+                    {departments.map((d: any) => (
+                      <SelectItem key={d.id} value={String(d.id)}>{d.nameAr || d.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
             <div className="space-y-2">
-              <Label>الموظف</Label>
-              <Select value={enrollmentData.employeeId} onValueChange={(value) => setEnrollmentData({ ...enrollmentData, employeeId: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="اختر الموظف" />
-                </SelectTrigger>
+              <Label>الموظف <span className="text-red-500">*</span></Label>
+              <Select value={enrollmentData.employeeId} onValueChange={(v) => setEnrollmentData({ ...enrollmentData, employeeId: v })}>
+                <SelectTrigger><SelectValue placeholder="اختر الموظف" /></SelectTrigger>
                 <SelectContent>
-                  {employees.map((emp: any) => (
-                    <SelectItem key={emp.id} value={String(emp.id)}>{emp.firstName} {emp.lastName}</SelectItem>
+                  {filteredEnrollEmployees.map((emp: any) => (
+                    <SelectItem key={emp.id} value={String(emp.id)}>
+                      {emp.firstName} {emp.lastName}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+
             <div className="space-y-2">
-              <Label>الدورة التدريبية</Label>
-              <Select value={enrollmentData.programId} onValueChange={(value) => setEnrollmentData({ ...enrollmentData, programId: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="اختر الدورة" />
-                </SelectTrigger>
+              <Label>الدورة التدريبية <span className="text-red-500">*</span></Label>
+              <Select value={enrollmentData.programId} onValueChange={(v) => setEnrollmentData({ ...enrollmentData, programId: v })}>
+                <SelectTrigger><SelectValue placeholder="اختر الدورة" /></SelectTrigger>
                 <SelectContent>
-                  {programs.map((prog: any) => (
+                  {(programs as any[]).map((prog: any) => (
                     <SelectItem key={prog.id} value={String(prog.id)}>{prog.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
           </div>
-          <div className="flex gap-2 mt-4 pt-3 border-t justify-end">
-            <Button variant="outline" onClick={() => setShowEnrollDialog(false)}>إلغاء</Button>
-            <Button
-              onClick={() => {
-                if (!enrollmentData.employeeId || !enrollmentData.programId) {
-                  toast.error('يرجى اختيار الموظف والدورة');
-                  return;
-                }
-                createEnrollmentMutation.mutate({
-                  employeeId: parseInt(enrollmentData.employeeId),
-                  programId: parseInt(enrollmentData.programId)
-                }, {
-                  onSuccess: () => {
-                    toast.success('تم تسجيل الموظف بنجاح');
-                    setShowEnrollDialog(false);
-                    setEnrollmentData({ employeeId: '', programId: '' });
-                  },
-                  onError: (error: any) => {
-                    toast.error(error.response?.data?.message || error.message || 'حدث خطأ أثناء التسجيل');
-                  }
-                });
-              }}
-              disabled={createEnrollmentMutation.isPending}
-            >
+          <DialogFooter className="flex-row-reverse gap-2">
+            <Button variant="outline" onClick={() => { setShowEnrollDialog(false); setEnrollFilterBranch(''); setEnrollFilterDept(''); setEnrollmentData({ employeeId: '', programId: '' }); }}>إلغاء</Button>
+            <Button onClick={handleEnroll} disabled={createEnrollmentMutation.isPending}>
               {createEnrollmentMutation.isPending && <Loader2 className="h-4 w-4 ms-2 animate-spin" />}
               تسجيل
             </Button>
-          </div>
-        </div>
-      </div>)}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Program Dialog */}
+      <Dialog open={showViewProgram} onOpenChange={(open) => { if (!open) { setShowViewProgram(false); setSelectedProgram(null); } }}>
+        <DialogContent className="max-w-lg" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BookOpen className="h-5 w-5 text-blue-500" />
+              تفاصيل الدورة
+            </DialogTitle>
+          </DialogHeader>
+          {selectedProgram && (
+            <div className="space-y-4 py-2">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-gray-500 mb-1">اسم الدورة</p>
+                  <p className="font-medium">{selectedProgram.name}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 mb-1">التصنيف</p>
+                  <p className="font-medium">{selectedProgram.category || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 mb-1">المدرب</p>
+                  <p className="font-medium">{selectedProgram.instructor || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 mb-1">المدة</p>
+                  <p className="font-medium">{selectedProgram.duration ? `${selectedProgram.duration} ${selectedProgram.durationUnit || 'ساعة'}` : '-'}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 mb-1">تاريخ البدء</p>
+                  <p className="font-medium">{selectedProgram.startDate ? formatDate(selectedProgram.startDate) : '-'}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 mb-1">تاريخ الانتهاء</p>
+                  <p className="font-medium">{selectedProgram.endDate ? formatDate(selectedProgram.endDate) : '-'}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 mb-1">الحد الأقصى</p>
+                  <p className="font-medium">{selectedProgram.maxParticipants || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 mb-1">الحالة</p>
+                  {getStatusBadge(selectedProgram.status)}
+                </div>
+              </div>
+              {selectedProgram.description && (
+                <div>
+                  <p className="text-gray-500 mb-1 text-sm">الوصف</p>
+                  <p className="text-sm bg-gray-50 p-3 rounded-lg">{selectedProgram.description}</p>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowViewProgram(false); setSelectedProgram(null); }}>إغلاق</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Program AlertDialog */}
+      <AlertDialog open={deleteProgramId !== null} onOpenChange={(open) => { if (!open) setDeleteProgramId(null); }}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>تأكيد حذف الدورة</AlertDialogTitle>
+            <AlertDialogDescription>
+              هل أنت متأكد من حذف هذه الدورة التدريبية؟ سيتم حذف جميع التسجيلات المرتبطة بها. لا يمكن التراجع عن هذا الإجراء.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row-reverse gap-2">
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => {
+                if (deleteProgramId !== null) {
+                  deleteProgramMutation.mutate(deleteProgramId, {
+                    onSuccess: () => { toast.success('تم حذف الدورة'); setDeleteProgramId(null); },
+                    onError: (err: any) => { toast.error(`فشل الحذف: ${err.message}`); setDeleteProgramId(null); },
+                  });
+                }
+              }}
+            >
+              حذف
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Enrollment AlertDialog */}
+      <AlertDialog open={deleteEnrollmentId !== null} onOpenChange={(open) => { if (!open) setDeleteEnrollmentId(null); }}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>تأكيد حذف التسجيل</AlertDialogTitle>
+            <AlertDialogDescription>
+              هل أنت متأكد من حذف هذا التسجيل؟ لا يمكن التراجع عن هذا الإجراء.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row-reverse gap-2">
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => {
+                if (deleteEnrollmentId !== null) {
+                  deleteEnrollmentMutation.mutate(deleteEnrollmentId, {
+                    onSuccess: () => { toast.success('تم حذف التسجيل'); setDeleteEnrollmentId(null); },
+                    onError: (err: any) => { toast.error(`فشل الحذف: ${err.message}`); setDeleteEnrollmentId(null); },
+                  });
+                }
+              }}
+            >
+              حذف
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

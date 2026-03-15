@@ -402,6 +402,12 @@ export const useAttendance = (date?: string, branchId?: number | null) => useQue
     queryFn: () => api.get('/hr/attendance', { params: { date, branchId } }).then(res => res.data),
 });
 
+export const useAttendanceMonthly = (year: number, month: number, branchId?: number | null) => useQuery({
+    queryKey: ['attendance', 'monthly', year, month, branchId],
+    queryFn: () => api.get('/hr/attendance/monthly', { params: { year, month, branchId } }).then(res => res.data),
+    enabled: !!year && !!month,
+});
+
 export const useAttendanceByEmployee = (employeeId: number) => useQuery({
     queryKey: ['attendance', 'employee', employeeId],
     queryFn: () => api.get(`/hr/attendance/employee/${employeeId}`).then(res => res.data),
@@ -473,6 +479,36 @@ export const useDeletePayroll = () => {
     return useMutation({
         mutationFn: (id: number) => api.delete(`/hr/payroll/${id}`),
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ['payroll'] }),
+    });
+};
+
+// Payroll Deductions
+export const usePayrollDeductions = (payrollRecordId: number | null) => useQuery({
+    queryKey: ['payroll-deductions', payrollRecordId],
+    queryFn: () => api.get(`/hr/payroll/${payrollRecordId}/deductions`).then(res => res.data),
+    enabled: !!payrollRecordId,
+});
+
+export const useAddPayrollDeduction = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ payrollRecordId, ...data }: { payrollRecordId: number } & any) =>
+            api.post(`/hr/payroll/${payrollRecordId}/deductions`, data).then(res => res.data),
+        onSuccess: (_: any, vars: any) => {
+            queryClient.invalidateQueries({ queryKey: ['payroll-deductions', vars.payrollRecordId] });
+            queryClient.invalidateQueries({ queryKey: ['payroll'] });
+        },
+    });
+};
+
+export const useDeletePayrollDeduction = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (deductionId: number) => api.delete(`/hr/payroll/deductions/${deductionId}`),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['payroll-deductions'] });
+            queryClient.invalidateQueries({ queryKey: ['payroll'] });
+        },
     });
 };
 
@@ -622,6 +658,14 @@ export const useCreatePerformanceReview = () => {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: (data: any) => api.post('/hr/performance', data).then(res => res.data),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['performance-reviews'] }),
+    });
+};
+
+export const useDeletePerformanceReview = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (id: number) => api.delete(`/hr/performance/${id}`),
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ['performance-reviews'] }),
     });
 };

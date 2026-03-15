@@ -39,6 +39,8 @@ public class SecurityConfiguration {
                                                 "/api/v1/health",
                                                 "/api/v1/setup/status",
                                                 "/api/v1/setup/progress",
+                                                "/api/v1/public/**",
+                                                "/uploads/**",
                                                 "/error")
                                                 .permitAll()
                                                 .anyRequest()

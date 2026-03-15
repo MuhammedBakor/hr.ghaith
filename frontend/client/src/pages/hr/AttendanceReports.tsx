@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/select";
 import { Calendar, Printer, FileSpreadsheet, Users, XCircle, Timer, TrendingUp, TrendingDown, BarChart3 } from 'lucide-react';
 import { useUser } from '@/services/authService';
-import { useEmployees, useAttendance } from '@/services/hrService';
+import { useEmployees, useAttendanceMonthly } from '@/services/hrService';
 import { toast } from 'sonner';
 import { useAppContext } from '@/contexts/AppContext';
 import * as XLSX from 'xlsx';
@@ -72,18 +72,14 @@ export default function AttendanceReports() {
     return Array.from(depts).map((d, i) => ({ id: i + 1, name: d }));
   }, [employeesData]);
 
-  // جلب سجلات الحضور للشهر المحدد
-  const startDate = new Date(selectedYear, selectedMonth - 1, 1);
-  const endDate = new Date(selectedYear, selectedMonth, 0);
-
-  const { data: attendanceData, isLoading } = useAttendance(undefined, selectedBranchId);
+  const { data: attendanceData, isLoading } = useAttendanceMonthly(selectedYear, selectedMonth, selectedBranchId);
 
   // حساب الإحصائيات لكل موظف
   const employeeReports = useMemo(() => {
     if (!employeesData || !attendanceData) return [];
 
     const reports: EmployeeAttendanceReport[] = [];
-    const workDaysInMonth = endDate.getDate(); // عدد أيام الشهر
+    const workDaysInMonth = new Date(selectedYear, selectedMonth, 0).getDate(); // عدد أيام الشهر
 
     for (const employee of employeesData) {
       const deptName = typeof employee.department === 'object' ? (employee.department?.nameAr || employee.department?.name) : employee.department;
@@ -94,7 +90,9 @@ export default function AttendanceReports() {
       // فلترة حسب القسم
       if (selectedDepartment !== 'all' && deptName !== selectedDepartment) continue;
 
-      const employeeAttendance = attendanceData.filter((a: any) => a.employeeId === employee.id);
+      const employeeAttendance = attendanceData.filter((a: any) =>
+        Number(a.employeeId ?? a.employee?.id) === Number(employee.id)
+      );
 
       let presentDays = 0;
       let lateDays = 0;
@@ -159,7 +157,7 @@ export default function AttendanceReports() {
     }
 
     return reports;
-  }, [employeesData, attendanceData, selectedEmployee, selectedDepartment, endDate]);
+  }, [employeesData, attendanceData, selectedEmployee, selectedDepartment, selectedMonth, selectedYear]);
 
   // الإحصائيات الإجمالية
   const totalStats = useMemo(() => {
@@ -481,7 +479,7 @@ export default function AttendanceReports() {
                   <SelectItem value="all">جميع الموظفين</SelectItem>
                   {employeesData?.filter((item: any) => !searchTerm || JSON.stringify(item).toLowerCase().includes(searchTerm.toLowerCase()))?.map((emp: any) => (
                     <SelectItem key={emp.id} value={String(emp.id)}>
-                      {emp.nameAr || emp.name}
+                      {`${emp.firstName || ''} ${emp.lastName || ''}`.trim() || emp.employeeNumber || emp.email}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -496,8 +494,8 @@ export default function AttendanceReports() {
                 <SelectContent>
                   <SelectItem value="all">جميع الأقسام</SelectItem>
                   {departmentsData?.map((dept: any) => (
-                    <SelectItem key={dept.id} value={String(dept.id)}>
-                      {dept.nameAr || dept.name}
+                    <SelectItem key={dept.name} value={dept.name}>
+                      {dept.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

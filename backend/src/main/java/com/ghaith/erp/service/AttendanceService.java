@@ -45,6 +45,15 @@ public class AttendanceService {
         return attendanceRepository.findByDateBetween(start, end);
     }
 
+    public List<AttendanceRecord> getAttendanceByMonth(int year, int month, Long branchId) {
+        LocalDateTime start = LocalDateTime.of(year, month, 1, 0, 0, 0);
+        LocalDateTime end = start.plusMonths(1).minusSeconds(1);
+        if (branchId != null) {
+            return attendanceRepository.findByEmployeeBranchIdAndDateBetween(branchId, start, end);
+        }
+        return attendanceRepository.findByDateBetween(start, end);
+    }
+
     public List<AttendanceRecord> getAttendanceByDepartment(Long departmentId) {
         return attendanceRepository.findByEmployeeDepartmentId(departmentId);
     }

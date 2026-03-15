@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ArrowRight, Edit, Printer, Download, Mail, Phone, MapPin, Building2, Briefcase, CreditCard, FileText, AlertTriangle, CheckCircle2, XCircle, User, Plus, Upload, X, Shield, UserCheck } from 'lucide-react';
+import { ArrowRight, Edit, Printer, Download, Mail, Phone, MapPin, Building2, Briefcase, CreditCard, FileText, AlertTriangle, CheckCircle2, XCircle, User, Plus, Upload, X, Shield, UserCheck, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/_core/hooks/useAuth';
 import {
@@ -31,7 +31,8 @@ import {
   useDepartments,
   usePositions,
   useBranches,
-  useEmployees
+  useEmployees,
+  useShifts
 } from '@/services/hrService';
 
 interface EmployeeDocument {
@@ -136,6 +137,7 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
 
   const { data: departmentsData } = useDepartments();
   const { data: positionsData } = usePositions();
+  const { data: shiftsData } = useShifts();
   const { data: branchesData } = useBranches();
   const { data: allEmployeesData } = useEmployees();
 
@@ -200,6 +202,7 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
           positionId: (typeof employeeData.position === 'object' ? String(employeeData.position?.id || '') : ''),
           branchId: (typeof employeeData.branch === 'object' ? String(employeeData.branch?.id || '') : ''),
           managerId: employeeData.manager ? String(employeeData.manager.id || '') : '',
+          shiftId: employeeData.shift ? String(employeeData.shift.id || '') : '',
           roles: employeeData.userRoles || (employeeData.user?.allRoles) || (employeeData.userRole ? [employeeData.userRole] : (employeeData.user?.role ? [employeeData.user.role] : [])),
           salary: employeeData.salary ? String(employeeData.salary) : '',
           housingAllowance: employeeData.housingAllowance ? String(employeeData.housingAllowance) : '',
@@ -232,6 +235,7 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
     positionId: '',
     branchId: '',
     managerId: '',
+    shiftId: '',
     roles: [] as string[],
     salary: '',
     housingAllowance: '',
@@ -292,6 +296,11 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
     }
     if (editForm.managerId) {
       updateData.manager = { id: parseInt(editForm.managerId) };
+    }
+    if (editForm.shiftId && editForm.shiftId !== 'none') {
+      updateData.shift = { id: parseInt(editForm.shiftId) };
+    } else if (editForm.shiftId === 'none') {
+      updateData.shift = null;
     }
     if (editForm.roles && editForm.roles.length > 0) {
       updateData.role = editForm.roles.join(',');
@@ -621,6 +630,30 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
                           {emp.firstName} {emp.lastName}
                         </SelectItem>
                       ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  الوردية
+                </Label>
+                <Select
+                  value={editForm.shiftId || 'none'}
+                  onValueChange={(value) => setEditForm(prev => ({ ...prev, shiftId: value === 'none' ? '' : value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر الوردية (اختياري)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">بدون وردية</SelectItem>
+                    {(shiftsData || []).filter((s: any) => s.isActive).map((s: any) => (
+                      <SelectItem key={s.id} value={String(s.id)}>
+                        {s.name}{s.startTime && s.endTime ? ` (${s.startTime} - ${s.endTime})` : ''}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

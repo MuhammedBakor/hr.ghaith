@@ -98,6 +98,14 @@ public class EmployeeController {
                 managerId = Long.parseLong((String) mgrIdObj);
             }
 
+            Long shiftId = null;
+            Object shiftIdObj = payload.get("shiftId");
+            if (shiftIdObj instanceof Number) {
+                shiftId = ((Number) shiftIdObj).longValue();
+            } else if (shiftIdObj instanceof String && !((String) shiftIdObj).isEmpty()) {
+                shiftId = Long.parseLong((String) shiftIdObj);
+            }
+
             java.math.BigDecimal salary = null;
             if (payload.get("salary") != null) {
                 salary = new java.math.BigDecimal(payload.get("salary").toString());
@@ -113,7 +121,7 @@ public class EmployeeController {
 
             return ResponseEntity
                     .ok(employeeService.createSimpleEmployee(firstName, lastName, email, phone, branchId, departmentId,
-                            positionId, role, managerId, salary, housingAllowance, transportAllowance));
+                            positionId, role, managerId, salary, housingAllowance, transportAllowance, shiftId));
         } catch (DuplicateEmailException e) {
             return ResponseEntity.status(409)
                     .body(java.util.Map.of("error", "EMAIL_EXISTS", "message", e.getMessage()));

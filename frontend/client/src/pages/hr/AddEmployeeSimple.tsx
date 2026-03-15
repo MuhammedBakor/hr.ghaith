@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowRight, Send, UserPlus, Mail, Phone, Building2, CheckCircle2, Shield, Users, Briefcase, UserCheck } from 'lucide-react';
+import { ArrowRight, Send, UserPlus, Mail, Phone, Building2, CheckCircle2, Shield, Users, Briefcase, UserCheck, Clock } from 'lucide-react';
 import {
   useBranches,
   useDepartments,
@@ -13,7 +13,8 @@ import {
   useCreateSimpleEmployee,
   useRoles,
   useCustomRoles,
-  useEmployees
+  useEmployees,
+  useShifts
 } from '@/services/hrService';
 import { toast } from 'sonner';
 import { useAppContext } from '@/contexts/AppContext';
@@ -50,6 +51,7 @@ export default function AddEmployeeSimple() {
     salary: '',
     housingAllowance: '',
     transportAllowance: '',
+    shiftId: '',
   });
 
   const updateField = (field: string, value: string) => {
@@ -64,6 +66,7 @@ export default function AddEmployeeSimple() {
   const { data: rolesData } = useRoles();
   const { data: customRolesData } = useCustomRoles();
   const { data: employeesData } = useEmployees({ branchId: selectedBranchId });
+  const { data: shiftsData } = useShifts();
   const managers = (employeesData || []).filter((e: any) =>
     e.user?.role === 'GENERAL_MANAGER' || e.user?.role === 'DEPARTEMENT_MANAGER'
   );
@@ -110,6 +113,7 @@ export default function AddEmployeeSimple() {
       salary: formData.salary ? parseFloat(formData.salary) : undefined,
       housingAllowance: formData.housingAllowance ? parseFloat(formData.housingAllowance) : undefined,
       transportAllowance: formData.transportAllowance ? parseFloat(formData.transportAllowance) : undefined,
+      shiftId: formData.shiftId && formData.shiftId !== 'none' ? parseInt(formData.shiftId) : undefined,
     }, {
       onSuccess: (data: any) => {
         setCreatedEmployee({
@@ -191,6 +195,7 @@ export default function AddEmployeeSimple() {
                   salary: '',
                   housingAllowance: '',
                   transportAllowance: '',
+                  shiftId: '',
                 });
               }}>
                 <UserPlus className="h-4 w-4 ms-2" />
@@ -403,6 +408,27 @@ export default function AddEmployeeSimple() {
                 {managers.map((m: any) => (
                   <SelectItem key={m.id} value={String(m.id)}>
                     {m.firstName} {m.lastName} — {m.user?.role === 'GENERAL_MANAGER' ? 'مدير عام' : 'مدير قسم'}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* الوردية */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-gray-500" />
+              الوردية
+            </Label>
+            <Select value={formData.shiftId} onValueChange={(v) => updateField('shiftId', v)}>
+              <SelectTrigger>
+                <SelectValue placeholder="اختر الوردية (اختياري)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">بدون وردية</SelectItem>
+                {(shiftsData || []).filter((s: any) => s.isActive).map((s: any) => (
+                  <SelectItem key={s.id} value={String(s.id)}>
+                    {s.name}{s.startTime && s.endTime ? ` (${s.startTime} - ${s.endTime})` : ''}
                   </SelectItem>
                 ))}
               </SelectContent>

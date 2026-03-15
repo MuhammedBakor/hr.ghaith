@@ -30,13 +30,14 @@ import {
   Plus,
   ArrowRight,
   Trash2,
+  MinusCircle,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { useAppContext } from '@/contexts/AppContext';
-import { useEmployees, usePayroll, useCreatePayroll, useDeletePayroll, useBranches, useDepartments } from '@/services/hrService';
+import { useEmployees, usePayroll, useCreatePayroll, useDeletePayroll, useBranches, useDepartments, usePayrollDeductions, useAddPayrollDeduction, useDeletePayrollDeduction } from '@/services/hrService';
 import { useQueryClient } from '@tanstack/react-query';
 
 
@@ -100,6 +101,8 @@ export default function Payroll() {
 
   const [detailsRecord, setDetailsRecord] = useState<PayrollRecord | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [showAddDeduction, setShowAddDeduction] = useState(false);
+  const [deductionForm, setDeductionForm] = useState({ reason: '', amount: '', type: 'absence' });
   const [showCalculateDialog, setShowCalculateDialog] = useState(false);
   const [calcMonth, setCalcMonth] = useState(() => String(new Date().getMonth() + 1).padStart(2, '0'));
   const [calcYear, setCalcYear] = useState(() => new Date().getFullYear());
@@ -127,6 +130,9 @@ export default function Payroll() {
 
   const createPayrollMutation = useCreatePayroll();
   const deletePayrollMutation = useDeletePayroll();
+  const { data: deductionsData, refetch: refetchDeductions } = usePayrollDeductions(detailsRecord?.id ?? null);
+  const addDeductionMutation = useAddPayrollDeduction();
+  const deleteDeductionMutation = useDeletePayrollDeduction();
 
   const handleEmployeeChange = (empId: string) => {
     setSelectedEmployee(empId);
@@ -551,8 +557,8 @@ export default function Payroll() {
       </Card>
 
       {/* Details Dialog */}
-      <Dialog open={!!detailsRecord} onOpenChange={(open) => { if (!open) setDetailsRecord(null); }}>
-        <DialogContent className="max-w-lg" dir="rtl">
+      <Dialog open={!!detailsRecord} onOpenChange={(open) => { if (!open) { setDetailsRecord(null); setShowAddDeduction(false); setDeductionForm({ reason: '', amount: '', type: 'absence' }); } }}>
+        <DialogContent className="max-w-xl" dir="rtl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
@@ -560,7 +566,7 @@ export default function Payroll() {
             </DialogTitle>
           </DialogHeader>
           {detailsRecord && (
-            <div className="space-y-4">
+            <div className="space-y-4 max-h-[70vh] overflow-y-auto">
               <div className="bg-gray-50 rounded-lg p-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">الموظف</span>
@@ -611,6 +617,129 @@ export default function Payroll() {
                     <span>صافي الراتب</span>
                     <span className="text-primary">{formatCurrency(detailsRecord.netSalary || 0)}</span>
                   </div>
+                </div>
+              </div>
+
+              {/* Deduction Breakdown */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-semibold text-sm text-gray-700 flex items-center gap-2">
+                    <MinusCircle className="h-4 w-4 text-red-500" />
+                    تفصيل الخصومات
+                  </h4>
+                  <Button size="sm" variant="outline" onClick={() => setShowAddDeduction(!showAddDeduction)}>
+                    <Plus className="h-3 w-3 ms-1" />
+                    إضافة خصم
+                  </Button>
+                </div>
+
+                {showAddDeduction && (
+                  <div className="border rounded-lg p-3 bg-red-50 space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-xs">السبب</Label>
+                        <Input
+                          placeholder="غياب بدون عذر"
+                          value={deductionForm.reason}
+                          onChange={(e) => setDeductionForm(prev => ({ ...prev, reason: e.target.value }))}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">المبلغ (ريال)</Label>
+                        <Input
+                          type="number"
+                          placeholder="0.00"
+                          value={deductionForm.amount}
+                          onChange={(e) => setDeductionForm(prev => ({ ...prev, amount: e.target.value }))}
+                          className="h-8 text-sm"
+                          dir="ltr"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">النوع</Label>
+                      <Select value={deductionForm.type} onValueChange={(v) => setDeductionForm(prev => ({ ...prev, type: v }))}>
+                        <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="absence">غياب</SelectItem>
+                          <SelectItem value="late">تأخر</SelectItem>
+                          <SelectItem value="other">أخرى</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex gap-2 justify-end">
+                      <Button size="sm" variant="ghost" onClick={() => setShowAddDeduction(false)}>إلغاء</Button>
+                      <Button
+                        size="sm"
+                        disabled={!deductionForm.reason || !deductionForm.amount || addDeductionMutation.isPending}
+                        onClick={() => {
+                          addDeductionMutation.mutate({
+                            payrollRecordId: detailsRecord.id,
+                            reason: deductionForm.reason,
+                            amount: parseFloat(deductionForm.amount),
+                            type: deductionForm.type,
+                          }, {
+                            onSuccess: () => {
+                              toast.success('تم إضافة الخصم بنجاح');
+                              setDeductionForm({ reason: '', amount: '', type: 'absence' });
+                              setShowAddDeduction(false);
+                              refetchDeductions();
+                              // Update local record
+                              setDetailsRecord(prev => prev ? {
+                                ...prev,
+                                deductions: (prev.deductions || 0) + parseFloat(deductionForm.amount),
+                                netSalary: (prev.netSalary || 0) - parseFloat(deductionForm.amount),
+                              } : null);
+                            },
+                            onError: () => toast.error('فشل إضافة الخصم'),
+                          });
+                        }}
+                      >
+                        حفظ الخصم
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="border rounded-lg divide-y max-h-40 overflow-y-auto">
+                  {!deductionsData || (deductionsData as any[]).length === 0 ? (
+                    <p className="text-xs text-gray-400 text-center py-3">لا توجد خصومات مفصّلة</p>
+                  ) : (
+                    (deductionsData as any[]).map((d: any) => (
+                      <div key={d.id} className="flex items-center justify-between px-3 py-2 text-sm">
+                        <div>
+                          <span className="text-gray-700">{d.reason}</span>
+                          <span className="text-xs text-gray-400 ms-2">({d.type === 'absence' ? 'غياب' : d.type === 'late' ? 'تأخر' : 'أخرى'})</span>
+                          {d.deductionDate && <span className="text-xs text-gray-400 ms-2">{d.deductionDate}</span>}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-red-600 font-medium">{formatCurrency(d.amount)}</span>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6"
+                            onClick={() => {
+                              deleteDeductionMutation.mutate(d.id, {
+                                onSuccess: () => {
+                                  toast.success('تم حذف الخصم');
+                                  refetchDeductions();
+                                  setDetailsRecord(prev => prev ? {
+                                    ...prev,
+                                    deductions: Math.max(0, (prev.deductions || 0) - d.amount),
+                                    netSalary: (prev.netSalary || 0) + d.amount,
+                                  } : null);
+                                },
+                                onError: () => toast.error('فشل حذف الخصم'),
+                              });
+                            }}
+                          >
+                            <Trash2 className="h-3 w-3 text-red-400" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             </div>

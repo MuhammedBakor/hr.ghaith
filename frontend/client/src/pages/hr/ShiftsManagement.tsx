@@ -1,6 +1,6 @@
 import { useAppContext } from '@/contexts/AppContext';
 import { generateNextCode } from '@/lib/generateCode';
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import {
   useShifts,
   useCreateShift,
@@ -13,7 +13,7 @@ import {
   useSeedShifts,
   useSeedPolicies
 } from "@/services/hrService";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,10 +23,10 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Clock, Edit2, Trash2, Settings, AlertCircle, CheckCircle2, Sun, Moon, Sunrise, RefreshCw, Users, Timer, Shield } from "lucide-react";
+import { Clock, Edit2, Trash2, Settings, CheckCircle2, XCircle, Sun, Moon, Sunrise, RefreshCw, Users, Timer, Shield } from "lucide-react";
 
-// أنواع الورديات
 const shiftTypes = [
   { value: 'regular', label: 'وردية عادية', icon: Sun, color: 'text-amber-500' },
   { value: 'flexible', label: 'وردية مرنة', icon: RefreshCw, color: 'text-blue-500' },
@@ -35,7 +35,6 @@ const shiftTypes = [
   { value: 'rotating', label: 'وردية متناوبة', icon: RefreshCw, color: 'text-green-500' },
 ];
 
-// أيام الأسبوع
 const weekDays = [
   { value: 'sunday', label: 'الأحد' },
   { value: 'monday', label: 'الإثنين' },
@@ -46,11 +45,62 @@ const weekDays = [
   { value: 'saturday', label: 'السبت' },
 ];
 
+const defaultShiftForm = {
+  code: '',
+  name: '',
+  nameEn: '',
+  description: '',
+  shiftType: 'regular' as 'regular' | 'flexible' | 'night' | 'split' | 'rotating',
+  startTime: '08:00',
+  endTime: '16:00',
+  flexibleStartMin: '07:30',
+  flexibleStartMax: '09:00',
+  flexibleEndMin: '15:30',
+  flexibleEndMax: '17:00',
+  graceMinutesBefore: 30,
+  graceMinutesAfter: 30,
+  earlyLeaveGrace: 15,
+  requiredWorkHours: '8.00',
+  minWorkHours: '6.00',
+  breakDurationMinutes: 60,
+  breakStartTime: '12:00',
+  breakEndTime: '13:00',
+  isBreakPaid: false,
+  workDays: ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday'],
+  allowOvertime: true,
+  maxOvertimeHours: '4.00',
+  overtimeMultiplier: '1.50',
+  isActive: true,
+  isDefault: false,
+  policyId: '' as string | number,
+};
+
+const defaultPolicyForm = {
+  code: '',
+  name: '',
+  description: '',
+  lateThresholdMinutes: 15,
+  severeLateThresholdMinutes: 60,
+  maxLateMinutesPerMonth: 60,
+  earlyLeaveThresholdMinutes: 15,
+  severeEarlyLeaveMinutes: 60,
+  absenceAfterLateMinutes: 240,
+  consecutiveAbsenceDays: 3,
+  enableAutoDeduction: true,
+  lateDeductionPerMinute: '0.00',
+  lateDeductionFixed: '50.00',
+  absenceDeductionDays: '1.00',
+  absenceDeductionAmount: '0.00',
+  enableAutoViolation: true,
+  requireCheckInLocation: false,
+  allowedLocationRadius: 100,
+  isActive: true,
+  isDefault: false,
+};
+
 export default function ShiftsManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const { selectedRole: userRole } = useAppContext();
-  const canEdit = userRole === "admin" || userRole === "manager";
-  const canDelete = userRole === "admin";
 
   const [activeTab, setActiveTab] = useState("shifts");
   const [isShiftDialogOpen, setIsShiftDialogOpen] = useState(false);
@@ -58,33 +108,20 @@ export default function ShiftsManagement() {
   const [editingShift, setEditingShift] = useState<any>(null);
   const [editingPolicy, setEditingPolicy] = useState<any>(null);
 
-  // جلب الورديات
   const { data: shifts, isLoading: shiftsLoading, refetch: refetchShifts, isError } = useShifts();
-
-  // جلب السياسات
   const { data: policies, isLoading: policiesLoading, refetch: refetchPolicies } = useAttendancePolicies();
 
-  // إنشاء وردية
   const createShiftMutation = useCreateShift();
-
-  // تحديث وردية
   const updateShiftMutation = useUpdateShift();
-
-  // حذف وردية
   const deleteShiftMutation = useDeleteShift();
-
-  // إنشاء سياسة
   const createPolicyMutation = useCreatePolicy();
-
-  // تحديث سياسة
   const updatePolicyMutation = useUpdatePolicy();
-
-  // حذف سياسة
   const deletePolicyMutation = useDeletePolicy();
-
-  // تهيئة البيانات الافتراضية
   const seedShiftsMutation = useSeedShifts();
   const seedPoliciesMutation = useSeedPolicies();
+
+  const [shiftForm, setShiftForm] = useState(defaultShiftForm);
+  const [policyForm, setPolicyForm] = useState(defaultPolicyForm);
 
   const handleSeedDefaults = async () => {
     try {
@@ -98,66 +135,29 @@ export default function ShiftsManagement() {
     }
   };
 
-  // نموذج الوردية
-  const [shiftForm, setShiftForm] = useState({
-    code: '',
-    name: '',
-    nameEn: '',
-    description: '',
-    shiftType: 'regular' as 'regular' | 'flexible' | 'night' | 'split' | 'rotating',
-    startTime: '08:00',
-    endTime: '16:00',
-    flexibleStartMin: '07:30',
-    flexibleStartMax: '09:00',
-    flexibleEndMin: '15:30',
-    flexibleEndMax: '17:00',
-    graceMinutesBefore: 30,
-    graceMinutesAfter: 30,
-    earlyLeaveGrace: 15,
-    requiredWorkHours: '8.00',
-    minWorkHours: '6.00',
-    breakDurationMinutes: 60,
-    breakStartTime: '12:00',
-    breakEndTime: '13:00',
-    isBreakPaid: false,
-    workDays: ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday'],
-    allowOvertime: true,
-    maxOvertimeHours: '4.00',
-    overtimeMultiplier: '1.50',
-    isActive: true,
-    isDefault: false,
-  });
+  const openNewShift = () => {
+    setEditingShift(null);
+    setShiftForm({ ...defaultShiftForm, code: generateNextCode('SHIFT', shifts || []) });
+    setIsShiftDialogOpen(true);
+  };
 
-  // نموذج السياسة
-  const [policyForm, setPolicyForm] = useState({
-    code: '',
-    name: '',
-    description: '',
-    lateThresholdMinutes: 15,
-    severeLateThresholdMinutes: 60,
-    maxLateMinutesPerMonth: 60,
-    earlyLeaveThresholdMinutes: 15,
-    severeEarlyLeaveMinutes: 60,
-    absenceAfterLateMinutes: 240,
-    consecutiveAbsenceDays: 3,
-    enableAutoDeduction: true,
-    lateDeductionPerMinute: '0.00',
-    lateDeductionFixed: '50.00',
-    absenceDeductionDays: '1.00',
-    enableAutoViolation: true,
-    requireCheckInLocation: false,
-    allowedLocationRadius: 100,
-    isActive: true,
-    isDefault: false,
-  });
+  const openNewPolicy = () => {
+    setEditingPolicy(null);
+    setPolicyForm({ ...defaultPolicyForm, code: generateNextCode('APOL', policies || []) });
+    setIsPolicyDialogOpen(true);
+  };
 
   const handleShiftSubmit = async () => {
     try {
+      const payload = {
+        ...shiftForm,
+        policyId: shiftForm.policyId !== '' ? shiftForm.policyId : null,
+      };
       if (editingShift) {
-        await updateShiftMutation.mutateAsync({ id: editingShift.id, ...shiftForm });
+        await updateShiftMutation.mutateAsync({ id: editingShift.id, ...payload });
         toast.success("تم تحديث الوردية بنجاح");
       } else {
-        await createShiftMutation.mutateAsync(shiftForm);
+        await createShiftMutation.mutateAsync(payload);
         toast.success("تم إنشاء الوردية بنجاح");
       }
       setIsShiftDialogOpen(false);
@@ -214,6 +214,7 @@ export default function ShiftsManagement() {
       overtimeMultiplier: shift.overtimeMultiplier || '1.50',
       isActive: shift.isActive ?? true,
       isDefault: shift.isDefault || false,
+      policyId: shift.policy?.id || '',
     });
     setIsShiftDialogOpen(true);
   };
@@ -235,6 +236,7 @@ export default function ShiftsManagement() {
       lateDeductionPerMinute: policy.lateDeductionPerMinute || '0.00',
       lateDeductionFixed: policy.lateDeductionFixed || '50.00',
       absenceDeductionDays: policy.absenceDeductionDays || '1.00',
+      absenceDeductionAmount: policy.absenceDeductionAmount || '0.00',
       enableAutoViolation: policy.enableAutoViolation ?? true,
       requireCheckInLocation: policy.requireCheckInLocation || false,
       allowedLocationRadius: policy.allowedLocationRadius || 100,
@@ -244,12 +246,9 @@ export default function ShiftsManagement() {
     setIsPolicyDialogOpen(true);
   };
 
-  const getShiftTypeInfo = (type: string) => {
-    return shiftTypes.find(t => t.value === type) || shiftTypes[0];
-  };
+  const getShiftTypeInfo = (type: string) => shiftTypes.find(t => t.value === type) || shiftTypes[0];
 
   if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>;
-
 
   return (
     <div className="space-y-6">
@@ -260,29 +259,19 @@ export default function ShiftsManagement() {
           <p className="text-muted-foreground">تحكم في أوقات العمل وسياسات الحضور والانصراف</p>
         </div>
         <div className="flex gap-2">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="بحث..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full md:w-64 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-          <Button
-            variant="outline"
-            onClick={handleSeedDefaults}
-            disabled={seedShiftsMutation.isPending || seedPoliciesMutation.isPending}
-          >
+          <input
+            type="text"
+            placeholder="بحث..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-40 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+          <Button variant="outline" onClick={handleSeedDefaults} disabled={seedShiftsMutation.isPending || seedPoliciesMutation.isPending}>
             <Settings className="h-4 w-4 ms-2" />
-            تهيئة البيانات الافتراضية
+            تهيئة البيانات
           </Button>
-          <Button onClick={() => { setEditingShift(null); if (!isShiftDialogOpen) setShiftForm(f => ({ ...f, code: generateNextCode('SHIFT', shifts || []) })); setIsShiftDialogOpen(!isShiftDialogOpen); }}>
-            {isShiftDialogOpen ? 'إغلاق النموذج' : 'إضافة وردية'}
-          </Button>
-          <Button variant="secondary" onClick={() => { setEditingPolicy(null); if (!isPolicyDialogOpen) setPolicyForm(f => ({ ...f, code: generateNextCode('APOL', policies || []) })); setIsPolicyDialogOpen(!isPolicyDialogOpen); }}>
-            {isPolicyDialogOpen ? 'إغلاق النموذج' : 'إضافة سياسة'}
-          </Button>
+          <Button onClick={openNewShift}>إضافة وردية</Button>
+          <Button variant="secondary" onClick={openNewPolicy}>إضافة سياسة</Button>
         </div>
       </div>
 
@@ -291,9 +280,7 @@ export default function ShiftsManagement() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Clock className="h-5 w-5 text-blue-600" />
-              </div>
+              <div className="p-2 bg-blue-100 rounded-lg"><Clock className="h-5 w-5 text-blue-600" /></div>
               <div>
                 <p className="text-sm text-muted-foreground">الورديات النشطة</p>
                 <p className="text-2xl font-bold">{shifts?.filter((s: any) => s.isActive).length || 0}</p>
@@ -304,9 +291,7 @@ export default function ShiftsManagement() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Shield className="h-5 w-5 text-green-600" />
-              </div>
+              <div className="p-2 bg-green-100 rounded-lg"><Shield className="h-5 w-5 text-green-600" /></div>
               <div>
                 <p className="text-sm text-muted-foreground">السياسات النشطة</p>
                 <p className="text-2xl font-bold">{policies?.filter((p: any) => p.isActive).length || 0}</p>
@@ -317,14 +302,10 @@ export default function ShiftsManagement() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-amber-100 rounded-lg">
-                <Users className="h-5 w-5 text-amber-600" />
-              </div>
+              <div className="p-2 bg-amber-100 rounded-lg"><Users className="h-5 w-5 text-amber-600" /></div>
               <div>
                 <p className="text-sm text-muted-foreground">الوردية الافتراضية</p>
-                <p className="text-lg font-medium truncate">
-                  {shifts?.find((s: any) => s.isDefault)?.name || 'غير محددة'}
-                </p>
+                <p className="text-lg font-medium truncate">{shifts?.find((s: any) => s.isDefault)?.name || 'غير محددة'}</p>
               </div>
             </div>
           </CardContent>
@@ -332,369 +313,242 @@ export default function ShiftsManagement() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <Timer className="h-5 w-5 text-purple-600" />
-              </div>
+              <div className="p-2 bg-purple-100 rounded-lg"><Timer className="h-5 w-5 text-purple-600" /></div>
               <div>
                 <p className="text-sm text-muted-foreground">السياسة الافتراضية</p>
-                <p className="text-lg font-medium truncate">
-                  {policies?.find((p: any) => p.isDefault)?.name || 'غير محددة'}
-                </p>
+                <p className="text-lg font-medium truncate">{policies?.find((p: any) => p.isDefault)?.name || 'غير محددة'}</p>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Forms Section */}
-      <div className="grid grid-cols-1 gap-6">
-        {isShiftDialogOpen && (
-          <Card className="shadow-lg border-primary/20 animate-in fade-in slide-in-from-top-4">
-            <CardHeader>
-              <CardTitle>{editingShift ? 'تعديل الوردية' : 'إضافة وردية جديدة'}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 py-4">
-                {/* Basic Info */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>الكود</Label>
-                    <Input
-                      value={shiftForm.code}
-                      readOnly={!editingShift}
-                      className={!editingShift ? "bg-muted font-mono" : "font-mono"}
-                      onChange={(e) => editingShift && setShiftForm({ ...shiftForm, code: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>نوع الوردية</Label>
-                    <Select
-                      value={shiftForm.shiftType}
-                      onValueChange={(value: any) => setShiftForm({ ...shiftForm, shiftType: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {shiftTypes.map((type) => (
-                          <SelectItem key={type.value} value={type.value}>
-                            <div className="flex items-center gap-2">
-                              <type.icon className={`h-4 w-4 ${type.color}`} />
-                              {type.label}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>اسم الوردية (عربي)</Label>
-                    <Input
-                      value={shiftForm.name}
-                      onChange={(e) => setShiftForm({ ...shiftForm, name: e.target.value })}
-                      placeholder="الوردية الصباحية"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>اسم الوردية (إنجليزي)</Label>
-                    <Input
-                      value={shiftForm.nameEn}
-                      onChange={(e) => setShiftForm({ ...shiftForm, nameEn: e.target.value })}
-                      placeholder="أدخل..."
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>الوصف</Label>
-                  <Textarea
-                    value={shiftForm.description}
-                    onChange={(e) => setShiftForm({ ...shiftForm, description: e.target.value })}
-                    placeholder="وصف الوردية..."
-                  />
-                </div>
-
-                {/* Time Settings */}
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">أوقات العمل</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>وقت البداية</Label>
-                        <Input
-                          type="time"
-                          value={shiftForm.startTime}
-                          onChange={(e) => setShiftForm({ ...shiftForm, startTime: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>وقت النهاية</Label>
-                        <Input
-                          type="time"
-                          value={shiftForm.endTime}
-                          onChange={(e) => setShiftForm({ ...shiftForm, endTime: e.target.value })}
-                        />
-                      </div>
-                    </div>
-
-                    {shiftForm.shiftType === 'flexible' && (
-                      <>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label>أقل وقت حضور مرن</Label>
-                            <Input
-                              type="time"
-                              value={shiftForm.flexibleStartMin}
-                              onChange={(e) => setShiftForm({ ...shiftForm, flexibleStartMin: e.target.value })}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>أقصى وقت حضور مرن</Label>
-                            <Input
-                              type="time"
-                              value={shiftForm.flexibleStartMax}
-                              onChange={(e) => setShiftForm({ ...shiftForm, flexibleStartMax: e.target.value })}
-                            />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label>أقل وقت انصراف مرن</Label>
-                            <Input
-                              type="time"
-                              value={shiftForm.flexibleEndMin}
-                              onChange={(e) => setShiftForm({ ...shiftForm, flexibleEndMin: e.target.value })}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>أقصى وقت انصراف مرن</Label>
-                            <Input
-                              type="time"
-                              value={shiftForm.flexibleEndMax}
-                              onChange={(e) => setShiftForm({ ...shiftForm, flexibleEndMax: e.target.value })}
-                            />
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Grace Periods */}
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">فترات السماح</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label>سماح قبل (دقيقة)</Label>
-                        <Input
-                          type="number"
-                          value={shiftForm.graceMinutesBefore}
-                          onChange={(e) => setShiftForm({ ...shiftForm, graceMinutesBefore: parseInt(e.target.value) || 0 })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>سماح بعد (دقيقة)</Label>
-                        <Input
-                          type="number"
-                          value={shiftForm.graceMinutesAfter}
-                          onChange={(e) => setShiftForm({ ...shiftForm, graceMinutesAfter: parseInt(e.target.value) || 0 })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>سماح انصراف مبكر</Label>
-                        <Input
-                          type="number"
-                          value={shiftForm.earlyLeaveGrace}
-                          onChange={(e) => setShiftForm({ ...shiftForm, earlyLeaveGrace: parseInt(e.target.value) || 0 })}
-                        />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Work Hours and Days */}
-                <div className="grid grid-cols-2 gap-4">
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-base">ساعات العمل</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-2">
-                        <Label>ساعات العمل المطلوبة</Label>
-                        <Input
-                          value={shiftForm.requiredWorkHours}
-                          onChange={(e) => setShiftForm({ ...shiftForm, requiredWorkHours: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>الحد الأقصى للإضافي</Label>
-                        <Input
-                          value={shiftForm.maxOvertimeHours}
-                          onChange={(e) => setShiftForm({ ...shiftForm, maxOvertimeHours: e.target.value })}
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-base">أيام العمل</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex flex-wrap gap-2">
-                        {weekDays.map((day) => (
-                          <Badge
-                            key={day.value}
-                            variant={shiftForm.workDays.includes(day.value) ? "default" : "outline"}
-                            className="cursor-pointer"
-                            onClick={() => {
-                              if (shiftForm.workDays.includes(day.value)) {
-                                setShiftForm({
-                                  ...shiftForm,
-                                  workDays: shiftForm.workDays.filter(d => d !== day.value)
-                                });
-                              } else {
-                                setShiftForm({
-                                  ...shiftForm,
-                                  workDays: [...shiftForm.workDays, day.value]
-                                });
-                              }
-                            }}
-                          >
-                            {day.label}
-                          </Badge>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* Status */}
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={shiftForm.isActive}
-                      onCheckedChange={(checked) => setShiftForm({ ...shiftForm, isActive: checked })}
-                    />
-                    <Label>نشط</Label>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={shiftForm.isDefault}
-                      onCheckedChange={(checked) => setShiftForm({ ...shiftForm, isDefault: checked })}
-                    />
-                    <Label>الوردية الافتراضية</Label>
-                  </div>
-                </div>
+      {/* Shift Dialog */}
+      <Dialog open={isShiftDialogOpen} onOpenChange={setIsShiftDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingShift ? 'تعديل الوردية' : 'إضافة وردية جديدة'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>الكود</Label>
+                <Input value={shiftForm.code} readOnly={!editingShift} className={!editingShift ? "bg-muted font-mono" : "font-mono"} onChange={(e) => editingShift && setShiftForm({ ...shiftForm, code: e.target.value })} />
               </div>
-              <div className="flex gap-2 pt-4 border-t justify-end">
-                <Button variant="outline" onClick={() => setIsShiftDialogOpen(false)}>إلغاء</Button>
-                <Button onClick={handleShiftSubmit} disabled={createShiftMutation.isPending || updateShiftMutation.isPending}>
-                  {editingShift ? 'تحديث الوردية' : 'إنشاء الوردية'}
-                </Button>
+              <div className="space-y-2">
+                <Label>نوع الوردية</Label>
+                <Select value={shiftForm.shiftType} onValueChange={(v: any) => setShiftForm({ ...shiftForm, shiftType: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {shiftTypes.map((type) => (
+                      <SelectItem key={type.value} value={type.value}>
+                        <div className="flex items-center gap-2">
+                          <type.icon className={`h-4 w-4 ${type.color}`} />
+                          {type.label}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            </CardContent>
-          </Card>
-        )}
+            </div>
 
-        {isPolicyDialogOpen && (
-          <Card className="shadow-lg border-secondary/20 animate-in fade-in slide-in-from-top-4">
-            <CardHeader>
-              <CardTitle>{editingPolicy ? 'تعديل السياسة' : 'إضافة سياسة جديدة'}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>اسم الوردية (عربي)</Label>
+                <Input value={shiftForm.name} onChange={(e) => setShiftForm({ ...shiftForm, name: e.target.value })} placeholder="الوردية الصباحية" />
+              </div>
+              <div className="space-y-2">
+                <Label>اسم الوردية (إنجليزي)</Label>
+                <Input value={shiftForm.nameEn} onChange={(e) => setShiftForm({ ...shiftForm, nameEn: e.target.value })} placeholder="Morning Shift" />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>سياسة الحضور</Label>
+              <Select
+                value={shiftForm.policyId !== '' ? String(shiftForm.policyId) : 'none'}
+                onValueChange={(v) => setShiftForm({ ...shiftForm, policyId: v === 'none' ? '' : v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="اختر سياسة الحضور (اختياري)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">بدون سياسة</SelectItem>
+                  {policies?.map((p: any) => (
+                    <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>الوصف</Label>
+              <Textarea value={shiftForm.description} onChange={(e) => setShiftForm({ ...shiftForm, description: e.target.value })} placeholder="وصف الوردية..." />
+            </div>
+
+            <Card>
+              <CardHeader className="pb-3"><CardTitle className="text-base">أوقات العمل</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>الكود</Label>
-                    <Input
-                      value={policyForm.code}
-                      readOnly={!editingPolicy}
-                      className={!editingPolicy ? "bg-muted font-mono" : "font-mono"}
-                      onChange={(e) => editingPolicy && setPolicyForm({ ...policyForm, code: e.target.value })}
-                    />
+                    <Label>وقت البداية</Label>
+                    <Input type="time" value={shiftForm.startTime} onChange={(e) => setShiftForm({ ...shiftForm, startTime: e.target.value })} />
                   </div>
                   <div className="space-y-2">
-                    <Label>اسم السياسة</Label>
-                    <Input
-                      value={policyForm.name}
-                      onChange={(e) => setPolicyForm({ ...policyForm, name: e.target.value })}
-                      placeholder="السياسة الافتراضية"
-                    />
+                    <Label>وقت النهاية</Label>
+                    <Input type="time" value={shiftForm.endTime} onChange={(e) => setShiftForm({ ...shiftForm, endTime: e.target.value })} />
                   </div>
                 </div>
+                {shiftForm.shiftType === 'flexible' && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>أقل وقت حضور مرن</Label>
+                      <Input type="time" value={shiftForm.flexibleStartMin} onChange={(e) => setShiftForm({ ...shiftForm, flexibleStartMin: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>أقصى وقت حضور مرن</Label>
+                      <Input type="time" value={shiftForm.flexibleStartMax} onChange={(e) => setShiftForm({ ...shiftForm, flexibleStartMax: e.target.value })} />
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-                <div className="space-y-2">
-                  <Label>الوصف</Label>
-                  <Textarea
-                    value={policyForm.description}
-                    onChange={(e) => setPolicyForm({ ...policyForm, description: e.target.value })}
-                    placeholder="وصف السياسة..."
-                  />
-                </div>
-
+            <Card>
+              <CardHeader className="pb-3"><CardTitle className="text-base">فترات السماح</CardTitle></CardHeader>
+              <CardContent>
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <Label>حد التأخير (دقيقة)</Label>
-                    <Input
-                      type="number"
-                      value={policyForm.lateThresholdMinutes}
-                      onChange={(e) => setPolicyForm({ ...policyForm, lateThresholdMinutes: parseInt(e.target.value) || 0 })}
-                    />
+                    <Label>سماح قبل (دقيقة)</Label>
+                    <Input type="number" value={shiftForm.graceMinutesBefore} onChange={(e) => setShiftForm({ ...shiftForm, graceMinutesBefore: parseInt(e.target.value) || 0 })} />
                   </div>
                   <div className="space-y-2">
-                    <Label>حد الغياب (دقيقة)</Label>
-                    <Input
-                      type="number"
-                      value={policyForm.absenceAfterLateMinutes}
-                      onChange={(e) => setPolicyForm({ ...policyForm, absenceAfterLateMinutes: parseInt(e.target.value) || 0 })}
-                    />
+                    <Label>سماح بعد (دقيقة)</Label>
+                    <Input type="number" value={shiftForm.graceMinutesAfter} onChange={(e) => setShiftForm({ ...shiftForm, graceMinutesAfter: parseInt(e.target.value) || 0 })} />
                   </div>
-                  <div className="space-y-2 flex flex-col justify-end">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Switch
-                        checked={policyForm.enableAutoDeduction}
-                        onCheckedChange={(checked) => setPolicyForm({ ...policyForm, enableAutoDeduction: checked })}
-                      />
-                      <Label>تفعيل الخصم التلقائي</Label>
-                    </div>
+                  <div className="space-y-2">
+                    <Label>سماح انصراف مبكر</Label>
+                    <Input type="number" value={shiftForm.earlyLeaveGrace} onChange={(e) => setShiftForm({ ...shiftForm, earlyLeaveGrace: parseInt(e.target.value) || 0 })} />
                   </div>
                 </div>
+              </CardContent>
+            </Card>
 
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={policyForm.isActive}
-                      onCheckedChange={(checked) => setPolicyForm({ ...policyForm, isActive: checked })}
-                    />
-                    <Label>نشط</Label>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={policyForm.isDefault}
-                      onCheckedChange={(checked) => setPolicyForm({ ...policyForm, isDefault: checked })}
-                    />
-                    <Label>السياسة الافتراضية</Label>
-                  </div>
+            <Card>
+              <CardHeader className="pb-3"><CardTitle className="text-base">أيام العمل</CardTitle></CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {weekDays.map((day) => (
+                    <Badge
+                      key={day.value}
+                      variant={shiftForm.workDays.includes(day.value) ? "default" : "outline"}
+                      className="cursor-pointer"
+                      onClick={() => {
+                        if (shiftForm.workDays.includes(day.value)) {
+                          setShiftForm({ ...shiftForm, workDays: shiftForm.workDays.filter(d => d !== day.value) });
+                        } else {
+                          setShiftForm({ ...shiftForm, workDays: [...shiftForm.workDays, day.value] });
+                        }
+                      }}
+                    >
+                      {day.label}
+                    </Badge>
+                  ))}
                 </div>
+              </CardContent>
+            </Card>
+
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                <Switch checked={shiftForm.isActive} onCheckedChange={(checked) => setShiftForm({ ...shiftForm, isActive: checked })} />
+                <Label>نشط</Label>
               </div>
-              <div className="flex gap-2 pt-4 border-t justify-end">
-                <Button variant="outline" onClick={() => setIsPolicyDialogOpen(false)}>إلغاء</Button>
-                <Button onClick={handlePolicySubmit} disabled={createPolicyMutation.isPending || updatePolicyMutation.isPending}>
-                  {editingPolicy ? 'تحديث السياسة' : 'إنشاء السياسة'}
-                </Button>
+              <div className="flex items-center gap-2">
+                <Switch checked={shiftForm.isDefault} onCheckedChange={(checked) => setShiftForm({ ...shiftForm, isDefault: checked })} />
+                <Label>الوردية الافتراضية</Label>
               </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+            </div>
+
+            <div className="flex gap-2 pt-4 border-t justify-end">
+              <Button variant="outline" onClick={() => setIsShiftDialogOpen(false)}>إلغاء</Button>
+              <Button onClick={handleShiftSubmit} disabled={createShiftMutation.isPending || updateShiftMutation.isPending}>
+                {editingShift ? 'تحديث الوردية' : 'إنشاء الوردية'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Policy Dialog */}
+      <Dialog open={isPolicyDialogOpen} onOpenChange={setIsPolicyDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingPolicy ? 'تعديل السياسة' : 'إضافة سياسة جديدة'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>الكود</Label>
+                <Input value={policyForm.code} readOnly={!editingPolicy} className={!editingPolicy ? "bg-muted font-mono" : "font-mono"} onChange={(e) => editingPolicy && setPolicyForm({ ...policyForm, code: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>اسم السياسة</Label>
+                <Input value={policyForm.name} onChange={(e) => setPolicyForm({ ...policyForm, name: e.target.value })} placeholder="السياسة الافتراضية" />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>الوصف</Label>
+              <Textarea value={policyForm.description} onChange={(e) => setPolicyForm({ ...policyForm, description: e.target.value })} placeholder="وصف السياسة..." />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>حد التأخير (دقيقة)</Label>
+                <Input type="number" value={policyForm.lateThresholdMinutes} onChange={(e) => setPolicyForm({ ...policyForm, lateThresholdMinutes: parseInt(e.target.value) || 0 })} />
+              </div>
+              <div className="space-y-2">
+                <Label>حد الغياب (دقيقة)</Label>
+                <Input type="number" value={policyForm.absenceAfterLateMinutes} onChange={(e) => setPolicyForm({ ...policyForm, absenceAfterLateMinutes: parseInt(e.target.value) || 0 })} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>خصم ثابت للتأخير (ريال)</Label>
+                <Input value={policyForm.lateDeductionFixed} onChange={(e) => setPolicyForm({ ...policyForm, lateDeductionFixed: e.target.value })} placeholder="50.00" />
+              </div>
+              <div className="space-y-2">
+                <Label>خصم الغياب بدون عذر (ريال)</Label>
+                <Input value={policyForm.absenceDeductionAmount} onChange={(e) => setPolicyForm({ ...policyForm, absenceDeductionAmount: e.target.value })} placeholder="0.00" />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                <Switch checked={policyForm.enableAutoDeduction} onCheckedChange={(checked) => setPolicyForm({ ...policyForm, enableAutoDeduction: checked })} />
+                <Label>تفعيل الخصم التلقائي</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch checked={policyForm.isActive} onCheckedChange={(checked) => setPolicyForm({ ...policyForm, isActive: checked })} />
+                <Label>نشط</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch checked={policyForm.isDefault} onCheckedChange={(checked) => setPolicyForm({ ...policyForm, isDefault: checked })} />
+                <Label>السياسة الافتراضية</Label>
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-4 border-t justify-end">
+              <Button variant="outline" onClick={() => setIsPolicyDialogOpen(false)}>إلغاء</Button>
+              <Button onClick={handlePolicySubmit} disabled={createPolicyMutation.isPending || updatePolicyMutation.isPending}>
+                {editingPolicy ? 'تحديث السياسة' : 'إنشاء السياسة'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Tabs Content */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -714,17 +568,18 @@ export default function ShiftsManagement() {
                     <TableHead>النوع</TableHead>
                     <TableHead>البداية</TableHead>
                     <TableHead>النهاية</TableHead>
+                    <TableHead>السياسة</TableHead>
                     <TableHead>الحالة</TableHead>
                     <TableHead className="text-left">الإجراءات</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {shiftsLoading ? (
-                    <TableRow><TableCell colSpan={7} className="text-center py-10">جاري التحميل...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={8} className="text-center py-10">جاري التحميل...</TableCell></TableRow>
                   ) : shifts?.length === 0 ? (
-                    <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">لا توجد ورديات مسجلة</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={8} className="text-center py-10 text-muted-foreground">لا توجد ورديات مسجلة</TableCell></TableRow>
                   ) : (
-                    shifts?.filter((s: any) => !searchTerm || s.name.includes(searchTerm) || s.code.includes(searchTerm)).map((shift: any) => (
+                    shifts?.filter((s: any) => !searchTerm || s.name?.includes(searchTerm) || s.code?.includes(searchTerm)).map((shift: any) => (
                       <TableRow key={shift.id}>
                         <TableCell className="font-mono">{shift.code}</TableCell>
                         <TableCell>
@@ -733,13 +588,16 @@ export default function ShiftsManagement() {
                             {shift.isDefault && <Badge variant="secondary" className="text-[10px]">افتراضي</Badge>}
                           </div>
                         </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            {getShiftTypeInfo(shift.shiftType).label}
-                          </div>
-                        </TableCell>
+                        <TableCell>{getShiftTypeInfo(shift.shiftType).label}</TableCell>
                         <TableCell>{shift.startTime}</TableCell>
                         <TableCell>{shift.endTime}</TableCell>
+                        <TableCell>
+                          {shift.policy ? (
+                            <Badge variant="outline" className="text-xs">{shift.policy.name}</Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">-</span>
+                          )}
+                        </TableCell>
                         <TableCell>
                           <Badge variant={shift.isActive ? "default" : "secondary"}>
                             {shift.isActive ? 'نشط' : 'غير نشط'}
@@ -750,21 +608,17 @@ export default function ShiftsManagement() {
                             <Button variant="ghost" size="icon" onClick={() => openEditShift(shift)}>
                               <Edit2 className="h-4 w-4" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={async () => {
-                                if (confirm('هل أنت متأكد من حذف هذه الوردية؟')) {
-                                  try {
-                                    await deleteShiftMutation.mutateAsync(shift.id);
-                                    toast.success("تم حذف الوردية بنجاح");
-                                    refetchShifts();
-                                  } catch (error: any) {
-                                    toast.error(error.message || "حدث خطأ");
-                                  }
+                            <Button variant="ghost" size="icon" onClick={async () => {
+                              if (confirm('هل أنت متأكد من حذف هذه الوردية؟')) {
+                                try {
+                                  await deleteShiftMutation.mutateAsync(shift.id);
+                                  toast.success("تم حذف الوردية بنجاح");
+                                  refetchShifts();
+                                } catch (error: any) {
+                                  toast.error(error.message || "حدث خطأ");
                                 }
-                              }}
-                            >
+                              }
+                            }}>
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
                           </div>
@@ -788,6 +642,7 @@ export default function ShiftsManagement() {
                     <TableHead>الاسم</TableHead>
                     <TableHead>حد التأخير</TableHead>
                     <TableHead>حد الغياب</TableHead>
+                    <TableHead>خصم الغياب (ريال)</TableHead>
                     <TableHead>خصم آلي</TableHead>
                     <TableHead>الحالة</TableHead>
                     <TableHead className="text-left">الإجراءات</TableHead>
@@ -795,11 +650,11 @@ export default function ShiftsManagement() {
                 </TableHeader>
                 <TableBody>
                   {policiesLoading ? (
-                    <TableRow><TableCell colSpan={7} className="text-center py-10">جاري التحميل...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={8} className="text-center py-10">جاري التحميل...</TableCell></TableRow>
                   ) : policies?.length === 0 ? (
-                    <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">لا توجد سياسات مسجلة</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={8} className="text-center py-10 text-muted-foreground">لا توجد سياسات مسجلة</TableCell></TableRow>
                   ) : (
-                    policies?.filter((p: any) => !searchTerm || p.name.includes(searchTerm) || p.code.includes(searchTerm)).map((policy: any) => (
+                    policies?.filter((p: any) => !searchTerm || p.name?.includes(searchTerm) || p.code?.includes(searchTerm)).map((policy: any) => (
                       <TableRow key={policy.id}>
                         <TableCell className="font-mono">{policy.code}</TableCell>
                         <TableCell>
@@ -810,6 +665,7 @@ export default function ShiftsManagement() {
                         </TableCell>
                         <TableCell>{policy.lateThresholdMinutes} دقيقة</TableCell>
                         <TableCell>{policy.absenceAfterLateMinutes} دقيقة</TableCell>
+                        <TableCell>{policy.absenceDeductionAmount ?? '-'}</TableCell>
                         <TableCell>
                           {policy.enableAutoDeduction ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <XCircle className="h-4 w-4 text-muted-foreground" />}
                         </TableCell>
@@ -823,21 +679,17 @@ export default function ShiftsManagement() {
                             <Button variant="ghost" size="icon" onClick={() => openEditPolicy(policy)}>
                               <Edit2 className="h-4 w-4" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={async () => {
-                                if (confirm('هل أنت متأكد من حذف هذه السياسة؟')) {
-                                  try {
-                                    await deletePolicyMutation.mutateAsync(policy.id);
-                                    toast.success("تم حذف السياسة بنجاح");
-                                    refetchPolicies();
-                                  } catch (error: any) {
-                                    toast.error(error.message || "حدث خطأ");
-                                  }
+                            <Button variant="ghost" size="icon" onClick={async () => {
+                              if (confirm('هل أنت متأكد من حذف هذه السياسة؟')) {
+                                try {
+                                  await deletePolicyMutation.mutateAsync(policy.id);
+                                  toast.success("تم حذف السياسة بنجاح");
+                                  refetchPolicies();
+                                } catch (error: any) {
+                                  toast.error(error.message || "حدث خطأ");
                                 }
-                              }}
-                            >
+                              }
+                            }}>
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
                           </div>

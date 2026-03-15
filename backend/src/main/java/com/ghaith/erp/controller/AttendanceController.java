@@ -50,6 +50,14 @@ public class AttendanceController {
         return ResponseEntity.ok(attendanceService.getAttendanceByDepartment(departmentId));
     }
 
+    @GetMapping("/monthly")
+    public ResponseEntity<List<AttendanceRecord>> getAttendanceByMonth(
+            @RequestParam int year,
+            @RequestParam int month,
+            @RequestParam(required = false) Long branchId) {
+        return ResponseEntity.ok(attendanceService.getAttendanceByMonth(year, month, branchId));
+    }
+
     @GetMapping("/range")
     public ResponseEntity<List<AttendanceRecord>> getAttendanceByDateRange(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,

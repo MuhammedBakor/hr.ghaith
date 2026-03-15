@@ -27,6 +27,7 @@ public class EmployeeService {
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
     private final EntityManager entityManager;
+    private final ShiftRepository shiftRepository;
 
     private static final String CHAR_LOWER = "abcdefghijklmnopqrstuvwxyz";
     private static final String CHAR_UPPER = CHAR_LOWER.toUpperCase();
@@ -127,7 +128,8 @@ public class EmployeeService {
 
     public java.util.Map<String, String> createSimpleEmployee(String firstName, String lastName, String email,
             String phone, Long branchId, Long departmentId, Long positionId, String roleStr, Long managerId,
-            java.math.BigDecimal salary, java.math.BigDecimal housingAllowance, java.math.BigDecimal transportAllowance) {
+            java.math.BigDecimal salary, java.math.BigDecimal housingAllowance, java.math.BigDecimal transportAllowance,
+            Long shiftId) {
         System.out.println("Starting createSimpleEmployee for email: " + email);
 
         // Validate: check if this email is already used by an employee IN THE SAME
@@ -175,6 +177,9 @@ public class EmployeeService {
         }
         if (transportAllowance != null) {
             employee.setTransportAllowance(transportAllowance);
+        }
+        if (shiftId != null) {
+            employee.setShift(shiftRepository.findById(shiftId).orElse(null));
         }
 
         // Create User Account
@@ -327,6 +332,11 @@ public class EmployeeService {
         // Manager update
         if (employeeDetails.getManager() != null && employeeDetails.getManager().getId() != null) {
             employee.setManager(employeeRepository.findById(employeeDetails.getManager().getId()).orElse(null));
+        }
+
+        // Shift update
+        if (employeeDetails.getShift() != null && employeeDetails.getShift().getId() != null) {
+            employee.setShift(shiftRepository.findById(employeeDetails.getShift().getId()).orElse(null));
         }
 
         // Role update (primary role + additional roles)

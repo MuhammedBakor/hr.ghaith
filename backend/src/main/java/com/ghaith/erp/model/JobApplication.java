@@ -23,6 +23,11 @@ public class JobApplication extends BaseEntity {
 
     private String phone;
 
+    private Integer yearsOfExperience;
+
+    @Column(columnDefinition = "TEXT")
+    private String coverLetter;
+
     @Column(columnDefinition = "TEXT")
     private String resumeUrl;
 

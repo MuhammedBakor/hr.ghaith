@@ -34,6 +34,7 @@ public class AttendancePolicy extends BaseEntity {
     private BigDecimal lateDeductionPerMinute;
     private BigDecimal lateDeductionFixed;
     private BigDecimal absenceDeductionDays;
+    private BigDecimal absenceDeductionAmount; // Fixed SAR amount deducted per absence day
 
     private Boolean enableAutoViolation;
     private Boolean requireCheckInLocation;

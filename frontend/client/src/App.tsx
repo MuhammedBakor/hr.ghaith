@@ -81,11 +81,9 @@ const AddEmployee = lazy(() => import("@/pages/hr/AddEmployee"));
 const AddEmployeeSimple = lazy(() => import("@/pages/hr/AddEmployeeSimple"));
 const EmployeeActivation = lazy(() => import("@/pages/hr/EmployeeActivation"));
 const EmployeeDocs = lazy(() => import("@/pages/hr/EmployeeDocs"));
-const OnboardingReview = lazy(() => import("@/pages/hr/OnboardingReview"));
 const LeaveManagement = lazy(() => import("@/pages/hr/LeaveManagement"));
 const PerformanceAdvanced = lazy(() => import("@/pages/hr/PerformanceAdvanced"));
 const TrainingAdvanced = lazy(() => import("@/pages/hr/TrainingAdvanced"));
-const HRAutomation = lazy(() => import("@/pages/hr/HRAutomation"));
 const FleetAutomation = lazy(() => import("@/pages/fleet/FleetAutomation"));
 const FinanceAutomation = lazy(() => import("@/pages/finance/FinanceAutomation"));
 const PropertyAutomation = lazy(() => import("@/pages/property/PropertyAutomation"));
@@ -99,8 +97,6 @@ const ViolationsManagement = lazy(() => import("@/pages/hr/ViolationsManagement"
 const PenaltyEscalation = lazy(() => import("@/pages/hr/PenaltyEscalation"));
 const MyViolations = lazy(() => import("@/pages/hr/MyViolations"));
 const AttendanceReports = lazy(() => import("@/pages/hr/AttendanceReports"));
-const FieldTracking = lazy(() => import("@/pages/hr/FieldTracking"));
-const QRScanner = lazy(() => import("@/pages/hr/QRScanner"));
 const AttendanceEmailReports = lazy(() => import("@/pages/hr/AttendanceEmailReports"));
 const ShiftsManagement = lazy(() => import("@/pages/hr/ShiftsManagement"));
 const OfficialLetters = lazy(() => import("@/pages/hr/OfficialLetters"));
@@ -253,6 +249,7 @@ const Workflow = lazy(() => import("@/pages/workflow/Workflow"));
 const Approvals = lazy(() => import("@/pages/workflow/Approvals"));
 const PublicSite = lazy(() => import("@/pages/public_site/PublicSite"));
 const Blog = lazy(() => import("@/pages/public_site/Blog"));
+const JobApply = lazy(() => import("@/pages/public/JobApply"));
 const BeneficiaryRules = lazy(() => import("@/pages/admin/BeneficiaryRules"));
 const Budgets = lazy(() => import("@/pages/finance/Budgets"));
 const Cases = lazy(() => import("@/pages/legal/Cases"));
@@ -313,6 +310,9 @@ const DepartmentsHub = lazy(() => import("@/pages/DepartmentsHub"));
 function Router() {
   return (
     <Switch>
+      {/* Public Routes — no auth required */}
+      <Route path="/jobs/:id" component={JobApply} />
+
       {/* Auth Routes */}
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
@@ -406,16 +406,6 @@ function Router() {
           <ShiftsManagement />
         </DashboardLayout>
       </Route>
-      <Route path="/departments/hr/field-tracking">
-        <DashboardLayout>
-          <FieldTracking />
-        </DashboardLayout>
-      </Route>
-      <Route path="/departments/hr/qr-scanner">
-        <DashboardLayout>
-          <QRScanner />
-        </DashboardLayout>
-      </Route>
       <Route path="/departments/hr/approval-chains">
         <DashboardLayout>
           <ApprovalChains />
@@ -431,19 +421,9 @@ function Router() {
           <AttendanceReports />
         </DashboardLayout>
       </Route>
-      <Route path="/departments/hr/onboarding-review">
-        <DashboardLayout>
-          <OnboardingReview />
-        </DashboardLayout>
-      </Route>
       <Route path="/departments/hr/penalty-escalation">
         <DashboardLayout>
           <PenaltyEscalation />
-        </DashboardLayout>
-      </Route>
-      <Route path="/departments/hr/automation">
-        <DashboardLayout>
-          <HRAutomation />
         </DashboardLayout>
       </Route>
       <Route path="/departments/hr/salary-components">
@@ -459,6 +439,33 @@ function Router() {
       <Route path="/departments/hr/employees/add">
         <DashboardLayout>
           <AddEmployeeSimple />
+        </DashboardLayout>
+      </Route>
+
+      {/* Requests department sub-pages */}
+      <Route path="/departments/requests">
+        <DashboardLayout>
+          <RequestList />
+        </DashboardLayout>
+      </Route>
+      <Route path="/departments/requests/types">
+        <DashboardLayout>
+          <RequestTypes />
+        </DashboardLayout>
+      </Route>
+      <Route path="/departments/requests/workflows">
+        <DashboardLayout>
+          <Workflows />
+        </DashboardLayout>
+      </Route>
+      <Route path="/departments/workflow/approvals">
+        <DashboardLayout>
+          <Approvals />
+        </DashboardLayout>
+      </Route>
+      <Route path="/departments/support/tickets">
+        <DashboardLayout>
+          <Tickets />
         </DashboardLayout>
       </Route>
 
@@ -493,21 +500,7 @@ function Router() {
         </RoleProtectedRoute>
       </Route>
 
-      <Route path="/hr/field-tracking">
-        <RoleProtectedRoute module="hr" hrSubPage="tracking">
-          <DashboardLayout>
-            <FieldTracking />
-          </DashboardLayout>
-        </RoleProtectedRoute>
-      </Route>
 
-      <Route path="/hr/qr-scanner">
-        <RoleProtectedRoute module="hr" hrSubPage="qr">
-          <DashboardLayout>
-            <QRScanner />
-          </DashboardLayout>
-        </RoleProtectedRoute>
-      </Route>
 
       <Route path="/hr/email-reports">
         <RoleProtectedRoute module="hr" hrSubPage="reports">
@@ -635,14 +628,6 @@ function Router() {
         </RoleProtectedRoute>
       </Route>
 
-      <Route path="/hr/onboarding-review">
-        <RoleProtectedRoute module="hr" hrSubPage="onboarding">
-          <DashboardLayout>
-            <OnboardingReview />
-          </DashboardLayout>
-        </RoleProtectedRoute>
-      </Route>
-
       <Route path="/hr/leave-management">
         <RoleProtectedRoute module="hr" hrSubPage="leaves">
           <DashboardLayout>
@@ -663,13 +648,6 @@ function Router() {
         <RoleProtectedRoute module="hr" hrSubPage="training">
           <DashboardLayout>
             <TrainingAdvanced />
-          </DashboardLayout>
-        </RoleProtectedRoute>
-      </Route>
-      <Route path="/hr/automation">
-        <RoleProtectedRoute module="hr" hrSubPage="automation">
-          <DashboardLayout>
-            <HRAutomation />
           </DashboardLayout>
         </RoleProtectedRoute>
       </Route>

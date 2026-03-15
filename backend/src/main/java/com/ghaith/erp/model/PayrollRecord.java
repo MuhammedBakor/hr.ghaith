@@ -1,9 +1,12 @@
 package com.ghaith.erp.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+
+import java.util.List;
 
 @Data
 @Entity
@@ -27,4 +30,8 @@ public class PayrollRecord extends BaseEntity {
 
     private String month;
     private Integer year;
+
+    @JsonManagedReference
+    @OneToMany(mappedBy = "payrollRecord", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    private List<PayrollDeduction> deductionDetails;
 }

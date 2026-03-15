@@ -26,6 +26,12 @@ public class PerformanceController {
         return ResponseEntity.ok(performanceService.createReview(payload));
     }
 
+    @DeleteMapping("/performance/{id}")
+    public ResponseEntity<Void> deleteReview(@PathVariable Long id) {
+        performanceService.deleteReview(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/goals")
     public ResponseEntity<List<PerformanceGoal>> getAllGoals() {
         return ResponseEntity.ok(performanceService.getAllGoals());

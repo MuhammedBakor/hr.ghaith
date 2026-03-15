@@ -19,12 +19,22 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Dialog } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
-import { Star, Plus, Eye, Edit, CheckCircle2, Clock, Award, BarChart3 } from 'lucide-react';
-import { useEmployees, usePerformanceReviews, useGoals, useCreateGoal, useKPIs, useCreatePerformanceReview } from '@/services/hrService';
+import { Star, Plus, Eye, CheckCircle2, Clock, Award, BarChart3, Trash2 } from 'lucide-react';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { useEmployees, usePerformanceReviews, useGoals, useCreateGoal, useKPIs, useCreatePerformanceReview, useDeletePerformanceReview, useBranches, useDepartments } from '@/services/hrService';
 import { useAppContext } from '@/contexts/AppContext';
 import { toast } from 'sonner';
 import { PrintButton } from "@/components/PrintButton";
@@ -55,14 +65,22 @@ export default function PerformanceAdvanced() {
     status: 'draft'
   });
 
+  const [reviewFilterBranch, setReviewFilterBranch] = useState('');
+  const [reviewFilterDept, setReviewFilterDept] = useState('');
+  const [viewRecord, setViewRecord] = useState<any>(null);
+  const [deleteReviewId, setDeleteReviewId] = useState<number | null>(null);
+
   // البيانات من API (REST)
   const { data: reviewsData, isLoading } = usePerformanceReviews();
   const { data: employeesData } = useEmployees({ branchId: selectedBranchId });
+  const { data: branchesData } = useBranches();
+  const { data: departmentsData } = useDepartments({ branchId: selectedBranchId || (reviewFilterBranch ? parseInt(reviewFilterBranch) : null) });
   const { data: goalsData, refetch: refetchGoals } = useGoals();
   const { data: kpisData } = useKPIs();
 
   const createGoalMutation = useCreateGoal();
   const createReviewMutation = useCreatePerformanceReview();
+  const deleteReviewMutation = useDeletePerformanceReview();
 
   const handleCreateGoal = () => {
     if (!newGoal.employeeId || !newGoal.title) {
@@ -119,8 +137,20 @@ export default function PerformanceAdvanced() {
     );
   };
 
-  const apiReviews = reviewsData || [];
+  const allApiReviews = reviewsData || [];
   const employees = employeesData || [];
+  const branches = (branchesData || []).filter((b: any) => b.id);
+  const departments = departmentsData || [];
+  const filteredReviewEmployees = employees.filter((e: any) => {
+    if (reviewFilterBranch && String(e.branch?.id) !== reviewFilterBranch) return false;
+    if (reviewFilterDept && String(e.department?.id) !== reviewFilterDept) return false;
+    return true;
+  });
+
+  // Filter reviews by selected branch (unless on comprehensive dashboard)
+  const apiReviews = selectedBranchId
+    ? allApiReviews.filter((r: any) => r.employee?.branch?.id === selectedBranchId)
+    : allApiReviews;
 
   const getEmployeeName = (id: number) => {
     const emp = employees.find((e: any) => e.id === id);
@@ -129,21 +159,23 @@ export default function PerformanceAdvanced() {
 
   const performanceStats = {
     totalReviews: apiReviews.length,
-    completedReviews: apiReviews.filter((r: any) => r.status === 'completed').length,
-    pendingReviews: apiReviews.filter((r: any) => r.status === 'pending').length,
-    averageScore: apiReviews.length > 0 ? apiReviews.reduce((sum: number, r: any) => sum + (r.overallRating || 0), 0) / apiReviews.length : 0
+    completedReviews: apiReviews.filter((r: any) => r.status === 'finalized').length,
+    pendingReviews: apiReviews.filter((r: any) => r.status === 'draft' || r.status === 'submitted').length,
+    averageScore: apiReviews.length > 0 ? apiReviews.reduce((sum: number, r: any) => sum + (r.rating || 0), 0) / apiReviews.length : 0
   };
 
   // تحويل البيانات من API إلى الشكل المطلوب
   const reviews = apiReviews.map((r: any) => ({
     id: r.id,
-    employee: getEmployeeName(r.employeeId),
-    department: '-',
-    reviewer: r.reviewerId ? getEmployeeName(r.reviewerId) : '-',
-    period: r.period,
-    overallScore: r.rating,
-    status: r.status || 'pending',
-    completedAt: r.updatedAt ? new Date(r.updatedAt).toISOString().split('T')[0] : null
+    raw: r,
+    employeeName: r.employee ? `${r.employee.firstName} ${r.employee.lastName}` : `موظف #${r.id}`,
+    department: r.employee?.department?.nameAr || r.employee?.department?.name || '-',
+    branch: r.employee?.branch?.nameAr || r.employee?.branch?.name || '-',
+    period: r.period || '-',
+    rating: r.rating || 0,
+    feedback: r.feedback || '',
+    status: r.status || 'draft',
+    reviewDate: r.reviewDate || null,
   }));
 
   // الأهداف من API
@@ -168,10 +200,12 @@ export default function PerformanceAdvanced() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'completed':
+      case 'finalized': case 'completed':
         return <Badge className="bg-green-100 text-green-700">مكتمل</Badge>;
-      case 'pending':
-        return <Badge className="bg-amber-100 text-amber-700">قيد الانتظار</Badge>;
+      case 'submitted':
+        return <Badge className="bg-blue-100 text-blue-700">مُرسَل</Badge>;
+      case 'draft':
+        return <Badge className="bg-amber-100 text-amber-700">مسودة</Badge>;
       case 'in_progress':
         return <Badge className="bg-blue-100 text-blue-700">جاري</Badge>;
       case 'on_track':
@@ -308,8 +342,8 @@ export default function PerformanceAdvanced() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>الموظف</TableHead>
+                    <TableHead>الفرع</TableHead>
                     <TableHead>القسم</TableHead>
-                    <TableHead>المقيّم</TableHead>
                     <TableHead>الفترة</TableHead>
                     <TableHead>التقييم</TableHead>
                     <TableHead>الحالة</TableHead>
@@ -317,26 +351,28 @@ export default function PerformanceAdvanced() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {reviews.map((review) => (
+                  {reviews.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-gray-400">لا توجد تقييمات بعد</TableCell>
+                    </TableRow>
+                  ) : reviews.map((review) => (
                     <TableRow key={review.id}>
-                      <TableCell className="font-medium">{review.employee}</TableCell>
+                      <TableCell className="font-medium">{review.employeeName}</TableCell>
+                      <TableCell>{review.branch}</TableCell>
                       <TableCell>{review.department}</TableCell>
-                      <TableCell>{review.reviewer}</TableCell>
                       <TableCell>{review.period}</TableCell>
                       <TableCell>
-                        {review.overallScore ? renderStars(review.overallScore) : '-'}
+                        {review.rating ? renderStars(review.rating) : '-'}
                       </TableCell>
                       <TableCell>{getStatusBadge(review.status)}</TableCell>
                       <TableCell>
                         <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => toast.info("عرض التقييم")}>
+                          <Button variant="ghost" size="icon" title="عرض التفاصيل" onClick={() => setViewRecord(review)}>
                             <Eye className="h-4 w-4" />
                           </Button>
-                          {review.status === 'pending' && (
-                            <Button variant="ghost" size="icon" onClick={() => toast.info("تعديل التقييم")}>
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          )}
+                          <Button variant="ghost" size="icon" title="حذف" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => setDeleteReviewId(review.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -479,21 +515,18 @@ export default function PerformanceAdvanced() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {reviews.filter(r => r.overallScore).slice(0, 3).map((review, index) => (
+                  {reviews.filter(r => r.rating).sort((a, b) => b.rating - a.rating).slice(0, 3).map((review, index) => (
                     <div key={review.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${index === 0 ? 'bg-amber-100 text-amber-600' :
-                          index === 1 ? 'bg-gray-200 text-gray-600' :
-                            'bg-orange-100 text-orange-600'
-                          }`}>
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${index === 0 ? 'bg-amber-100 text-amber-600' : index === 1 ? 'bg-gray-200 text-gray-600' : 'bg-orange-100 text-orange-600'}`}>
                           {index + 1}
                         </div>
                         <div>
-                          <p className="font-medium">{review.employee}</p>
+                          <p className="font-medium">{review.employeeName}</p>
                           <p className="text-sm text-gray-500">{review.department}</p>
                         </div>
                       </div>
-                      {renderStars(review.overallScore!)}
+                      {renderStars(review.rating)}
                     </div>
                   ))}
                 </div>
@@ -504,81 +537,208 @@ export default function PerformanceAdvanced() {
       </Tabs>
 
       {/* New Review Dialog */}
-      {showNewReview && (<div className="mt-4 p-6 bg-white border rounded-xl shadow-sm">
-        <div>
-          <div className="mb-4 border-b pb-3">
-            <h3 className="text-lg font-bold">تقييم أداء جديد</h3>
-            <p className="text-sm text-gray-500">إنشاء تقييم أداء لموظف</p>
-          </div>
-          <div className="space-y-4">
+      <Dialog open={showNewReview} onOpenChange={(open) => { if (!open) { setShowNewReview(false); setReviewFilterBranch(''); setReviewFilterDept(''); } }}>
+        <DialogContent className="max-w-2xl" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Star className="h-5 w-5 text-amber-500" />
+              تقييم أداء جديد
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {/* Branch + Department filters */}
+            <div className={`grid gap-4 ${selectedBranchId ? 'grid-cols-1' : 'grid-cols-2'}`}>
+              {!selectedBranchId && (
+                <div className="space-y-2">
+                  <Label>الفرع (تصفية)</Label>
+                  <Select value={reviewFilterBranch} onValueChange={(v) => { setReviewFilterBranch(v === 'all' ? '' : v); setReviewFilterDept(''); setNewReview(r => ({ ...r, employeeId: 0 })); }}>
+                    <SelectTrigger><SelectValue placeholder="جميع الفروع" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">جميع الفروع</SelectItem>
+                      {branches.map((b: any) => (
+                        <SelectItem key={b.id} value={String(b.id)}>{b.nameAr || b.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              <div className="space-y-2">
+                <Label>القسم (تصفية)</Label>
+                <Select value={reviewFilterDept} onValueChange={(v) => { setReviewFilterDept(v === 'all' ? '' : v); setNewReview(r => ({ ...r, employeeId: 0 })); }}>
+                  <SelectTrigger><SelectValue placeholder="جميع الأقسام" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">جميع الأقسام</SelectItem>
+                    {departments.map((d: any) => (
+                      <SelectItem key={d.id} value={String(d.id)}>{d.nameAr || d.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Employee + Period */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>الموظف</Label>
-                <Select value={String(newReview.employeeId)} onValueChange={(v) => setNewReview({ ...newReview, employeeId: Number(v) })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="اختر الموظف" />
-                  </SelectTrigger>
+                <Label>الموظف <span className="text-red-500">*</span></Label>
+                <Select value={newReview.employeeId ? String(newReview.employeeId) : ''} onValueChange={(v) => setNewReview(r => ({ ...r, employeeId: Number(v) }))}>
+                  <SelectTrigger><SelectValue placeholder="اختر الموظف" /></SelectTrigger>
                   <SelectContent>
-                    {employees.map((emp: any) => (
-                      <SelectItem key={emp.id} value={String(emp.id)}>{emp.firstName} {emp.lastName}</SelectItem>
+                    {filteredReviewEmployees.map((emp: any) => (
+                      <SelectItem key={emp.id} value={String(emp.id)}>
+                        {emp.firstName} {emp.lastName}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label>فترة التقييم</Label>
-                <Select value={newReview.period} onValueChange={(v) => setNewReview({ ...newReview, period: v })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="اختر الفترة" />
-                  </SelectTrigger>
+                <Select value={newReview.period} onValueChange={(v) => setNewReview(r => ({ ...r, period: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="2026-Q1">Q1 2026</SelectItem>
                     <SelectItem value="2025-Q4">Q4 2025</SelectItem>
+                    <SelectItem value="2025-Q3">Q3 2025</SelectItem>
+                    <SelectItem value="2025-Q2">Q2 2025</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
-            <div className="space-y-4">
-              <h4 className="font-medium">تقييم المؤشرات</h4>
-              {kpis.map((kpi) => (
-                <div key={kpi.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <p className="font-medium">{kpi.name}</p>
-                    <p className="text-sm text-gray-500">{kpi.description}</p>
-                  </div>
-                  <Select>
-                    <SelectTrigger className="w-32">
-                      <SelectValue placeholder="التقييم" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="5">5 - ممتاز</SelectItem>
-                      <SelectItem value="4">4 - جيد جداً</SelectItem>
-                      <SelectItem value="3">3 - جيد</SelectItem>
-                      <SelectItem value="2">2 - مقبول</SelectItem>
-                      <SelectItem value="1">1 - ضعيف</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              ))}
+
+            {/* Rating */}
+            <div className="space-y-2">
+              <Label>التقييم العام</Label>
+              <div className="flex items-center gap-3">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setNewReview(r => ({ ...r, rating: star }))}
+                    className="focus:outline-none"
+                  >
+                    <Star className={`h-8 w-8 transition-colors ${star <= newReview.rating ? 'fill-amber-400 text-amber-400' : 'text-gray-300 hover:text-amber-300'}`} />
+                  </button>
+                ))}
+                <span className="text-sm text-gray-500 ms-2">
+                  {newReview.rating === 5 ? 'ممتاز' : newReview.rating === 4 ? 'جيد جداً' : newReview.rating === 3 ? 'جيد' : newReview.rating === 2 ? 'مقبول' : 'ضعيف'}
+                </span>
+              </div>
             </div>
+
+            {/* Feedback */}
             <div className="space-y-2">
               <Label>ملاحظات عامة</Label>
               <Textarea
                 placeholder="أدخل ملاحظاتك حول أداء الموظف..."
                 rows={3}
                 value={newReview.feedback}
-                onChange={(e) => setNewReview({ ...newReview, feedback: e.target.value })}
+                onChange={(e) => setNewReview(r => ({ ...r, feedback: e.target.value }))}
               />
             </div>
           </div>
-          <div className="flex gap-2 mt-4 pt-3 border-t justify-end">
-            <Button variant="outline" onClick={() => setShowNewReview(false)}>إلغاء</Button>
+          <DialogFooter className="flex-row-reverse gap-2">
+            <Button variant="outline" onClick={() => { setShowNewReview(false); setReviewFilterBranch(''); setReviewFilterDept(''); }}>إلغاء</Button>
             <Button onClick={handleCreateReview} disabled={createReviewMutation.isPending}>
               {createReviewMutation.isPending ? 'جاري الحفظ...' : 'حفظ التقييم'}
             </Button>
-          </div>
-        </div>
-      </div>)}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Review Details Dialog */}
+      <Dialog open={!!viewRecord} onOpenChange={(open) => { if (!open) setViewRecord(null); }}>
+        <DialogContent className="max-w-lg" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Star className="h-5 w-5 text-amber-500" />
+              تفاصيل التقييم
+            </DialogTitle>
+          </DialogHeader>
+          {viewRecord && (
+            <div className="space-y-4 py-2">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-gray-500 mb-1">الموظف</p>
+                  <p className="font-medium">{viewRecord.employeeName}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 mb-1">الفرع</p>
+                  <p className="font-medium">{viewRecord.branch}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 mb-1">القسم</p>
+                  <p className="font-medium">{viewRecord.department}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 mb-1">الفترة</p>
+                  <p className="font-medium">{viewRecord.period}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 mb-1">تاريخ التقييم</p>
+                  <p className="font-medium">{viewRecord.reviewDate || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 mb-1">الحالة</p>
+                  {getStatusBadge(viewRecord.status)}
+                </div>
+              </div>
+              <div>
+                <p className="text-gray-500 mb-1 text-sm">التقييم العام</p>
+                {renderStars(viewRecord.rating)}
+              </div>
+              {viewRecord.feedback && (
+                <div>
+                  <p className="text-gray-500 mb-1 text-sm">الملاحظات</p>
+                  <p className="text-sm bg-gray-50 p-3 rounded-lg">{viewRecord.feedback}</p>
+                </div>
+              )}
+              {viewRecord.raw?.strengths && (
+                <div>
+                  <p className="text-gray-500 mb-1 text-sm">نقاط القوة</p>
+                  <p className="text-sm bg-green-50 p-3 rounded-lg">{viewRecord.raw.strengths}</p>
+                </div>
+              )}
+              {viewRecord.raw?.improvements && (
+                <div>
+                  <p className="text-gray-500 mb-1 text-sm">مجالات التحسين</p>
+                  <p className="text-sm bg-amber-50 p-3 rounded-lg">{viewRecord.raw.improvements}</p>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewRecord(null)}>إغلاق</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Review AlertDialog */}
+      <AlertDialog open={deleteReviewId !== null} onOpenChange={(open) => { if (!open) setDeleteReviewId(null); }}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
+            <AlertDialogDescription>
+              هل أنت متأكد من حذف هذا التقييم؟ لا يمكن التراجع عن هذا الإجراء.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row-reverse gap-2">
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => {
+                if (deleteReviewId !== null) {
+                  deleteReviewMutation.mutate(deleteReviewId, {
+                    onSuccess: () => { toast.success('تم حذف التقييم'); setDeleteReviewId(null); },
+                    onError: (err: any) => { toast.error(`فشل الحذف: ${err.message}`); setDeleteReviewId(null); },
+                  });
+                }
+              }}
+            >
+              حذف
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* New Goal Dialog */}
       {showGoalDialog && (<div className="mt-4 p-6 bg-white border rounded-xl shadow-sm">

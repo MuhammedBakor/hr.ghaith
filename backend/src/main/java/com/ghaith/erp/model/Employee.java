@@ -52,6 +52,11 @@ public class Employee extends BaseEntity {
     @JoinColumn(name = "manager_id")
     private Employee manager;
 
+    @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "shift_id")
+    private Shift shift;
+
     @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

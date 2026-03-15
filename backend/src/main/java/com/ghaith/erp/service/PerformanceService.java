@@ -80,6 +80,14 @@ public class PerformanceService {
         return reviewRepository.save(review);
     }
 
+    @Transactional
+    public void deleteReview(Long id) {
+        if (!reviewRepository.existsById(id)) {
+            throw new RuntimeException("التقييم غير موجود");
+        }
+        reviewRepository.deleteById(id);
+    }
+
     // Goals
     public List<PerformanceGoal> getAllGoals() {
         return goalRepository.findAll();

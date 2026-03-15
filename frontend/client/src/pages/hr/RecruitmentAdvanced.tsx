@@ -1,4 +1,5 @@
-import { formatDate, formatDateTime } from '@/lib/formatDate';
+import React from 'react';
+import { formatDate } from '@/lib/formatDate';
 import { useState } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { Button } from '@/components/ui/button';
@@ -24,7 +25,6 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -41,7 +41,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Briefcase, Users, Plus, Eye, Edit, UserPlus, FileText, Calendar, CheckCircle2, XCircle, Mail, Phone, Inbox, Trash2, Loader2 } from 'lucide-react';
+import { Briefcase, Users, Plus, Eye, Edit, UserPlus, FileText, Calendar, CheckCircle2, XCircle, Mail, Phone, Inbox, Trash2, Loader2, Link2, Copy, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { PrintButton } from "@/components/PrintButton";
 import {
@@ -55,17 +55,79 @@ import {
   useCreateInterview
 } from "@/services/recruitmentService";
 
-export default function RecruitmentAdvanced() {
-  const [showInlineForm, setShowInlineForm] = useState(false);
-  const [inlineData, setInlineData] = useState<any>({});
+function ApplicantsTable({
+  title, description, rows, loading, emptyText, getStatusBadge, onView, onInterview
+}: {
+  title: string;
+  description: string;
+  rows: any[];
+  loading: boolean;
+  emptyText: string;
+  getStatusBadge: (s: string) => React.ReactNode;
+  onView: (a: any) => void;
+  onInterview: (a: any) => void;
+}) {
+  return (
+    <Card className="border-0 shadow-sm">
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
+      </CardHeader>
+      <CardContent className="p-0">
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : rows.length === 0 ? (
+          <div className="text-center py-12 text-gray-500">
+            <Inbox className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+            <p className="text-lg font-medium mb-2">{emptyText}</p>
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>الاسم</TableHead>
+                <TableHead>البريد الإلكتروني</TableHead>
+                <TableHead>الهاتف</TableHead>
+                <TableHead>سنوات الخبرة</TableHead>
+                <TableHead>تاريخ التقديم</TableHead>
+                <TableHead>الحالة</TableHead>
+                <TableHead>الإجراءات</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map((applicant: any) => (
+                <TableRow key={applicant.id}>
+                  <TableCell className="font-medium">{applicant.applicantName}</TableCell>
+                  <TableCell>{applicant.email}</TableCell>
+                  <TableCell>{applicant.phone || '-'}</TableCell>
+                  <TableCell>{applicant.yearsOfExperience != null ? `${applicant.yearsOfExperience} سنوات` : '-'}</TableCell>
+                  <TableCell>{formatDate(applicant.createdAt)}</TableCell>
+                  <TableCell>{getStatusBadge(applicant.status)}</TableCell>
+                  <TableCell>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => onView(applicant)} title="عرض التفاصيل">
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => onInterview(applicant)} title="جدولة مقابلة">
+                        <Calendar className="h-4 w-4 text-purple-600" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
+export default function RecruitmentAdvanced() {
   const [searchTerm, setSearchTerm] = useState('');
   const { selectedRole: userRole } = useAppContext();
-  const canEdit = userRole === "admin" || (userRole && String(userRole).includes("manager"));
-  const canDelete = userRole === "admin";
-
-  const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 20;
 
   const [activeTab, setActiveTab] = useState('jobs');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -76,7 +138,10 @@ export default function RecruitmentAdvanced() {
   const [showScheduleInterview, setShowScheduleInterview] = useState(false);
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [selectedApplicant, setSelectedApplicant] = useState<any>(null);
-  const [newJob, setNewJob] = useState({
+  const [shareJob, setShareJob] = useState<any>(null);
+  const [copied, setCopied] = useState(false);
+
+  const emptyJob = {
     title: '',
     titleAr: '',
     location: '',
@@ -87,7 +152,9 @@ export default function RecruitmentAdvanced() {
     benefits: '',
     openings: 1,
     applicationDeadline: ''
-  });
+  };
+  const [newJob, setNewJob] = useState(emptyJob);
+
   const [interviewData, setInterviewData] = useState({
     interviewType: 'phone' as const,
     scheduledAt: '',
@@ -96,8 +163,7 @@ export default function RecruitmentAdvanced() {
     meetingLink: ''
   });
 
-
-  // جلب البيانات من API
+  // Data
   const { data: jobs = [], isLoading: jobsLoading, isError } = useRecruitmentJobs();
   const { data: applications = [], isLoading: applicationsLoading } = useRecruitmentApplications();
   const { data: interviews = [] } = useRecruitmentInterviews();
@@ -109,8 +175,6 @@ export default function RecruitmentAdvanced() {
   const updateApplicationStatusMutation = useUpdateApplicationStatus();
   const createInterviewMutation = useCreateInterview();
 
-  // Note: Local "publish" and "close" logic will be handled via Generic Update Job for now
-  // as the backend implementation for specialized /publish and /close endpoints was simplified to generic update.
   const handlePublishJob = (id: number) => {
     updateJobMutation.mutate({ id, status: 'open' }, {
       onSuccess: () => toast.success('تم نشر الوظيفة بنجاح')
@@ -123,26 +187,11 @@ export default function RecruitmentAdvanced() {
     });
   };
 
-  const resetNewJob = () => {
-    setNewJob({
-      title: '',
-      titleAr: '',
-      location: '',
-      employmentType: 'full_time',
-      experienceLevel: 'mid',
-      description: '',
-      requirements: '',
-      benefits: '',
-      openings: 1,
-      applicationDeadline: ''
-    });
-  };
-
   const recruitmentStats = {
-    openPositions: jobs.filter((j: any) => j.status === 'open').length,
-    totalApplicants: applications.length,
-    interviewsScheduled: applications.filter((a: any) => a.status === 'interview').length,
-    offersExtended: applications.filter((a: any) => a.status === 'offer').length
+    openPositions: (jobs as any[]).filter((j: any) => j.status === 'open').length,
+    totalApplicants: (applications as any[]).length,
+    interviewsScheduled: (applications as any[]).filter((a: any) => a.status === 'interview').length,
+    offersExtended: (applications as any[]).filter((a: any) => a.status === 'offer').length
   };
 
   const confirmDelete = () => {
@@ -164,7 +213,15 @@ export default function RecruitmentAdvanced() {
     }
     createJobMutation.mutate({
       ...newJob,
+      status: 'open',
       applicationDeadline: newJob.applicationDeadline ? new Date(newJob.applicationDeadline).toISOString() : undefined
+    }, {
+      onSuccess: () => {
+        toast.success('تم إنشاء الوظيفة بنجاح');
+        setShowNewJob(false);
+        setNewJob(emptyJob);
+      },
+      onError: (err: any) => toast.error(`فشل الإنشاء: ${err.message}`)
     });
   };
 
@@ -183,6 +240,13 @@ export default function RecruitmentAdvanced() {
       description: selectedJob.description,
       requirements: selectedJob.requirements,
       status: selectedJob.status
+    }, {
+      onSuccess: () => {
+        toast.success('تم تحديث الوظيفة بنجاح');
+        setShowEditJob(false);
+        setSelectedJob(null);
+      },
+      onError: (err: any) => toast.error(`فشل التحديث: ${err.message}`)
     });
   };
 
@@ -198,37 +262,31 @@ export default function RecruitmentAdvanced() {
       duration: interviewData.duration,
       location: interviewData.location,
       meetingLink: interviewData.meetingLink
+    }, {
+      onSuccess: () => {
+        toast.success('تم جدولة المقابلة بنجاح');
+        setShowScheduleInterview(false);
+        setInterviewData({ interviewType: 'phone', scheduledAt: '', duration: 60, location: '', meetingLink: '' });
+      },
+      onError: (err: any) => toast.error(`فشل الجدولة: ${err.message}`)
     });
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'open':
-        return <Badge className="bg-green-100 text-green-700">مفتوح</Badge>;
-      case 'closed':
-        return <Badge className="bg-gray-100 text-gray-700">مغلق</Badge>;
-      case 'draft':
-        return <Badge className="bg-yellow-100 text-yellow-700">مسودة</Badge>;
-      case 'filled':
-        return <Badge className="bg-blue-100 text-blue-700">مكتمل</Badge>;
-      case 'new':
-        return <Badge className="bg-blue-100 text-blue-700">جديد</Badge>;
-      case 'screening':
-        return <Badge className="bg-amber-100 text-amber-700">فرز</Badge>;
-      case 'interview':
-        return <Badge className="bg-purple-100 text-purple-700">مقابلة</Badge>;
-      case 'assessment':
-        return <Badge className="bg-indigo-100 text-indigo-700">تقييم</Badge>;
-      case 'offer':
-        return <Badge className="bg-green-100 text-green-700">عرض</Badge>;
-      case 'rejected':
-        return <Badge className="bg-red-100 text-red-700">مرفوض</Badge>;
-      case 'hired':
-        return <Badge className="bg-emerald-100 text-emerald-700">تم التوظيف</Badge>;
-      case 'withdrawn':
-        return <Badge className="bg-gray-100 text-gray-700">منسحب</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
+      case 'open': return <Badge className="bg-green-100 text-green-700">مفتوح</Badge>;
+      case 'closed': return <Badge className="bg-gray-100 text-gray-700">مغلق</Badge>;
+      case 'draft': return <Badge className="bg-yellow-100 text-yellow-700">مسودة</Badge>;
+      case 'filled': return <Badge className="bg-blue-100 text-blue-700">مكتمل</Badge>;
+      case 'new': return <Badge className="bg-blue-100 text-blue-700">جديد</Badge>;
+      case 'screening': return <Badge className="bg-amber-100 text-amber-700">فرز</Badge>;
+      case 'interview': return <Badge className="bg-purple-100 text-purple-700">مقابلة</Badge>;
+      case 'assessment': return <Badge className="bg-indigo-100 text-indigo-700">تقييم</Badge>;
+      case 'offer': return <Badge className="bg-green-100 text-green-700">عرض</Badge>;
+      case 'rejected': return <Badge className="bg-red-100 text-red-700">مرفوض</Badge>;
+      case 'hired': return <Badge className="bg-emerald-100 text-emerald-700">تم التوظيف</Badge>;
+      case 'withdrawn': return <Badge className="bg-gray-100 text-gray-700">منسحب</Badge>;
+      default: return <Badge variant="secondary">{status}</Badge>;
     }
   };
 
@@ -242,8 +300,19 @@ export default function RecruitmentAdvanced() {
     }
   };
 
-  // Remove early return
+  const filteredJobs = (jobs as any[]).filter((j: any) =>
+    !searchTerm || (j.titleAr || j.title || '').toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  const filteredApps = (applications as any[]).filter((a: any) =>
+    !searchTerm || (a.applicantName || '').toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
+  const appsByStatus = (status: string) =>
+    filteredApps.filter((a: any) => a.status === status);
+
+  const pendingApps = filteredApps.filter((a: any) =>
+    !['interview', 'assessment', 'hired', 'rejected'].includes(a.status)
+  );
 
   return (
     <div className="space-y-6" dir="rtl">
@@ -257,6 +326,7 @@ export default function RecruitmentAdvanced() {
         />
         {searchTerm && <button onClick={() => setSearchTerm('')} className="text-gray-400 hover:text-gray-600">✕</button>}
       </div>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -329,8 +399,36 @@ export default function RecruitmentAdvanced() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="flex-wrap">
           <TabsTrigger value="jobs">الوظائف الشاغرة</TabsTrigger>
-          <TabsTrigger value="applicants">المتقدمين</TabsTrigger>
-          <TabsTrigger value="interviews">المقابلات</TabsTrigger>
+          <TabsTrigger value="applicants">
+            المتقدمين
+            {pendingApps.length > 0 && (
+              <span className="ms-1.5 bg-blue-500 text-white text-xs rounded-full px-1.5 py-0.5">{pendingApps.length}</span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="interview">
+            المقابلات
+            {appsByStatus('interview').length > 0 && (
+              <span className="ms-1.5 bg-purple-500 text-white text-xs rounded-full px-1.5 py-0.5">{appsByStatus('interview').length}</span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="assessment">
+            التقييم
+            {appsByStatus('assessment').length > 0 && (
+              <span className="ms-1.5 bg-indigo-500 text-white text-xs rounded-full px-1.5 py-0.5">{appsByStatus('assessment').length}</span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="hired">
+            التوظيف
+            {appsByStatus('hired').length > 0 && (
+              <span className="ms-1.5 bg-emerald-500 text-white text-xs rounded-full px-1.5 py-0.5">{appsByStatus('hired').length}</span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="rejected">
+            المرفوضون
+            {appsByStatus('rejected').length > 0 && (
+              <span className="ms-1.5 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5">{appsByStatus('rejected').length}</span>
+            )}
+          </TabsTrigger>
         </TabsList>
 
         {/* Jobs Tab */}
@@ -348,7 +446,7 @@ export default function RecruitmentAdvanced() {
                 </div>
               ) : isError ? (
                 <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>
-              ) : jobs.length === 0 ? (
+              ) : filteredJobs.length === 0 ? (
                 <div className="text-center py-12 text-gray-500">
                   <Inbox className="h-16 w-16 mx-auto mb-4 text-gray-300" />
                   <p className="text-lg font-medium mb-2">لا توجد وظائف</p>
@@ -368,58 +466,42 @@ export default function RecruitmentAdvanced() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {jobs.map((job: any) => (
+                    {filteredJobs.map((job: any) => (
                       <TableRow key={job.id}>
                         <TableCell className="font-medium">{job.titleAr || job.title}</TableCell>
                         <TableCell>{job.location || '-'}</TableCell>
                         <TableCell>{getEmploymentTypeLabel(job.employmentType)}</TableCell>
                         <TableCell>{job.openings}</TableCell>
-                        <TableCell>
-                          {job.applicationDeadline
-                            ? formatDate(job.applicationDeadline)
-                            : '-'}
-                        </TableCell>
+                        <TableCell>{job.applicationDeadline ? formatDate(job.applicationDeadline) : '-'}</TableCell>
                         <TableCell>{getStatusBadge(job.status)}</TableCell>
                         <TableCell>
                           <div className="flex gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEditJob(job)}
-                              title="تعديل"
-                            >
+                            <Button variant="ghost" size="icon" onClick={() => handleEditJob(job)} title="تعديل">
                               <Edit className="h-4 w-4" />
                             </Button>
                             {job.status === 'draft' && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handlePublishJob(job.id)}
-                                title="نشر"
-                              >
+                              <Button variant="ghost" size="icon" onClick={() => handlePublishJob(job.id)} title="نشر الوظيفة">
                                 <CheckCircle2 className="h-4 w-4 text-green-600" />
                               </Button>
                             )}
                             {job.status === 'open' && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleCloseJob(job.id)}
-                                title="إغلاق"
-                              >
-                                <XCircle className="h-4 w-4 text-red-600" />
-                              </Button>
+                              <>
+                                <Button variant="ghost" size="icon" onClick={() => { setShareJob(job); setCopied(false); }} title="مشاركة رابط التقديم">
+                                  <Link2 className="h-4 w-4 text-blue-600" />
+                                </Button>
+                                <Button variant="ghost" size="icon" onClick={() => handleCloseJob(job.id)} title="إغلاق الوظيفة">
+                                  <XCircle className="h-4 w-4 text-red-600" />
+                                </Button>
+                              </>
                             )}
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => {
-                                setItemToDelete(job.id);
-                                setDeleteDialogOpen(true);
-                              }}
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => { setItemToDelete(job.id); setDeleteDialogOpen(true); }}
                               title="حذف"
                             >
-                              <Trash2 className="h-4 w-4 text-red-600" />
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         </TableCell>
@@ -432,179 +514,106 @@ export default function RecruitmentAdvanced() {
           </Card>
         </TabsContent>
 
-        {/* Applicants Tab */}
+        {/* Applicants Tab — pending/new */}
         <TabsContent value="applicants" className="space-y-4">
-          <Card className="border-0 shadow-sm">
-            <CardHeader>
-              <CardTitle>المتقدمين</CardTitle>
-              <CardDescription>قائمة جميع المتقدمين للوظائف</CardDescription>
-            </CardHeader>
-            <CardContent className="p-0">
-              {applicationsLoading ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>
-              ) : applications.length === 0 ? (
-                <div className="text-center py-12 text-gray-500">
-                  <Inbox className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                  <p className="text-lg font-medium mb-2">لا يوجد متقدمين</p>
-                  <p className="text-sm">سيظهر المتقدمين هنا عند تقديمهم للوظائف</p>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>الاسم</TableHead>
-                      <TableHead>البريد الإلكتروني</TableHead>
-                      <TableHead>الهاتف</TableHead>
-                      <TableHead>سنوات الخبرة</TableHead>
-                      <TableHead>تاريخ التقديم</TableHead>
-                      <TableHead>الحالة</TableHead>
-                      <TableHead>الإجراءات</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {applications.map((applicant: any) => (
-                      <TableRow key={applicant.id}>
-                        <TableCell className="font-medium">{applicant.applicantName}</TableCell>
-                        <TableCell>{applicant.email}</TableCell>
-                        <TableCell>{applicant.phone || '-'}</TableCell>
-                        <TableCell>{applicant.yearsOfExperience || '-'} سنوات</TableCell>
-                        <TableCell>
-                          {formatDate(applicant.appliedAt)}
-                        </TableCell>
-                        <TableCell>{getStatusBadge(applicant.status)}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => {
-                                setSelectedApplicant(applicant);
-                                setShowApplicantDetails(true);
-                              }}
-                              title="عرض التفاصيل"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => {
-                                setSelectedApplicant(applicant);
-                                setShowScheduleInterview(true);
-                              }}
-                              title="جدولة مقابلة"
-                            >
-                              <Calendar className="h-4 w-4 text-purple-600" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+          <ApplicantsTable
+            title="المتقدمين الجدد"
+            description="المتقدمون في انتظار المراجعة"
+            rows={pendingApps}
+            loading={applicationsLoading}
+            emptyText="لا يوجد متقدمون جدد"
+            getStatusBadge={getStatusBadge}
+            onView={(a) => { setSelectedApplicant(a); setShowApplicantDetails(true); }}
+            onInterview={(a) => { setSelectedApplicant(a); setShowScheduleInterview(true); }}
+          />
         </TabsContent>
 
-        {/* Interviews Tab */}
-        <TabsContent value="interviews" className="space-y-4">
-          <Card className="border-0 shadow-sm">
-            <CardHeader>
-              <CardTitle>المقابلات</CardTitle>
-              <CardDescription>جدول المقابلات المجدولة</CardDescription>
-            </CardHeader>
-            <CardContent className="p-0">
-              {interviews.length === 0 ? (
-                <div className="text-center py-12 text-gray-500">
-                  <Calendar className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                  <p className="text-lg font-medium mb-2">لا توجد مقابلات</p>
-                  <p className="text-sm">قم بجدولة مقابلات من صفحة المتقدمين</p>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>نوع المقابلة</TableHead>
-                      <TableHead>الموعد</TableHead>
-                      <TableHead>المدة</TableHead>
-                      <TableHead>المكان/الرابط</TableHead>
-                      <TableHead>الحالة</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {interviews.map((interview: any) => (
-                      <TableRow key={interview.id}>
-                        <TableCell>
-                          {interview.interviewType === 'phone' && 'هاتفية'}
-                          {interview.interviewType === 'video' && 'فيديو'}
-                          {interview.interviewType === 'in_person' && 'حضورية'}
-                          {interview.interviewType === 'technical' && 'تقنية'}
-                          {interview.interviewType === 'hr' && 'موارد بشرية'}
-                          {interview.interviewType === 'final' && 'نهائية'}
-                        </TableCell>
-                        <TableCell>
-                          {formatDateTime(interview.scheduledAt)}
-                        </TableCell>
-                        <TableCell>{interview.duration} دقيقة</TableCell>
-                        <TableCell>{interview.location || interview.meetingLink || '-'}</TableCell>
-                        <TableCell>{getStatusBadge(interview.status)}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+        {/* Interview Tab */}
+        <TabsContent value="interview" className="space-y-4">
+          <ApplicantsTable
+            title="المقابلات"
+            description="المتقدمون في مرحلة المقابلة"
+            rows={appsByStatus('interview')}
+            loading={applicationsLoading}
+            emptyText="لا يوجد متقدمون في مرحلة المقابلة"
+            getStatusBadge={getStatusBadge}
+            onView={(a) => { setSelectedApplicant(a); setShowApplicantDetails(true); }}
+            onInterview={(a) => { setSelectedApplicant(a); setShowScheduleInterview(true); }}
+          />
+        </TabsContent>
+
+        {/* Assessment Tab */}
+        <TabsContent value="assessment" className="space-y-4">
+          <ApplicantsTable
+            title="التقييم"
+            description="المتقدمون في مرحلة التقييم"
+            rows={appsByStatus('assessment')}
+            loading={applicationsLoading}
+            emptyText="لا يوجد متقدمون في مرحلة التقييم"
+            getStatusBadge={getStatusBadge}
+            onView={(a) => { setSelectedApplicant(a); setShowApplicantDetails(true); }}
+            onInterview={(a) => { setSelectedApplicant(a); setShowScheduleInterview(true); }}
+          />
+        </TabsContent>
+
+        {/* Hired Tab */}
+        <TabsContent value="hired" className="space-y-4">
+          <ApplicantsTable
+            title="التوظيف"
+            description="المتقدمون الذين تم توظيفهم"
+            rows={appsByStatus('hired')}
+            loading={applicationsLoading}
+            emptyText="لا يوجد موظفون جدد بعد"
+            getStatusBadge={getStatusBadge}
+            onView={(a) => { setSelectedApplicant(a); setShowApplicantDetails(true); }}
+            onInterview={(a) => { setSelectedApplicant(a); setShowScheduleInterview(true); }}
+          />
+        </TabsContent>
+
+        {/* Rejected Tab */}
+        <TabsContent value="rejected" className="space-y-4">
+          <ApplicantsTable
+            title="المرفوضون"
+            description="المتقدمون الذين تم رفضهم"
+            rows={appsByStatus('rejected')}
+            loading={applicationsLoading}
+            emptyText="لا يوجد متقدمون مرفوضون"
+            getStatusBadge={getStatusBadge}
+            onView={(a) => { setSelectedApplicant(a); setShowApplicantDetails(true); }}
+            onInterview={(a) => { setSelectedApplicant(a); setShowScheduleInterview(true); }}
+          />
         </TabsContent>
       </Tabs>
 
       {/* New Job Dialog */}
-      {showNewJob && (<div className="mt-4 p-6 bg-white border rounded-xl shadow-sm">
-        <div>
-          <div className="mb-4 border-b pb-3">
-            <h3 className="text-lg font-bold">إضافة وظيفة جديدة</h3>
-            <p className="text-sm text-gray-500">أدخل تفاصيل الوظيفة الشاغرة</p>
-          </div>
-          <div className="grid gap-4 py-4">
+      <Dialog open={showNewJob} onOpenChange={(open) => { if (!open) { setShowNewJob(false); setNewJob(emptyJob); } }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Briefcase className="h-5 w-5 text-blue-500" />
+              إضافة وظيفة جديدة
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>عنوان الوظيفة (إنجليزي) *</Label>
-                <Input
-                  value={newJob.title}
-                  onChange={(e) => setNewJob({ ...newJob, title: e.target.value })}
-                  placeholder="مثال: Software Engineer"
-                />
+                <Label>عنوان الوظيفة (إنجليزي) <span className="text-red-500">*</span></Label>
+                <Input value={newJob.title} onChange={(e) => setNewJob({ ...newJob, title: e.target.value })} placeholder="مثال: Software Engineer" />
               </div>
               <div className="space-y-2">
                 <Label>عنوان الوظيفة (عربي)</Label>
-                <Input
-                  value={newJob.titleAr}
-                  onChange={(e) => setNewJob({ ...newJob, titleAr: e.target.value })}
-                  placeholder="مثال: مهندس برمجيات"
-                />
+                <Input value={newJob.titleAr} onChange={(e) => setNewJob({ ...newJob, titleAr: e.target.value })} placeholder="مثال: مهندس برمجيات" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>الموقع</Label>
-                <Input
-                  value={newJob.location}
-                  onChange={(e) => setNewJob({ ...newJob, location: e.target.value })}
-                  placeholder="مثال: الرياض"
-                />
+                <Input value={newJob.location} onChange={(e) => setNewJob({ ...newJob, location: e.target.value })} placeholder="مثال: الرياض" />
               </div>
               <div className="space-y-2">
                 <Label>نوع الدوام</Label>
-                <Select
-                  value={newJob.employmentType}
-                  onValueChange={(value: any) => setNewJob({ ...newJob, employmentType: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                <Select value={newJob.employmentType} onValueChange={(v: any) => setNewJob({ ...newJob, employmentType: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="full_time">دوام كامل</SelectItem>
                     <SelectItem value="part_time">دوام جزئي</SelectItem>
@@ -617,13 +626,8 @@ export default function RecruitmentAdvanced() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>مستوى الخبرة</Label>
-                <Select
-                  value={newJob.experienceLevel}
-                  onValueChange={(value: any) => setNewJob({ ...newJob, experienceLevel: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                <Select value={newJob.experienceLevel} onValueChange={(v: any) => setNewJob({ ...newJob, experienceLevel: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="entry">مبتدئ</SelectItem>
                     <SelectItem value="mid">متوسط</SelectItem>
@@ -634,102 +638,66 @@ export default function RecruitmentAdvanced() {
               </div>
               <div className="space-y-2">
                 <Label>عدد الشواغر</Label>
-                <Input
-                  type="number"
-                  min="1"
-                  value={newJob.openings}
-                  onChange={(e) => setNewJob({ ...newJob, openings: parseInt(e.target.value) || 1 })}
-                />
+                <Input type="number" min="1" value={newJob.openings} onChange={(e) => setNewJob({ ...newJob, openings: parseInt(e.target.value) || 1 })} />
               </div>
             </div>
             <div className="space-y-2">
               <Label>تاريخ إغلاق التقديم</Label>
-              <Input
-                type="date"
-                value={newJob.applicationDeadline}
-                onChange={(e) => setNewJob({ ...newJob, applicationDeadline: e.target.value })}
-              />
+              <Input type="date" value={newJob.applicationDeadline} onChange={(e) => setNewJob({ ...newJob, applicationDeadline: e.target.value })} />
             </div>
             <div className="space-y-2">
               <Label>وصف الوظيفة</Label>
-              <Textarea
-                value={newJob.description}
-                onChange={(e) => setNewJob({ ...newJob, description: e.target.value })}
-                placeholder="وصف تفصيلي للوظيفة..."
-                rows={3}
-              />
+              <Textarea value={newJob.description} onChange={(e) => setNewJob({ ...newJob, description: e.target.value })} placeholder="وصف تفصيلي للوظيفة..." rows={3} />
             </div>
             <div className="space-y-2">
               <Label>المتطلبات</Label>
-              <Textarea
-                value={newJob.requirements}
-                onChange={(e) => setNewJob({ ...newJob, requirements: e.target.value })}
-                placeholder="المتطلبات والمؤهلات المطلوبة..."
-                rows={3}
-              />
+              <Textarea value={newJob.requirements} onChange={(e) => setNewJob({ ...newJob, requirements: e.target.value })} placeholder="المتطلبات والمؤهلات المطلوبة..." rows={3} />
             </div>
             <div className="space-y-2">
               <Label>المزايا</Label>
-              <Textarea
-                value={newJob.benefits}
-                onChange={(e) => setNewJob({ ...newJob, benefits: e.target.value })}
-                placeholder="المزايا والحوافز..."
-                rows={2}
-              />
+              <Textarea value={newJob.benefits} onChange={(e) => setNewJob({ ...newJob, benefits: e.target.value })} placeholder="المزايا والحوافز..." rows={2} />
             </div>
           </div>
-          <div className="flex gap-2 mt-4 pt-3 border-t justify-end">
-            <Button variant="outline" onClick={() => setShowNewJob(false)}>إلغاء</Button>
+          <DialogFooter className="flex-row-reverse gap-2">
+            <Button variant="outline" onClick={() => { setShowNewJob(false); setNewJob(emptyJob); }}>إلغاء</Button>
             <Button onClick={handleCreateJob} disabled={createJobMutation.isPending}>
               {createJobMutation.isPending && <Loader2 className="h-4 w-4 ms-2 animate-spin" />}
               إنشاء الوظيفة
             </Button>
-          </div>
-        </div>
-      </div>)}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Job Dialog */}
-      {showEditJob && (<div className="mt-4 p-6 bg-white border rounded-xl shadow-sm">
-        <div>
-          <div className="mb-4 border-b pb-3">
-            <h3 className="text-lg font-bold">تعديل الوظيفة</h3>
-            <p className="text-sm text-gray-500">تعديل تفاصيل الوظيفة</p>
-          </div>
+      <Dialog open={showEditJob} onOpenChange={(open) => { if (!open) { setShowEditJob(false); setSelectedJob(null); } }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit className="h-5 w-5 text-blue-500" />
+              تعديل الوظيفة
+            </DialogTitle>
+          </DialogHeader>
           {selectedJob && (
-            <div className="grid gap-4 py-4">
+            <div className="space-y-4 py-2">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>عنوان الوظيفة (إنجليزي)</Label>
-                  <Input
-                    value={selectedJob.title}
-                    onChange={(e) => setSelectedJob({ ...selectedJob, title: e.target.value })}
-                  />
+                  <Input value={selectedJob.title} onChange={(e) => setSelectedJob({ ...selectedJob, title: e.target.value })} />
                 </div>
                 <div className="space-y-2">
                   <Label>عنوان الوظيفة (عربي)</Label>
-                  <Input
-                    value={selectedJob.titleAr || ''}
-                    onChange={(e) => setSelectedJob({ ...selectedJob, titleAr: e.target.value })}
-                  />
+                  <Input value={selectedJob.titleAr || ''} onChange={(e) => setSelectedJob({ ...selectedJob, titleAr: e.target.value })} />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>الموقع</Label>
-                  <Input
-                    value={selectedJob.location || ''}
-                    onChange={(e) => setSelectedJob({ ...selectedJob, location: e.target.value })}
-                  />
+                  <Input value={selectedJob.location || ''} onChange={(e) => setSelectedJob({ ...selectedJob, location: e.target.value })} />
                 </div>
                 <div className="space-y-2">
                   <Label>الحالة</Label>
-                  <Select
-                    value={selectedJob.status}
-                    onValueChange={(value) => setSelectedJob({ ...selectedJob, status: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                  <Select value={selectedJob.status} onValueChange={(v) => setSelectedJob({ ...selectedJob, status: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="draft">مسودة</SelectItem>
                       <SelectItem value="open">مفتوح</SelectItem>
@@ -742,50 +710,45 @@ export default function RecruitmentAdvanced() {
               </div>
               <div className="space-y-2">
                 <Label>وصف الوظيفة</Label>
-                <Textarea
-                  value={selectedJob.description || ''}
-                  onChange={(e) => setSelectedJob({ ...selectedJob, description: e.target.value })}
-                  rows={3}
-                />
+                <Textarea value={selectedJob.description || ''} onChange={(e) => setSelectedJob({ ...selectedJob, description: e.target.value })} rows={3} />
               </div>
               <div className="space-y-2">
                 <Label>المتطلبات</Label>
-                <Textarea
-                  value={selectedJob.requirements || ''}
-                  onChange={(e) => setSelectedJob({ ...selectedJob, requirements: e.target.value })}
-                  rows={3}
-                />
+                <Textarea value={selectedJob.requirements || ''} onChange={(e) => setSelectedJob({ ...selectedJob, requirements: e.target.value })} rows={3} />
               </div>
             </div>
           )}
-          <div className="flex gap-2 mt-4 pt-3 border-t justify-end">
-            <Button variant="outline" onClick={() => setShowEditJob(false)}>إلغاء</Button>
+          <DialogFooter className="flex-row-reverse gap-2">
+            <Button variant="outline" onClick={() => { setShowEditJob(false); setSelectedJob(null); }}>إلغاء</Button>
             <Button onClick={handleUpdateJob} disabled={updateJobMutation.isPending}>
               {updateJobMutation.isPending && <Loader2 className="h-4 w-4 ms-2 animate-spin" />}
               حفظ التغييرات
             </Button>
-          </div>
-        </div>
-      </div>)}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Applicant Details Dialog */}
-      {showApplicantDetails && (<div className="mt-4 p-6 bg-white border rounded-xl shadow-sm">
-        <div>
-          <div className="mb-4 border-b pb-3">
-            <h3 className="text-lg font-bold">تفاصيل المتقدم</h3>
-          </div>
+      <Dialog open={showApplicantDetails} onOpenChange={(open) => { if (!open) setShowApplicantDetails(false); }}>
+        <DialogContent className="max-w-lg" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5 text-blue-500" />
+              تفاصيل المتقدم
+            </DialogTitle>
+          </DialogHeader>
           {selectedApplicant && (
-            <div className="space-y-4 py-4">
+            <div className="space-y-4 py-2">
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                  <UserPlus className="h-8 w-8 text-primary" />
+                <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center">
+                  <UserPlus className="h-7 w-7 text-primary" />
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold">{selectedApplicant.applicantName}</h3>
-                  <p className="text-sm text-gray-500">{getStatusBadge(selectedApplicant.status)}</p>
+                  <div className="mt-1">{getStatusBadge(selectedApplicant.status)}</div>
                 </div>
               </div>
-              <div className="grid gap-3">
+              <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm">
                   <Mail className="h-4 w-4 text-gray-400" />
                   <span>{selectedApplicant.email}</span>
@@ -798,79 +761,96 @@ export default function RecruitmentAdvanced() {
                 )}
                 <div className="flex items-center gap-2 text-sm">
                   <Briefcase className="h-4 w-4 text-gray-400" />
-                  <span>{selectedApplicant.yearsOfExperience || 0} سنوات خبرة</span>
+                  <span>{selectedApplicant.yearsOfExperience != null ? `${selectedApplicant.yearsOfExperience} سنوات خبرة` : 'لم تُحدد سنوات الخبرة'}</span>
                 </div>
+                {selectedApplicant.position && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <FileText className="h-4 w-4 text-gray-400" />
+                    <span>الوظيفة المتقدم لها: {selectedApplicant.position}</span>
+                  </div>
+                )}
                 <div className="flex items-center gap-2 text-sm">
                   <Calendar className="h-4 w-4 text-gray-400" />
-                  <span>تقدم في: {formatDate(selectedApplicant.appliedAt)}</span>
+                  <span>تقدم في: {formatDate(selectedApplicant.createdAt)}</span>
                 </div>
+                {selectedApplicant.resumeUrl && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <FileText className="h-4 w-4 text-blue-500" />
+                    <a
+                      href={`${import.meta.env.VITE_API_URL?.replace('/api/v1', '') || 'http://localhost:8080'}${selectedApplicant.resumeUrl}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline font-medium"
+                    >
+                      تحميل السيرة الذاتية (CV)
+                    </a>
+                  </div>
+                )}
               </div>
               {selectedApplicant.coverLetter && (
-                <div className="border-t pt-4">
-                  <h4 className="font-medium mb-2">خطاب التقديم</h4>
-                  <p className="text-sm text-gray-600">{selectedApplicant.coverLetter}</p>
+                <div className="border-t pt-3">
+                  <h4 className="font-medium mb-2 text-sm">خطاب التقديم</h4>
+                  <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">{selectedApplicant.coverLetter}</p>
                 </div>
               )}
-              <div className="border-t pt-4">
-                <h4 className="font-medium mb-2">تحديث الحالة</h4>
+              <div className="border-t pt-3">
+                <h4 className="font-medium mb-2 text-sm">تحديث الحالة</h4>
                 <div className="flex flex-wrap gap-2">
-                  {['screening', 'interview', 'assessment', 'offer', 'hired', 'rejected'].map((status) => (
+                  {[
+                    { value: 'interview', label: 'مقابلة', className: 'border-purple-300 text-purple-700 hover:bg-purple-50' },
+                    { value: 'assessment', label: 'تقييم', className: 'border-indigo-300 text-indigo-700 hover:bg-indigo-50' },
+                    { value: 'hired', label: 'توظيف', className: 'border-emerald-300 text-emerald-700 hover:bg-emerald-50' },
+                    { value: 'rejected', label: 'رفض', className: 'border-red-300 text-red-700 hover:bg-red-50' },
+                  ].map(({ value, label, className }) => (
                     <Button
-                      key={status}
+                      key={value}
                       variant="outline"
                       size="sm"
+                      className={selectedApplicant.status !== value ? className : ''}
                       onClick={() => {
-                        updateApplicationStatusMutation.mutate({
-                          id: selectedApplicant.id,
-                          status: status as any
+                        updateApplicationStatusMutation.mutate({ id: selectedApplicant.id, status: value as any }, {
+                          onSuccess: () => {
+                            toast.success(`تم تحديث الحالة إلى: ${label}`);
+                            setShowApplicantDetails(false);
+                            setActiveTab(value);
+                          }
                         });
-                        setShowApplicantDetails(false);
                       }}
-                      disabled={selectedApplicant.status === status}
+                      disabled={selectedApplicant.status === value || updateApplicationStatusMutation.isPending}
                     >
-                      {status === 'screening' && 'فرز'}
-                      {status === 'interview' && 'مقابلة'}
-                      {status === 'assessment' && 'تقييم'}
-                      {status === 'offer' && 'عرض'}
-                      {status === 'hired' && 'توظيف'}
-                      {status === 'rejected' && 'رفض'}
+                      {updateApplicationStatusMutation.isPending && selectedApplicant.status !== value
+                        ? <Loader2 className="h-3 w-3 animate-spin" />
+                        : label}
                     </Button>
                   ))}
                 </div>
               </div>
             </div>
           )}
-          <div className="flex gap-2 mt-4 pt-3 border-t justify-end">
+          <DialogFooter className="flex-row-reverse gap-2">
             <Button variant="outline" onClick={() => setShowApplicantDetails(false)}>إغلاق</Button>
-            <Button onClick={() => {
-              setShowApplicantDetails(false);
-              setShowScheduleInterview(true);
-            }}>
+            <Button onClick={() => { setShowApplicantDetails(false); setShowScheduleInterview(true); }}>
               جدولة مقابلة
             </Button>
-          </div>
-        </div>
-      </div>)}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Schedule Interview Dialog */}
-      {showScheduleInterview && (<div className="mt-4 p-6 bg-white border rounded-xl shadow-sm">
-        <div>
-          <div className="mb-4 border-b pb-3">
-            <h3 className="text-lg font-bold">جدولة مقابلة</h3>
-            <p className="text-sm text-gray-500">
-              {selectedApplicant && `جدولة مقابلة مع ${selectedApplicant.applicantName}`}
-            </p>
-          </div>
-          <div className="grid gap-4 py-4">
+      <Dialog open={showScheduleInterview} onOpenChange={(open) => { if (!open) setShowScheduleInterview(false); }}>
+        <DialogContent className="max-w-lg" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-purple-500" />
+              جدولة مقابلة
+              {selectedApplicant && <span className="text-sm font-normal text-gray-500">— {selectedApplicant.applicantName}</span>}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label>نوع المقابلة</Label>
-              <Select
-                value={interviewData.interviewType}
-                onValueChange={(value: any) => setInterviewData({ ...interviewData, interviewType: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+              <Select value={interviewData.interviewType} onValueChange={(v: any) => setInterviewData({ ...interviewData, interviewType: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="phone">هاتفية</SelectItem>
                   <SelectItem value="video">فيديو</SelectItem>
@@ -882,64 +862,87 @@ export default function RecruitmentAdvanced() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>الموعد *</Label>
-              <Input
-                type="datetime-local"
-                value={interviewData.scheduledAt}
-                onChange={(e) => setInterviewData({ ...interviewData, scheduledAt: e.target.value })}
-              />
+              <Label>الموعد <span className="text-red-500">*</span></Label>
+              <Input type="datetime-local" value={interviewData.scheduledAt} onChange={(e) => setInterviewData({ ...interviewData, scheduledAt: e.target.value })} />
             </div>
             <div className="space-y-2">
               <Label>المدة (بالدقائق)</Label>
-              <Input
-                type="number"
-                min="15"
-                step="15"
-                value={interviewData.duration}
-                onChange={(e) => setInterviewData({ ...interviewData, duration: parseInt(e.target.value) || 60 })}
-              />
+              <Input type="number" min="15" step="15" value={interviewData.duration} onChange={(e) => setInterviewData({ ...interviewData, duration: parseInt(e.target.value) || 60 })} />
             </div>
             <div className="space-y-2">
               <Label>المكان (للمقابلات الحضورية)</Label>
-              <Input
-                value={interviewData.location}
-                onChange={(e) => setInterviewData({ ...interviewData, location: e.target.value })}
-                placeholder="مثال: غرفة الاجتماعات 1"
-              />
+              <Input value={interviewData.location} onChange={(e) => setInterviewData({ ...interviewData, location: e.target.value })} placeholder="مثال: غرفة الاجتماعات 1" />
             </div>
             <div className="space-y-2">
               <Label>رابط الاجتماع (للمقابلات عن بعد)</Label>
-              <Input
-                value={interviewData.meetingLink}
-                onChange={(e) => setInterviewData({ ...interviewData, meetingLink: e.target.value })}
-                placeholder="مثال: https://meet.google.com/..."
-              />
+              <Input value={interviewData.meetingLink} onChange={(e) => setInterviewData({ ...interviewData, meetingLink: e.target.value })} placeholder="مثال: https://meet.google.com/..." />
             </div>
           </div>
-          <div className="flex gap-2 mt-4 pt-3 border-t justify-end">
+          <DialogFooter className="flex-row-reverse gap-2">
             <Button variant="outline" onClick={() => setShowScheduleInterview(false)}>إلغاء</Button>
             <Button onClick={handleScheduleInterview} disabled={createInterviewMutation.isPending}>
               {createInterviewMutation.isPending && <Loader2 className="h-4 w-4 ms-2 animate-spin" />}
               جدولة المقابلة
             </Button>
-          </div>
-        </div>
-      </div>)}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      {/* AlertDialog لتأكيد الحذف */}
+      {/* Share Job Link Dialog */}
+      <Dialog open={!!shareJob} onOpenChange={(open) => { if (!open) setShareJob(null); }}>
+        <DialogContent className="max-w-md" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Link2 className="h-5 w-5 text-blue-600" />
+              مشاركة رابط التقديم
+            </DialogTitle>
+          </DialogHeader>
+          {shareJob && (() => {
+            const link = `${window.location.origin}/jobs/${shareJob.id}`;
+            return (
+              <div className="space-y-4 py-2">
+                <p className="text-sm text-gray-500">
+                  أرسل هذا الرابط للمتقدمين ليتمكنوا من الاطلاع على تفاصيل الوظيفة وتقديم طلباتهم:
+                </p>
+                <div className="bg-gray-50 border rounded-lg p-3">
+                  <p className="text-sm font-semibold text-gray-700 mb-1">{shareJob.titleAr || shareJob.title}</p>
+                  <p className="text-xs text-gray-400 break-all" dir="ltr">{link}</p>
+                </div>
+                <Button
+                  className="w-full"
+                  variant={copied ? 'outline' : 'default'}
+                  onClick={() => {
+                    navigator.clipboard.writeText(link).then(() => {
+                      setCopied(true);
+                      toast.success('تم نسخ الرابط');
+                      setTimeout(() => setCopied(false), 3000);
+                    });
+                  }}
+                >
+                  {copied
+                    ? <><Check className="h-4 w-4 ms-2 text-green-600" /> تم النسخ</>
+                    : <><Copy className="h-4 w-4 ms-2" /> نسخ الرابط</>
+                  }
+                </Button>
+              </div>
+            );
+          })()}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShareJob(null)}>إغلاق</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent dir="rtl">
           <AlertDialogHeader>
             <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
-            <AlertDialogDescription>
-              هل أنت متأكد من هذا الإجراء؟ لا يمكن التراجع عنه.
-            </AlertDialogDescription>
+            <AlertDialogDescription>هل أنت متأكد من حذف هذه الوظيفة؟ لا يمكن التراجع عن هذا الإجراء.</AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <AlertDialogFooter className="flex-row-reverse gap-2">
             <AlertDialogCancel>إلغاء</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
-              حذف
-            </AlertDialogAction>
+            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">حذف</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -10,6 +10,8 @@ import lombok.EqualsAndHashCode;
 import java.math.BigDecimal;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 @Entity
 @Table(name = "hr_shifts")
 @Data
@@ -58,6 +60,11 @@ public class Shift extends BaseEntity {
 
     private Boolean isActive;
     private Boolean isDefault;
+
+    @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "policy_id")
+    private AttendancePolicy policy;
 
     public enum ShiftType {
         regular, flexible, night, split, rotating

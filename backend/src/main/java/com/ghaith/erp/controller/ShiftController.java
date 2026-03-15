@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/hr/shifts")
@@ -25,13 +26,13 @@ public class ShiftController {
     }
 
     @PostMapping
-    public ResponseEntity<Shift> createShift(@RequestBody Shift shift) {
-        return ResponseEntity.ok(shiftService.createShift(shift));
+    public ResponseEntity<Shift> createShift(@RequestBody Map<String, Object> payload) {
+        return ResponseEntity.ok(shiftService.createShiftFromPayload(payload));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Shift> updateShift(@PathVariable Long id, @RequestBody Shift shift) {
-        return ResponseEntity.ok(shiftService.updateShift(id, shift));
+    public ResponseEntity<Shift> updateShift(@PathVariable Long id, @RequestBody Map<String, Object> payload) {
+        return ResponseEntity.ok(shiftService.updateShiftFromPayload(id, payload));
     }
 
     @DeleteMapping("/{id}")

@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowRight, Save, User, Briefcase, CreditCard, Phone, FileText, Upload, Mail, MessageSquare, Send, CheckCircle2, Shield, Loader2, AlertCircle, Building2, Users } from 'lucide-react';
+import { ArrowRight, Save, User, Briefcase, CreditCard, Phone, FileText, Upload, Mail, MessageSquare, Send, CheckCircle2, Shield, Loader2, AlertCircle, Building2, Users, Clock } from 'lucide-react';
 import {
   useEmployees,
   useDepartments,
@@ -16,7 +16,8 @@ import {
   useCustomRoles,
   usePositions,
   useCreateEmployee,
-  useInviteEmployee
+  useInviteEmployee,
+  useShifts
 } from '@/services/hrService';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -48,7 +49,7 @@ export default function AddEmployee() {
   const [formData, setFormData] = useState({
     firstName: '', lastName: '', email: '', phone: '',
     departmentId: preDeptId, branchId: String(selectedBranchId || ''), positionId: '', roleCode: preRole,
-    managerId: '', joinDate: new Date().toISOString().split('T')[0], workType: 'full_time',
+    managerId: '', shiftId: '', joinDate: new Date().toISOString().split('T')[0], workType: 'full_time',
     nationalId: '', nationality: '', dateOfBirth: '', gender: '', maritalStatus: '', address: '',
     emergencyName: '', emergencyRelation: '', emergencyPhone: '',
     bankName: '', bankAccount: '',
@@ -83,6 +84,7 @@ export default function AddEmployee() {
   const managers = (employeesData || []).filter((e: any) =>
     e.user?.role === 'GENERAL_MANAGER' || e.user?.role === 'DEPARTEMENT_MANAGER'
   );
+  const { data: shiftsData } = useShifts();
 
   const isLoading = isLoadingDepts || isLoadingBranches || isLoadingRoles || isLoadingPositions;
 
@@ -121,6 +123,7 @@ export default function AddEmployee() {
         bankName: formData.bankName,
         bankAccount: formData.bankAccount,
         iban: formData.iban,
+        shift: formData.shiftId && formData.shiftId !== 'none' ? { id: parseInt(formData.shiftId) } : undefined,
       });
 
       toast.success('تم إضافة الموظف بنجاح');
@@ -322,6 +325,22 @@ export default function AddEmployee() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2"><Clock className="h-4 w-4" />الوردية</Label>
+                  <Select value={formData.shiftId} onValueChange={(v) => updateField('shiftId', v)}>
+                    <SelectTrigger><SelectValue placeholder="اختر الوردية (اختياري)" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">بدون وردية</SelectItem>
+                      {(shiftsData || []).filter((s: any) => s.isActive).map((s: any) => (
+                        <SelectItem key={s.id} value={String(s.id)}>
+                          {s.name}{s.startTime && s.endTime ? ` (${s.startTime} - ${s.endTime})` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label>تاريخ الالتحاق</Label>
                   <Input type="date" value={formData.joinDate} onChange={(e) => updateField('joinDate', e.target.value)} />
