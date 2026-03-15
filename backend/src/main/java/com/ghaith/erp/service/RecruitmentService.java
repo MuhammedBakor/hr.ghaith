@@ -100,16 +100,19 @@ public class RecruitmentService {
 
     @Transactional
     public Interview createInterview(Interview interview) {
+        // Extract applicationId BEFORE save (the deserialized object has only id set, not full fields)
+        Long appId = (interview.getApplication() != null) ? interview.getApplication().getId() : null;
         Interview saved = interviewRepository.save(interview);
-        if (saved.getApplication() != null) {
-            JobApplication app = saved.getApplication();
-            String scheduledAt = saved.getScheduledAt() != null
-                    ? saved.getScheduledAt().toString()
-                    : (saved.getInterviewDate() != null ? saved.getInterviewDate().toString() : "");
-            emailService.sendInterviewScheduled(
-                    app.getEmail(), app.getApplicantName(), app.getPosition(),
-                    saved.getInterviewType(), scheduledAt,
-                    saved.getDuration(), saved.getLocation(), saved.getMeetingLink());
+        if (appId != null) {
+            applicationRepository.findById(appId).ifPresent(app -> {
+                String scheduledAt = saved.getScheduledAt() != null
+                        ? saved.getScheduledAt().toString()
+                        : (saved.getInterviewDate() != null ? saved.getInterviewDate().toString() : "");
+                emailService.sendInterviewScheduled(
+                        app.getEmail(), app.getApplicantName(), app.getPosition(),
+                        saved.getInterviewType(), scheduledAt,
+                        saved.getDuration(), saved.getLocation(), saved.getMeetingLink());
+            });
         }
         return saved;
     }
@@ -165,16 +168,33 @@ public class RecruitmentService {
             interview.setStatus(interviewDetails.getStatus());
         if (interviewDetails.getNotes() != null)
             interview.setNotes(interviewDetails.getNotes());
+        // Extract applicationId from the managed entity (Hibernate proxy has id available without full load)
+        Long appId = (interview.getApplication() != null) ? interview.getApplication().getId() : null;
         Interview saved = interviewRepository.save(interview);
-        if (saved.getApplication() != null) {
-            JobApplication app = saved.getApplication();
-            String scheduledAt = saved.getScheduledAt() != null
-                    ? saved.getScheduledAt().toString()
-                    : (saved.getInterviewDate() != null ? saved.getInterviewDate().toString() : "");
-            emailService.sendInterviewUpdated(
-                    app.getEmail(), app.getApplicantName(), app.getPosition(),
-                    saved.getInterviewType(), scheduledAt,
-                    saved.getDuration(), saved.getLocation(), saved.getMeetingLink());
+        if (appId != null) {
+            applicationRepository.findById(appId).ifPresent(app -> {
+                String scheduledAt = saved.getScheduledAt() != null
+                        ? saved.getScheduledAt().toString()
+                        : (saved.getInterviewDate() != null ? saved.getInterviewDate().toString() : "");
+                emailService.sendInterviewUpdated(
+                        app.getEmail(), app.getApplicantName(), app.getPosition(),
+                        saved.getInterviewType(), scheduledAt,
+                        saved.getDuration(), saved.getLocation(), saved.getMeetingLink());
+            });
+        }
+        return saved;
+    }
+
+    @Transactional
+    public Interview cancelInterview(Long id) {
+        Interview interview = interviewRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("المقابلة غير موجودة"));
+        Long appId = (interview.getApplication() != null) ? interview.getApplication().getId() : null;
+        interview.setStatus(Interview.InterviewStatus.cancelled);
+        Interview saved = interviewRepository.save(interview);
+        if (appId != null) {
+            applicationRepository.findById(appId).ifPresent(app ->
+                emailService.sendInterviewCancelled(app.getEmail(), app.getApplicantName(), app.getPosition()));
         }
         return saved;
     }

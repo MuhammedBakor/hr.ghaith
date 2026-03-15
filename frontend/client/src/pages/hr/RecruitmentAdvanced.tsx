@@ -54,7 +54,8 @@ import {
   useDeleteApplication,
   useRecruitmentInterviews,
   useCreateInterview,
-  useUpdateInterview
+  useUpdateInterview,
+  useCancelInterview
 } from "@/services/recruitmentService";
 
 function ApplicantsTable({
@@ -163,6 +164,7 @@ export default function RecruitmentAdvanced() {
   const [showScheduleInterview, setShowScheduleInterview] = useState(false);
   const [showEditInterview, setShowEditInterview] = useState(false);
   const [editingInterview, setEditingInterview] = useState<any>(null);
+  const [showCancelInterviewDialog, setShowCancelInterviewDialog] = useState(false);
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [selectedApplicant, setSelectedApplicant] = useState<any>(null);
   const [shareJob, setShareJob] = useState<any>(null);
@@ -203,6 +205,7 @@ export default function RecruitmentAdvanced() {
   const deleteApplicationMutation = useDeleteApplication();
   const createInterviewMutation = useCreateInterview();
   const updateInterviewMutation = useUpdateInterview();
+  const cancelInterviewMutation = useCancelInterview();
 
   const handlePublishJob = (id: number) => {
     updateJobMutation.mutate({ id, status: 'open' }, {
@@ -363,6 +366,20 @@ export default function RecruitmentAdvanced() {
         setInterviewData({ interviewType: 'phone', scheduledAt: '', duration: 60, location: '', meetingLink: '' });
       },
       onError: (err: any) => toast.error(`فشل التحديث: ${err.message}`)
+    });
+  };
+
+  const handleConfirmCancelInterview = () => {
+    if (!editingInterview) return;
+    cancelInterviewMutation.mutate(editingInterview.id, {
+      onSuccess: () => {
+        toast.success('تم إلغاء المقابلة وإرسال بريد إلكتروني للمتقدم');
+        setShowCancelInterviewDialog(false);
+        setShowEditInterview(false);
+        setEditingInterview(null);
+        setInterviewData({ interviewType: 'phone', scheduledAt: '', duration: 60, location: '', meetingLink: '' });
+      },
+      onError: (err: any) => toast.error(`فشل الإلغاء: ${err.message}`)
     });
   };
 
@@ -1080,7 +1097,15 @@ export default function RecruitmentAdvanced() {
             </div>
           </div>
           <DialogFooter className="flex-row-reverse gap-2">
-            <Button variant="outline" onClick={() => { setShowEditInterview(false); setEditingInterview(null); }}>إلغاء</Button>
+            <Button variant="outline" onClick={() => { setShowEditInterview(false); setEditingInterview(null); }}>إغلاق</Button>
+            <Button
+              variant="destructive"
+              onClick={() => setShowCancelInterviewDialog(true)}
+              disabled={cancelInterviewMutation.isPending}
+            >
+              {cancelInterviewMutation.isPending && <Loader2 className="h-4 w-4 ms-2 animate-spin" />}
+              إلغاء الاجتماع وإشعار المتقدم
+            </Button>
             <Button onClick={handleUpdateInterview} disabled={updateInterviewMutation.isPending}>
               {updateInterviewMutation.isPending && <Loader2 className="h-4 w-4 ms-2 animate-spin" />}
               حفظ وإرسال بريد تحديث
@@ -1133,6 +1158,27 @@ export default function RecruitmentAdvanced() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Cancel Interview Confirmation */}
+      <AlertDialog open={showCancelInterviewDialog} onOpenChange={setShowCancelInterviewDialog}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-right">تأكيد إلغاء المقابلة</AlertDialogTitle>
+            <AlertDialogDescription className="text-right">
+              هل أنت متأكد من إلغاء هذه المقابلة؟ سيتم إرسال بريد إلكتروني تلقائي للمتقدم يُعلمه بالإلغاء.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row-reverse gap-2">
+            <AlertDialogCancel>تراجع</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmCancelInterview}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              تأكيد الإلغاء وإرسال الإشعار
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Delete Applicant Confirmation */}
       <AlertDialog open={deleteApplicantDialogOpen} onOpenChange={setDeleteApplicantDialogOpen}>

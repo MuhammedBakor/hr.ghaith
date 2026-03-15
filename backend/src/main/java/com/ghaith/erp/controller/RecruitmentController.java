@@ -92,6 +92,11 @@ public class RecruitmentController {
         return ResponseEntity.ok(recruitmentService.updateInterview(id, interview));
     }
 
+    @PutMapping("/interviews/{id}/cancel")
+    public ResponseEntity<Interview> cancelInterview(@PathVariable Long id) {
+        return ResponseEntity.ok(recruitmentService.cancelInterview(id));
+    }
+
     @DeleteMapping("/interviews/{id}")
     public ResponseEntity<Void> deleteInterview(@PathVariable Long id) {
         recruitmentService.deleteInterview(id);

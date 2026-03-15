@@ -1,9 +1,10 @@
 package com.ghaith.erp.service;
 
+import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -21,79 +22,79 @@ public class EmailService {
 
     public void sendCredentials(String to, String firstName, String temporaryPassword) {
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(fromEmail);
-            message.setTo(to);
-            message.setSubject("مرحباً بك في نظام غيث - بيانات الدخول الخاصة بك");
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, "UTF-8");
 
-            String content = String.format(
-                    "مرحباً %s،\n\n" +
-                            "تم إنشاء حساب لك في نظام غيث (Ghaith ERP).\n" +
-                            "إليك بيانات الدخول الخاصة بك:\n\n" +
-                            "البريد الإلكتروني: %s\n" +
-                            "كلمة المرور المؤقتة: %s\n\n" +
-                            "يرجى تسجيل الدخول وتغيير كلمة المرور الخاصة بك في أقرب وقت.\n" +
-                            "رابط النظام: " + frontendUrl + "/login\n\n" +
-                            "مع تحيات إدارة النظام.",
-                    firstName, to, temporaryPassword);
+            helper.setFrom(fromEmail);
+            helper.setTo(to);
+            helper.setSubject("مرحباً بك في نظام غيث - بيانات الدخول الخاصة بك");
 
-            message.setText(content);
-            System.out.println("Attempting to send email via mailSender... From: " + fromEmail + " To: " + to);
+            String htmlContent = String.format(
+                    "<div dir='rtl' style='text-align: right; font-family: sans-serif;'>" +
+                            "مرحباً %s،<br><br>" +
+                            "تم إنشاء حساب لك في نظام غيث (Ghaith ERP).<br>" +
+                            "إليك بيانات الدخول الخاصة بك:<br><br>" +
+                            "البريد الإلكتروني: <b>%s</b><br>" +
+                            "كلمة المرور المؤقتة: <b>%s</b><br><br>" +
+                            "يرجى تسجيل الدخول وتغيير كلمة المرور الخاصة بك في أقرب وقت.<br>" +
+                            "رابط النظام: <a href='%s/login'>%s/login</a><br><br>" +
+                            "مع تحيات إدارة النظام." +
+                            "</div>",
+                    firstName, to, temporaryPassword, frontendUrl, frontendUrl);
+
+            helper.setText(htmlContent, true);
+            log.info("Attempting to send credentials email to {}", to);
             mailSender.send(message);
-            System.out.println("mailSender.send() returned successfully.");
             log.info("Credentials email sent successfully to {}", to);
         } catch (Exception e) {
-            System.out.println("EXCEPTION in EmailService.sendCredentials: " + e.getMessage());
-            e.printStackTrace();
             log.error("Failed to send credentials email to {}: {}", to, e.getMessage());
-            // We don't throw an exception here because we don't want to roll back
-            // the employee creation if only the email fails.
-            // In a production app, you might want to retry or log this for manual action.
         }
     }
 
     public void sendVerificationCode(String to, String firstName, String code, String employeeNumber) {
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(fromEmail);
-            message.setTo(to);
-            message.setSubject("كود تفعيل حسابك في منصة غيث");
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, "UTF-8");
+
+            helper.setFrom(fromEmail);
+            helper.setTo(to);
+            helper.setSubject("كود تفعيل حسابك في منصة غيث");
 
             String activationUrl = String.format("%s/activate?emp=%s&code=%s", frontendUrl, employeeNumber, code);
 
-            String content = String.format(
-                    "مرحباً %s،\n\n" +
-                            "شكراً لانضمامك إلى منصة غيث. لإكمال تفعيل حسابك، اضغط على الرابط التالي:\n\n" +
-                            "رابط التفعيل: %s\n\n" +
-                            "أو استخدم البيانات التالية في صفحة التفعيل:\n" +
-                            "الرقم الوظيفي: %s\n" +
-                            "كود التفعيل: %s\n\n" +
-                            "بعد التفعيل وإنشاء كلمة المرور، يمكنك تسجيل الدخول باستخدام:\n" +
-                            "البريد الإلكتروني: %s\n" +
-                            "كلمة المرور: التي ستقوم بإنشائها أثناء التفعيل\n\n" +
-                            "مع تحيات،\nفريق منصة غيث",
+            String htmlContent = String.format(
+                    "<div dir='rtl' style='text-align: right; font-family: sans-serif;'>" +
+                            "مرحباً %s،<br><br>" +
+                            "شكراً لانضمامك إلى منصة غيث. لإكمال تفعيل حسابك، اضغط على الرابط التالي:<br><br>" +
+                            "<b><a href='%s'>رابط التفعيل</a></b><br><br>" +
+                            "أو استخدم البيانات التالية في صفحة التفعيل:<br>" +
+                            "الرقم الوظيفي: <b>%s</b><br>" +
+                            "كود التفعيل: <b>%s</b><br><br>" +
+                            "بعد التفعيل وإنشاء كلمة المرور، يمكنك تسجيل الدخول باستخدام:<br>" +
+                            "البريد الإلكتروني: <b>%s</b><br>" +
+                            "كلمة المرور: التي ستقوم بإنشائها أثناء التفعيل<br><br>" +
+                            "مع تحيات،<br>فريق منصة غيث" +
+                            "</div>",
                     firstName, activationUrl, employeeNumber, code, to);
 
-            message.setText(content);
-            System.out.println("Attempting to send verification email... From: " + fromEmail + " To: " + to);
+            helper.setText(htmlContent, true);
             mailSender.send(message);
-            System.out.println("Verification email sent successfully.");
             log.info("Verification code sent successfully to {}", to);
         } catch (Exception e) {
-            System.out.println("EXCEPTION in EmailService.sendVerificationCode: " + e.getMessage());
-            e.printStackTrace();
             log.error("Failed to send verification code to {}: {}", to, e.getMessage());
         }
     }
 
     public void sendInterviewScheduled(String to, String applicantName, String position,
-                                       String interviewType, String scheduledAt,
-                                       Integer duration, String location, String meetingLink) {
+            String interviewType, String scheduledAt,
+            Integer duration, String location, String meetingLink) {
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(fromEmail);
-            message.setTo(to);
-            message.setSubject("دعوة لمقابلة عمل - " + position);
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, "UTF-8");
+
+            helper.setFrom(fromEmail);
+            helper.setTo(to);
+            helper.setSubject("دعوة لمقابلة عمل - " + position);
 
             String typeLabel = switch (interviewType != null ? interviewType : "") {
                 case "phone" -> "هاتفية";
@@ -105,18 +106,24 @@ public class EmailService {
                 default -> interviewType != null ? interviewType : "غير محدد";
             };
 
-            StringBuilder content = new StringBuilder();
-            content.append(String.format("مرحباً %s،\n\n", applicantName));
-            content.append(String.format("يسعدنا إبلاغك بأنه تم جدولة مقابلة عمل لوظيفة: %s\n\n", position));
-            content.append("تفاصيل المقابلة:\n");
-            content.append(String.format("- نوع المقابلة: %s\n", typeLabel));
-            content.append(String.format("- الموعد: %s\n", scheduledAt));
-            if (duration != null) content.append(String.format("- المدة: %d دقيقة\n", duration));
-            if (location != null && !location.isBlank()) content.append(String.format("- المكان: %s\n", location));
-            if (meetingLink != null && !meetingLink.isBlank()) content.append(String.format("- رابط الاجتماع: %s\n", meetingLink));
-            content.append("\nنتمنى لك التوفيق.\n\nمع تحيات،\nفريق التوظيف - منصة غيث");
+            StringBuilder htmlContent = new StringBuilder();
+            htmlContent.append("<div dir='rtl' style='text-align: right; font-family: sans-serif;'>");
+            htmlContent.append(String.format("مرحباً %s،<br><br>", applicantName));
+            htmlContent.append(
+                    String.format("يسعدنا إبلاغك بأنه تم جدولة مقابلة عمل لوظيفة: <b>%s</b><br><br>", position));
+            htmlContent.append("<b>تفاصيل المقابلة:</b><br>");
+            htmlContent.append(String.format("- نوع المقابلة: %s<br>", typeLabel));
+            htmlContent.append(String.format("- الموعد: %s<br>", scheduledAt));
+            if (duration != null)
+                htmlContent.append(String.format("- المدة: %d دقيقة<br>", duration));
+            if (location != null && !location.isBlank())
+                htmlContent.append(String.format("- المكان: %s<br>", location));
+            if (meetingLink != null && !meetingLink.isBlank())
+                htmlContent.append(String.format("- رابط الاجتماع: <a href='%s'>%s</a><br>", meetingLink, meetingLink));
+            htmlContent.append("<br>نتمنى لك التوفيق.<br><br>مع تحيات،<br>فريق التوظيف - منصة غيث");
+            htmlContent.append("</div>");
 
-            message.setText(content.toString());
+            helper.setText(htmlContent.toString(), true);
             mailSender.send(message);
             log.info("Interview scheduled email sent to {}", to);
         } catch (Exception e) {
@@ -125,13 +132,15 @@ public class EmailService {
     }
 
     public void sendInterviewUpdated(String to, String applicantName, String position,
-                                     String interviewType, String scheduledAt,
-                                     Integer duration, String location, String meetingLink) {
+            String interviewType, String scheduledAt,
+            Integer duration, String location, String meetingLink) {
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(fromEmail);
-            message.setTo(to);
-            message.setSubject("تحديث موعد المقابلة - " + position);
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, "UTF-8");
+
+            helper.setFrom(fromEmail);
+            helper.setTo(to);
+            helper.setSubject("تحديث موعد المقابلة - " + position);
 
             String typeLabel = switch (interviewType != null ? interviewType : "") {
                 case "phone" -> "هاتفية";
@@ -143,18 +152,24 @@ public class EmailService {
                 default -> interviewType != null ? interviewType : "غير محدد";
             };
 
-            StringBuilder content = new StringBuilder();
-            content.append(String.format("مرحباً %s،\n\n", applicantName));
-            content.append(String.format("نود إبلاغك بأنه تم تعديل موعد مقابلتك لوظيفة: %s\n\n", position));
-            content.append("التفاصيل المحدّثة للمقابلة:\n");
-            content.append(String.format("- نوع المقابلة: %s\n", typeLabel));
-            content.append(String.format("- الموعد الجديد: %s\n", scheduledAt));
-            if (duration != null) content.append(String.format("- المدة: %d دقيقة\n", duration));
-            if (location != null && !location.isBlank()) content.append(String.format("- المكان: %s\n", location));
-            if (meetingLink != null && !meetingLink.isBlank()) content.append(String.format("- رابط الاجتماع: %s\n", meetingLink));
-            content.append("\nنتمنى لك التوفيق.\n\nمع تحيات،\nفريق التوظيف - منصة غيث");
+            StringBuilder htmlContent = new StringBuilder();
+            htmlContent.append("<div dir='rtl' style='text-align: right; font-family: sans-serif;'>");
+            htmlContent.append(String.format("مرحباً %s،<br><br>", applicantName));
+            htmlContent
+                    .append(String.format("نود إبلاغك بأنه تم تعديل موعد مقابلتك لوظيفة: <b>%s</b><br><br>", position));
+            htmlContent.append("<b>التفاصيل المحدّثة للمقابلة:</b><br>");
+            htmlContent.append(String.format("- نوع المقابلة: %s<br>", typeLabel));
+            htmlContent.append(String.format("- الموعد الجديد: %s<br>", scheduledAt));
+            if (duration != null)
+                htmlContent.append(String.format("- المدة: %d دقيقة<br>", duration));
+            if (location != null && !location.isBlank())
+                htmlContent.append(String.format("- المكان: %s<br>", location));
+            if (meetingLink != null && !meetingLink.isBlank())
+                htmlContent.append(String.format("- رابط الاجتماع: <a href='%s'>%s</a><br>", meetingLink, meetingLink));
+            htmlContent.append("<br>نتمنى لك التوفيق.<br><br>مع تحيات،<br>فريق التوظيف - منصة غيث");
+            htmlContent.append("</div>");
 
-            message.setText(content.toString());
+            helper.setText(htmlContent.toString(), true);
             mailSender.send(message);
             log.info("Interview updated email sent to {}", to);
         } catch (Exception e) {
@@ -162,23 +177,53 @@ public class EmailService {
         }
     }
 
+    public void sendInterviewCancelled(String to, String applicantName, String position) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, "UTF-8");
+
+            helper.setFrom(fromEmail);
+            helper.setTo(to);
+            helper.setSubject("إلغاء موعد المقابلة - " + position);
+
+            String htmlContent = String.format(
+                    "<div dir='rtl' style='text-align: right; font-family: sans-serif;'>" +
+                    "مرحباً %s،<br><br>" +
+                    "نود إبلاغك بأنه تم <b>إلغاء</b> موعد مقابلتك لوظيفة: <b>%s</b><br><br>" +
+                    "نعتذر عن أي إزعاج، وسنتواصل معك قريباً لتحديد موعد بديل إن أمكن.<br><br>" +
+                    "مع تحيات،<br>فريق التوظيف - منصة غيث" +
+                    "</div>",
+                    applicantName, position);
+
+            helper.setText(htmlContent, true);
+            mailSender.send(message);
+            log.info("Interview cancelled email sent to {}", to);
+        } catch (Exception e) {
+            log.error("Failed to send interview cancelled email to {}: {}", to, e.getMessage());
+        }
+    }
+
     public void sendPasswordResetCode(String to, String firstName, String code) {
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(fromEmail);
-            message.setTo(to);
-            message.setSubject("إعادة تعيين كلمة المرور - منصة غيث");
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, "UTF-8");
 
-            String content = String.format(
-                    "مرحباً %s،\n\n" +
-                            "لقد تلقينا طلباً لإعادة تعيين كلمة المرور الخاصة بحسابك.\n\n" +
-                            "رمز التحقق: %s\n\n" +
-                            "أدخل هذا الرمز في صفحة إعادة تعيين كلمة المرور لإكمال العملية.\n" +
-                            "إذا لم تطلب إعادة تعيين كلمة المرور، يرجى تجاهل هذا البريد.\n\n" +
-                            "مع تحيات،\nفريق منصة غيث",
+            helper.setFrom(fromEmail);
+            helper.setTo(to);
+            helper.setSubject("إعادة تعيين كلمة المرور - منصة غيث");
+
+            String htmlContent = String.format(
+                    "<div dir='rtl' style='text-align: right; font-family: sans-serif;'>" +
+                            "مرحباً %s،<br><br>" +
+                            "لقد تلقينا طلباً لإعادة تعيين كلمة المرور الخاصة بحسابك.<br><br>" +
+                            "رمز التحقق: <b>%s</b><br><br>" +
+                            "أدخل هذا الرمز في صفحة إعادة تعيين كلمة المرور لإكمال العملية.<br>" +
+                            "إذا لم تطلب إعادة تعيين كلمة المرور، يرجى تجاهل هذا البريد.<br><br>" +
+                            "مع تحيات،<br>فريق منصة غيث" +
+                            "</div>",
                     firstName, code);
 
-            message.setText(content);
+            helper.setText(htmlContent, true);
             mailSender.send(message);
             log.info("Password reset code sent successfully to {}", to);
         } catch (Exception e) {

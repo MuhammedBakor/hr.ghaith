@@ -187,6 +187,15 @@ export const useDeleteInterview = () => {
         },
     });
 };
+export const useCancelInterview = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (id: number) => api.put(`/recruitment/interviews/${id}/cancel`).then(r => r.data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["recruitment", "interviews"] });
+        },
+    });
+};
 export const useCreateApplication = () => {
     const queryClient = useQueryClient();
     return useMutation({
