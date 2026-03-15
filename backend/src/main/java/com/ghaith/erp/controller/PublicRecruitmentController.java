@@ -50,8 +50,9 @@ public class PublicRecruitmentController {
         Files.createDirectories(uploadPath);
         Files.copy(file.getInputStream(), uploadPath.resolve(filename));
 
-        String fileUrl = "/uploads/" + filename;
-        return ResponseEntity.ok(Map.of("url", fileUrl, "filename", originalFilename != null ? originalFilename : filename));
+        String fileUrl = "/api/v1/public/uploads/" + filename;
+        return ResponseEntity
+                .ok(Map.of("url", fileUrl, "filename", originalFilename != null ? originalFilename : filename));
     }
 
     @PostMapping("/jobs/{id}/apply")
@@ -63,7 +64,8 @@ public class PublicRecruitmentController {
             return ResponseEntity.notFound().build();
         }
         String position = (job.getTitleAr() != null && !job.getTitleAr().isBlank())
-                ? job.getTitleAr() : job.getTitle();
+                ? job.getTitleAr()
+                : job.getTitle();
         if (application.getPosition() == null || application.getPosition().isBlank()) {
             application.setPosition(position);
         }
