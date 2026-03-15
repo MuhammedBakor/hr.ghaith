@@ -7,6 +7,7 @@ import com.ghaith.erp.repository.DepartmentRepository;
 import com.ghaith.erp.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -17,9 +18,20 @@ public class DataInitializer implements CommandLineRunner {
     private final UserRepository userRepository;
     private final DepartmentRepository departmentRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JdbcTemplate jdbcTemplate;
 
     @Override
     public void run(String... args) throws Exception {
+        // Fix employees_status_check constraint to include 'incomplete' (ddl-auto:update never updates existing constraints)
+        try {
+            jdbcTemplate.execute("ALTER TABLE employees DROP CONSTRAINT IF EXISTS employees_status_check");
+            jdbcTemplate.execute(
+                "ALTER TABLE employees ADD CONSTRAINT employees_status_check " +
+                "CHECK (status IN ('active','inactive','terminated','on_leave','suspended','incomplete'))"
+            );
+        } catch (Exception e) {
+            System.out.println("Note: Could not update employees_status_check constraint: " + e.getMessage());
+        }
         // Seed default users
         if (userRepository.findByEmail("admin").isEmpty()) {
             User admin = User.builder()

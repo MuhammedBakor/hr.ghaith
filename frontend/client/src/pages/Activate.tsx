@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { useState } from 'react';
 import { useLocation, useSearch } from 'wouter';
 import { Button } from '@/components/ui/button';
@@ -27,7 +27,6 @@ export default function Activate() {
   const [showPassword, setShowPassword] = useState(false);
   const [employeeName, setEmployeeName] = useState('');
   const [employeeEmail, setEmployeeEmail] = useState('');
-  const [isAutoVerifying, setIsAutoVerifying] = useState(false);
 
   // Mutation للتحقق من الكود
   const verifyMutation = useMutation({
@@ -86,17 +85,6 @@ export default function Activate() {
     },
   });
 
-  // Auto-verify when both emp and code are pre-filled from URL (direct email link)
-  useEffect(() => {
-    if (empFromUrl && codeFromUrl && step === 'verify') {
-      setIsAutoVerifying(true);
-      verifyMutation.mutate(
-        { employeeNumber: empFromUrl, activationCode: codeFromUrl },
-        { onSettled: () => setIsAutoVerifying(false) }
-      );
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const handleVerify = () => {
     if (!employeeNumber || !activationCode) {
@@ -143,47 +131,40 @@ export default function Activate() {
         <CardContent className="space-y-6">
           {step === 'verify' && (
             <>
-              {isAutoVerifying || verifyMutation.isPending ? (
-                <div className="flex flex-col items-center gap-3 py-4 text-gray-500">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <p className="text-sm">جاري التحقق من الكود...</p>
+              <div className="space-y-2">
+                <Label>الرقم الوظيفي</Label>
+                <div className="relative">
+                  <User className="absolute end-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="أدخل..."
+                    value={employeeNumber}
+                    onChange={(e) => setEmployeeNumber(e.target.value)}
+                    className="pe-10"
+                    dir="ltr"
+                  />
                 </div>
-              ) : (
-                <>
-                  <div className="space-y-2">
-                    <Label>الرقم الوظيفي</Label>
-                    <div className="relative">
-                      <User className="absolute end-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <Input
-                        placeholder="أدخل..."
-                        value={employeeNumber}
-                        onChange={(e) => setEmployeeNumber(e.target.value)}
-                        className="pe-10"
-                        dir="ltr"
-                      />
-                    </div>
-                  </div>
+              </div>
 
-                  <div className="space-y-2">
-                    <Label>كود التفعيل</Label>
-                    <div className="relative">
-                      <KeyRound className="absolute end-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <Input
-                        placeholder="أدخل..."
-                        value={activationCode}
-                        onChange={(e) => setActivationCode(e.target.value)}
-                        className="pe-10 font-mono tracking-widest"
-                        dir="ltr"
-                        maxLength={10}
-                      />
-                    </div>
-                  </div>
+              <div className="space-y-2">
+                <Label>كود التفعيل</Label>
+                <div className="relative">
+                  <KeyRound className="absolute end-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="أدخل..."
+                    value={activationCode}
+                    onChange={(e) => setActivationCode(e.target.value)}
+                    className="pe-10 font-mono tracking-widest"
+                    dir="ltr"
+                    maxLength={10}
+                  />
+                </div>
+              </div>
 
-                  <Button className="w-full" onClick={handleVerify} disabled={verifyMutation.isPending}>
-                    تحقق من الكود
-                  </Button>
-                </>
-              )}
+              <Button className="w-full" onClick={handleVerify} disabled={verifyMutation.isPending}>
+                {verifyMutation.isPending
+                  ? <><Loader2 className="h-4 w-4 ms-2 animate-spin" />جاري التحقق...</>
+                  : 'تفعيل'}
+              </Button>
             </>
           )}
 
