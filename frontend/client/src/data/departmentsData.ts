@@ -27,7 +27,6 @@ export const departmentsData: DeptData[] = [
       { label: 'الورديات والسياسات', path: '/hr/shifts' },
       { label: 'التتبع الميداني', path: '/hr/field-tracking' },
       { label: 'ماسح QR', path: '/hr/qr-scanner' },
-      { label: 'سلاسل الموافقات', path: '/hr/approval-chains' },
       { label: 'الخطابات الرسمية', path: '/hr/official-letters' },
       { label: 'تقارير الحضور', path: '/hr/attendance-reports' },
       { label: 'مراجعة الانضمام', path: '/hr/onboarding-review' },
@@ -164,18 +163,6 @@ export const departmentsData: DeptData[] = [
     items: [
       { label: 'المنتجات', path: '/store' },
       { label: 'الطلبات', path: '/store/orders' },
-    ],
-  },
-  {
-    id: 'requests',
-    label: 'الطلبات',
-    items: [
-      { label: 'كل الطلبات', path: '/requests' },
-      { label: 'أنواع الطلبات', path: '/requests/types' },
-      { label: 'سير العمل', path: '/requests/workflows' },
-      { label: 'الموافقات', path: '/workflow/approvals' },
-      { label: 'التذاكر', path: '/support/tickets' },
-      { label: 'أتمتة الدعم', path: '/support/automation' },
     ],
   },
   {

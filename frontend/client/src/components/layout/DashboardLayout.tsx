@@ -295,8 +295,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       hr: 'hr', finance: 'finance', fleet: 'fleet', property: 'property',
       operations: 'projects', governance: 'governance', bi: 'bi',
       legal: 'legal', marketing: 'marketing', store: 'store',
-      requests: 'requests', documents: 'documents', reports: 'reports',
+      requests: 'requests', 'requests-workflow': 'requests', documents: 'documents', reports: 'reports',
       comms: 'comms', workflow: 'workflow', integrations: 'integrations',
+      support: 'support',
     };
 
     // جدول مطابقة مسارات HR بصلاحياتها الفرعية (الأطول أولاً لتفادي التطابق المبكر)
@@ -315,7 +316,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       ['/hr/violations', 'violations'],
       ['/hr/my-violations', 'my_violations'],
       ['/hr/shifts', 'shifts'],
-      ['/hr/approval-chains', 'approvals'],
       ['/hr/official-letters', 'letters'],
       ['/hr/penalty-escalation', 'escalation'],
       ['/hr/salary-components', 'salary'],
@@ -453,6 +453,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       icon: Calendar,
       module: 'home' as ModuleType,
     }] : []),
+    // الطلبات و سير العمل - لجميع الأدوار
+    {
+      label: 'الطلبات و سير العمل',
+      path: '/departments/requests',
+      icon: FileText,
+      module: 'requests',
+      children: [
+        { label: 'كل الطلبات', path: '/departments/requests', icon: FileText, module: 'requests' },
+        { label: 'سير العمل', path: '/departments/requests-workflow/workflows', icon: GitBranch, module: 'requests' },
+        { label: 'التذاكر', path: '/departments/support/tickets', icon: Ticket, module: 'support' },
+      ],
+    },
     {
       label: ['employee', 'supervisor'].includes(selectedRole) ? 'الحضور' : 'الموارد البشرية',
       path: '/hr',
@@ -472,7 +484,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         { label: 'مخالفاتي', path: '/hr/my-violations', icon: AlertTriangle, hrSubPage: 'my_violations' },
         { label: 'الورديات والسياسات', path: '/hr/shifts', icon: CalendarClock, hrSubPage: 'shifts' },
         { label: 'أرصدة الإجازات', path: '/hr/leave-balances', icon: Calendar, hrSubPage: 'leave-balances' },
-        { label: 'سلاسل الموافقات', path: '/hr/approval-chains', icon: GitBranch, hrSubPage: 'approvals' },
         { label: 'الخطابات الرسمية', path: '/hr/official-letters', icon: FileText, hrSubPage: 'letters' },
         { label: 'تقارير الحضور', path: '/hr/attendance-reports', icon: BarChart3, hrSubPage: 'reports' },
         { label: 'تصعيد الجزاءات', path: '/hr/penalty-escalation', icon: TrendingUp, hrSubPage: 'escalation' },
@@ -791,9 +802,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       sectionMap[item.path] = { label: dept.label, path: deptDirectPath };
 
       // /departments/hr/employees → label + parent /departments/hr
+      // Skip if hubItemPath === deptHubPath (e.g. dept id 'requests', item path '/requests')
+      // — this would overwrite the dept hub entry with a circular parent reference.
       const hubItemPath = '/departments' + item.path;
-      map[hubItemPath] = item.label;
-      sectionMap[hubItemPath] = { label: dept.label, path: deptHubPath };
+      if (hubItemPath !== deptHubPath) {
+        map[hubItemPath] = item.label;
+        sectionMap[hubItemPath] = { label: dept.label, path: deptHubPath };
+      }
     }
   }
 

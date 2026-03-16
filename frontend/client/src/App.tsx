@@ -71,7 +71,6 @@ const AttendanceMonitoring = lazy(() => import("@/pages/hr/AttendanceMonitoring"
 const Leaves = lazy(() => import("@/pages/hr/Leaves"));
 const Payroll = lazy(() => import("@/pages/hr/Payroll"));
 const SalaryComponents = lazy(() => import("@/pages/hr/SalaryComponents"));
-const ApprovalChains = lazy(() => import("@/pages/hr/ApprovalChains"));
 const Performance = lazy(() => import("@/pages/hr/Performance"));
 const Training = lazy(() => import("@/pages/hr/Training"));
 const Organization = lazy(() => import("@/pages/hr/Organization"));
@@ -338,6 +337,13 @@ function Router() {
         </DashboardLayout>
       </Route>
 
+      {/* Specific top-level department pages that must come before the :dept catch-all */}
+      <Route path="/departments/requests">
+        <DashboardLayout>
+          <RequestList />
+        </DashboardLayout>
+      </Route>
+
       {/* Department detail (services list) - /departments/hr, /departments/finance, etc. */}
       <Route path="/departments/:dept">
         <DashboardLayout>
@@ -406,11 +412,6 @@ function Router() {
           <ShiftsManagement />
         </DashboardLayout>
       </Route>
-      <Route path="/departments/hr/approval-chains">
-        <DashboardLayout>
-          <ApprovalChains />
-        </DashboardLayout>
-      </Route>
       <Route path="/departments/hr/official-letters">
         <DashboardLayout>
           <OfficialLetters />
@@ -443,24 +444,9 @@ function Router() {
       </Route>
 
       {/* Requests department sub-pages */}
-      <Route path="/departments/requests">
-        <DashboardLayout>
-          <RequestList />
-        </DashboardLayout>
-      </Route>
-      <Route path="/departments/requests/types">
-        <DashboardLayout>
-          <RequestTypes />
-        </DashboardLayout>
-      </Route>
-      <Route path="/departments/requests/workflows">
+      <Route path="/departments/requests-workflow/workflows">
         <DashboardLayout>
           <Workflows />
-        </DashboardLayout>
-      </Route>
-      <Route path="/departments/workflow/approvals">
-        <DashboardLayout>
-          <Approvals />
         </DashboardLayout>
       </Route>
       <Route path="/departments/support/tickets">
@@ -542,13 +528,6 @@ function Router() {
         </RoleProtectedRoute>
       </Route>
 
-      <Route path="/hr/approval-chains">
-        <RoleProtectedRoute module="hr" hrSubPage="approvals">
-          <DashboardLayout>
-            <ApprovalChains />
-          </DashboardLayout>
-        </RoleProtectedRoute>
-      </Route>
 
       <Route path="/hr/performance">
         <RoleProtectedRoute module="hr" hrSubPage="performance">

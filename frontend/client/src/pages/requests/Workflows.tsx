@@ -32,7 +32,7 @@ interface WorkflowTemplate {
 export default function Workflows() {
   const confirmDelete = (fn: () => void) => { if (window.confirm("هل أنت متأكد من الحذف؟")) fn(); };
 
-  const { data: currentUser, isError, error} = useUser();
+  const { data: currentUser, isError, error } = useUser();
   const { selectedRole, currentEmployee } = useAppContext();
   const userRole = currentUser?.role || 'user';
   const isAdmin = ['admin', 'general_manager', 'hr_manager'].includes(selectedRole);
@@ -121,11 +121,11 @@ export default function Workflows() {
     const workflows = workflowsData || [];
     const requests = requestsData || [];
     const today = new Date().toDateString();
-    
+
     const activeWorkflows = workflows.filter((w: any) => w.isActive).length;
     const totalInstances = requests.filter((r: any) => r.status === 'pending' || r.status === 'in_review').length;
-    const completedToday = requests.filter((r: any) => 
-      (r.status === 'approved' || r.status === 'completed') && 
+    const completedToday = requests.filter((r: any) =>
+      (r.status === 'approved' || r.status === 'completed') &&
       r.updatedAt && new Date(r.updatedAt).toDateString() === today
     ).length;
 
@@ -167,6 +167,11 @@ export default function Workflows() {
       ? `${currentEmployee.firstName} ${currentEmployee.lastName}`
       : currentUser?.username || '';
     const empDept = currentEmployee?.department?.nameAr || currentEmployee?.department?.name || '';
+    const roleLabels: Record<string, string> = {
+      admin: 'مدير النظام', general_manager: 'المدير العام', hr_manager: 'مدير الموارد البشرية',
+      department_manager: 'مدير القسم', supervisor: 'مشرف', employee: 'موظف', agent: 'وكيل',
+    };
+    const empRole = roleLabels[selectedRole] || selectedRole;
 
     if (selectedWorkflow) {
       updateMutation.mutate({ id: selectedWorkflow.id, ...newWorkflow });
@@ -175,6 +180,7 @@ export default function Workflows() {
         ...newWorkflow,
         createdByName: empName,
         createdByDepartment: empDept,
+        createdByRole: empRole,
       });
     }
   };
@@ -185,7 +191,7 @@ export default function Workflows() {
   };
 
   const getStatusBadge = (isActive: boolean) => {
-    return isActive 
+    return isActive
       ? <Badge className="bg-green-100 text-green-800">نشط</Badge>
       : <Badge className="bg-gray-100 text-gray-800">متوقف</Badge>;
   };
@@ -342,8 +348,11 @@ export default function Workflows() {
                       <td className="p-3">
                         <div className="text-sm">
                           <span className="font-medium">{item.createdByName || '-'}</span>
+                          {item.createdByRole && (
+                            <span className="text-purple-600 block text-[10px] font-medium leading-none mt-0.5">{item.createdByRole}</span>
+                          )}
                           {item.createdByDepartment && (
-                            <span className="text-muted-foreground block text-xs">{item.createdByDepartment}</span>
+                            <span className="text-muted-foreground block text-xs mt-0.5">{item.createdByDepartment}</span>
                           )}
                         </div>
                       </td>

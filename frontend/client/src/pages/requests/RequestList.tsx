@@ -13,13 +13,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Clock, CheckCircle2, AlertCircle, User, Check, X, Building2 } from 'lucide-react';
+import { Search, Clock, CheckCircle2, AlertCircle, User, Check, X, Building2, Eye, Pencil, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { useUser } from '@/services/authService';
 import { useAppContext } from '@/contexts/AppContext';
+import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
 interface Request {
@@ -32,8 +33,10 @@ interface Request {
   status: string;
   requesterId: number;
   requesterName?: string;
+  requesterRole?: string;
   requesterDepartment?: string;
   requesterDepartmentId?: number;
+  requesterBranch?: string;
   approverName?: string;
   assignedTo?: number | null;
   createdAt: string;
@@ -42,6 +45,7 @@ interface Request {
 export default function RequestList() {
   const { data: currentUser, isError } = useUser();
   const { selectedRole, currentEmployee, currentEmployeeId, currentUserId } = useAppContext();
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [newRequest, setNewRequest] = useState({
@@ -50,6 +54,9 @@ export default function RequestList() {
     description: '',
     priority: 'medium'
   });
+  const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
+  const [viewMode, setViewMode] = useState<'view' | 'edit' | null>(null);
+  const [editForm, setEditForm] = useState({ type: '', subject: '', description: '', priority: 'medium' });
 
   const queryClient = useQueryClient();
 
@@ -76,15 +83,34 @@ export default function RequestList() {
     onSuccess: () => {
       toast.success('تم تحديث الطلب');
       queryClient.invalidateQueries({ queryKey: ['requests'] });
+      setViewMode(null);
+      setSelectedRequest(null);
     },
     onError: (error: any) => {
       toast.error('فشل في التحديث: ' + (error?.message || 'حدث خطأ'));
     },
   });
 
+  const deleteRequestMutation = useMutation({
+    mutationFn: (id: number) => api.delete(`/requests/${id}`).then(r => r.data),
+    onSuccess: () => {
+      toast.success('تم حذف الطلب بنجاح');
+      queryClient.invalidateQueries({ queryKey: ['requests'] });
+      setViewMode(null);
+      setSelectedRequest(null);
+    },
+    onError: (error: any) => {
+      toast.error('فشل في حذف الطلب: ' + (error?.response?.data?.message || error?.message || 'حدث خطأ'));
+    },
+  });
+
+  const isOwnerOrGM = selectedRole === 'admin' || selectedRole === 'general_manager';
+
   // Role-based checks
   const isManager = ['admin', 'general_manager', 'hr_manager', 'department_manager'].includes(selectedRole);
   const isAdmin = ['admin', 'general_manager'].includes(selectedRole);
+  const isSystemOwner = ['owner', 'admin', 'system_admin'].includes((user?.role as string)?.toLowerCase() || '');
+  const isSupervisorOrAgent = ['supervisor', 'agent'].includes(selectedRole);
 
   // Get current employee department ID
   const myDeptId = currentEmployee?.department?.id || currentEmployee?.departmentId;
@@ -116,8 +142,8 @@ export default function RequestList() {
       // Don't show own requests in assigned tab
       if (req.requesterId?.toString() === myUserId?.toString()) return false;
 
-      // Admin/GM see all pending requests
-      if (isAdmin) return true;
+      // Admin/GM/Owner see all pending requests
+      if (isAdmin || isSystemOwner) return true;
 
       // Department manager sees requests from their department
       if (selectedRole === 'department_manager' && myDeptId) {
@@ -127,34 +153,34 @@ export default function RequestList() {
       // HR manager sees all pending requests
       if (selectedRole === 'hr_manager') return true;
 
-      // Supervisor sees requests from their team (same department)
-      if (selectedRole === 'supervisor' && myDeptId) {
-        return req.requesterDepartmentId?.toString() === myDeptId?.toString();
-      }
-
       return false;
     })
   );
 
   // "All requests" tab - role-based visibility
   const allFilteredRequests = filterBySearch(
-    isAdmin
+    (isAdmin || isSystemOwner)
       ? allRequests
       : selectedRole === 'hr_manager'
         ? allRequests
-        : (selectedRole === 'department_manager' || selectedRole === 'supervisor') && myDeptId
+        : selectedRole === 'department_manager' && myDeptId
           ? allRequests.filter((req) =>
-              req.requesterDepartmentId?.toString() === myDeptId?.toString() ||
-              req.requesterId?.toString() === myUserId?.toString()
-            )
+            req.requesterDepartmentId?.toString() === myDeptId?.toString() ||
+            req.requesterId?.toString() === myUserId?.toString()
+          )
           : allRequests.filter((req) => req.requesterId?.toString() === myUserId?.toString())
   );
 
   // Can this user approve/reject?
   const canApprove = (req: Request) => {
+    // Admins/GMs can change status anytime
+    const isAdminOrOwner = isAdmin || isSystemOwner;
+    if (isAdminOrOwner) return true;
+
+    // Others can only approve if pending and not their own
     if (req.status !== 'pending') return false;
     if (req.requesterId?.toString() === myUserId?.toString()) return false;
-    if (isAdmin) return true;
+
     if (selectedRole === 'hr_manager') return true;
     if (selectedRole === 'department_manager' && myDeptId) {
       return req.requesterDepartmentId?.toString() === myDeptId?.toString();
@@ -163,6 +189,51 @@ export default function RequestList() {
       return req.requesterDepartmentId?.toString() === myDeptId?.toString();
     }
     return false;
+  };
+
+  // Can edit: requester if request is still pending, or admin/owner
+  const canEdit = (req: Request) => {
+    if (isAdmin || isSystemOwner) return true;
+    if (req.requesterId?.toString() === myUserId?.toString() && req.status === 'pending') return true;
+    return false;
+  };
+
+  // Can delete: admin/owner only
+  const canDelete = (req: Request) => isAdmin || isSystemOwner;
+
+  const handleViewDetails = (req: Request) => {
+    setSelectedRequest(req);
+    setViewMode('view');
+    setIsOpen(false);
+  };
+
+  const handleEditOpen = (req: Request) => {
+    setSelectedRequest(req);
+    setEditForm({
+      type: req.requestType,
+      subject: req.title,
+      description: req.description || '',
+      priority: req.priority,
+    });
+    setViewMode('edit');
+    setIsOpen(false);
+  };
+
+  const handleEditSave = () => {
+    if (!selectedRequest) return;
+    updateRequestMutation.mutate({
+      id: selectedRequest.id,
+      requestType: editForm.type,
+      title: editForm.subject,
+      description: editForm.description,
+      priority: editForm.priority,
+    });
+  };
+
+  const handleDelete = (req: Request) => {
+    if (window.confirm(`هل أنت متأكد من حذف الطلب ${req.requestNumber}؟`)) {
+      deleteRequestMutation.mutate(req.id);
+    }
   };
 
   const handleApprove = (req: Request) => {
@@ -193,6 +264,12 @@ export default function RequestList() {
       : currentUser?.username || '';
     const empDept = currentEmployee?.department?.nameAr || currentEmployee?.department?.name || '';
     const empDeptId = currentEmployee?.department?.id || currentEmployee?.departmentId || null;
+    const empBranch = (currentEmployee as any)?.branch?.nameAr || (currentEmployee as any)?.branch?.name || '';
+    const roleLabels: Record<string, string> = {
+      admin: 'مدير النظام', general_manager: 'المدير العام', hr_manager: 'مدير الموارد البشرية',
+      department_manager: 'مدير القسم', supervisor: 'مشرف', employee: 'موظف', agent: 'وكيل',
+    };
+    const empRole = roleLabels[selectedRole] || selectedRole;
 
     createRequestMutation.mutate({
       requestNumber: `REQ-${Date.now()}`,
@@ -202,8 +279,10 @@ export default function RequestList() {
       priority: newRequest.priority,
       requesterId: myUserId,
       requesterName: empName,
+      requesterRole: empRole,
       requesterDepartment: empDept,
       requesterDepartmentId: empDeptId,
+      requesterBranch: empBranch,
     });
   };
 
@@ -257,7 +336,7 @@ export default function RequestList() {
     }
   };
 
-  const renderRequestTable = (data: Request[], showRequester: boolean, showActions: boolean) => (
+  const renderRequestTable = (data: Request[], showRequester: boolean, showApproveActions: boolean) => (
     <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
       {isLoading ? (
         <div className="text-center py-8">جاري التحميل...</div>
@@ -269,18 +348,18 @@ export default function RequestList() {
             <TableRow>
               <TableHead>رقم الطلب</TableHead>
               {showRequester && <TableHead>مقدم الطلب</TableHead>}
-              {showRequester && <TableHead>القسم</TableHead>}
+              {showRequester && <TableHead>الدور / الفرع / القسم</TableHead>}
               <TableHead>النوع</TableHead>
               <TableHead>الموضوع</TableHead>
               <TableHead>تاريخ الطلب</TableHead>
               <TableHead>الأولوية</TableHead>
               <TableHead>الحالة</TableHead>
-              {showActions && <TableHead className="w-[100px]">إجراءات</TableHead>}
+              <TableHead className="w-[130px]">إجراءات</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {data.map((req) => (
-              <TableRow key={req.id}>
+              <TableRow key={req.id} className={selectedRequest?.id === req.id ? 'bg-blue-50' : ''}>
                 <TableCell className="font-medium">{req.requestNumber}</TableCell>
                 {showRequester && (
                   <TableCell>
@@ -292,14 +371,40 @@ export default function RequestList() {
                 )}
                 {showRequester && (
                   <TableCell>
-                    <div className="flex items-center gap-1.5">
-                      <Building2 className="h-3.5 w-3.5 text-gray-400" />
-                      <span className="text-sm">{req.requesterDepartment || '-'}</span>
+                    <div className="space-y-0.5">
+                      {req.requesterRole && (
+                        <div className="flex items-center gap-1">
+                          <User className="h-3 w-3 text-purple-400" />
+                          <span className="text-xs text-purple-700">{req.requesterRole}</span>
+                        </div>
+                      )}
+                      {req.requesterBranch && (
+                        <div className="flex items-center gap-1">
+                          <Building2 className="h-3 w-3 text-blue-400" />
+                          <span className="text-xs text-blue-700">{req.requesterBranch}</span>
+                        </div>
+                      )}
+                      {req.requesterDepartment && (
+                        <div className="flex items-center gap-1">
+                          <Building2 className="h-3 w-3 text-gray-400" />
+                          <span className="text-xs text-gray-600">{req.requesterDepartment}</span>
+                        </div>
+                      )}
+                      {!req.requesterRole && !req.requesterBranch && !req.requesterDepartment && (
+                        <span className="text-xs text-gray-400">-</span>
+                      )}
                     </div>
                   </TableCell>
                 )}
                 <TableCell>{getRequestTypeName(req.requestType)}</TableCell>
-                <TableCell>{req.title}</TableCell>
+                <TableCell>
+                  <div className="font-medium">{req.title}</div>
+                  <div className="text-[10px] text-gray-500 mt-1 leading-tight">
+                    {req.requesterName} • {req.requesterRole}
+                    <br />
+                    {req.requesterBranch} / {req.requesterDepartment}
+                  </div>
+                </TableCell>
                 <TableCell>{formatDate(req.createdAt)}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
@@ -317,10 +422,31 @@ export default function RequestList() {
                     )}
                   </div>
                 </TableCell>
-                {showActions && (
-                  <TableCell>
-                    {canApprove(req) && (
-                      <div className="flex items-center gap-1">
+                <TableCell>
+                  <div className="flex items-center gap-1">
+                    {/* View details */}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleViewDetails(req)}
+                      title="عرض التفاصيل"
+                    >
+                      <Eye className="h-4 w-4 text-blue-500" />
+                    </Button>
+                    {/* Edit */}
+                    {canEdit(req) && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEditOpen(req)}
+                        title="تعديل"
+                      >
+                        <Pencil className="h-4 w-4 text-amber-500" />
+                      </Button>
+                    )}
+                    {/* Approve/Reject */}
+                    {((showApproveActions && canApprove(req)) || isAdmin || isSystemOwner) && (
+                      <div className="flex gap-0.5">
                         <Button
                           variant="ghost"
                           size="icon"
@@ -339,8 +465,20 @@ export default function RequestList() {
                         </Button>
                       </div>
                     )}
-                  </TableCell>
-                )}
+                    {/* Delete */}
+                    {(isOwnerOrGM || currentUserId === req.requesterId) && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(req)}
+                        title="حذف"
+                        disabled={deleteRequestMutation.isPending}
+                      >
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
+                    )}
+                  </div>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -358,7 +496,7 @@ export default function RequestList() {
           <h2 className="text-2xl font-bold tracking-tight">الطلبات</h2>
           <p className="text-gray-500">مركز الطلبات والتذاكر الموحد</p>
         </div>
-        <Button onClick={() => setIsOpen(!isOpen)}>
+        <Button onClick={() => { setIsOpen(!isOpen); setViewMode(null); setSelectedRequest(null); }}>
           {isOpen ? 'إلغاء' : '+ إنشاء طلب جديد'}
         </Button>
       </div>
@@ -424,6 +562,116 @@ export default function RequestList() {
         </div>
       )}
 
+      {/* View Details Panel */}
+      {viewMode === 'view' && selectedRequest && (
+        <div className="mt-4 p-6 bg-white border rounded-xl shadow-sm animate-in fade-in">
+          <div className="mb-4 border-b pb-3 flex items-center justify-between">
+            <h3 className="text-lg font-bold">تفاصيل الطلب — {selectedRequest.requestNumber}</h3>
+            <Button variant="ghost" size="icon" onClick={() => { setViewMode(null); setSelectedRequest(null); }}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div><span className="text-sm text-gray-500">رقم الطلب:</span> <span className="font-medium">{selectedRequest.requestNumber}</span></div>
+            <div><span className="text-sm text-gray-500">الحالة:</span> <span className="mr-1">{getStatusBadge(selectedRequest.status)}</span></div>
+            <div><span className="text-sm text-gray-500">نوع الطلب:</span> <span className="font-medium">{getRequestTypeName(selectedRequest.requestType)}</span></div>
+            <div><span className="text-sm text-gray-500">الأولوية:</span> <span className="font-medium flex items-center gap-1">{getPriorityIcon(selectedRequest.priority)}{selectedRequest.priority === 'high' ? 'عالية' : selectedRequest.priority === 'medium' ? 'متوسطة' : 'منخفضة'}</span></div>
+            <div><span className="text-sm text-gray-500">الموضوع:</span> <span className="font-medium">{selectedRequest.title}</span></div>
+            <div><span className="text-sm text-gray-500">تاريخ الطلب:</span> <span className="font-medium">{formatDate(selectedRequest.createdAt)}</span></div>
+            <div><span className="text-sm text-gray-500">مقدم الطلب:</span> <span className="font-medium">{selectedRequest.requesterName || '-'}</span></div>
+            <div><span className="text-sm text-gray-500">الدور:</span> <span className="font-medium">{selectedRequest.requesterRole || '-'}</span></div>
+            <div><span className="text-sm text-gray-500">الفرع:</span> <span className="font-medium">{selectedRequest.requesterBranch || '-'}</span></div>
+            <div><span className="text-sm text-gray-500">القسم:</span> <span className="font-medium">{selectedRequest.requesterDepartment || '-'}</span></div>
+            {selectedRequest.approverName && (
+              <div><span className="text-sm text-gray-500">المُوافق:</span> <span className="font-medium">{selectedRequest.approverName}</span></div>
+            )}
+            {selectedRequest.description && (
+              <div className="md:col-span-2">
+                <span className="text-sm text-gray-500">التفاصيل:</span>
+                <p className="mt-1 p-3 bg-gray-50 rounded text-sm">{selectedRequest.description}</p>
+              </div>
+            )}
+          </div>
+          <div className="mt-4 flex gap-2">
+            {canEdit(selectedRequest) && (
+              <Button variant="outline" onClick={() => handleEditOpen(selectedRequest)}>
+                <Pencil className="h-4 w-4 ml-1" /> تعديل
+              </Button>
+            )}
+            {canDelete(selectedRequest) && (
+              <Button variant="destructive" onClick={() => handleDelete(selectedRequest)} disabled={deleteRequestMutation.isPending}>
+                <Trash2 className="h-4 w-4 ml-1" /> حذف
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Edit Panel */}
+      {viewMode === 'edit' && selectedRequest && (
+        <div className="mt-4 p-6 bg-white border rounded-xl shadow-sm animate-in fade-in">
+          <div className="mb-4 border-b pb-3 flex items-center justify-between">
+            <h3 className="text-lg font-bold">تعديل الطلب — {selectedRequest.requestNumber}</h3>
+            <Button variant="ghost" size="icon" onClick={() => { setViewMode(null); setSelectedRequest(null); }}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>نوع الطلب *</Label>
+              <Select value={editForm.type} onValueChange={(v) => setEditForm({ ...editForm, type: v })}>
+                <SelectTrigger><SelectValue placeholder="اختر نوع الطلب" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="leave">إجازة</SelectItem>
+                  <SelectItem value="purchase">شراء</SelectItem>
+                  <SelectItem value="maintenance">صيانة</SelectItem>
+                  <SelectItem value="it_support">دعم تقني</SelectItem>
+                  <SelectItem value="other">أخرى</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>الموضوع *</Label>
+              <Input
+                value={editForm.subject}
+                onChange={(e) => setEditForm({ ...editForm, subject: e.target.value })}
+                placeholder="موضوع الطلب"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>التفاصيل</Label>
+              <Textarea
+                value={editForm.description}
+                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                placeholder="تفاصيل الطلب"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>الأولوية</Label>
+              <Select value={editForm.priority} onValueChange={(v) => setEditForm({ ...editForm, priority: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">منخفضة</SelectItem>
+                  <SelectItem value="medium">متوسطة</SelectItem>
+                  <SelectItem value="high">عالية</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                onClick={handleEditSave}
+                disabled={!editForm.type || !editForm.subject || updateRequestMutation.isPending}
+              >
+                {updateRequestMutation.isPending ? 'جاري الحفظ...' : 'حفظ التعديلات'}
+              </Button>
+              <Button variant="outline" onClick={() => { setViewMode(null); setSelectedRequest(null); }}>
+                إلغاء
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Tabs defaultValue="my-requests" className="w-full">
         <TabsList className="grid w-full grid-cols-1 md:grid-cols-3 lg:w-[500px]">
           <TabsTrigger value="my-requests">
@@ -435,7 +683,7 @@ export default function RequestList() {
             </TabsTrigger>
           )}
           <TabsTrigger value="all">
-            {isAdmin ? 'كل الطلبات' : 'طلبات القسم'} ({allFilteredRequests.length})
+            {(isAdmin || isSystemOwner) ? 'كل الطلبات' : selectedRole === 'department_manager' ? 'طلبات القسم' : 'سجل طلباتي'} ({allFilteredRequests.length})
           </TabsTrigger>
         </TabsList>
 
@@ -462,7 +710,7 @@ export default function RequestList() {
         )}
 
         <TabsContent value="all" className="mt-4">
-          {renderRequestTable(allFilteredRequests, isManager, isManager)}
+          {renderRequestTable(allFilteredRequests, isManager || isSystemOwner, isManager || isSystemOwner)}
         </TabsContent>
       </Tabs>
     </div>

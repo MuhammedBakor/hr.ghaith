@@ -145,7 +145,7 @@ export const DEPT_CODE_TO_MODULE: Record<string, ModuleType> = {
 };
 
 // الوحدات الأساسية المتاحة دائماً بغض النظر عن أقسام الشركة
-const CORE_MODULES: ModuleType[] = ['home', 'admin', 'platform', 'settings', 'system', 'inbox'];
+const CORE_MODULES: ModuleType[] = ['home', 'admin', 'platform', 'settings', 'system', 'inbox', 'requests', 'support', 'workflow'];
 
 // صلاحيات الوحدات لكل صفة
 export const modulePermissions: Record<UserRoleType, ModuleType[]> = {
@@ -162,34 +162,34 @@ export const modulePermissions: Record<UserRoleType, ModuleType[]> = {
     'support', 'projects', 'platform', 'inbox'
   ],
   hr_manager: [
-    'home', 'hr', 'requests', 'documents', 'reports', 'comms', 'settings'
+    'home', 'hr', 'requests', 'documents', 'reports', 'comms', 'settings', 'support', 'workflow'
   ],
   finance_manager: [
-    'home', 'finance', 'requests', 'documents', 'reports', 'comms', 'store', 'settings'
+    'home', 'finance', 'requests', 'documents', 'reports', 'comms', 'store', 'settings', 'support', 'workflow'
   ],
   fleet_manager: [
-    'home', 'fleet', 'requests', 'documents', 'reports', 'comms', 'settings'
+    'home', 'fleet', 'requests', 'documents', 'reports', 'comms', 'settings', 'support', 'workflow'
   ],
   legal_manager: [
-    'home', 'legal', 'requests', 'documents', 'reports', 'comms', 'settings'
+    'home', 'legal', 'requests', 'documents', 'reports', 'comms', 'settings', 'support', 'workflow'
   ],
   projects_manager: [
-    'home', 'operations', 'requests', 'documents', 'reports', 'comms', 'settings'
+    'home', 'operations', 'requests', 'documents', 'reports', 'comms', 'settings', 'support', 'workflow'
   ],
   store_manager: [
-    'home', 'store', 'requests', 'documents', 'reports', 'comms', 'settings'
+    'home', 'store', 'requests', 'documents', 'reports', 'comms', 'settings', 'support', 'workflow'
   ],
   supervisor: [
     'home', 'hr', 'requests', 'documents', 'comms', 'support', 'workflow'
   ],
   employee: [
-    'home', 'hr', 'requests', 'documents', 'comms', 'support'
+    'home', 'hr', 'requests', 'documents', 'comms', 'support', 'workflow'
   ],
   department_manager: [
     'home', 'hr', 'property', 'requests', 'documents', 'comms', 'support', 'workflow'
   ],
   agent: [
-    'home', 'fleet', 'requests', 'comms', 'support'
+    'home', 'requests', 'comms', 'support', 'workflow'
   ],
 };
 
@@ -637,9 +637,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   })();
 
-  const allowedModules: ModuleType[] = rolePackPermissions?.modules
-    ? (rolePackPermissions.modules as ModuleType[])
-    : modulePermissions[selectedRole];
+  const allowedModules: ModuleType[] = useMemo(() => {
+    if (rolePackPermissions?.modules) {
+      return rolePackPermissions.modules as ModuleType[];
+    }
+
+    const baseModules = [...modulePermissions[selectedRole]];
+
+    // Check for additional modules in authData.roles (comma-separated string from backend)
+    if (authData?.roles) {
+      const additionalRoles = Array.isArray(authData.roles)
+        ? (authData.roles as string[]).map(r => r.toLowerCase())
+        : (authData.roles as string).split(',').map(r => r.trim().toLowerCase());
+
+      const moduleKeywords: string[] = [
+        'hr', 'finance', 'fleet', 'property', 'operations', 'governance', 'legal',
+        'marketing', 'store', 'requests', 'documents', 'reports', 'comms',
+        'workflow', 'platform', 'public_site', 'integrations', 'bi', 'support', 'logs'
+      ];
+
+      additionalRoles.forEach(role => {
+        if (moduleKeywords.includes(role) && !baseModules.includes(role as ModuleType)) {
+          baseModules.push(role as ModuleType);
+        }
+      });
+    }
+
+    return baseModules as ModuleType[];
+  }, [selectedRole, rolePackPermissions, authData?.roles]);
 
   const allowedHrSubPages: string[] = rolePackPermissions?.hrSubPages
     ? rolePackPermissions.hrSubPages

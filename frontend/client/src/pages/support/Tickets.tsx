@@ -27,7 +27,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Ticket, Clock, CheckCircle2, AlertCircle, Edit, Trash2, Eye } from "lucide-react";
+import { Plus, Search, Ticket, Clock, CheckCircle2, AlertCircle, Edit, Trash2, Eye, User, Building2 } from "lucide-react";
+import api from '@/lib/api';
+import { useUser } from '@/services/authService';
+import { useAppContext } from '@/contexts/AppContext';
+import { useAuth } from '@/hooks/useAuth';
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 import { toast } from "sonner";
@@ -75,6 +79,9 @@ const statusIcons: Record<string, React.ReactNode> = {
 };
 
 export default function Tickets() {
+  const { selectedRole, currentUserId } = useAppContext();
+  const isAdmin = ['admin', 'general_manager'].includes(selectedRole);
+  const isOwnerOrGM = isAdmin; // for consistency with TicketService logic
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -383,6 +390,7 @@ export default function Tickets() {
                 <TableRow>
                   <TableHead>رقم التذكرة</TableHead>
                   <TableHead>العنوان</TableHead>
+                  {isOwnerOrGM && <TableHead>الموظف / الفرع / القسم</TableHead>}
                   <TableHead>الأولوية</TableHead>
                   <TableHead>الحالة</TableHead>
                   <TableHead>التاريخ</TableHead>
@@ -400,6 +408,28 @@ export default function Tickets() {
                         {ticket.description}
                       </p>
                     </TableCell>
+                    {isOwnerOrGM && (
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1.5">
+                            <User className="h-3.5 w-3.5 text-gray-400" />
+                            <p className="font-medium text-sm">{ticket.authorName}</p>
+                          </div>
+                          <div className="flex flex-col gap-0.5 mt-1">
+                            {ticket.authorRole && (
+                              <div className="flex items-center gap-1">
+                                <span className="text-[10px] bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded-full border border-purple-100 font-medium">
+                                  {ticket.authorRole}
+                                </span>
+                              </div>
+                            )}
+                            <p className="text-[10px] text-muted-foreground">
+                              {ticket.authorBranch} / {ticket.authorDepartment}
+                            </p>
+                          </div>
+                        </div>
+                      </TableCell>
+                    )}
                     <TableCell>
                       <Badge className={priorityColors[ticket.priority] || priorityColors.medium}>
                         {priorityLabels[ticket.priority] || ticket.priority}
@@ -438,15 +468,17 @@ export default function Tickets() {
                         <Button variant="ghost" size="sm" onClick={() => handleEditTicket(ticket)} title="تعديل">
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          onClick={() => handleDeleteTicket(ticket.id)}
-                          title="حذف"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {(isOwnerOrGM || currentUserId === ticket.authorId) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => handleDeleteTicket(ticket.id)}
+                            title="حذف"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -512,6 +544,15 @@ export default function Tickets() {
                 <div>
                   <Label className="text-muted-foreground text-sm">رقم التذكرة</Label>
                   <p className="mt-1 font-mono">{ticketDetails.ticketNumber}</p>
+                </div>
+              )}
+              {isOwnerOrGM && ticketDetails.authorName && (
+                <div className="pt-3 border-t">
+                  <Label className="text-muted-foreground text-sm">بيانات الموظف</Label>
+                  <p className="mt-1 font-medium">{ticketDetails.authorName}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {ticketDetails.authorBranch} - {ticketDetails.authorDepartment}
+                  </p>
                 </div>
               )}
             </div>

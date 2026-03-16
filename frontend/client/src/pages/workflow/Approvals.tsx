@@ -145,6 +145,7 @@ export default function Approvals() {
             <TableHeader>
               <TableRow>
                 <TableHead className="text-end">مقدم الطلب</TableHead>
+                <TableHead className="text-end">الدور</TableHead>
                 <TableHead className="text-end">القسم</TableHead>
                 <TableHead className="text-end">النوع</TableHead>
                 <TableHead className="text-end">الموضوع</TableHead>
@@ -171,6 +172,12 @@ export default function Approvals() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1.5">
+                        <User className="h-3.5 w-3.5 text-purple-400" />
+                        <span className="text-xs text-purple-700 font-medium">{req.requesterRole || '-'}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1.5">
                         <Building2 className="h-3.5 w-3.5 text-gray-400" />
                         <span>{req.requesterDepartment || '-'}</span>
                       </div>
@@ -181,8 +188,8 @@ export default function Approvals() {
                     <TableCell>
                       <Badge className={
                         req.priority === 'high' ? 'bg-red-100 text-red-800' :
-                        req.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-green-100 text-green-800'
+                          req.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-green-100 text-green-800'
                       }>
                         {req.priority === 'high' ? 'عالية' : req.priority === 'medium' ? 'متوسطة' : 'منخفضة'}
                       </Badge>

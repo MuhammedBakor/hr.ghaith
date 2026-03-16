@@ -57,6 +57,14 @@ export default function AddEmployee() {
     city: '', iban: '',
   });
 
+  const [selectedModules, setSelectedModules] = useState<string[]>([]);
+
+  const toggleModule = (module: string) => {
+    setSelectedModules(prev =>
+      prev.includes(module) ? prev.filter(m => m !== module) : [...prev, module]
+    );
+  };
+
   // جلب البيانات من API
   const { data: departmentsData, isLoading: isLoadingDepts } = useDepartments({ branchId: formData.branchId ? parseInt(formData.branchId) : (selectedBranchId || null) });
   const allDepartments = departmentsData || [];
@@ -98,6 +106,11 @@ export default function AddEmployee() {
     if (!formData.departmentId) { toast.error('يرجى تحديد القسم'); setActiveTab('work'); return; }
     setIsSubmitting(true);
     try {
+      // Append selected modules to roleCode if any
+      const finalRoleCode = selectedModules.length > 0
+        ? `${formData.roleCode},${selectedModules.join(',')}`
+        : formData.roleCode;
+
       const data = await createEmployeeMutation.mutateAsync({
         firstName: formData.firstName,
         lastName: formData.lastName,
@@ -107,7 +120,7 @@ export default function AddEmployee() {
         position: formData.positionId ? { id: parseInt(formData.positionId) } : undefined,
         branch: formData.branchId ? { id: Number(formData.branchId) } : undefined,
         salary: formData.basicSalary ? parseFloat(formData.basicSalary) : undefined,
-        role: formData.roleCode,
+        role: finalRoleCode, // Use finalRoleCode here
         status: 'active',
         // Also include full profile data if provided
         nationalId: formData.nationalId,
@@ -309,6 +322,23 @@ export default function AddEmployee() {
                   </Select>
                   <p className="text-xs text-gray-500">الدور يحدد صلاحيات الموظف (موظف، مشرف، مدير قسم...)</p>
                 </div>
+                {formData.roleCode === 'AGENT' && (
+                  <div className="space-y-4 p-4 border rounded-lg bg-orange-50/30 border-orange-100 animate-in fade-in slide-in-from-top-2">
+                    <Label className="text-orange-900 flex items-center gap-2">
+                      <Shield className="h-4 w-4" /> صلاحيات إضافية للمندوب
+                    </Label>
+                    <div className="flex items-center space-x-2 space-x-reverse">
+                      <Checkbox
+                        id="module-fleet"
+                        checked={selectedModules.includes('FLEET')}
+                        onCheckedChange={() => toggleModule('FLEET')}
+                      />
+                      <Label htmlFor="module-fleet" className="cursor-pointer font-normal">
+                        الوصول إلى نظام إدارة الأسطول (Fleet Management)
+                      </Label>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-2">

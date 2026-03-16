@@ -5,6 +5,7 @@ import com.ghaith.erp.exception.DuplicateEmailException;
 import com.ghaith.erp.model.*;
 import com.ghaith.erp.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +18,7 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class EmployeeService {
 
     private final EmployeeRepository employeeRepository;
@@ -85,23 +87,41 @@ public class EmployeeService {
             }
 
             String verificationCode = String.valueOf(100000 + random.nextInt(900000));
-            Role role = Role.EMPLOYEE;
-            String customRoleCode = null;
-            try {
-                if (employee.getRole() != null) {
-                    role = Role.valueOf(employee.getRole().toUpperCase());
-                }
-            } catch (IllegalArgumentException e) {
-                // Not an enum role — treat as a custom RolePack code
-                customRoleCode = employee.getRole();
-            }
-
             // Reuse existing user account if email already exists (user may be employee in
             // another branch)
             User existingUser = userRepository.findByEmail(email).orElse(null);
+
+            // Role parsing: "AGENT,FLEET" -> primary=AGENT, roles=FLEET
+            Role primaryRole = Role.EMPLOYEE;
+            String additionalRoles = null;
+            if (employee.getRole() != null) {
+                String[] parts = employee.getRole().split(",");
+                try {
+                    primaryRole = Role.valueOf(parts[0].trim().toUpperCase());
+                } catch (IllegalArgumentException e) {
+                    // If first part isn't a Role enum, it might be a RolePack code
+                    additionalRoles = parts[0].trim();
+                }
+                if (parts.length > 1) {
+                    StringBuilder sb = new StringBuilder();
+                    for (int i = 1; i < parts.length; i++) {
+                        if (sb.length() > 0)
+                            sb.append(",");
+                        sb.append(parts[i].trim().toUpperCase());
+                    }
+                    if (additionalRoles == null) {
+                        additionalRoles = sb.toString();
+                    } else {
+                        additionalRoles += "," + sb.toString();
+                    }
+                }
+            }
+
             if (existingUser != null) {
                 existingUser.setVerificationCode(verificationCode);
-                if (customRoleCode != null) existingUser.setRoles(customRoleCode);
+                existingUser.setRole(primaryRole);
+                if (additionalRoles != null)
+                    existingUser.setRoles(additionalRoles);
                 userRepository.save(existingUser);
                 employee.setUser(existingUser);
             } else {
@@ -109,8 +129,8 @@ public class EmployeeService {
                         .username(email)
                         .email(email)
                         .password(passwordEncoder.encode(generateRandomPassword(10)))
-                        .role(role)
-                        .roles(customRoleCode) // store custom RolePack code here
+                        .role(primaryRole)
+                        .roles(additionalRoles) // store custom RolePack code or extra modules here
                         .enabled(false)
                         .verificationCode(verificationCode)
                         .build();
@@ -185,16 +205,32 @@ public class EmployeeService {
         // Create User Account
         String verificationCode = String.valueOf(100000 + random.nextInt(900000));
         System.out.println("Generated verification code: " + verificationCode);
-        Role role = Role.EMPLOYEE;
-        try {
-            if (roleStr != null) {
-                role = Role.valueOf(roleStr.toUpperCase());
+        // Role parsing: "AGENT,FLEET" -> primary=AGENT, roles=FLEET
+        Role primaryRole = Role.EMPLOYEE;
+        String additionalRoles = null;
+        if (roleStr != null) {
+            String[] parts = roleStr.split(",");
+            try {
+                primaryRole = Role.valueOf(parts[0].trim().toUpperCase());
+            } catch (IllegalArgumentException e) {
+                additionalRoles = parts[0].trim();
             }
-        } catch (IllegalArgumentException e) {
-            System.out.println("Invalid role: " + roleStr + ", fallback to EMPLOYEE");
+            if (parts.length > 1) {
+                StringBuilder sb = new StringBuilder();
+                for (int i = 1; i < parts.length; i++) {
+                    if (sb.length() > 0)
+                        sb.append(",");
+                    sb.append(parts[i].trim().toUpperCase());
+                }
+                if (additionalRoles == null) {
+                    additionalRoles = sb.toString();
+                } else {
+                    additionalRoles += "," + sb.toString();
+                }
+            }
         }
 
-        System.out.println("Creating User object for role: " + role);
+        System.out.println("Creating User object for role: " + primaryRole + " additional: " + additionalRoles);
         User user = userRepository.findByEmail(email).orElse(null);
         if (user != null) {
             // User exists — check if already linked to an employee IN THE SAME BRANCH
@@ -209,6 +245,9 @@ public class EmployeeService {
             System.out
                     .println("Reusing existing user ID: " + user.getId() + " for new employee in branch: " + branchId);
             user.setVerificationCode(verificationCode);
+            user.setRole(primaryRole);
+            if (additionalRoles != null)
+                user.setRoles(additionalRoles);
             userRepository.save(user);
             // Evict cache to ensure Spring Security picks up the new verification code
             com.ghaith.erp.config.ApplicationConfig.evictUserCache(email);
@@ -218,7 +257,8 @@ public class EmployeeService {
                     .username(email)
                     .email(email)
                     .password(passwordEncoder.encode(generateRandomPassword(10)))
-                    .role(role)
+                    .role(primaryRole)
+                    .roles(additionalRoles)
                     .enabled(false)
                     .verificationCode(verificationCode)
                     .build();
@@ -483,80 +523,86 @@ public class EmployeeService {
                 .orElseThrow(() -> new RuntimeException("الموظف غير موجود"));
 
         Long userId = employee.getUser() != null ? employee.getUser().getId() : null;
+        log.info("Starting deletion of employee ID: {}, User ID: {}", id, userId);
 
-        // 1. Unlink manager/reviewer/author roles to avoid blocking deletion
-        // Employees table (subordinates)
+        // Detach all managed entities so Hibernate doesn't interfere with native
+        // queries
+        entityManager.clear();
+
+        // 1. Clean all FK references to this employee
+        log.info("Cleaning FK references to employee ID: {}", id);
+        cleanFkReferences("employees", "id", id);
+
+        // 2. Self-referencing FK (subordinates) - although cleanFkReferences should
+        // handle this,
+        // we keep it as a fallback or if cleanFkReferences excludes the same table.
         entityManager.createNativeQuery("UPDATE employees SET manager_id = NULL WHERE manager_id = :id")
                 .setParameter("id", id).executeUpdate();
 
-        // Departments table (department manager)
-        entityManager.createNativeQuery("UPDATE departments SET manager_id = NULL WHERE manager_id = :id")
-                .setParameter("id", id).executeUpdate();
-
-        // Performance reviews (reviewer role)
-        entityManager.createNativeQuery("UPDATE performance_reviews SET reviewer_id = NULL WHERE reviewer_id = :id")
-                .setParameter("id", id).executeUpdate();
-
-        // Tickets (author and assigned agent)
-        entityManager.createNativeQuery("UPDATE tickets SET author_id = NULL WHERE author_id = :id")
-                .setParameter("id", id).executeUpdate();
-        entityManager.createNativeQuery("UPDATE tickets SET assigned_to_id = NULL WHERE assigned_to_id = :id")
-                .setParameter("id", id).executeUpdate();
-
-        // Ticket comments (comment author)
-        entityManager.createNativeQuery("UPDATE ticket_comments SET author_id = NULL WHERE author_id = :id")
-                .setParameter("id", id).executeUpdate();
-
-        // 2. Manual cascade cleanup for Field Tracking (Point -> Session)
-        // Native SQL doesn't trigger JPA CascadeType.ALL
-        entityManager.createNativeQuery(
-                "DELETE FROM hr_field_tracking_points WHERE session_id IN (SELECT id FROM hr_field_tracking_sessions WHERE employee_id = :id)")
-                .setParameter("id", id).executeUpdate();
-
-        // 3. Clean up all primary dependent records
-        String[][] tableInfos = {
-                { "attendance_records", "employee_id" },
-                { "payroll_records", "employee_id" },
-                { "performance_reviews", "employee_id" },
-                { "performance_kpis", "employee_id" },
-                { "performance_goals", "employee_id" },
-                { "hr_leave_requests", "employee_id" },
-                { "hr_leave_balances", "employee_id" },
-                { "training_enrollments", "employee_id" },
-                { "hr_field_tracking_sessions", "employee_id" },
-                { "employee_documents", "employee_id" },
-                { "expenses", "employee_id" }
-        };
-
-        for (String[] info : tableInfos) {
-            String tableName = info[0];
-            String columnName = info[1];
-            try {
-                entityManager.createNativeQuery("DELETE FROM " + tableName + " WHERE " + columnName + " = :id")
-                        .setParameter("id", id).executeUpdate();
-            } catch (Exception e) {
-                System.out.println("Could not clean up table " + tableName + ": " + e.getMessage());
-            }
-        }
-
-        // 4. Delete the employee record itself
+        // 3. Delete the employee record
+        log.info("Deleting record from employees table for ID: {}", id);
         entityManager.createNativeQuery("DELETE FROM employees WHERE id = :id")
                 .setParameter("id", id).executeUpdate();
 
-        // 5. Handle shared user account
+        // 4. Handle shared user account
         if (userId != null) {
             Number count = (Number) entityManager
                     .createNativeQuery("SELECT COUNT(*) FROM employees WHERE user_id = :uid")
                     .setParameter("uid", userId)
                     .getSingleResult();
 
+            log.info("Employee count for user ID {}: {}", userId, count);
             if (count.longValue() == 0) {
-                System.out.println("No more employees for user ID " + userId + ". Deleting user account.");
+                log.info("User ID {} is no longer linked to any employee. Deleting user...", userId);
+                cleanFkReferences("_users", "id", userId);
                 entityManager.createNativeQuery("DELETE FROM _users WHERE id = :uid")
                         .setParameter("uid", userId).executeUpdate();
+            }
+        }
+        log.info("Successfully deleted employee ID: {}", id);
+    }
+
+    /**
+     * Dynamically finds all FK references to targetTable.targetColumn and cleans
+     * them.
+     * Checks column nullability first: nullable columns get SET NULL, non-nullable
+     * get DELETE.
+     * This avoids failed statements that would abort the PostgreSQL transaction.
+     */
+    private void cleanFkReferences(String targetTable, String targetColumn, Long targetId) {
+        @SuppressWarnings("unchecked")
+        List<Object[]> fks = entityManager.createNativeQuery(
+                "SELECT kcu.table_name, kcu.column_name, c.is_nullable " +
+                        "FROM information_schema.key_column_usage kcu " +
+                        "JOIN information_schema.referential_constraints rc ON kcu.constraint_name = rc.constraint_name "
+                        +
+                        "JOIN information_schema.key_column_usage ccu ON rc.unique_constraint_name = ccu.constraint_name "
+                        +
+                        "JOIN information_schema.columns c ON c.table_name = kcu.table_name " +
+                        "  AND c.column_name = kcu.column_name " +
+                        "  AND c.table_schema = kcu.table_schema " +
+                        "WHERE ccu.table_name = :targetTable " +
+                        "  AND ccu.column_name = :targetCol " +
+                        "  AND kcu.table_schema NOT IN ('information_schema', 'pg_catalog')")
+                .setParameter("targetTable", targetTable)
+                .setParameter("targetCol", targetColumn)
+                .getResultList();
+
+        for (Object[] fk : fks) {
+            String table = (String) fk[0];
+            String column = (String) fk[1];
+            String nullable = (String) fk[2]; // "YES" or "NO"
+
+            if ("YES".equals(nullable)) {
+                log.info("Cleaning FK reference (NULLABLE): Updating {}.{} to NULL for target ID {}", table, column,
+                        targetId);
+                entityManager
+                        .createNativeQuery("UPDATE " + table + " SET " + column + " = NULL WHERE " + column + " = :val")
+                        .setParameter("val", targetId).executeUpdate();
             } else {
-                System.out.println(
-                        "User ID " + userId + " still has " + count + " other employee records. Keeping user account.");
+                log.info("Cleaning FK reference (NOT NULL): Deleting from {} where {} = {} ", table, column, targetId);
+                entityManager.createNativeQuery("DELETE FROM " + table + " WHERE " + column + " = :val")
+                        .setParameter("val", targetId).executeUpdate();
             }
         }
     }

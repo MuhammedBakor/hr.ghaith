@@ -8,7 +8,6 @@ const Attendance = lazy(() => import("@/pages/hr/AttendanceMonitoring"));
 const Leaves = lazy(() => import("@/pages/hr/Leaves"));
 const Payroll = lazy(() => import("@/pages/hr/Payroll"));
 const SalaryComponents = lazy(() => import("@/pages/hr/SalaryComponents"));
-const ApprovalChains = lazy(() => import("@/pages/hr/ApprovalChains"));
 const Performance = lazy(() => import("@/pages/hr/Performance"));
 const Training = lazy(() => import("@/pages/hr/Training"));
 const Organization = lazy(() => import("@/pages/hr/Organization"));
@@ -83,11 +82,6 @@ export function HrRoutes() {
     <Route path="/hr/salary-components">
     <DashboardLayout>
     <SalaryComponents />
-    </DashboardLayout>
-    </Route>
-    <Route path="/hr/approval-chains">
-    <DashboardLayout>
-    <ApprovalChains />
     </DashboardLayout>
     </Route>
     <Route path="/hr/performance">

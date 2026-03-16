@@ -37,4 +37,16 @@ public class Ticket extends BaseEntity {
 
     @Column(name = "assigned_to_id")
     private Long assignedToId;
+
+    @jakarta.persistence.Transient
+    private String authorName;
+
+    @jakarta.persistence.Transient
+    private String authorRole;
+
+    @jakarta.persistence.Transient
+    private String authorDepartment;
+
+    @jakarta.persistence.Transient
+    private String authorBranch;
 }

@@ -153,6 +153,9 @@ public class AuthenticationService {
                 user.setVerificationCode(null);
                 repository.save(user);
 
+                // Evict cached UserDetails so login uses the new password
+                com.ghaith.erp.config.ApplicationConfig.evictUserCache(user.getEmail());
+
                 employeeRepository.findAllByUserId(user.getId()).forEach(employee -> {
                         employee.setStatus(Employee.EmployeeStatus.active);
                         employeeRepository.save(employee);

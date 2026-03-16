@@ -36,6 +36,7 @@ import {
 } from '@/services/hrService';
 import { Link } from 'wouter';
 import { useAppContext } from '@/contexts/AppContext';
+import { useAuth } from '@/_core/hooks/useAuth';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { PrintButton } from '@/components/PrintButton';
 import { ExportButtons } from '@/components/ExportButtons';
@@ -92,8 +93,10 @@ export default function EmployeeList() {
   const confirmDelete = (fn: () => void) => { if (window.confirm("هل أنت متأكد من الحذف؟")) fn(); };
 
   const { selectedRole: userRole } = useAppContext();
+  const { user } = useAuth();
+  const isSystemOwner = ['owner', 'admin', 'system_admin'].includes((user?.role as string)?.toLowerCase() || '');
   const canEdit = userRole === "admin" || String(userRole).includes("manager");
-  const canDelete = userRole === "admin";
+  const canDelete = userRole === "admin" || isSystemOwner;
 
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;

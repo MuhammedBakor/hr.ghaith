@@ -114,7 +114,6 @@ const departments: Department[] = [
       { label: 'المخالفات والجزاءات', path: '/hr/violations', icon: Scale },
       { label: 'مخالفاتي', path: '/hr/my-violations', icon: AlertTriangle },
       { label: 'الورديات والسياسات', path: '/hr/shifts', icon: CalendarClock },
-      { label: 'سلاسل الموافقات', path: '/hr/approval-chains', icon: GitBranch },
       { label: 'الخطابات الرسمية', path: '/hr/official-letters', icon: FileText },
       { label: 'تقارير الحضور', path: '/hr/attendance-reports', icon: BarChart3 },
       { label: 'تصعيد الجزاءات', path: '/hr/penalty-escalation', icon: TrendingUp },
@@ -294,23 +293,6 @@ const departments: Department[] = [
     ],
   },
   {
-    id: 'requests',
-    label: 'الطلبات',
-    icon: FileText,
-    color: '#2563EB',
-    bgColor: 'bg-blue-50',
-    borderColor: 'border-blue-200',
-    description: 'إدارة الطلبات وسير العمل والموافقات والدعم الفني',
-    items: [
-      { label: 'كل الطلبات', path: '/requests', icon: FileText },
-      { label: 'أنواع الطلبات', path: '/requests/types', icon: ListTodo },
-      { label: 'سير العمل', path: '/requests/workflows', icon: GitBranch },
-      { label: 'الموافقات', path: '/workflow/approvals', icon: CheckCircle },
-      { label: 'التذاكر', path: '/support/tickets', icon: Ticket },
-      { label: 'أتمتة الدعم', path: '/support/automation', icon: Zap },
-    ],
-  },
-  {
     id: 'documents',
     label: 'المستندات',
     icon: FileStack,
@@ -352,21 +334,6 @@ const departments: Department[] = [
       { label: 'الخطابات الرسمية', path: '/comms/official-letters', icon: Send },
       { label: 'الصادر', path: '/correspondence/outgoing', icon: Send },
       { label: 'الوارد', path: '/correspondence/incoming', icon: Mail },
-    ],
-  },
-  {
-    id: 'workflow',
-    label: 'سير العمل',
-    icon: GitBranch,
-    color: '#7C3AED',
-    bgColor: 'bg-purple-50',
-    borderColor: 'border-purple-200',
-    description: 'إدارة العمليات والموافقات والتفويضات وإعدادات سير العمل',
-    items: [
-      { label: 'العمليات', path: '/workflow', icon: GitBranch },
-      { label: 'الموافقات', path: '/workflow/approvals', icon: CheckCircle },
-      { label: 'التفويضات', path: '/workflow/delegations', icon: Users },
-      { label: 'إعدادات الموافقات', path: '/workflow/settings', icon: Settings },
     ],
   },
   {
@@ -418,8 +385,8 @@ export default function DepartmentsHub() {
   const deptIds = departments.map(d => d.id);
   const selectedDept =
     pathParts.length >= 2 && pathParts[0] === 'departments' ? pathParts[1] :
-    pathParts.length === 1 && deptIds.includes(pathParts[0]) ? pathParts[0] :
-    null;
+      pathParts.length === 1 && deptIds.includes(pathParts[0]) ? pathParts[0] :
+        null;
 
   const { selectedCompanyId, selectedBranchId } = useAppContext();
 
@@ -544,7 +511,7 @@ export default function DepartmentsHub() {
                 return (
                   <Link
                     key={item.path}
-                    href={'/departments' + item.path}
+                    href={item.path}
                     className={`group flex items-center gap-3 p-4 rounded-xl border border-white/5 bg-gradient-to-br from-[#1e293b] to-[#0f172a] hover:border-[#C9A84C]/30 hover:shadow-lg hover:shadow-[#C9A84C]/5 transition-all duration-300`}
                   >
                     <div

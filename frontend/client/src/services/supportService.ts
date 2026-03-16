@@ -11,6 +11,10 @@ export interface Ticket {
     status: 'open' | 'in_progress' | 'resolved' | 'closed';
     authorId?: number;
     assignedToId?: number;
+    authorName?: string;
+    authorRole?: string;
+    authorDepartment?: string;
+    authorBranch?: string;
     createdAt: string;
 }
 

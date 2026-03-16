@@ -57,6 +57,9 @@ export default function AttendanceMonitoring() {
   const isDeptManagerRole = ['department_manager', 'finance_manager', 'fleet_manager', 'legal_manager', 'projects_manager', 'store_manager'].includes(selectedRole);
   const isManager = isTopRole || isDeptManagerRole || selectedRole === 'supervisor';
   const canSeeSubordinates = isManager;
+  // Only system owner (admin/owner) and General Manager can approve/reject early leave requests
+  const isSystemOwner = ['owner', 'admin', 'system_admin'].includes((user?.role as string)?.toLowerCase() || '');
+  const canApproveEarlyLeave = selectedRole === 'admin' || selectedRole === 'general_manager' || isSystemOwner;
 
   const myDeptId = currentEmployee
     ? (typeof currentEmployee.department === 'object' ? currentEmployee.department?.id : currentEmployee.departmentId)
@@ -262,6 +265,10 @@ export default function AttendanceMonitoring() {
       const deptId = emp ? (typeof emp.department === 'object' ? emp.department?.id : emp.departmentId) : null;
       const deptName = emp ? (typeof emp.department === 'object' ? (emp.department?.nameAr || emp.department?.name) : '') : '';
       const role = emp?.jobTitle || emp?.role || (typeof emp?.position === 'object' ? emp?.position?.title : emp?.position) || '';
+      const empBranchId = emp?.branchId || att?.branchId;
+      const branchName = empBranchId
+        ? (branches?.find((b: any) => b.id === empBranchId)?.nameAr || branches?.find((b: any) => b.id === empBranchId)?.name || '')
+        : (selectedBranch?.nameAr || selectedBranch?.name || '');
       return {
         id: att.id,
         employeeId: empId,
@@ -269,6 +276,7 @@ export default function AttendanceMonitoring() {
         role,
         departmentId: deptId,
         departmentName: deptName,
+        branchName,
         checkIn: att.checkIn,
         checkOut: att.checkOut,
         status: att.status || 'unknown',
@@ -281,21 +289,19 @@ export default function AttendanceMonitoring() {
         checkOutLongitude: att.checkOutLongitude,
       };
     });
-  }, [attendanceData, employeesData]);
+  }, [attendanceData, employeesData, branches, selectedBranch]);
 
   // فلترة حسب الدور
   const roleFilteredRecords = useMemo(() => {
     if (isTopRole) return records;
-    if (isDeptManagerRole && myDeptId) {
-      return records.filter(r => r.departmentId === myDeptId);
-    }
-    if (selectedRole === 'supervisor') {
+    if (isDeptManagerRole || selectedRole === 'supervisor') {
+      // مدير القسم والمشرف: يرون فقط الموظفين التابعين لهم مباشرة
       const subordinateIds = (subordinates || []).map((s: any) => s.id);
-      return records.filter(r => r.employeeId === currentEmployee?.id || subordinateIds.includes(r.employeeId));
+      return records.filter(r => subordinateIds.includes(r.employeeId));
     }
     // موظف عادي: يرى فقط سجله
     return records.filter(r => r.employeeId === currentEmployee?.id);
-  }, [records, isTopRole, isDeptManagerRole, selectedRole, myDeptId, currentEmployee, subordinates]);
+  }, [records, isTopRole, isDeptManagerRole, selectedRole, currentEmployee, subordinates]);
 
   // فلترة إضافية
   const filteredRecords = useMemo(() => {
@@ -432,11 +438,11 @@ export default function AttendanceMonitoring() {
     <div className="space-y-6" dir="rtl">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Users className="h-6 w-6 text-blue-600" />
+          <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2 text-slate-100">
+            <Users className="h-6 w-6" style={{ color: '#C9A84C' }} />
             الحضور والانصراف
           </h2>
-          <p className="text-gray-500">
+          <p className="text-slate-400">
             {isTopRole
               ? 'متابعة حضور وانصراف جميع الموظفين'
               : isDeptManagerRole
@@ -446,7 +452,7 @@ export default function AttendanceMonitoring() {
                   : 'سجل الحضور والانصراف الخاص بك'}
           </p>
         </div>
-        <Button variant="outline" onClick={() => refetch()} className="gap-2">
+        <Button variant="outline" onClick={() => refetch()} className="gap-2 border-slate-700 bg-slate-800/50 text-slate-200 hover:bg-slate-700">
           <RefreshCw className="h-4 w-4" />
           تحديث
         </Button>
@@ -454,60 +460,77 @@ export default function AttendanceMonitoring() {
 
       {/* بطاقة تسجيل الحضور - مخفية لمدير النظام والمدير العام */}
       {!isAdminOrGM && (
-        <Card className="bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200">
-          <CardContent className="p-6">
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 rounded-full bg-emerald-100">
-                    <UserCheck className="h-6 w-6 text-emerald-600" />
+        <Card className="bg-gradient-to-r from-[#1e293b] to-[#0f172a] border-slate-700/50 shadow-xl overflow-hidden relative">
+          {/* Decorative Glow */}
+          <div className="absolute -top-24 -inline-end-24 w-48 h-48 bg-[#C9A84C] opacity-5 blur-[80px] rounded-full pointer-events-none" />
+
+          <CardContent className="p-6 relative">
+            <div className="flex flex-col gap-6">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-xl bg-[#C9A84C]/10 border border-[#C9A84C]/20 shadow-inner">
+                    <UserCheck className="h-7 w-7" style={{ color: '#C9A84C' }} />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-lg">
+                    <h3 className="font-bold text-xl text-slate-100 mb-1">
                       {currentEmployee ? `${currentEmployee.firstName} ${currentEmployee.lastName}` : 'جاري التحميل...'}
                     </h3>
-                    <p className="text-sm text-gray-600">
-                      {(typeof currentEmployee?.position === 'object' ? currentEmployee?.position?.title : currentEmployee?.position) || 'موظف'} - {selectedBranch?.name || 'الفرع الرئيسي'}
-                    </p>
+                    <div className="flex items-center gap-2 text-sm text-slate-400">
+                      <span className="px-2 py-0.5 rounded-md bg-slate-800/50 border border-slate-700 text-xs text-slate-300">
+                        {(typeof currentEmployee?.position === 'object' ? currentEmployee?.position?.title : currentEmployee?.position) || 'موظف'}
+                      </span>
+                      <span className="w-1 h-1 rounded-full bg-slate-600" />
+                      <span>{selectedBranch?.name || 'الفرع الرئيسي'}</span>
+                    </div>
                   </div>
                 </div>
-                <div className="text-start">
-                  <div className="flex items-center gap-2 text-2xl font-bold text-emerald-700">
-                    <Timer className="h-6 w-6" />
+
+                <div className="flex flex-col items-end">
+                  <div className="flex items-center gap-3 text-3xl font-black tracking-wider" style={{ color: '#C9A84C' }}>
+                    <Timer className="h-7 w-7 opacity-80" />
                     {currentTime.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                   </div>
-                  <p className="text-sm text-gray-600">
-                    {currentTime.toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                  </p>
+                  <div className="flex items-center gap-2 text-slate-400 mt-1">
+                    <Calendar className="h-4 w-4" />
+                    <span className="text-sm font-medium">
+                      {currentTime.toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                    </span>
+                  </div>
                 </div>
               </div>
 
               {isEmployeeError && !isAdminOrGM && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-800 flex items-center gap-3">
+                <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400 flex items-center gap-3">
                   <AlertCircle className="h-5 w-5" />
                   <p>لا يوجد سجل موظف مرتبط بحسابك. يرجى التواصل مع إدارة الموارد البشرية لتفعيل وظائف الحضور والانصراف.</p>
                 </div>
               )}
 
               {isAdminOrGM && !currentEmployee && !isEmployeeLoading && (
-                <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg text-blue-700 text-sm flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4" />
+                <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl text-blue-400 text-sm flex items-center gap-3">
+                  <AlertCircle className="h-5 w-5 flex-shrink-0" />
                   <p>تنبيه: أنت داخل بحساب إداري لا يوجد له سجل موظف. يمكنك المراقبة ولكن لا يمكنك تسجيل الحضور لنفسك.</p>
                 </div>
               )}
 
               {todayAttendance && (
-                <div className="p-3 bg-white rounded-lg border border-emerald-200">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="h-5 w-5 text-emerald-600" />
-                      <span className="font-medium">تم تسجيل الحضور اليوم</span>
+                <div className="p-4 bg-slate-800/40 rounded-xl border border-slate-700/50 backdrop-blur-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-full bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+                        <CheckCircle className="h-5 w-5 text-emerald-500" />
+                      </div>
+                      <span className="font-semibold text-slate-200">تم تسجيل الحضور اليوم</span>
                     </div>
-                    <div className="text-sm text-gray-600">
-                      الدخول: {todayAttendance.checkIn ? new Date(todayAttendance.checkIn).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }) : '-'}
+                    <div className="text-sm text-slate-400 flex items-center gap-4 bg-slate-900/40 px-3 py-1.5 rounded-lg border border-slate-700/30">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        الدخول: <span className="text-slate-100">{todayAttendance.checkIn ? new Date(todayAttendance.checkIn).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }) : '-'}</span>
+                      </span>
                       {todayAttendance.checkOut && (
-                        <span className="me-4">
-                          الخروج: {new Date(todayAttendance.checkOut).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                          الخروج: <span className="text-slate-100">{new Date(todayAttendance.checkOut).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}</span>
                         </span>
                       )}
                     </div>
@@ -515,40 +538,57 @@ export default function AttendanceMonitoring() {
                 </div>
               )}
 
-              <div className="flex flex-wrap gap-3">
+              <div className="flex flex-wrap gap-4 pt-2">
                 <Button
                   onClick={handleCheckIn}
                   disabled={isGettingLocation || checkInMutation.isPending || !!todayAttendance?.checkIn}
-                  className="gap-2 bg-emerald-600 hover:bg-emerald-700"
+                  className="h-12 px-6 gap-3 text-base font-bold transition-all duration-300 shadow-lg shadow-emerald-500/10"
+                  style={{
+                    backgroundColor: !!todayAttendance?.checkIn ? 'rgba(255,255,255,0.05)' : '#10b981',
+                    color: !!todayAttendance?.checkIn ? '#64748b' : 'white',
+                    border: !!todayAttendance?.checkIn ? '1px solid rgba(255,255,255,0.1)' : 'none'
+                  }}
                 >
-                  {isGettingLocation || checkInMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
+                  {isGettingLocation || checkInMutation.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <LogIn className="h-5 w-5" />}
                   تسجيل حضور
                 </Button>
+
                 <Button
                   onClick={handleCheckOut}
                   disabled={isGettingLocation || checkOutMutation.isPending || !todayAttendance?.checkIn || !!todayAttendance?.checkOut}
+                  className="h-12 px-6 gap-3 text-base font-bold transition-all duration-300 shadow-lg shadow-rose-500/5"
                   variant="outline"
-                  className="gap-2 border-red-300 text-red-600 hover:bg-red-50"
+                  style={{
+                    backgroundColor: 'transparent',
+                    color: (!todayAttendance?.checkIn || !!todayAttendance?.checkOut) ? '#475569' : '#ef4444',
+                    border: `1px solid ${(!todayAttendance?.checkIn || !!todayAttendance?.checkOut) ? 'rgba(255,255,255,0.1)' : 'rgba(239, 68, 68, 0.4)'}`,
+                  }}
                 >
-                  {isGettingLocation || checkOutMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
+                  {isGettingLocation || checkOutMutation.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <LogOut className="h-5 w-5" />}
                   تسجيل انصراف
                 </Button>
+
                 <Button
                   onClick={() => setShowEarlyLeaveDialog(true)}
                   disabled={!todayAttendance?.checkIn || !!todayAttendance?.checkOut || todayAttendance?.status === 'pending_early_leave' || todayAttendance?.status === 'early_leave'}
+                  className="h-12 px-6 gap-3 text-base font-bold transition-all duration-300"
                   variant="outline"
-                  className="gap-2 border-amber-300 text-amber-600 hover:bg-amber-50"
+                  style={{
+                    backgroundColor: 'rgba(201,168,76,0.05)',
+                    color: '#C9A84C',
+                    border: '1px solid rgba(201,168,76,0.4)',
+                  }}
                 >
-                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTriangle className="h-5 w-5" />
                   {todayAttendance?.status === 'pending_early_leave' ? 'بانتظار الموافقة' : todayAttendance?.status === 'early_leave' ? 'تمت الموافقة' : 'طلب خروج مبكر'}
                 </Button>
               </div>
             </div>
             {currentLocation && (
-              <div className="mt-4 p-3 bg-white rounded-lg border border-emerald-200">
-                <p className="text-sm text-gray-600">
-                  <MapPin className="h-4 w-4 inline-block ms-1 text-emerald-600" />
-                  آخر موقع مسجل: {currentLocation.lat.toFixed(6)}, {currentLocation.lng.toFixed(6)}
+              <div className="mt-6 p-3 bg-slate-800/30 rounded-lg border border-slate-700/30 flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-[#C9A84C]" />
+                <p className="text-xs text-slate-400">
+                  آخر موقع مسجل: <span className="text-slate-200">{currentLocation.lat.toFixed(6)}, {currentLocation.lng.toFixed(6)}</span>
                 </p>
               </div>
             )}
@@ -662,6 +702,7 @@ export default function AttendanceMonitoring() {
                     <th className="px-4 py-3 text-end text-xs font-medium text-gray-500">اسم الموظف</th>
                     <th className="px-4 py-3 text-end text-xs font-medium text-gray-500">الوظيفة</th>
                     <th className="px-4 py-3 text-end text-xs font-medium text-gray-500">القسم</th>
+                    <th className="px-4 py-3 text-end text-xs font-medium text-gray-500">الفرع</th>
                     <th className="px-4 py-3 text-end text-xs font-medium text-gray-500">تسجيل الدخول</th>
                     <th className="px-4 py-3 text-end text-xs font-medium text-gray-500">تسجيل الخروج</th>
                     <th className="px-4 py-3 text-end text-xs font-medium text-gray-500">ساعات العمل</th>
@@ -676,6 +717,7 @@ export default function AttendanceMonitoring() {
                       <td className="px-4 py-3 font-medium text-gray-900">{record.employeeName}</td>
                       <td className="px-4 py-3 text-gray-600">{record.role || '-'}</td>
                       <td className="px-4 py-3 text-gray-600">{record.departmentName || '-'}</td>
+                      <td className="px-4 py-3 text-gray-600">{record.branchName || '-'}</td>
                       <td className="px-4 py-3">
                         {record.checkIn ? (
                           <span className="flex items-center gap-1 text-green-700">
@@ -703,7 +745,7 @@ export default function AttendanceMonitoring() {
                       </td>
                       {isManager && (
                         <td className="px-4 py-3">
-                          {record.status === 'pending_early_leave' && (
+                          {record.status === 'pending_early_leave' && canApproveEarlyLeave && (
                             <div className="flex items-center gap-1">
                               <Button size="sm" variant="ghost" className="h-7 px-2 text-green-600 hover:bg-green-50"
                                 onClick={() => approveEarlyLeaveMut.mutate(record.id)} disabled={approveEarlyLeaveMut.isPending} title="موافقة">
@@ -733,7 +775,7 @@ export default function AttendanceMonitoring() {
                   ))}
                   {filteredRecords.length === 0 && (
                     <tr>
-                      <td colSpan={isManager ? 9 : 8} className="px-4 py-12 text-center text-gray-400">
+                      <td colSpan={isManager ? 10 : 9} className="px-4 py-12 text-center text-gray-400">
                         لا توجد سجلات حضور لهذا التاريخ
                       </td>
                     </tr>
@@ -746,28 +788,30 @@ export default function AttendanceMonitoring() {
       </Card>
 
       {/* Dialog طلب الخروج المبكر */}
-      {showEarlyLeaveDialog && !isAdminOrGM && (
-        <div className="mt-4 p-6 bg-white border rounded-xl shadow-sm">
-          <div>
-            <div className="mb-4 border-b pb-3">
-              <h3 className="text-lg font-bold">طلب خروج مبكر</h3>
-              <p className="text-sm text-gray-500">سيتم إرسال طلبك للموافقة حسب الصلاحيات المحددة في النظام</p>
-            </div>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label>سبب الخروج المبكر</Label>
-                <Textarea value={earlyLeaveReason} onChange={(e) => setEarlyLeaveReason(e.target.value)} placeholder="اكتب سبب طلب الخروج المبكر..." rows={4} />
+      {
+        showEarlyLeaveDialog && !isAdminOrGM && (
+          <div className="mt-4 p-6 bg-white border rounded-xl shadow-sm">
+            <div>
+              <div className="mb-4 border-b pb-3">
+                <h3 className="text-lg font-bold">طلب خروج مبكر</h3>
+                <p className="text-sm text-gray-500">سيتم إرسال طلبك للموافقة حسب الصلاحيات المحددة في النظام</p>
+              </div>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>سبب الخروج المبكر</Label>
+                  <Textarea value={earlyLeaveReason} onChange={(e) => setEarlyLeaveReason(e.target.value)} placeholder="اكتب سبب طلب الخروج المبكر..." rows={4} />
+                </div>
+              </div>
+              <div className="flex gap-2 mt-4 pt-3 border-t justify-end">
+                <Button variant="outline" onClick={() => setShowEarlyLeaveDialog(false)}>إلغاء</Button>
+                <Button onClick={handleEarlyLeaveRequest} disabled={earlyLeaveMutation.isPending}>
+                  {earlyLeaveMutation.isPending ? 'جاري الإرسال...' : 'إرسال الطلب'}
+                </Button>
               </div>
             </div>
-            <div className="flex gap-2 mt-4 pt-3 border-t justify-end">
-              <Button variant="outline" onClick={() => setShowEarlyLeaveDialog(false)}>إلغاء</Button>
-              <Button onClick={handleEarlyLeaveRequest} disabled={earlyLeaveMutation.isPending}>
-                {earlyLeaveMutation.isPending ? 'جاري الإرسال...' : 'إرسال الطلب'}
-              </Button>
-            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   );
 }
