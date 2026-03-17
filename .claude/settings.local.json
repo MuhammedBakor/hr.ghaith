@@ -45,7 +45,10 @@
       "Read(//c/Users/mb70n/OneDrive/Documents/new g/frontend/client/**)",
       "Bash(/tmp/check_hooks.sh:*)",
       "Bash(find \"C:\\\\Users\\\\mb70n\\\\OneDrive\\\\Documents\\\\new g\\\\frontend\\\\client\\\\src\" -name \"*.tsx\" -type f 2>/dev/null | head -20)",
-      "Bash(cd /c/Users/mb70n/OneDrive/Documents/\"new g\" && find frontend/client/src/pages/hr -name \"*.tsx\" -exec grep -l \"grid grid-cols\" {} \\\\; | head -10)"
+      "Bash(cd /c/Users/mb70n/OneDrive/Documents/\"new g\" && find frontend/client/src/pages/hr -name \"*.tsx\" -exec grep -l \"grid grid-cols\" {} \\\\; | head -10)",
+      "Bash(find:*)",
+      "Bash(for file:*)",
+      "Read(//c/Users/mb70n/OneDrive/Documents/new g/backend/src/main/java/com/ghaith/erp/dto/**)"
     ]
   }
 }

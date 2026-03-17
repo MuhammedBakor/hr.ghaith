@@ -67,10 +67,10 @@ export function AgentDashboard({ stats, user, roleLabel, currentEmployee }: any)
 
             {/* Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard title="المهام الموكلة" value={stats?.assignedTasks || 0} icon={ListTodo} color="orange" sub="مهام اليوم" />
-                <StatCard title="حالة المركبة" value={stats?.vehicleStatus || 'جاهزة'} icon={Truck} color="blue" />
-                <StatCard title="استهلاك الوقود (الأسبوع)" value={stats?.fuelConsumption || 0} icon={Fuel} color="green" sub="لتر" />
-                <StatCard title="بلاغات الدعم" value={stats?.activeTickets || 0} icon={MessageSquare} color="amber" alert={stats?.activeTickets > 0} />
+                <StatCard title="المهام الموكلة" value={stats?.assignedTasks || 0} icon={ListTodo} color="orange" sub="مهام اليوم" link="/departments/requests" />
+                <StatCard title="حالة المركبة" value={stats?.vehicleStatus || 'جاهزة'} icon={Truck} color="blue" link="/fleet/vehicles" />
+                <StatCard title="استهلاك الوقود (الأسبوع)" value={stats?.fuelConsumption || 0} icon={Fuel} color="green" sub="لتر" link="/fleet/fuel" />
+                <StatCard title="بلاغات الدعم" value={stats?.activeTickets || 0} icon={MessageSquare} color="amber" alert={stats?.activeTickets > 0} link="/support/tickets" />
             </div>
 
             {/* Quick Actions */}
@@ -82,7 +82,7 @@ export function AgentDashboard({ stats, user, roleLabel, currentEmployee }: any)
                     <QuickAction icon={Fuel} label="تسجيل وقود" link="/fleet/fuel" color="green" />
                     <QuickAction icon={Wrench} label="طلب صيانة" link="/fleet/maintenance" color="red" />
                     <QuickAction icon={MessageSquare} label="الدعم الفني" link="/support/tickets" color="amber" />
-                    <QuickAction icon={Calendar} label="الطلبات" link="/requests" color="gray" />
+                    <QuickAction icon={Calendar} label="الطلبات" link="/departments/requests" color="gray" />
                     <QuickAction icon={User} label="ملفي الشخصي" link="/profile" color="purple" />
                 </div>
             </div>

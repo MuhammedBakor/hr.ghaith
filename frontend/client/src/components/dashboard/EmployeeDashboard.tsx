@@ -74,23 +74,27 @@ export function EmployeeDashboard({ stats, user, roleLabel, currentEmployee }: a
                     value={stats?.leaveBalance || 0}
                     icon={Calendar} color="blue"
                     sub="يوم متاح"
+                    link="/hr/leave-management"
                 />
                 <StatCard
                     title="ساعات العمل (الشهر)"
                     value={stats?.workingHours || 0}
                     icon={Clock} color="green"
+                    link="/hr/attendance-monitoring"
                 />
                 <StatCard
                     title="الراتب المتوقع"
                     value={stats?.expectedSalary || 0}
                     icon={DollarSign} color="indigo"
                     sub="قبل الاستقطاعات"
+                    link="/hr/payroll"
                 />
                 <StatCard
                     title="المخالفات"
                     value={stats?.totalViolations || 0}
                     icon={ShieldAlert} color="red"
                     alert={stats?.totalViolations > 0}
+                    link="/hr/my-violations"
                 />
             </div>
 
@@ -100,7 +104,7 @@ export function EmployeeDashboard({ stats, user, roleLabel, currentEmployee }: a
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                     <QuickAction icon={Clock} label="تسجيل الحضور" link="/hr/attendance-monitoring" color="green" />
                     <QuickAction icon={Calendar} label="طلب إجازة" link="/hr/leave-management" color="blue" />
-                    <QuickAction icon={FileText} label="طلباتي" link="/requests" color="amber" />
+                    <QuickAction icon={FileText} label="طلباتي" link="/departments/requests" color="amber" />
                     <QuickAction icon={ShieldAlert} label="مخالفاتي" link="/hr/my-violations" color="red" />
                     <QuickAction icon={User} label="ملفي الشخصي" link="/profile" color="purple" />
                 </div>

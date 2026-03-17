@@ -3,10 +3,12 @@ import { useAppContext } from '@/contexts/AppContext';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { Label } from '@/components/ui/label';
-import { Loader2, User, Lock, AlertCircle, Eye, EyeOff, KeyRound, Mail, CheckCircle2 } from 'lucide-react';
+import { Loader2, User, Lock, AlertCircle, Eye, EyeOff, KeyRound, Mail, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { useLogin, useSendPasswordResetCode, useResetPassword } from '@/services/authService';
+import { useMutation } from '@tanstack/react-query';
+import api from '@/lib/api';
 
-type ViewType = 'main' | 'login' | 'reset-request' | 'reset-verify' | 'reset-success';
+type ViewType = 'main' | 'login' | 'reset-request' | 'reset-verify' | 'reset-success' | 'activate-verify' | 'activate-password' | 'activate-success';
 
 // ─── Brand colours (matches gyth.html) ───────────────────────────────────────
 const GOLD = '#C9A13B';
@@ -66,9 +68,27 @@ export default function Login() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [resetError, setResetError] = useState('');
 
+  const [empNumber, setEmpNumber] = useState('');
+  const [activationCode, setActivationCode] = useState('');
+  const [activatePassword, setActivatePassword] = useState('');
+  const [confirmActivatePassword, setConfirmActivatePassword] = useState('');
+  const [showActivatePassword, setShowActivatePassword] = useState(false);
+  const [activateError, setActivateError] = useState('');
+  const [activateEmpName, setActivateEmpName] = useState('');
+
   const loginMut = useLogin();
   const sendResetCodeMutation = useSendPasswordResetCode();
   const verifyResetMutation = useResetPassword();
+
+  const verifyActivationMut = useMutation({
+    mutationFn: (data: { employeeNumber: string; activationCode: string }) =>
+      api.post('/auth/employee-invitation/verify', data).then(res => res.data),
+  });
+
+  const completeActivationMut = useMutation({
+    mutationFn: (data: { employeeNumber: string; activationCode: string; password: string }) =>
+      api.post('/auth/employee-invitation/complete', data).then(res => res.data),
+  });
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) setLocation('/select-branch');
@@ -104,9 +124,54 @@ export default function Login() {
     });
   };
 
+  const handleActivateVerify = () => {
+    if (!empNumber.trim() || !activationCode.trim()) { setActivateError('يرجى إدخال الرقم الوظيفي وكود التفعيل'); return; }
+    setActivateError('');
+    verifyActivationMut.mutate({ employeeNumber: empNumber.trim(), activationCode: activationCode.trim() }, {
+      onSuccess: (result) => {
+        if (result.valid) {
+          setActivateEmpName(result.employeeName || '');
+          if (result.userExists) {
+            // Existing user (multi-branch) — complete directly
+            completeActivationMut.mutate({ employeeNumber: empNumber.trim(), activationCode: activationCode.trim(), password: '' }, {
+              onSuccess: (res) => {
+                if (res.success) {
+                  if (res.token) localStorage.setItem('token', res.token);
+                  setCurrentView('activate-success');
+                } else { setActivateError(res.error || 'فشل تفعيل الحساب'); }
+              },
+              onError: (err: any) => { setActivateError(err.response?.data?.message || err.message || 'فشل تفعيل الحساب'); },
+            });
+          } else {
+            setCurrentView('activate-password');
+          }
+        } else {
+          setActivateError(result.error || 'كود التفعيل غير صحيح');
+        }
+      },
+      onError: (err: any) => { setActivateError(err.response?.data?.message || err.message || 'فشل التحقق'); },
+    });
+  };
+
+  const handleActivateComplete = () => {
+    if (!activatePassword || activatePassword.length < 8) { setActivateError('كلمة المرور يجب أن تكون 8 أحرف على الأقل'); return; }
+    if (activatePassword !== confirmActivatePassword) { setActivateError('كلمات المرور غير متطابقة'); return; }
+    setActivateError('');
+    completeActivationMut.mutate({ employeeNumber: empNumber.trim(), activationCode: activationCode.trim(), password: activatePassword }, {
+      onSuccess: (result) => {
+        if (result.success) {
+          if (result.token) localStorage.setItem('token', result.token);
+          setCurrentView('activate-success');
+        } else { setActivateError(result.error || 'فشل تفعيل الحساب'); }
+      },
+      onError: (err: any) => { setActivateError(err.response?.data?.message || err.message || 'فشل تفعيل الحساب'); },
+    });
+  };
+
   const resetAllStates = () => {
     setUsername(''); setPassword(''); setLoginError('');
     setResetEmail(''); setResetCode(''); setNewPassword(''); setConfirmPassword(''); setResetError('');
+    setEmpNumber(''); setActivationCode(''); setActivatePassword(''); setConfirmActivatePassword(''); setActivateError(''); setActivateEmpName('');
   };
 
   // ─── Services carousel drag-to-scroll ────────────────────────────────────
@@ -247,11 +312,11 @@ export default function Login() {
                   تسجيل الدخول
                 </button>
                 <button
-                  onClick={() => setCurrentView('reset-request')}
-                  className="hidden sm:block px-4 md:px-8 py-2 md:py-3 rounded-xl font-bold transition text-xs md:text-base"
+                  onClick={() => setCurrentView('activate-verify')}
+                  className="px-5 md:px-8 py-2.5 md:py-3 rounded-xl font-bold transition text-sm md:text-base"
                   {...outlineBtn}
                 >
-                  استعادة كلمة المرور
+                  تفعيل حساب موظف
                 </button>
               </div>
             </div>
@@ -415,12 +480,18 @@ export default function Login() {
                   {loginMut.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                   {loginMut.isPending ? 'جاري تسجيل الدخول...' : 'تسجيل الدخول'}
                 </button>
-                <div className="text-center pt-1">
+                <div className="text-center pt-1 space-y-2">
                   <button type="button" onClick={() => { resetAllStates(); setCurrentView('reset-request'); }}
-                    className="text-xs transition-colors" style={{ color: '#9ca3af' }}
+                    className="text-xs transition-colors block mx-auto" style={{ color: '#9ca3af' }}
                     onMouseEnter={e => { (e.currentTarget).style.color = GOLD; }}
                     onMouseLeave={e => { (e.currentTarget).style.color = '#9ca3af'; }}>
                     نسيت كلمة المرور؟
+                  </button>
+                  <button type="button" onClick={() => { resetAllStates(); setCurrentView('activate-verify'); }}
+                    className="text-xs transition-colors block mx-auto" style={{ color: '#9ca3af' }}
+                    onMouseEnter={e => { (e.currentTarget).style.color = GOLD; }}
+                    onMouseLeave={e => { (e.currentTarget).style.color = '#9ca3af'; }}>
+                    موظف جديد؟ تفعيل الحساب
                   </button>
                 </div>
               </form>
@@ -527,6 +598,115 @@ export default function Login() {
               <h2 className="text-2xl font-bold mb-2" style={{ color: PRIMARY }}>تم بنجاح!</h2>
               <p className="text-sm mb-8" style={{ color: '#9ca3af' }}>
                 تم إعادة تعيين كلمة المرور. يمكنك الآن تسجيل الدخول بكلمة المرور الجديدة.
+              </p>
+              <button onClick={() => { resetAllStates(); setCurrentView('login'); }}
+                className="w-full py-3.5 rounded-xl text-sm font-bold transition"
+                {...goldBtn}>
+                تسجيل الدخول
+              </button>
+            </div>
+          )}
+
+          {/* ── ACTIVATE VERIFY ──────────────────────────────────── */}
+          {currentView === 'activate-verify' && (
+            <>
+              <BackBtn to="main" />
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5"
+                style={{ backgroundColor: 'rgba(201,161,59,0.12)' }}>
+                <ShieldCheck className="h-6 w-6" style={{ color: GOLD }} />
+              </div>
+              <h2 className="text-2xl font-bold mb-1" style={{ color: PRIMARY }}>تفعيل حساب موظف</h2>
+              <p className="text-sm mb-7" style={{ color: '#9ca3af' }}>أدخل الرقم الوظيفي وكود التفعيل المرسل إلى بريدك الإلكتروني</p>
+              <ErrorBanner msg={activateError} />
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-xs font-medium mb-1.5 block" style={{ color: '#374151' }}>الرقم الوظيفي</Label>
+                  <div className="relative">
+                    <User className="absolute top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none" style={{ color: '#9ca3af', insetInlineEnd: '14px' }} />
+                    <input type="text" placeholder="أدخل الرقم الوظيفي" value={empNumber}
+                      onChange={e => setEmpNumber(e.target.value)} className={inputCls}
+                      style={{ paddingInlineEnd: '40px' }} dir="ltr"
+                      disabled={verifyActivationMut.isPending} />
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-xs font-medium mb-1.5 block" style={{ color: '#374151' }}>كود التفعيل</Label>
+                  <div className="relative">
+                    <KeyRound className="absolute top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none" style={{ color: '#9ca3af', insetInlineEnd: '14px' }} />
+                    <input type="text" placeholder="أدخل كود التفعيل" value={activationCode}
+                      onChange={e => setActivationCode(e.target.value)}
+                      className={`${inputCls} font-mono tracking-widest`}
+                      style={{ paddingInlineEnd: '40px' }} dir="ltr" maxLength={10}
+                      disabled={verifyActivationMut.isPending} />
+                  </div>
+                </div>
+                <button onClick={handleActivateVerify} disabled={verifyActivationMut.isPending}
+                  className="w-full py-3.5 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2"
+                  {...goldBtn}>
+                  {verifyActivationMut.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {verifyActivationMut.isPending ? 'جاري التحقق...' : 'تحقق وتفعيل'}
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* ── ACTIVATE PASSWORD ─────────────────────────────────── */}
+          {currentView === 'activate-password' && (
+            <>
+              <BackBtn to="activate-verify" />
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-5"
+                style={{ backgroundColor: 'rgba(201,161,59,0.12)' }}>
+                <ShieldCheck className="h-6 w-6" style={{ color: GOLD }} />
+              </div>
+              <h2 className="text-2xl font-bold mb-1" style={{ color: PRIMARY }}>إنشاء كلمة المرور</h2>
+              <p className="text-sm mb-7" style={{ color: '#9ca3af' }}>
+                مرحباً {activateEmpName ? activateEmpName : ''}، قم بإنشاء كلمة مرور لحسابك
+              </p>
+              <ErrorBanner msg={activateError} />
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-xs font-medium mb-1.5 block" style={{ color: '#374151' }}>كلمة المرور الجديدة</Label>
+                  <div className="relative">
+                    <Lock className="absolute top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none" style={{ color: '#9ca3af', insetInlineEnd: '14px' }} />
+                    <input type={showActivatePassword ? 'text' : 'password'} placeholder="أدخل كلمة المرور"
+                      value={activatePassword} onChange={e => setActivatePassword(e.target.value)} className={inputCls}
+                      style={{ paddingInlineEnd: '40px', paddingInlineStart: '40px' }} disabled={completeActivationMut.isPending} />
+                    <button type="button" onClick={() => setShowActivatePassword(!showActivatePassword)}
+                      className="absolute top-1/2 -translate-y-1/2" style={{ color: '#9ca3af', insetInlineStart: '14px' }}>
+                      {showActivatePassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  <p className="text-xs mt-1" style={{ color: '#9ca3af' }}>8 أحرف على الأقل</p>
+                </div>
+                <div>
+                  <Label className="text-xs font-medium mb-1.5 block" style={{ color: '#374151' }}>تأكيد كلمة المرور</Label>
+                  <div className="relative">
+                    <Lock className="absolute top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none" style={{ color: '#9ca3af', insetInlineEnd: '14px' }} />
+                    <input type={showActivatePassword ? 'text' : 'password'} placeholder="أعد إدخال كلمة المرور"
+                      value={confirmActivatePassword} onChange={e => setConfirmActivatePassword(e.target.value)} className={inputCls}
+                      style={{ paddingInlineEnd: '40px' }} disabled={completeActivationMut.isPending} />
+                  </div>
+                </div>
+                <button onClick={handleActivateComplete} disabled={completeActivationMut.isPending}
+                  className="w-full py-3.5 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2"
+                  {...goldBtn}>
+                  {completeActivationMut.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {completeActivationMut.isPending ? 'جاري التفعيل...' : 'تفعيل الحساب'}
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* ── ACTIVATE SUCCESS ──────────────────────────────────── */}
+          {currentView === 'activate-success' && (
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5"
+                style={{ backgroundColor: 'rgba(16,185,129,0.1)' }}>
+                <CheckCircle2 className="h-8 w-8" style={{ color: '#10b981' }} />
+              </div>
+              <h2 className="text-2xl font-bold mb-2" style={{ color: PRIMARY }}>تم تفعيل حسابك بنجاح!</h2>
+              <p className="text-sm mb-8" style={{ color: '#9ca3af' }}>
+                يمكنك الآن تسجيل الدخول باستخدام بياناتك الجديدة.
               </p>
               <button onClick={() => { resetAllStates(); setCurrentView('login'); }}
                 className="w-full py-3.5 rounded-xl text-sm font-bold transition"

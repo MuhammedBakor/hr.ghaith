@@ -122,6 +122,10 @@ export default function EmployeeList() {
   // Get branch from AppContext
   const { selectedBranchId, currentBranch, currentEmployee, selectedRole, branches } = useAppContext();
 
+  // Non-admin roles must have a branch selected before fetching data
+  const isAdminOrGM = selectedRole === 'admin' || selectedRole === 'general_manager';
+  const branchReady = isAdminOrGM || selectedBranchId !== null;
+
   // For generic department managers: also filter by their own department
   // Specialist managers (hr_manager, legal_manager, etc.) can see all employees in their branch
   const isGenericDeptManager = selectedRole === 'department_manager';
@@ -129,9 +133,11 @@ export default function EmployeeList() {
     ? currentEmployee.department.id : null;
 
   // Fetch data using hrService hooks - filter by branchId (company context) and optionally departmentId
+  // Don't fetch until branch is set for non-admin roles
   const { data: employeesData, isLoading: loading, isError } = useEmployees({
     branchId: selectedBranchId,
     departmentId: deptManagerDeptId,
+    enabled: branchReady,
   });
   const { data: departmentsData } = useDepartments({ branchId: selectedBranchId });
   const { data: positionsData } = usePositions({ branchId: selectedBranchId });

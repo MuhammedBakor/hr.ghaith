@@ -118,6 +118,12 @@ public class AttendanceController {
         return ResponseEntity.ok(attendanceService.rejectAttendance(id));
     }
 
+    @DeleteMapping("/all")
+    public ResponseEntity<?> deleteAllAttendance(@RequestParam(required = false) Long branchId) {
+        attendanceService.deleteAllAttendance(branchId);
+        return ResponseEntity.ok(Map.of("success", true, "message", "تم حذف جميع سجلات الحضور"));
+    }
+
     @GetMapping("/report-settings")
     public ResponseEntity<?> getReportSettings() {
         return ResponseEntity.ok(new java.util.HashMap<>());

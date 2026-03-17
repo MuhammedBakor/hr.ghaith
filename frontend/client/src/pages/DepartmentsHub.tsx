@@ -375,6 +375,22 @@ const departments: Department[] = [
   },
 ];
 
+// Map employee department code/name to departments hub ID
+const DEPT_CODE_TO_HUB_ID: Record<string, string> = {
+  'HR': 'hr', 'الموارد البشرية': 'hr', 'Human Resources': 'hr',
+  'FIN': 'finance', 'المالية': 'finance', 'Finance': 'finance',
+  'FLEET': 'fleet', 'الاسطول': 'fleet', 'Fleet': 'fleet',
+  'LEGAL': 'legal', 'القانون': 'legal', 'Legal': 'legal',
+  'PROJ': 'operations', 'المشاريع': 'operations', 'Projects': 'operations',
+  'WH': 'store', 'المخازن': 'store', 'Warehouses': 'store',
+  'PROP': 'property', 'الاملاك': 'property', 'Properties': 'property',
+  'UMRAH': 'workflow', 'العمرة': 'workflow', 'Umrah': 'workflow',
+  'GOV': 'governance', 'الحوكمة': 'governance', 'Governance': 'governance',
+  'BI': 'bi', 'ذكاء الأعمال': 'bi', 'Business Intelligence': 'bi',
+  'MKT': 'marketing', 'التسويق': 'marketing', 'Marketing': 'marketing',
+  'SUP': 'support', 'الدعم': 'support', 'Support': 'support',
+};
+
 export default function DepartmentsHub() {
   const [location, navigate] = useLocation();
 
@@ -388,7 +404,8 @@ export default function DepartmentsHub() {
       pathParts.length === 1 && deptIds.includes(pathParts[0]) ? pathParts[0] :
         null;
 
-  const { selectedCompanyId, selectedBranchId } = useAppContext();
+  const { selectedCompanyId, selectedBranchId, selectedRole, currentEmployee: ctxEmployee, canAccessModule } = useAppContext();
+  const isTopAdmin = selectedRole === 'admin' || selectedRole === 'general_manager';
 
   // Fetch company data to get its assigned departments (only when in a company context)
   const isInCompanyContext = selectedBranchId !== null && selectedCompanyId !== null;
@@ -410,10 +427,39 @@ export default function DepartmentsHub() {
     }
   }, [companyData, isInCompanyContext]);
 
-  // Filter departments: show all if no restrictions, otherwise only allowed ones
-  const visibleDepartments = allowedDeptIds
-    ? departments.filter(d => allowedDeptIds.includes(d.id))
-    : departments;
+  // Get the employee's own department hub IDs
+  const employeeDeptIds = useMemo<string[]>(() => {
+    if (isTopAdmin) return []; // admins see all, handled separately
+    if (!ctxEmployee?.department) return [];
+    const dept = ctxEmployee.department;
+    const keys = typeof dept === 'object'
+      ? [dept.code, dept.nameAr, dept.name].filter(Boolean)
+      : [dept];
+    const hubIds = new Set<string>();
+    for (const key of keys) {
+      const hubId = DEPT_CODE_TO_HUB_ID[key];
+      if (hubId) hubIds.add(hubId);
+    }
+    return Array.from(hubIds);
+  }, [ctxEmployee, isTopAdmin]);
+
+  // Filter departments based on role:
+  // - Admin/GM: show all (or company-filtered)
+  // - Others: show only the departments the employee belongs to
+  const visibleDepartments = useMemo(() => {
+    if (isTopAdmin) {
+      // Admin/GM: company filter or all
+      return allowedDeptIds
+        ? departments.filter(d => allowedDeptIds.includes(d.id))
+        : departments;
+    }
+    // Non-admin: show only employee's own departments
+    if (employeeDeptIds.length > 0) {
+      return departments.filter(d => employeeDeptIds.includes(d.id));
+    }
+    // Fallback: filter by module permissions
+    return departments.filter(d => canAccessModule(d.id as any));
+  }, [isTopAdmin, allowedDeptIds, employeeDeptIds, canAccessModule]);
 
   const activeDept = visibleDepartments.find(d => d.id === selectedDept);
 

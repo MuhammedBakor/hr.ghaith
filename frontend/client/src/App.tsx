@@ -504,6 +504,14 @@ function Router() {
         </RoleProtectedRoute>
       </Route>
 
+      <Route path="/hr/official-letters">
+        <RoleProtectedRoute module="hr" hrSubPage="official-letters">
+          <DashboardLayout>
+            <OfficialLetters />
+          </DashboardLayout>
+        </RoleProtectedRoute>
+      </Route>
+
       <Route path="/hr/leaves">
         <RoleProtectedRoute module="hr" hrSubPage="leaves">
           <DashboardLayout>
@@ -1371,9 +1379,11 @@ function Router() {
       </Route>
 
       <Route path="/settings/branding">
-        <DashboardLayout>
-          <LetterheadSettings />
-        </DashboardLayout>
+        <RoleProtectedRoute module="settings">
+          <DashboardLayout>
+            <LetterheadSettings />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       {/* Settings Module Routes */}
@@ -1400,69 +1410,91 @@ function Router() {
       </Route>
 
       <Route path="/settings/system">
-        <DashboardLayout>
-          <SystemSettings />
-        </DashboardLayout>
+        <RoleProtectedRoute module="settings">
+          <DashboardLayout>
+            <SystemSettings />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/settings/notifications">
-        <DashboardLayout>
-          <NotificationSettings />
-        </DashboardLayout>
+        <RoleProtectedRoute module="settings">
+          <DashboardLayout>
+            <NotificationSettings />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/settings/backup">
-        <DashboardLayout>
-          <Backup />
-        </DashboardLayout>
+        <RoleProtectedRoute module="settings">
+          <DashboardLayout>
+            <Backup />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/settings/branches">
-        <DashboardLayout>
-          <BranchSettings />
-        </DashboardLayout>
+        <RoleProtectedRoute module="settings">
+          <DashboardLayout>
+            <BranchSettings />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/settings/departments">
-        <DashboardLayout>
-          <DepartmentSettings />
-        </DashboardLayout>
+        <RoleProtectedRoute module="settings">
+          <DashboardLayout>
+            <DepartmentSettings />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/settings/roles">
-        <DashboardLayout>
-          <RoleSettings />
-        </DashboardLayout>
+        <RoleProtectedRoute module="settings">
+          <DashboardLayout>
+            <RoleSettings />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/settings/code-prefixes">
-        <DashboardLayout>
-          <CodePrefixes />
-        </DashboardLayout>
+        <RoleProtectedRoute module="settings">
+          <DashboardLayout>
+            <CodePrefixes />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/settings/email">
-        <DashboardLayout>
-          <EmailSettings />
-        </DashboardLayout>
+        <RoleProtectedRoute module="settings">
+          <DashboardLayout>
+            <EmailSettings />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/settings/whatsapp">
-        <DashboardLayout>
-          <WhatsAppSettings />
-        </DashboardLayout>
+        <RoleProtectedRoute module="settings">
+          <DashboardLayout>
+            <WhatsAppSettings />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/settings/sms">
-        <DashboardLayout>
-          <SmsSettings />
-        </DashboardLayout>
+        <RoleProtectedRoute module="settings">
+          <DashboardLayout>
+            <SmsSettings />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/settings/message-templates">
-        <DashboardLayout>
-          <MessageTemplates />
-        </DashboardLayout>
+        <RoleProtectedRoute module="settings">
+          <DashboardLayout>
+            <MessageTemplates />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/logs/messages">
@@ -1676,9 +1708,11 @@ function Router() {
         </DashboardLayout>
       </Route>
       <Route path="/settings/finance/fiscal-periods">
-        <DashboardLayout>
-          <FiscalPeriods />
-        </DashboardLayout>
+        <RoleProtectedRoute module="settings">
+          <DashboardLayout>
+            <FiscalPeriods />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/fleet/fleet-daily-reports">
         <DashboardLayout>
@@ -1771,9 +1805,11 @@ function Router() {
         </DashboardLayout>
       </Route>
       <Route path="/settings/hr/leave-types">
-        <DashboardLayout>
-          <LeaveTypes />
-        </DashboardLayout>
+        <RoleProtectedRoute module="settings">
+          <DashboardLayout>
+            <LeaveTypes />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/comms/official-communications">
         <DashboardLayout>
@@ -1781,9 +1817,11 @@ function Router() {
         </DashboardLayout>
       </Route>
       <Route path="/settings/templates">
-        <DashboardLayout>
-          <PrintTemplates />
-        </DashboardLayout>
+        <RoleProtectedRoute module="settings">
+          <DashboardLayout>
+            <PrintTemplates />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/finance/receivables">
         <DashboardLayout>
@@ -1796,9 +1834,11 @@ function Router() {
         </DashboardLayout>
       </Route>
       <Route path="/settings/hr/work-schedules">
-        <DashboardLayout>
-          <WorkSchedules />
-        </DashboardLayout>
+        <RoleProtectedRoute module="settings">
+          <DashboardLayout>
+            <WorkSchedules />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/marketing/campaigns">
         <DashboardLayout>
@@ -1826,9 +1866,11 @@ function Router() {
         </DashboardLayout>
       </Route>
       <Route path="/settings/hr/positions">
-        <DashboardLayout>
-          <Positions />
-        </DashboardLayout>
+        <RoleProtectedRoute module="settings">
+          <DashboardLayout>
+            <Positions />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/hr/programs">
         <DashboardLayout>
@@ -1860,28 +1902,28 @@ function Router() {
         <DashboardLayout><PermissionChangeLog /></DashboardLayout>
       </Route>
       <Route path="/settings/security-config">
-        <DashboardLayout><SecuritySettingsPage /></DashboardLayout>
+        <RoleProtectedRoute module="settings"><DashboardLayout><SecuritySettingsPage /></DashboardLayout></RoleProtectedRoute>
       </Route>
       <Route path="/settings/smtp">
-        <DashboardLayout><SmtpSettings /></DashboardLayout>
+        <RoleProtectedRoute module="settings"><DashboardLayout><SmtpSettings /></DashboardLayout></RoleProtectedRoute>
       </Route>
       <Route path="/settings/hr-config">
-        <DashboardLayout><HrSettings /></DashboardLayout>
+        <RoleProtectedRoute module="settings"><DashboardLayout><HrSettings /></DashboardLayout></RoleProtectedRoute>
       </Route>
       <Route path="/settings/finance-config">
-        <DashboardLayout><FinanceSettingsPage /></DashboardLayout>
+        <RoleProtectedRoute module="settings"><DashboardLayout><FinanceSettingsPage /></DashboardLayout></RoleProtectedRoute>
       </Route>
       <Route path="/settings/fleet-config">
-        <DashboardLayout><FleetSettings /></DashboardLayout>
+        <RoleProtectedRoute module="settings"><DashboardLayout><FleetSettings /></DashboardLayout></RoleProtectedRoute>
       </Route>
       <Route path="/settings/domains">
-        <DashboardLayout><DomainsSettings /></DashboardLayout>
+        <RoleProtectedRoute module="settings"><DashboardLayout><DomainsSettings /></DashboardLayout></RoleProtectedRoute>
       </Route>
       <Route path="/settings/letter-templates">
-        <DashboardLayout><LetterTemplates /></DashboardLayout>
+        <RoleProtectedRoute module="settings"><DashboardLayout><LetterTemplates /></DashboardLayout></RoleProtectedRoute>
       </Route>
       <Route path="/settings/audit-log">
-        <DashboardLayout><AuditLogViewer /></DashboardLayout>
+        <RoleProtectedRoute module="settings"><DashboardLayout><AuditLogViewer /></DashboardLayout></RoleProtectedRoute>
       </Route>
 
       <Route path="/404" component={NotFound} />

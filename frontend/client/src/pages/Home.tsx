@@ -151,7 +151,9 @@ export default function Home() {
   const stats = dashboard?.stats;
   const systemStatus = (dashboard?.systemStatus ?? 'healthy') as 'healthy' | 'warning' | 'critical';
   const alerts = dashboard?.criticalAlerts ?? [];
-  const moduleIssues = dashboard?.health ?? [];
+  const allModuleHealth = dashboard?.health ?? [];
+  // Only count modules with actual issues (warning/critical), not healthy ones
+  const moduleIssues = allModuleHealth.filter((m: any) => m.status !== 'healthy');
 
   if (isLoading) {
     return (
@@ -415,7 +417,7 @@ export default function Home() {
               {canAccessModule('projects') && <QuickAction icon={FolderKanban} label="المشاريع" link="/projects" color="indigo" count={stats?.projects.overdue} />}
               {canAccessModule('property') && <QuickAction icon={Building2} label="العقارات" link="/property" color="pink" />}
               {canAccessModule('governance') && <QuickAction icon={Shield} label="الحوكمة" link="/governance" color="red" count={stats?.governance.pendingApprovals} />}
-              {canAccessModule('requests') && <QuickAction icon={ClipboardList} label="الطلبات" link="/requests" color="gray" count={pendingActions?.total} />}
+              {canAccessModule('requests') && <QuickAction icon={ClipboardList} label="الطلبات" link="/departments/requests" color="gray" count={pendingActions?.total} />}
               <QuickAction icon={Inbox} label="البريد الوارد" link="/inbox" color="blue" />
               {canAccessModule('bi') && <QuickAction icon={BarChart3} label="التقارير" link="/bi" color="green" />}
             </div>
@@ -439,8 +441,8 @@ export default function Home() {
           <div className="rounded-2xl p-5" style={{ backgroundColor: '#ffffff', border: 'none', boxShadow: '0 4px 24px rgba(0,0,0,0.08), 0 1px 6px rgba(0,0,0,0.05)' }}>
             <h2 className="text-sm font-semibold mb-4" style={{ color: 'rgb(201, 168, 76)' }}>صحة الوحدات</h2>
             <div className="space-y-3">
-              {moduleIssues.length > 0 ? (
-                moduleIssues.map((mod: any, i: number) => (
+              {allModuleHealth.length > 0 ? (
+                allModuleHealth.map((mod: any, i: number) => (
                   <ModuleHealthBadge key={i} status={mod.status} name={mod.nameAr} />
                 ))
               ) : (

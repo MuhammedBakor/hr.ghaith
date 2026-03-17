@@ -163,6 +163,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [location, setLocation] = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => window.innerWidth >= 1024);
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Unread notifications count
+  const { data: unreadNotifications } = useQuery<{ count: number }>({
+    queryKey: ['notifications-unread'],
+    queryFn: () => api.get('/notifications/unread-count').then(res => res.data).catch(() => ({ count: 0 })),
+    refetchInterval: 30000,
+  });
+  const unreadCount = unreadNotifications?.count || 0;
   const { logout, user, loading, isAuthenticated } = useAuth();
   const {
     selectedBranchId,
@@ -180,6 +189,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     allowedRoles,
     currentEmployee: ctxEmployee,
   } = useAppContext();
+
+  // تحديد نوع الدور
+  const isTopAdmin = selectedRole === 'admin' || selectedRole === 'general_manager';
 
   // جلب بيانات الموظفين لمدير القسم - مع فلترة بالفرع والقسم
   const isDeptManager = ['hr_manager', 'finance_manager', 'fleet_manager', 'legal_manager', 'projects_manager', 'store_manager', 'department_manager'].includes(selectedRole);
@@ -235,6 +247,126 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, []);
 
   const { data: searchResults, isLoading: searchLoading } = useQuickSearch(debouncedQuery);
+
+  // HR path → sub-page mapping for search permission checks
+  const hrSearchPathToSub: Array<[string, string]> = React.useMemo(() => [
+    ['/hr/employees', 'employees'],
+    ['/hr/attendance-monitoring', 'attendance-monitoring'],
+    ['/hr/attendance-reports', 'reports'],
+    ['/hr/attendance', 'attendance'],
+    ['/hr/leave-management', 'leaves'],
+    ['/hr/leave-balances', 'leave-balances'],
+    ['/hr/payroll', 'payroll'],
+    ['/hr/performance-advanced', 'performance'],
+    ['/hr/training-advanced', 'training'],
+    ['/hr/organization-structure', 'organization'],
+    ['/hr/recruitment-advanced', 'recruitment'],
+    ['/hr/violations', 'violations'],
+    ['/hr/my-violations', 'my_violations'],
+    ['/hr/shifts', 'shifts'],
+    ['/hr/field-tracking', 'tracking'],
+    ['/hr/qr-scanner', 'qr'],
+    ['/hr/official-letters', 'letters'],
+    ['/hr/onboarding-review', 'onboarding'],
+    ['/hr/penalty-escalation', 'escalation'],
+    ['/hr/automation', 'automation'],
+    ['/hr/salary-components', 'salary'],
+    ['/hr/department-employees', 'employees-list'],
+  ], []);
+
+  // Check if user can access a specific link based on module + sub-page permissions
+  const canAccessLink = React.useCallback((link: string, module?: string) => {
+    // Check module-level permission first
+    if (module && !canAccessModule(module as ModuleType)) return false;
+
+    // For HR paths, also check sub-page permission
+    if (link.startsWith('/hr/')) {
+      for (const [prefix, subPage] of hrSearchPathToSub) {
+        if (link === prefix || link.startsWith(prefix + '/')) {
+          return canAccessHrSubPage(subPage);
+        }
+      }
+    }
+
+    // Settings paths - only system owners
+    if (link.startsWith('/settings/')) {
+      return canAccessModule('settings' as ModuleType);
+    }
+
+    // Admin paths
+    if (link.startsWith('/admin/')) {
+      return canAccessModule('admin' as ModuleType);
+    }
+
+    // Governance paths
+    if (link.startsWith('/governance/')) {
+      return canAccessModule('governance' as ModuleType);
+    }
+
+    return true;
+  }, [canAccessModule, canAccessHrSubPage, hrSearchPathToSub]);
+
+  // Search through local departments data (الأقسام المركزية) + filter API results by permissions
+  const filteredSearchResults = React.useMemo(() => {
+    const query = debouncedQuery.trim().toLowerCase();
+
+    // Filter API results by module + sub-page permissions
+    const apiResults = (searchResults || []).filter((r: any) => {
+      return canAccessLink(r.link || '', r.module);
+    });
+
+    // Search local departments data if query is long enough
+    if (query.length < 2) return apiResults;
+
+    const localResults: Array<{ id: string; type: string; module: string; title: string; subtitle?: string; link: string; badge?: string }> = [];
+    const existingLinks = new Set(apiResults.map((r: any) => r.link));
+
+    for (const dept of departmentsData) {
+      // Check if user can access this department's module
+      const moduleId = dept.id as ModuleType;
+      if (!canAccessModule(moduleId)) continue;
+
+      const deptMatches = dept.label.toLowerCase().includes(query);
+
+      // If the department name matches, add the department itself (only for top admins)
+      if (deptMatches && isTopAdmin) {
+        const deptLink = `/departments/${dept.id}`;
+        if (!existingLinks.has(deptLink)) {
+          localResults.push({
+            id: `dept-${dept.id}`,
+            type: 'department',
+            module: dept.id,
+            title: dept.label,
+            subtitle: 'قسم مركزي',
+            link: deptLink,
+            badge: 'قسم',
+          });
+          existingLinks.add(deptLink);
+        }
+      }
+
+      // Search through department services/items — check sub-page permissions too
+      for (const item of dept.items) {
+        if (item.label.toLowerCase().includes(query) || deptMatches) {
+          if (!existingLinks.has(item.path) && canAccessLink(item.path, dept.id)) {
+            localResults.push({
+              id: `dept-item-${dept.id}-${item.path}`,
+              type: 'service',
+              module: dept.id,
+              title: item.label,
+              subtitle: dept.label,
+              link: item.path,
+              badge: dept.label,
+            });
+            existingLinks.add(item.path);
+          }
+        }
+      }
+    }
+
+    // Local results first (departments/services), then API results
+    return [...localResults, ...apiResults];
+  }, [searchResults, debouncedQuery, canAccessModule, canAccessLink, isTopAdmin]);
 
   const greetingTime = () => {
     const h = new Date().getHours();
@@ -329,12 +461,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     };
 
     // الصفحات المسموح بها للجميع
-    const publicPaths = ['/', '/profile', '/inbox'];
+    const publicPaths = ['/', '/profile', '/inbox', '/select-branch'];
     if (publicPaths.includes(location)) return;
 
-    // صفحة الأقسام الرئيسية - للمدير العام ومدير النظام فقط
+    // الإشعارات متاحة لجميع المستخدمين
+    if (location.startsWith('/platform/notifications')) return;
+
+    // صفحة الأقسام الرئيسية - متاحة لجميع المستخدمين
     if (location === '/departments') {
-      if (!topAdmin) setLocation('/');
       return;
     }
 
@@ -399,7 +533,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // سيتم التحقق من المصادقة بعد تعريف كل الـ hooks
 
   // الأقسام التي يتم استبدالها بصفحة "الأقسام" للمدير العام ومدير النظام
-  const isTopAdmin = selectedRole === 'admin' || selectedRole === 'general_manager';
   const departmentModules: ModuleType[] = ['hr', 'finance', 'fleet', 'property', 'operations', 'governance', 'bi', 'legal', 'marketing', 'store'];
 
   // جميع عناصر القائمة مع تحديد الوحدة لكل عنصر
@@ -423,8 +556,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       { label: 'الإحصائيات الشاملة', path: '/', icon: BarChart3, module: 'home' as ModuleType },
       { label: 'الأقسام', path: '/departments', icon: Grid3X3, module: 'home' as ModuleType },
     ] : []),
-    // للأدوار الأخرى: رابط بسيط للرئيسية
-    ...(!isTopAdmin ? [{ label: 'الرئيسية', path: '/', icon: LayoutDashboard, module: 'home' as ModuleType }] : []),
+    // للأدوار الأخرى: رابط بسيط للرئيسية + بوابة الموظف + الأقسام
+    ...(!isTopAdmin ? [
+      { label: 'الرئيسية', path: '/', icon: LayoutDashboard, module: 'home' as ModuleType },
+      { label: 'بوابة الموظف', path: '/select-branch', icon: Building2, module: 'home' as ModuleType },
+      { label: 'الأقسام', path: '/departments', icon: Grid3X3, module: 'home' as ModuleType },
+    ] : []),
     // عنصر موظفي القسم - يظهر فقط لمدراء الأقسام
     ...(isDeptManager ? [{
       label: `موظفي القسم (${deptEmployeeCount})`,
@@ -720,8 +857,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const filterNavItems = (items: NavItem[]): NavItem[] => {
     return items
       .filter(item => {
-        // إخفاء عناصر الأقسام من الشريط الجانبي للمدير العام ومدير النظام
-        if (isTopAdmin && item.module && departmentModules.includes(item.module)) {
+        // إخفاء عناصر الأقسام من الشريط الجانبي - يتم الوصول لها من صفحة الأقسام
+        if (item.module && departmentModules.includes(item.module)) {
           return false;
         }
         // إذا كان للعنصر وحدة محددة، تحقق من الصلاحية
@@ -1068,11 +1205,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <button
                 className="lg:hidden p-2 rounded-xl transition-colors hover:bg-white/10"
                 style={{ color: '#e5e7eb', border: '1px solid rgba(255,255,255,0.05)' }}
-                onClick={() => setShowSearch(!showSearch)}
+                onClick={() => {
+                  setShowSearch(!showSearch);
+                  if (!showSearch) setTimeout(() => searchInputRef.current?.focus(), 50);
+                }}
               >
                 <Search className="h-4 w-4" />
               </button>
 
+              {/* Desktop search input */}
               <div className="relative hidden lg:block">
                 <Search className="absolute end-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none" style={{ color: '#6b7280' }} />
                 <input
@@ -1097,51 +1238,88 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 />
               </div>
 
+              {/* Search dropdown (mobile: input + results, desktop: results only) */}
               {showSearch && (
-                <div className="absolute top-full end-0 mt-3 w-[calc(100vw-2rem)] sm:w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden transform translate-x-4 sm:translate-x-0">
-                  {searchLoading ? (
-                    <div className="p-6 text-center text-sm text-gray-500">جاري البحث...</div>
-                  ) : searchResults && searchResults.length > 0 ? (
-                    searchResults.map((r: any, i: number) => (
-                      <SearchResultItem key={i} result={r} onClose={() => { setShowSearch(false); setSearchQuery(''); }} />
-                    ))
-                  ) : (
-                    <div className="p-8 text-center text-gray-400 text-sm">
-                      {searchQuery.length < 2 ? 'ادخل حرفين على الأقل للبحث' : `لا نتائج لـ "${debouncedQuery}"`}
-                    </div>
-                  )}
+                <div className="absolute top-full end-0 mt-2 w-[calc(100vw-2rem)] sm:w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden transform translate-x-4 sm:translate-x-0 max-h-[70vh] flex flex-col">
+                  {/* Mobile search input inside dropdown */}
+                  <div className="lg:hidden relative border-b border-gray-100">
+                    <Search className="absolute end-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none" style={{ color: '#9ca3af' }} />
+                    <input
+                      ref={searchInputRef}
+                      type="text"
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                      placeholder="بحث..."
+                      className="w-full text-sm py-3 outline-none"
+                      style={{
+                        paddingInlineEnd: '36px',
+                        paddingInlineStart: '16px',
+                        backgroundColor: '#fff',
+                        color: '#1f2937',
+                      }}
+                      autoFocus
+                    />
+                  </div>
+                  {/* Search results */}
+                  <div className="overflow-y-auto flex-1">
+                    {searchLoading ? (
+                      <div className="p-6 text-center text-sm text-gray-500">جاري البحث...</div>
+                    ) : filteredSearchResults && filteredSearchResults.length > 0 ? (
+                      filteredSearchResults.map((r: any, i: number) => (
+                        <SearchResultItem key={i} result={r} onClose={() => { setShowSearch(false); setSearchQuery(''); }} />
+                      ))
+                    ) : (
+                      <div className="p-8 text-center text-gray-400 text-sm">
+                        {searchQuery.length < 2 ? 'ادخل حرفين على الأقل للبحث' : `لا نتائج لـ "${debouncedQuery}"`}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
 
-            {/* Icons row - Hidden on mobile, dropdown instead? No, keep it simple for now but consolidated */}
-            <div className="hidden md:flex items-center gap-1">
+            {/* Icons row */}
+            <div className="flex items-center gap-1">
               <button
                 className="p-2 rounded-lg transition-colors hover:bg-white/10"
-                style={{ color: '#9ca3af' }}
-                onClick={() => queryClient.invalidateQueries()}
+                style={{ color: isRefreshing ? '#C9A84C' : '#9ca3af' }}
+                onClick={() => {
+                  setIsRefreshing(true);
+                  queryClient.invalidateQueries().then(() => {
+                    window.location.reload();
+                  });
+                }}
+                disabled={isRefreshing}
                 title="تحديث البيانات"
               >
-                <RefreshCw className="h-4 w-4" />
+                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
               </button>
-              <Link href="/settings">
-                <button
-                  className="p-2 rounded-lg transition-colors hover:bg-white/10"
-                  style={{ color: '#9ca3af' }}
-                  title="الإعدادات"
-                >
-                  <Settings className="h-4 w-4" />
-                </button>
-              </Link>
+              {canAccessModule('settings') && (
+                <Link href="/settings">
+                  <button
+                    className="hidden md:block p-2 rounded-lg transition-colors hover:bg-white/10"
+                    style={{ color: '#9ca3af' }}
+                    title="الإعدادات"
+                  >
+                    <Settings className="h-4 w-4" />
+                  </button>
+                </Link>
+              )}
             </div>
 
             {/* Bell/Notifications */}
             <button
               className="relative p-2 rounded-xl transition-colors hover:bg-white/10"
               style={{ color: '#e5e7eb', border: '1px solid rgba(255,255,255,0.05)' }}
+              onClick={() => setLocation('/platform/notifications')}
+              title="الإشعارات"
             >
               <Bell className="h-4 w-4 md:h-5 md:w-5" />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-[#1a2035]"></span>
+              {unreadCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 flex items-center justify-center bg-red-500 rounded-full border-2 border-[#1a2035] text-[10px] font-bold text-white px-0.5">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
             </button>
 
             {/* خانة الصفة - فقط للمستخدمين الذين لديهم أكثر من دور */}

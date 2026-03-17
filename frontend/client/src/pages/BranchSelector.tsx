@@ -9,7 +9,7 @@ import { Shield, User, Loader2 } from 'lucide-react';
 export default function BranchSelector() {
   const [, setLocation] = useLocation();
   const { user, isAuthenticated, loading: authLoading } = useAuth();
-  const { branches, branchesLoading, setSelectedBranchId, setSelectedCompanyId, selectedRole } = useAppContext();
+  const { branches, branchesLoading, setSelectedBranchId, setSelectedCompanyId, selectedRole, currentEmployee } = useAppContext();
 
   // Fetch companies to map branchId → companyId
   const { data: companies = [] } = useQuery<any[]>({
@@ -64,7 +64,12 @@ export default function BranchSelector() {
     );
   }
 
-  const displayName = (user?.username || user?.email || 'المستخدم').toUpperCase();
+  // Show employee full name (Arabic first, then English), fallback to username
+  const displayName = currentEmployee
+    ? (currentEmployee.firstNameAr && currentEmployee.lastNameAr
+        ? `${currentEmployee.firstNameAr} ${currentEmployee.lastNameAr}`
+        : `${currentEmployee.firstName || ''} ${currentEmployee.lastName || ''}`.trim())
+    : (user?.username || 'المستخدم');
 
   const role = user?.role?.toLowerCase();
   const isAdminOrOwner = role === 'owner' || role === 'admin' || role === 'system_admin' || role === 'general_manager';

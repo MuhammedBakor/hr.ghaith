@@ -60,22 +60,20 @@ public class EmailService {
             helper.setTo(to);
             helper.setSubject("كود تفعيل حسابك في منصة غيث");
 
-            String activationUrl = String.format("%s/activate?emp=%s&code=%s", frontendUrl, employeeNumber, code);
-
             String htmlContent = String.format(
                     "<div dir='rtl' style='text-align: right; font-family: sans-serif;'>" +
                             "مرحباً %s،<br><br>" +
-                            "شكراً لانضمامك إلى منصة غيث. لإكمال تفعيل حسابك، اضغط على الرابط التالي:<br><br>" +
-                            "<b><a href='%s'>رابط التفعيل</a></b><br><br>" +
-                            "أو استخدم البيانات التالية في صفحة التفعيل:<br>" +
+                            "شكراً لانضمامك إلى منصة غيث. لتفعيل حسابك، توجه إلى صفحة تسجيل الدخول واضغط على زر <b>\"تفعيل حساب موظف\"</b>.<br><br>" +
+                            "ثم أدخل البيانات التالية:<br>" +
                             "الرقم الوظيفي: <b>%s</b><br>" +
                             "كود التفعيل: <b>%s</b><br><br>" +
                             "بعد التفعيل وإنشاء كلمة المرور، يمكنك تسجيل الدخول باستخدام:<br>" +
                             "البريد الإلكتروني: <b>%s</b><br>" +
                             "كلمة المرور: التي ستقوم بإنشائها أثناء التفعيل<br><br>" +
+                            "رابط النظام: <a href='%s'>%s</a><br><br>" +
                             "مع تحيات،<br>فريق منصة غيث" +
                             "</div>",
-                    firstName, activationUrl, employeeNumber, code, to);
+                    firstName, employeeNumber, code, to, frontendUrl, frontendUrl);
 
             helper.setText(htmlContent, true);
             mailSender.send(message);

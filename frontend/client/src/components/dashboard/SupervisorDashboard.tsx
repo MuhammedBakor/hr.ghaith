@@ -67,10 +67,10 @@ export function SupervisorDashboard({ stats, pendingActions, user, roleLabel, cu
 
             {/* Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard title="الموظفون المتاحون" value={stats?.teamPresent || 0} icon={Users} color="blue" sub={`من أصل ${stats?.teamTotal || 0} موظف`} />
-                <StatCard title="حضور اليوم" value={stats?.attendanceRate + '%' || '0%'} icon={Clock} color="green" />
-                <StatCard title="مهام ميدانية نشطة" value={stats?.activeFieldTasks || 0} icon={MapPin} color="purple" />
-                <StatCard title="طلبات معلقة" value={pendingActions?.total || 0} icon={AlertTriangle} color="amber" alert={pendingActions?.total > 0} />
+                <StatCard title="الموظفون المتاحون" value={stats?.teamPresent || 0} icon={Users} color="blue" sub={`من أصل ${stats?.teamTotal || 0} موظف`} link="/hr/attendance-monitoring" />
+                <StatCard title="حضور اليوم" value={stats?.attendanceRate + '%' || '0%'} icon={Clock} color="green" link="/hr/attendance-monitoring" />
+                <StatCard title="مهام ميدانية نشطة" value={stats?.activeFieldTasks || 0} icon={MapPin} color="purple" link="/hr/field-tracking" />
+                <StatCard title="طلبات معلقة" value={pendingActions?.total || 0} icon={AlertTriangle} color="amber" alert={pendingActions?.total > 0} link="/departments/requests" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -91,7 +91,7 @@ export function SupervisorDashboard({ stats, pendingActions, user, roleLabel, cu
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         <QuickAction icon={Clock} label="سجل الحضور" link="/hr/attendance-monitoring" color="green" />
                         <QuickAction icon={Calendar} label="الإجازات" link="/hr/leave-management" color="blue" />
-                        <QuickAction icon={CheckSquare} label="الطلبات" link="/requests" color="amber" />
+                        <QuickAction icon={CheckSquare} label="الطلبات" link="/departments/requests" color="amber" />
                         <QuickAction icon={User} label="ملفي الشخصي" link="/profile" color="purple" />
                     </div>
                 </div>

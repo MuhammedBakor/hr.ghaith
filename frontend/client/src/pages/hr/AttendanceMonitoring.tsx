@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import {
   Clock, LogIn, LogOut, AlertTriangle, Loader2, RefreshCw, Users, CheckCircle, XCircle,
-  MapPin, UserCheck, Timer, ClipboardList, AlertCircle, ArrowRight, Calendar
+  MapPin, UserCheck, Timer, ClipboardList, AlertCircle, ArrowRight, Calendar, Trash2, Filter, X, Search
 } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import {
@@ -34,6 +34,26 @@ export default function AttendanceMonitoring() {
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [branchFilter, setBranchFilter] = useState<string>('all');
+  const [roleFilter, setRoleFilter] = useState<string>('');
+  const [notesFilter, setNotesFilter] = useState<string>('');
+  const [checkInFilter, setCheckInFilter] = useState<string>('');
+  const [checkOutFilter, setCheckOutFilter] = useState<string>('');
+  const [hoursFilter, setHoursFilter] = useState<string>('');
+  const [openFilter, setOpenFilter] = useState<string | null>(null);
+  const [filterPos, setFilterPos] = useState<{ top: number; left: number; openUp: boolean }>({ top: 0, left: 0, openUp: false });
+  const handleFilterClick = useCallback((key: string, e: React.MouseEvent) => {
+    if (openFilter === key) { setOpenFilter(null); return; }
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const openUp = spaceBelow < 250;
+    setFilterPos({
+      top: openUp ? rect.top : rect.bottom + 4,
+      left: rect.left,
+      openUp,
+    });
+    setOpenFilter(key);
+  }, [openFilter]);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [showEarlyLeaveDialog, setShowEarlyLeaveDialog] = useState(false);
@@ -67,9 +87,26 @@ export default function AttendanceMonitoring() {
 
   // قائمة الموظفين المتاحين للتسجيل اليدوي
   const manualEntryEmployees = useMemo(() => {
-    if (isTopRole) return employeesData || [];
-    return subordinates || [];
-  }, [isTopRole, employeesData, subordinates]);
+    if (isDeptManagerRole && myDeptId) {
+      // مدير القسم: يرى جميع موظفي قسمه في الفرع الحالي
+      const allEmps = employeesData || [];
+      return (allEmps as any[]).filter((emp: any) => {
+        const empDeptId = typeof emp.department === 'object' ? emp.department?.id : emp.departmentId;
+        const empBranchId = emp.branch?.id || emp.branchId;
+        const isSameDept = empDeptId === myDeptId;
+        const isSameBranch = !selectedBranchId || empBranchId === selectedBranchId;
+        const isNotSelf = emp.id !== currentEmployee?.id;
+        return isSameDept && isSameBranch && isNotSelf;
+      });
+    }
+    // غير ذلك: التابعين المباشرين
+    const subs = subordinates || [];
+    if (!selectedBranchId) return subs;
+    return subs.filter((emp: any) => {
+      const empBranchId = emp.branchId || emp.branch?.id;
+      return empBranchId === selectedBranchId;
+    });
+  }, [isDeptManagerRole, myDeptId, employeesData, subordinates, selectedBranchId, currentEmployee]);
 
   const { data: attendanceData, isLoading, refetch } = useQuery({
     queryKey: ['attendance-monitoring', selectedDate, selectedBranchId],
@@ -77,16 +114,22 @@ export default function AttendanceMonitoring() {
     refetchInterval: 30000,
   });
 
-  // التحقق من حالة حضور الموظف الحالي اليوم
-  const todayAttendance = useMemo(() => {
-    if (!currentEmployee || !attendanceData || isAdminOrGM) return null;
+  // جميع سجلات الحضور اليوم للموظف الحالي (يدعم تعدد التسجيلات)
+  const todayAllRecords = useMemo(() => {
+    if (!currentEmployee || !attendanceData || isAdminOrGM) return [];
     const today = new Date().toISOString().split('T')[0];
-    return (attendanceData as any[]).find((att: any) => {
+    return (attendanceData as any[]).filter((att: any) => {
       const attEmpId = att.employeeId || att.employee?.id;
       return attEmpId === currentEmployee.id &&
         new Date(att.date).toISOString().split('T')[0] === today;
     });
   }, [currentEmployee, attendanceData, isAdminOrGM]);
+
+  // آخر سجل اليوم - إذا كان الموظف سجل خروج يمكنه تسجيل دخول جديد
+  const todayAttendance = useMemo(() => {
+    if (todayAllRecords.length === 0) return null;
+    return todayAllRecords[todayAllRecords.length - 1];
+  }, [todayAllRecords]);
 
   // Mutations
   const checkInMutation = useCheckIn();
@@ -114,6 +157,12 @@ export default function AttendanceMonitoring() {
     onSuccess: () => { toast.success('تم رفض الحضور'); refetch(); queryClient.invalidateQueries({ queryKey: ['attendance'] }); },
     onError: (e: any) => toast.error(e?.response?.data?.message || 'حدث خطأ'),
   });
+  const deleteAllAttendanceMut = useMutation({
+    mutationFn: () => api.delete('/hr/attendance/all', { params: { branchId: selectedBranchId } }).then(r => r.data),
+    onSuccess: () => { toast.success('تم حذف جميع سجلات الحضور'); refetch(); queryClient.invalidateQueries({ queryKey: ['attendance'] }); },
+    onError: (e: any) => toast.error(e?.response?.data?.message || 'حدث خطأ في الحذف'),
+  });
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // الحصول على الموقع الجغرافي
   const getCurrentLocation = (): Promise<GeolocationPosition> => {
@@ -247,6 +296,7 @@ export default function AttendanceMonitoring() {
     }, {
       onSuccess: () => {
         toast.success('تم تسجيل الحضور اليدوي بنجاح - بانتظار موافقة الموارد البشرية');
+        setManualEntry({ employeeId: '', date: new Date().toISOString().split('T')[0], checkIn: '08:00', checkOut: '', notes: '' });
         setViewMode('list');
         refetch();
         queryClient.invalidateQueries({ queryKey: ['attendance'] });
@@ -264,8 +314,8 @@ export default function AttendanceMonitoring() {
       const emp = employee || att.employee;
       const deptId = emp ? (typeof emp.department === 'object' ? emp.department?.id : emp.departmentId) : null;
       const deptName = emp ? (typeof emp.department === 'object' ? (emp.department?.nameAr || emp.department?.name) : '') : '';
-      const role = emp?.jobTitle || emp?.role || (typeof emp?.position === 'object' ? emp?.position?.title : emp?.position) || '';
-      const empBranchId = emp?.branchId || att?.branchId;
+      const role = (typeof emp?.position === 'object' && emp?.position ? emp.position.title : null) || emp?.jobTitle || emp?.position || '';
+      const empBranchId = emp?.branch?.id || emp?.branchId || att?.branchId;
       const branchName = empBranchId
         ? (branches?.find((b: any) => b.id === empBranchId)?.nameAr || branches?.find((b: any) => b.id === empBranchId)?.name || '')
         : (selectedBranch?.nameAr || selectedBranch?.name || '');
@@ -281,7 +331,14 @@ export default function AttendanceMonitoring() {
         checkOut: att.checkOut,
         status: att.status || 'unknown',
         approvalStatus: att.approvalStatus,
-        workHours: att.workHours != null ? parseFloat(att.workHours) : 0,
+        workHours: (() => {
+          if (att.workHours != null && parseFloat(att.workHours) > 0) return parseFloat(att.workHours);
+          if (att.checkIn && att.checkOut) {
+            const mins = (new Date(att.checkOut).getTime() - new Date(att.checkIn).getTime()) / 60000;
+            return Math.round(mins / 6) / 10; // round to 1 decimal
+          }
+          return 0;
+        })(),
         notes: att.notes || '',
         checkInLatitude: att.checkInLatitude,
         checkInLongitude: att.checkInLongitude,
@@ -303,15 +360,48 @@ export default function AttendanceMonitoring() {
     return records.filter(r => r.employeeId === currentEmployee?.id);
   }, [records, isTopRole, isDeptManagerRole, selectedRole, currentEmployee, subordinates]);
 
+  // تحويل الأرقام العربية إلى إنجليزية للمقارنة
+  const arabicToEnglish = (str: string) => str.replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+  const formatTimeStr = (dateStr: string | null) => {
+    if (!dateStr) return '';
+    const t = new Date(dateStr);
+    const h = t.getHours().toString().padStart(2, '0');
+    const m = t.getMinutes().toString().padStart(2, '0');
+    return `${h}:${m}`;
+  };
+
   // فلترة إضافية
   const filteredRecords = useMemo(() => {
     let result = roleFilteredRecords;
     if (selectedDepartment !== 'all') {
       result = result.filter(r => String(r.departmentId) === selectedDepartment);
     }
+    if (branchFilter !== 'all') {
+      result = result.filter(r => r.branchName === branchFilter);
+    }
+    if (roleFilter) {
+      const s = roleFilter.toLowerCase();
+      result = result.filter(r => r.role.toLowerCase().includes(s));
+    }
     if (searchTerm) {
       const s = searchTerm.toLowerCase();
       result = result.filter(r => r.employeeName.toLowerCase().includes(s));
+    }
+    if (notesFilter) {
+      const s = notesFilter.toLowerCase();
+      result = result.filter(r => r.notes.toLowerCase().includes(s));
+    }
+    if (checkInFilter) {
+      const s = arabicToEnglish(checkInFilter);
+      result = result.filter(r => formatTimeStr(r.checkIn).includes(s));
+    }
+    if (checkOutFilter) {
+      const s = arabicToEnglish(checkOutFilter);
+      result = result.filter(r => formatTimeStr(r.checkOut).includes(s));
+    }
+    if (hoursFilter) {
+      const s = hoursFilter;
+      result = result.filter(r => r.workHours > 0 && r.workHours.toFixed(1).includes(s));
     }
     if (statusFilter !== 'all') {
       if (statusFilter === 'checked_in') result = result.filter(r => r.status === 'checked_in');
@@ -323,7 +413,7 @@ export default function AttendanceMonitoring() {
       else if (statusFilter === 'on_leave') result = result.filter(r => r.status === 'on_leave');
     }
     return result;
-  }, [roleFilteredRecords, selectedDepartment, searchTerm, statusFilter]);
+  }, [roleFilteredRecords, selectedDepartment, branchFilter, roleFilter, searchTerm, notesFilter, checkInFilter, checkOutFilter, hoursFilter, statusFilter]);
 
   const stats = useMemo(() => ({
     total: roleFilteredRecords.length,
@@ -354,7 +444,7 @@ export default function AttendanceMonitoring() {
 
   const formatTime = (dateStr: string | null) => {
     if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
+    return new Date(dateStr).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
   };
 
   const needsAction = (record: any) => {
@@ -452,10 +542,18 @@ export default function AttendanceMonitoring() {
                   : 'سجل الحضور والانصراف الخاص بك'}
           </p>
         </div>
-        <Button variant="outline" onClick={() => refetch()} className="gap-2 border-slate-700 bg-slate-800/50 text-slate-200 hover:bg-slate-700">
-          <RefreshCw className="h-4 w-4" />
-          تحديث
-        </Button>
+        <div className="flex gap-2">
+          {canApproveEarlyLeave && (
+            <Button variant="outline" onClick={() => setShowDeleteConfirm(true)} className="gap-2 border-red-700/50 bg-red-900/20 text-red-400 hover:bg-red-900/40 hover:text-red-300">
+              <Trash2 className="h-4 w-4" />
+              حذف الكل
+            </Button>
+          )}
+          <Button variant="outline" onClick={() => refetch()} className="gap-2 border-slate-700 bg-slate-800/50 text-slate-200 hover:bg-slate-700">
+            <RefreshCw className="h-4 w-4" />
+            تحديث
+          </Button>
+        </div>
       </div>
 
       {/* بطاقة تسجيل الحضور - مخفية لمدير النظام والمدير العام */}
@@ -486,9 +584,9 @@ export default function AttendanceMonitoring() {
                 </div>
 
                 <div className="flex flex-col items-end">
-                  <div className="flex items-center gap-3 text-3xl font-black tracking-wider" style={{ color: '#C9A84C' }}>
+                  <div className="flex items-center gap-3 text-3xl font-black tracking-wider" dir="ltr" style={{ color: '#C9A84C' }}>
                     <Timer className="h-7 w-7 opacity-80" />
-                    {currentTime.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                    {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                   </div>
                   <div className="flex items-center gap-2 text-slate-400 mt-1">
                     <Calendar className="h-4 w-4" />
@@ -513,27 +611,33 @@ export default function AttendanceMonitoring() {
                 </div>
               )}
 
-              {todayAttendance && (
-                <div className="p-4 bg-slate-800/40 rounded-xl border border-slate-700/50 backdrop-blur-sm">
-                  <div className="flex flex-wrap items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-full bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
-                        <CheckCircle className="h-5 w-5 text-emerald-500" />
-                      </div>
-                      <span className="font-semibold text-slate-200">تم تسجيل الحضور اليوم</span>
+              {todayAllRecords.length > 0 && (
+                <div className="p-4 bg-slate-800/40 rounded-xl border border-slate-700/50 backdrop-blur-sm space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-full bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+                      <CheckCircle className="h-5 w-5 text-emerald-500" />
                     </div>
-                    <div className="text-sm text-slate-400 flex items-center gap-4 bg-slate-900/40 px-3 py-1.5 rounded-lg border border-slate-700/30">
-                      <span className="flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                        الدخول: <span className="text-slate-100">{todayAttendance.checkIn ? new Date(todayAttendance.checkIn).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }) : '-'}</span>
-                      </span>
-                      {todayAttendance.checkOut && (
+                    <span className="font-semibold text-slate-200">
+                      سجلات الحضور اليوم {todayAllRecords.length > 1 ? `(${todayAllRecords.length})` : ''}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {todayAllRecords.map((rec: any, idx: number) => (
+                      <div key={rec.id || idx} className="text-sm text-slate-400 flex items-center gap-4 bg-slate-900/40 px-3 py-1.5 rounded-lg border border-slate-700/30" dir="ltr">
                         <span className="flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                          الخروج: <span className="text-slate-100">{new Date(todayAttendance.checkOut).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}</span>
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                          <span className="text-slate-100">{rec.checkIn ? new Date(rec.checkIn).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '-'}</span>
+                          <span dir="rtl">:الدخول</span>
                         </span>
-                      )}
-                    </div>
+                        {rec.checkOut && (
+                          <span className="flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                            <span className="text-slate-100">{new Date(rec.checkOut).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
+                            <span dir="rtl">:الخروج</span>
+                          </span>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
@@ -541,12 +645,12 @@ export default function AttendanceMonitoring() {
               <div className="flex flex-wrap gap-4 pt-2">
                 <Button
                   onClick={handleCheckIn}
-                  disabled={isGettingLocation || checkInMutation.isPending || !!todayAttendance?.checkIn}
+                  disabled={isGettingLocation || checkInMutation.isPending || (!!todayAttendance?.checkIn && !todayAttendance?.checkOut)}
                   className="h-12 px-6 gap-3 text-base font-bold transition-all duration-300 shadow-lg shadow-emerald-500/10"
                   style={{
-                    backgroundColor: !!todayAttendance?.checkIn ? 'rgba(255,255,255,0.05)' : '#10b981',
-                    color: !!todayAttendance?.checkIn ? '#64748b' : 'white',
-                    border: !!todayAttendance?.checkIn ? '1px solid rgba(255,255,255,0.1)' : 'none'
+                    backgroundColor: (!!todayAttendance?.checkIn && !todayAttendance?.checkOut) ? 'rgba(255,255,255,0.05)' : '#10b981',
+                    color: (!!todayAttendance?.checkIn && !todayAttendance?.checkOut) ? '#64748b' : 'white',
+                    border: (!!todayAttendance?.checkIn && !todayAttendance?.checkOut) ? '1px solid rgba(255,255,255,0.1)' : 'none'
                   }}
                 >
                   {isGettingLocation || checkInMutation.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <LogIn className="h-5 w-5" />}
@@ -645,34 +749,9 @@ export default function AttendanceMonitoring() {
         </Card>
       </div>
 
-      {/* Filters */}
-      <div className="flex gap-3 flex-wrap">
+      {/* Date filter */}
+      <div className="flex gap-3 flex-wrap items-center">
         <Input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="w-auto" />
-        {isTopRole && (
-          <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
-            <SelectTrigger className="w-[200px]"><SelectValue placeholder="جميع الأقسام" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">جميع الأقسام</SelectItem>
-              {(departmentsData || []).map((dept: any) => (
-                <SelectItem key={dept.id} value={String(dept.id)}>{dept.nameAr || dept.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[180px]"><SelectValue placeholder="جميع الحالات" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">جميع الحالات</SelectItem>
-            <SelectItem value="checked_in">مسجل دخول</SelectItem>
-            <SelectItem value="checked_out">انصرف</SelectItem>
-            <SelectItem value="absent">غائب</SelectItem>
-            <SelectItem value="late">متأخر</SelectItem>
-            <SelectItem value="early_leave">خروج مبكر</SelectItem>
-            <SelectItem value="on_leave">في إجازة</SelectItem>
-            <SelectItem value="pending">بانتظار الموافقة</SelectItem>
-          </SelectContent>
-        </Select>
-        <Input placeholder="بحث بالاسم..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-[200px]" />
       </div>
 
       {/* Table */}
@@ -682,12 +761,10 @@ export default function AttendanceMonitoring() {
             <Clock className="h-5 w-5" />
             سجل الحضور - {formatDate(selectedDate)}
           </CardTitle>
-          {canSeeSubordinates && (
-            <Button variant="outline" className="gap-2" onClick={() => setViewMode('manual-entry')}>
-              <ClipboardList className="h-4 w-4" />
-              تسجيل يدوي (للتابعين)
-            </Button>
-          )}
+          <Button variant="outline" className="gap-2" onClick={() => setViewMode('manual-entry')}>
+            <ClipboardList className="h-4 w-4" />
+            تسجيل يدوي (للتابعين)
+          </Button>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -695,56 +772,146 @@ export default function AttendanceMonitoring() {
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : (
+            <>
+            {/* Filter popup - fixed position so it's never clipped */}
+            {openFilter && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setOpenFilter(null)} />
+                <div className="fixed z-50 bg-white border rounded-lg shadow-xl p-2.5 min-w-[200px] max-h-[250px] overflow-y-auto" dir="rtl"
+                  style={{
+                    left: filterPos.left,
+                    ...(filterPos.openUp ? { bottom: window.innerHeight - filterPos.top + 4 } : { top: filterPos.top }),
+                  }}>
+                  {(openFilter === 'dept') ? (
+                    <div className="space-y-0.5">
+                      <button onClick={() => { setSelectedDepartment('all'); setOpenFilter(null); }}
+                        className={`block w-full text-start px-3 py-1.5 rounded text-xs ${selectedDepartment === 'all' ? 'bg-amber-50 text-amber-700 font-medium' : 'hover:bg-gray-50'}`}>الكل</button>
+                      {(departmentsData || []).map((dept: any) => (
+                        <button key={dept.id} onClick={() => { setSelectedDepartment(String(dept.id)); setOpenFilter(null); }}
+                          className={`block w-full text-start px-3 py-1.5 rounded text-xs ${selectedDepartment === String(dept.id) ? 'bg-amber-50 text-amber-700 font-medium' : 'hover:bg-gray-50'}`}>{dept.nameAr || dept.name}</button>
+                      ))}
+                    </div>
+                  ) : (openFilter === 'branch') ? (
+                    <div className="space-y-0.5">
+                      <button onClick={() => { setBranchFilter('all'); setOpenFilter(null); }}
+                        className={`block w-full text-start px-3 py-1.5 rounded text-xs ${branchFilter === 'all' ? 'bg-amber-50 text-amber-700 font-medium' : 'hover:bg-gray-50'}`}>الكل</button>
+                      {(branches || []).map((b: any) => (
+                        <button key={b.id} onClick={() => { setBranchFilter(b.nameAr || b.name); setOpenFilter(null); }}
+                          className={`block w-full text-start px-3 py-1.5 rounded text-xs ${branchFilter === (b.nameAr || b.name) ? 'bg-amber-50 text-amber-700 font-medium' : 'hover:bg-gray-50'}`}>{b.nameAr || b.name}</button>
+                      ))}
+                    </div>
+                  ) : (openFilter === 'status') ? (
+                    <div className="space-y-0.5">
+                      {[
+                        { v: 'all', l: 'الكل' }, { v: 'checked_in', l: 'مسجل دخول' }, { v: 'checked_out', l: 'انصرف' },
+                        { v: 'absent', l: 'غائب' }, { v: 'late', l: 'متأخر' }, { v: 'early_leave', l: 'خروج مبكر' },
+                        { v: 'on_leave', l: 'في إجازة' }, { v: 'pending', l: 'بانتظار الموافقة' },
+                      ].map(s => (
+                        <button key={s.v} onClick={() => { setStatusFilter(s.v); setOpenFilter(null); }}
+                          className={`block w-full text-start px-3 py-1.5 rounded text-xs ${statusFilter === s.v ? 'bg-amber-50 text-amber-700 font-medium' : 'hover:bg-gray-50'}`}>{s.l}</button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5">
+                      <div className="relative flex-1">
+                        <Search className="absolute top-1/2 -translate-y-1/2 start-2 h-3 w-3 text-gray-400" />
+                        <input
+                          autoFocus
+                          placeholder="بحث..."
+                          className="w-full h-8 ps-7 pe-2 text-xs border rounded-md outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-100"
+                          value={openFilter === 'name' ? searchTerm : openFilter === 'role' ? roleFilter : openFilter === 'checkIn' ? checkInFilter : openFilter === 'checkOut' ? checkOutFilter : openFilter === 'hours' ? hoursFilter : notesFilter}
+                          onChange={e => {
+                            const v = e.target.value;
+                            if (openFilter === 'name') setSearchTerm(v);
+                            else if (openFilter === 'role') setRoleFilter(v);
+                            else if (openFilter === 'checkIn') setCheckInFilter(v);
+                            else if (openFilter === 'checkOut') setCheckOutFilter(v);
+                            else if (openFilter === 'hours') setHoursFilter(v);
+                            else setNotesFilter(v);
+                          }}
+                          onKeyDown={e => { if (e.key === 'Enter') setOpenFilter(null); }}
+                        />
+                      </div>
+                      <button onClick={() => {
+                        if (openFilter === 'name') setSearchTerm('');
+                        else if (openFilter === 'role') setRoleFilter('');
+                        else if (openFilter === 'checkIn') setCheckInFilter('');
+                        else if (openFilter === 'checkOut') setCheckOutFilter('');
+                        else if (openFilter === 'hours') setHoursFilter('');
+                        else setNotesFilter('');
+                        setOpenFilter(null);
+                      }} className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600">
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
             <div className="overflow-x-auto w-full rounded-xl border">
-              <table className="w-full min-w-[600px] text-sm">
+              <table className="w-full min-w-[900px] text-sm">
                 <thead className="bg-gray-50 border-b">
                   <tr>
-                    <th className="px-4 py-3 text-end text-xs font-medium text-gray-500">اسم الموظف</th>
-                    <th className="px-4 py-3 text-end text-xs font-medium text-gray-500">الوظيفة</th>
-                    <th className="px-4 py-3 text-end text-xs font-medium text-gray-500">القسم</th>
-                    <th className="px-4 py-3 text-end text-xs font-medium text-gray-500">الفرع</th>
-                    <th className="px-4 py-3 text-end text-xs font-medium text-gray-500">تسجيل الدخول</th>
-                    <th className="px-4 py-3 text-end text-xs font-medium text-gray-500">تسجيل الخروج</th>
-                    <th className="px-4 py-3 text-end text-xs font-medium text-gray-500">ساعات العمل</th>
-                    <th className="px-4 py-3 text-end text-xs font-medium text-gray-500">الحالة</th>
-                    <th className="px-4 py-3 text-end text-xs font-medium text-gray-500">ملاحظات</th>
-                    {isManager && <th className="px-4 py-3 text-end text-xs font-medium text-gray-500">إجراءات</th>}
+                    {[
+                      { key: 'name', label: 'اسم الموظف', active: !!searchTerm },
+                      { key: 'role', label: 'الوظيفة', active: !!roleFilter },
+                      { key: 'dept', label: 'القسم', active: selectedDepartment !== 'all' },
+                      { key: 'branch', label: 'الفرع', active: branchFilter !== 'all' },
+                      { key: 'checkIn', label: 'تسجيل الدخول', active: !!checkInFilter },
+                      { key: 'checkOut', label: 'تسجيل الخروج', active: !!checkOutFilter },
+                      { key: 'hours', label: 'ساعات العمل', active: !!hoursFilter },
+                      { key: 'status', label: 'الحالة', active: statusFilter !== 'all' },
+                      { key: 'notes', label: 'ملاحظات', active: !!notesFilter },
+                    ].map(col => (
+                      <th key={col.key} className="px-3 py-2.5 text-end text-xs font-medium text-gray-500">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <span>{col.label}</span>
+                          <button
+                            onClick={(e) => handleFilterClick(col.key, e)}
+                            className={`p-0.5 rounded transition-colors ${col.active ? 'text-amber-600 bg-amber-50' : openFilter === col.key ? 'text-blue-600 bg-blue-50' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}
+                          >
+                            <Filter className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </th>
+                    ))}
+                    {isManager && <th className="px-3 py-2.5 text-end text-xs font-medium text-gray-500">إجراءات</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y">
                   {filteredRecords.map((record) => (
                     <tr key={record.id} className={`hover:bg-gray-50 transition-colors ${needsAction(record) ? 'bg-amber-50/40' : ''}`}>
-                      <td className="px-4 py-3 font-medium text-gray-900">{record.employeeName}</td>
-                      <td className="px-4 py-3 text-gray-600">{record.role || '-'}</td>
-                      <td className="px-4 py-3 text-gray-600">{record.departmentName || '-'}</td>
-                      <td className="px-4 py-3 text-gray-600">{record.branchName || '-'}</td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-3 font-medium text-gray-900">{record.employeeName}</td>
+                      <td className="px-3 py-3 text-gray-600">{record.role || '-'}</td>
+                      <td className="px-3 py-3 text-gray-600">{record.departmentName || '-'}</td>
+                      <td className="px-3 py-3 text-gray-600">{record.branchName || '-'}</td>
+                      <td className="px-3 py-3">
                         {record.checkIn ? (
-                          <span className="flex items-center gap-1 text-green-700">
+                          <span className="flex items-center gap-1 text-green-700" dir="ltr">
                             <LogIn className="h-3.5 w-3.5" />
                             {formatTime(record.checkIn)}
                             {record.checkInLatitude && <MapPin className="h-3 w-3 text-green-600" />}
                           </span>
                         ) : '-'}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-3">
                         {record.checkOut ? (
-                          <span className="flex items-center gap-1 text-red-600">
+                          <span className="flex items-center gap-1 text-red-600" dir="ltr">
                             <LogOut className="h-3.5 w-3.5" />
                             {formatTime(record.checkOut)}
                             {record.checkOutLatitude && <MapPin className="h-3 w-3 text-red-600" />}
                           </span>
                         ) : '-'}
                       </td>
-                      <td className="px-4 py-3 text-gray-700">
-                        {record.workHours > 0 ? `${record.workHours.toFixed(1)} ساعة` : '-'}
+                      <td className="px-3 py-3 text-gray-700">
+                        {record.workHours > 0 ? `${record.workHours.toFixed(1)} ساعة` : record.checkIn && !record.checkOut ? 'جاري العمل...' : '-'}
                       </td>
-                      <td className="px-4 py-3">{getStatusBadge(record)}</td>
-                      <td className="px-4 py-3 text-gray-500 text-xs max-w-[150px] truncate" title={record.notes}>
+                      <td className="px-3 py-3">{getStatusBadge(record)}</td>
+                      <td className="px-3 py-3 text-gray-500 text-xs max-w-[150px] truncate" title={record.notes}>
                         {record.notes || '-'}
                       </td>
                       {isManager && (
-                        <td className="px-4 py-3">
+                        <td className="px-3 py-3">
                           {record.status === 'pending_early_leave' && canApproveEarlyLeave && (
                             <div className="flex items-center gap-1">
                               <Button size="sm" variant="ghost" className="h-7 px-2 text-green-600 hover:bg-green-50"
@@ -757,7 +924,7 @@ export default function AttendanceMonitoring() {
                               </Button>
                             </div>
                           )}
-                          {record.status === 'pending_approval' && (
+                          {record.status === 'pending_approval' && canApproveEarlyLeave && (
                             <div className="flex items-center gap-1">
                               <Button size="sm" variant="ghost" className="h-7 px-2 text-green-600 hover:bg-green-50"
                                 onClick={() => approveAttendanceMut.mutate(record.id)} disabled={approveAttendanceMut.isPending} title="موافقة">
@@ -775,7 +942,7 @@ export default function AttendanceMonitoring() {
                   ))}
                   {filteredRecords.length === 0 && (
                     <tr>
-                      <td colSpan={isManager ? 10 : 9} className="px-4 py-12 text-center text-gray-400">
+                      <td colSpan={isManager ? 10 : 9} className="px-3 py-12 text-center text-gray-400">
                         لا توجد سجلات حضور لهذا التاريخ
                       </td>
                     </tr>
@@ -783,6 +950,7 @@ export default function AttendanceMonitoring() {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </CardContent>
       </Card>
@@ -812,6 +980,33 @@ export default function AttendanceMonitoring() {
           </div>
         )
       }
+
+      {/* Dialog تأكيد حذف جميع السجلات */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" dir="rtl">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 rounded-full bg-red-100">
+                <Trash2 className="h-6 w-6 text-red-600" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900">حذف جميع سجلات الحضور</h3>
+            </div>
+            <p className="text-sm text-gray-600 mb-6">
+              هل أنت متأكد من حذف جميع سجلات الحضور؟ هذا الإجراء لا يمكن التراجع عنه.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>إلغاء</Button>
+              <Button
+                variant="destructive"
+                onClick={() => { deleteAllAttendanceMut.mutate(); setShowDeleteConfirm(false); }}
+                disabled={deleteAllAttendanceMut.isPending}
+              >
+                {deleteAllAttendanceMut.isPending ? 'جاري الحذف...' : 'حذف الكل'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div >
   );
 }

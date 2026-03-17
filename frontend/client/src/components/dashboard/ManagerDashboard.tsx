@@ -61,10 +61,10 @@ export function ManagerDashboard({ stats, pendingActions, kpis, moduleIssues, us
 
             {/* Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard title="موظفي القسم" value={stats?.employees || 0} icon={Users} color="blue" sub="إجمالي الموظفين في قسمك" />
-                <StatCard title="طلبات معلقة" value={pendingActions?.total || 0} icon={FileText} color="amber" alert={(pendingActions?.total || 0) > 5} sub="طلبات تحتاج مراجعتك" />
-                <StatCard title="معدل الإنجاز" value={kpis?.completionRate || 0} icon={CheckCircle2} color="green" trend={kpis?.completionTrend} />
-                <StatCard title="تنبيهات حرجة" value={moduleIssues?.length || 0} icon={AlertCircle} color="red" alert={moduleIssues?.length > 0} />
+                <StatCard title="موظفي القسم" value={stats?.employees || 0} icon={Users} color="blue" sub="إجمالي الموظفين في قسمك" link="/hr/department-employees" />
+                <StatCard title="طلبات معلقة" value={pendingActions?.total || 0} icon={FileText} color="amber" alert={(pendingActions?.total || 0) > 5} sub="طلبات تحتاج مراجعتك" link="/departments/requests" />
+                <StatCard title="معدل الإنجاز" value={kpis?.completionRate || 0} icon={CheckCircle2} color="green" trend={kpis?.completionTrend} link="/hr/performance-advanced" />
+                <StatCard title="تنبيهات حرجة" value={moduleIssues?.length || 0} icon={AlertCircle} color="red" alert={moduleIssues?.length > 0} link="/platform/notifications" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -90,7 +90,7 @@ export function ManagerDashboard({ stats, pendingActions, kpis, moduleIssues, us
                     <div className="grid grid-cols-2 gap-3">
                         <QuickAction icon={Users} label="الحضور" link="/hr/attendance-monitoring" color="green" />
                         <QuickAction icon={Calendar} label="الإجازات" link="/hr/leave-management" color="blue" />
-                        <QuickAction icon={FileText} label="الطلبات" link="/requests" color="amber" />
+                        <QuickAction icon={FileText} label="الطلبات" link="/departments/requests" color="amber" />
                         <QuickAction icon={User} label="ملفي الشخصي" link="/profile" color="purple" />
                     </div>
                 </div>

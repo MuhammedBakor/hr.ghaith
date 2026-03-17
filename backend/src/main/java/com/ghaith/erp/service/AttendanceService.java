@@ -136,6 +136,12 @@ public class AttendanceService {
         record.setStatus("pending_approval");
         record.setApprovalStatus("pending");
 
+        // Calculate work hours for manual entry
+        if (record.getCheckIn() != null && record.getCheckOut() != null) {
+            long durationMinutes = java.time.Duration.between(record.getCheckIn(), record.getCheckOut()).toMinutes();
+            record.setWorkHours(Math.round(durationMinutes / 60.0 * 10.0) / 10.0);
+        }
+
         return attendanceRepository.save(record);
     }
 
@@ -220,6 +226,15 @@ public class AttendanceService {
         record.setApprovalStatus("rejected");
         record.setStatus("rejected");
         return attendanceRepository.save(record);
+    }
+
+    public void deleteAllAttendance(Long branchId) {
+        if (branchId != null) {
+            List<AttendanceRecord> records = attendanceRepository.findByEmployeeBranchId(branchId);
+            attendanceRepository.deleteAll(records);
+        } else {
+            attendanceRepository.deleteAll();
+        }
     }
 
     public AttendanceRecord checkInWithQR(Map<String, Object> payload, Long userId) {

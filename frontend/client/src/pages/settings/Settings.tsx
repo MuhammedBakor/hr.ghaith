@@ -1,13 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader2, Settings as SettingsIcon, Building2, Users, Bell, Shield, Database, Hash, Mail, MessageCircle, MessageSquare } from 'lucide-react';
 import { Link } from 'wouter';
+import { useAppContext, UserRoleType } from '@/contexts/AppContext';
+
+// Define which roles can see which settings cards
+// 'all' means visible to anyone who can access the settings module
+type SettingsAccess = 'system_owner' | 'all';
+
+interface SettingsCard {
+  title: string;
+  description: string;
+  icon: React.ComponentType<{ className?: string }>;
+  href: string;
+  count: number | null;
+  access: SettingsAccess;
+}
+
+// Roles that can see ALL settings (system-level)
+const SYSTEM_OWNER_ROLES: UserRoleType[] = ['admin', 'general_manager'];
 
 export default function Settings() {
   const queryClient = useQueryClient();
-  const confirmDelete = (fn: () => void) => { if (window.confirm("هل أنت متأكد من الحذف؟")) fn(); };
+  const { selectedRole, permissions } = useAppContext();
+
+  const isSystemOwner = SYSTEM_OWNER_ROLES.includes(selectedRole);
 
   const createMut = useMutation({
     mutationFn: (data: any) => api.post('/settings', data).then(r => r.data),
@@ -19,25 +38,12 @@ export default function Settings() {
     },
   });
 
-  const handleSubmit = () => { createMut.mutate({}); };
-
-  const { data: currentUser, isError, error } = useQuery({
-    queryKey: ['auth-me'],
-    queryFn: () => api.get('/auth/me').then(r => r.data),
-  });
-  const userRole = currentUser?.role || 'user';
-  const requiredRole = 'admin';
-  const hasAccess = userRole === 'admin' || userRole === requiredRole || requiredRole === 'user';
-
   const [searchTerm, setSearchTerm] = useState('');
-
-  const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 20;
 
   const [showDialog, setShowDialog] = React.useState(false);
   const [formData, setFormData] = React.useState<Record<string, any>>({});
 
-  const { data: branches, isLoading } = useQuery({
+  const { data: branches, isLoading, isError } = useQuery({
     queryKey: ['hr-branches'],
     queryFn: () => api.get('/hr-branches').then(r => r.data),
   });
@@ -46,18 +52,26 @@ export default function Settings() {
     queryFn: () => api.get('/roles').then(r => r.data),
   });
 
-  const settingsCards = [
-    { title: 'الفروع', description: 'إدارة فروع المنظمة', icon: Building2, href: '/settings/branches', count: branches?.length || 0 },
-    { title: 'الأقسام', description: 'إدارة أقسام المنظمة', icon: Users, href: '/settings/departments', count: null },
-    { title: 'الأدوار والصلاحيات', description: 'إدارة أدوار المستخدمين', icon: Shield, href: '/settings/roles', count: roles?.length || 0 },
-    { title: 'الإشعارات', description: 'إعدادات الإشعارات', icon: Bell, href: '/settings/notifications', count: null },
-    { title: 'النسخ الاحتياطي', description: 'إدارة النسخ الاحتياطية', icon: Database, href: '/settings/backup', count: null },
-    { title: 'إعدادات النظام', description: 'الإعدادات العامة للنظام', icon: SettingsIcon, href: '/settings/system', count: null },
-    { title: 'بادئات الأكواد', description: 'تخصيص بادئات الأكواد التلقائية', icon: Hash, href: '/settings/code-prefixes', count: null },
-    { title: 'إعدادات البريد', description: 'تكوين خادم SMTP للبريد الإلكتروني', icon: Mail, href: '/settings/email', count: null },
-    { title: 'إعدادات WhatsApp', description: 'تكوين WhatsApp Business API', icon: MessageCircle, href: '/settings/whatsapp', count: null },
-    { title: 'إعدادات SMS', description: 'تكوين خدمة الرسائل النصية', icon: MessageSquare, href: '/settings/sms', count: null },
+  const allSettingsCards: SettingsCard[] = [
+    { title: 'الفروع', description: 'إدارة فروع المنظمة', icon: Building2, href: '/settings/branches', count: branches?.length || 0, access: 'system_owner' },
+    { title: 'الأقسام', description: 'إدارة أقسام المنظمة', icon: Users, href: '/settings/departments', count: null, access: 'system_owner' },
+    { title: 'الأدوار والصلاحيات', description: 'إدارة أدوار المستخدمين', icon: Shield, href: '/settings/roles', count: roles?.length || 0, access: 'system_owner' },
+    { title: 'الإشعارات', description: 'إعدادات الإشعارات', icon: Bell, href: '/settings/notifications', count: null, access: 'all' },
+    { title: 'النسخ الاحتياطي', description: 'إدارة النسخ الاحتياطية', icon: Database, href: '/settings/backup', count: null, access: 'system_owner' },
+    { title: 'إعدادات النظام', description: 'الإعدادات العامة للنظام', icon: SettingsIcon, href: '/settings/system', count: null, access: 'system_owner' },
+    { title: 'بادئات الأكواد', description: 'تخصيص بادئات الأكواد التلقائية', icon: Hash, href: '/settings/code-prefixes', count: null, access: 'system_owner' },
+    { title: 'إعدادات البريد', description: 'تكوين خادم SMTP للبريد الإلكتروني', icon: Mail, href: '/settings/email', count: null, access: 'system_owner' },
+    { title: 'إعدادات WhatsApp', description: 'تكوين WhatsApp Business API', icon: MessageCircle, href: '/settings/whatsapp', count: null, access: 'system_owner' },
+    { title: 'إعدادات SMS', description: 'تكوين خدمة الرسائل النصية', icon: MessageSquare, href: '/settings/sms', count: null, access: 'system_owner' },
   ];
+
+  // Filter settings cards based on user role
+  const settingsCards = useMemo(() => {
+    return allSettingsCards.filter(card => {
+      if (card.access === 'system_owner') return isSystemOwner;
+      return true; // 'all' cards visible to everyone with settings access
+    });
+  }, [isSystemOwner, branches, roles]);
 
   if (isError) return <div className="p-8 text-center text-red-500">حدث خطأ في تحميل البيانات</div>;
 

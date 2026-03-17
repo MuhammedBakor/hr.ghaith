@@ -677,6 +677,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [allowedRoles, selectedRole, authData?.role]);
 
+  // فرض الفرع تلقائياً للأدوار غير المدير العام ومدير النظام
+  // إذا لم يتم اختيار فرع، نعيّن فرع الموظف تلقائياً لمنع رؤية بيانات فروع أخرى
+  useEffect(() => {
+    const isAdmin = selectedRole === 'admin' || selectedRole === 'general_manager';
+    if (isAdmin) return; // المدراء يمكنهم رؤية جميع الفروع
+
+    // إذا الفرع محدد بالفعل، لا نتدخل
+    if (selectedBranchId !== null) return;
+
+    // حاول تعيين فرع الموظف تلقائياً
+    if (currentEmployee?.branch?.id) {
+      setSelectedBranchId(currentEmployee.branch.id);
+    } else if (currentEmployee?.branchId) {
+      setSelectedBranchId(currentEmployee.branchId);
+    } else if (branches.length === 1) {
+      // إذا كان هناك فرع واحد فقط، عيّنه تلقائياً
+      setSelectedBranchId(branches[0].id);
+    }
+  }, [selectedRole, selectedBranchId, currentEmployee, branches]);
+
   const hasPermission = (permission: keyof typeof rolePermissions[UserRoleType]) => {
     return permissions[permission];
   };

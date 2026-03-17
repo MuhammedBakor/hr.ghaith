@@ -1,5 +1,24 @@
 import api from "../lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAppContext } from "@/contexts/AppContext";
+
+/**
+ * Hook to get the effective branchId for data fetching.
+ * Non-admin roles are always scoped to their selected branch.
+ * Returns { branchId, ready } where ready=false means "don't fetch yet".
+ */
+function useBranchScope(overrideBranchId?: number | null) {
+    const { selectedBranchId, selectedRole } = useAppContext();
+    const isAdmin = selectedRole === 'admin' || selectedRole === 'general_manager';
+    const branchId = overrideBranchId !== undefined ? overrideBranchId : selectedBranchId;
+
+    if (isAdmin) {
+        // Admins can view all (branchId=null) or a specific branch
+        return { branchId, ready: true };
+    }
+    // Non-admin: must have a branch set
+    return { branchId, ready: branchId !== null };
+}
 
 export type LeaveStatus = "pending" | "approved" | "rejected" | "cancelled";
 export type EmployeeStatus = "active" | "inactive" | "terminated" | "on_leave" | "suspended" | "incomplete";
@@ -75,14 +94,15 @@ export const hrService = {
 
 // Hooks
 // Employees
-export const useEmployees = (filters?: { branchId?: number | null; departmentId?: number | null }) => {
+export const useEmployees = (filters?: { branchId?: number | null; departmentId?: number | null; enabled?: boolean }) => {
+    const { branchId: scopedBranchId, ready } = useBranchScope(filters?.branchId);
     const params: Record<string, any> = {};
-    if (filters?.branchId) params.branchId = filters.branchId;
+    if (scopedBranchId) params.branchId = scopedBranchId;
     if (filters?.departmentId) params.departmentId = filters.departmentId;
-    const hasFilters = Object.keys(params).length > 0;
     return useQuery({
         queryKey: ['employees', params],
         queryFn: () => api.get('/hr/employees', { params }).then(res => res.data),
+        enabled: ready && filters?.enabled !== false,
     });
 };
 
@@ -173,10 +193,16 @@ export const useSubordinates = (managerId: number) => useQuery({
 });
 
 // Departments
-export const useDepartments = (filters?: { branchId?: number | null }) => useQuery({
-    queryKey: ['departments', filters],
-    queryFn: () => api.get('/hr/departments', { params: filters }).then(res => res.data),
-});
+export const useDepartments = (filters?: { branchId?: number | null }) => {
+    const { branchId, ready } = useBranchScope(filters?.branchId);
+    const params: Record<string, any> = {};
+    if (branchId) params.branchId = branchId;
+    return useQuery({
+        queryKey: ['departments', params],
+        queryFn: () => api.get('/hr/departments', { params }).then(res => res.data),
+        enabled: ready,
+    });
+};
 
 export const useCreateDepartment = () => {
     const queryClient = useQueryClient();
@@ -203,10 +229,16 @@ export const useDeleteDepartment = () => {
 };
 
 // Positions
-export const usePositions = (filters?: { branchId?: number | null }) => useQuery({
-    queryKey: ['positions', filters],
-    queryFn: () => api.get('/hr/positions', { params: filters }).then(res => res.data),
-});
+export const usePositions = (filters?: { branchId?: number | null }) => {
+    const { branchId, ready } = useBranchScope(filters?.branchId);
+    const params: Record<string, any> = {};
+    if (branchId) params.branchId = branchId;
+    return useQuery({
+        queryKey: ['positions', params],
+        queryFn: () => api.get('/hr/positions', { params }).then(res => res.data),
+        enabled: ready,
+    });
+};
 
 export const useCreatePosition = () => {
     const queryClient = useQueryClient();
@@ -233,10 +265,16 @@ export const useDeletePosition = () => {
 };
 
 // Leaves
-export const useLeaves = (filters?: { branchId?: number | null }) => useQuery({
-    queryKey: ['leaves', filters],
-    queryFn: () => api.get('/hr/leaves', { params: filters }).then(res => res.data),
-});
+export const useLeaves = (filters?: { branchId?: number | null }) => {
+    const { branchId, ready } = useBranchScope(filters?.branchId);
+    const params: Record<string, any> = {};
+    if (branchId) params.branchId = branchId;
+    return useQuery({
+        queryKey: ['leaves', params],
+        queryFn: () => api.get('/hr/leaves', { params }).then(res => res.data),
+        enabled: ready,
+    });
+};
 
 export const useCreateLeave = () => {
     const queryClient = useQueryClient();
@@ -271,17 +309,27 @@ export const useLeavesByEmployee = (employeeId: number) => useQuery({
     enabled: !!employeeId,
 });
 
-export const useLeavesByDepartment = (departmentId: number, filters?: { branchId?: number | null }) => useQuery({
-    queryKey: ['leaves', 'department', departmentId, filters],
-    queryFn: () => api.get(`/hr/leaves/department/${departmentId}`, { params: filters }).then(res => res.data),
-    enabled: !!departmentId,
-});
+export const useLeavesByDepartment = (departmentId: number, filters?: { branchId?: number | null }) => {
+    const { branchId, ready } = useBranchScope(filters?.branchId);
+    const params: Record<string, any> = {};
+    if (branchId) params.branchId = branchId;
+    return useQuery({
+        queryKey: ['leaves', 'department', departmentId, params],
+        queryFn: () => api.get(`/hr/leaves/department/${departmentId}`, { params }).then(res => res.data),
+        enabled: !!departmentId && ready,
+    });
+};
 
-export const useLeavesByStage = (stage: string, filters?: { branchId?: number | null }) => useQuery({
-    queryKey: ['leaves', 'stage', stage, filters],
-    queryFn: () => api.get(`/hr/leaves/stage/${stage}`, { params: filters }).then(res => res.data),
-    enabled: !!stage,
-});
+export const useLeavesByStage = (stage: string, filters?: { branchId?: number | null }) => {
+    const { branchId, ready } = useBranchScope(filters?.branchId);
+    const params: Record<string, any> = {};
+    if (branchId) params.branchId = branchId;
+    return useQuery({
+        queryKey: ['leaves', 'stage', stage, params],
+        queryFn: () => api.get(`/hr/leaves/stage/${stage}`, { params }).then(res => res.data),
+        enabled: !!stage && ready,
+    });
+};
 
 export const useEmployeeLeaveStats = (employeeId: number) => useQuery({
     queryKey: ['leaves', 'stats', employeeId],
@@ -360,10 +408,16 @@ export const useCancelLeave = () => {
 };
 
 // Leave Balances
-export const useLeaveBalances = (filters?: { branchId?: number | null }) => useQuery({
-    queryKey: ['leave-balances', filters],
-    queryFn: () => api.get('/hr/leave-balances', { params: filters }).then(res => res.data),
-});
+export const useLeaveBalances = (filters?: { branchId?: number | null }) => {
+    const { branchId, ready } = useBranchScope(filters?.branchId);
+    const params: Record<string, any> = {};
+    if (branchId) params.branchId = branchId;
+    return useQuery({
+        queryKey: ['leave-balances', params],
+        queryFn: () => api.get('/hr/leave-balances', { params }).then(res => res.data),
+        enabled: ready,
+    });
+};
 
 export const useLeaveBalancesByEmployee = (employeeId: number) => useQuery({
     queryKey: ['leave-balances', 'employee', employeeId],
@@ -447,10 +501,16 @@ export const useRequestEarlyLeave = () => {
 };
 
 // Payroll
-export const usePayroll = (branchId?: number) => useQuery({
-    queryKey: ['payroll', branchId],
-    queryFn: () => api.get('/hr/payroll', { params: { branchId } }).then(res => res.data),
-});
+export const usePayroll = (overrideBranchId?: number) => {
+    const { branchId, ready } = useBranchScope(overrideBranchId);
+    const params: Record<string, any> = {};
+    if (branchId) params.branchId = branchId;
+    return useQuery({
+        queryKey: ['payroll', params],
+        queryFn: () => api.get('/hr/payroll', { params }).then(res => res.data),
+        enabled: ready,
+    });
+};
 
 export const usePayrollByEmployee = (employeeId: number) => useQuery({
     queryKey: ['payroll', 'employee', employeeId],
