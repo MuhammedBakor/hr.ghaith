@@ -22,12 +22,13 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { useUser } from '@/services/authService';
-import { Search, RefreshCw, AlertTriangle, ArrowUp, Trash2, Edit, Shield, Loader2 } from "lucide-react";
+import { Search, RefreshCw, AlertTriangle, ArrowUp, Trash2, Edit, Shield, Loader2, Database, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 export default function PenaltyEscalation() {
   const { data: currentUser, isError, error} = useUser();
   const userRole = currentUser?.role || 'user';
+  const queryClient = useQueryClient();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -84,6 +85,22 @@ export default function PenaltyEscalation() {
     },
     onError: (error) => {
       toast.error(error.message || "حدث خطأ أثناء حذف القاعدة");
+    },
+  });
+
+  // تهيئة القيم الافتراضية (نظام العمل السعودي)
+  const seedDefaultsMutation = useMutation({
+    mutationFn: () => api.post('/hr/control-kernel/seed-defaults').then(r => r.data),
+    onSuccess: (data: any) => {
+      const msg = data?.message || 'تم تهيئة القيم الافتراضية بنجاح';
+      toast.success(msg);
+      refetch();
+      queryClient.invalidateQueries({ queryKey: ['violationTypes'] });
+      queryClient.invalidateQueries({ queryKey: ['penaltyTypes'] });
+    },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.message || err.message || 'حدث خطأ';
+      toast.error(msg);
     },
   });
 
@@ -158,7 +175,27 @@ export default function PenaltyEscalation() {
           <h2 className="text-lg md:text-2xl font-bold tracking-tight">تصعيد العقوبات</h2>
           <p className="text-muted-foreground">إدارة قواعد تصعيد العقوبات التدريجية</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            onClick={() => {
+              if (window.confirm('سيتم تهيئة قواعد التصعيد الافتراضية وفق نظام العمل السعودي. هل تريد المتابعة؟')) {
+                seedDefaultsMutation.mutate();
+              }
+            }}
+            disabled={seedDefaultsMutation.isPending}
+            className="border-green-300 text-green-700 hover:bg-green-50"
+          >
+            {seedDefaultsMutation.isPending
+              ? <Loader2 className="h-4 w-4 ms-2 animate-spin" />
+              : <Database className="h-4 w-4 ms-2" />
+            }
+            تهيئة الافتراضيات
+          </Button>
+          <Button variant="outline" onClick={() => setIsAddOpen(!isAddOpen)}>
+            <Plus className="h-4 w-4 ms-2" />
+            إضافة قاعدة
+          </Button>
           <Button variant="outline" onClick={() => refetch()}>
             <RefreshCw className="h-4 w-4 ms-2" />
             تحديث

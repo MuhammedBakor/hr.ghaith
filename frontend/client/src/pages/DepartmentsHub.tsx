@@ -129,7 +129,7 @@ const departments: Department[] = [
     borderColor: 'border-emerald-200',
     description: 'إدارة الفواتير والمصروفات والميزانية والموردين',
     items: [
-      { label: 'الفواتير', path: '/finance', icon: Receipt },
+      { label: 'الفواتير', path: '/finance/invoices', icon: Receipt },
       { label: 'المصروفات', path: '/finance/expenses', icon: Wallet },
       { label: 'الميزانية', path: '/finance/budget', icon: PieChart },
       { label: 'التقارير المالية', path: '/finance/reports', icon: FileBarChart },

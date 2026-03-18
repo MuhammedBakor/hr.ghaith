@@ -202,22 +202,22 @@ export const hrSubPermissions: Record<UserRoleType, string[]> = {
   ],
   general_manager: [
     'employees', 'employees-list', 'attendance', 'attendance-monitoring', 'leaves', 'leaves-list', 'leave-balances', 'payroll', 'performance',
-    'training', 'organization', 'recruitment', 'violations',
+    'training', 'organization', 'recruitment', 'violations', 'my_violations',
     'shifts', 'tracking', 'qr', 'approvals', 'letters', 'reports', 'onboarding', 'escalation', 'automation', 'salary'
   ],
   hr_manager: [
     'employees', 'employees-list', 'attendance', 'attendance-monitoring', 'leaves', 'leaves-list', 'leave-balances', 'payroll', 'performance',
-    'training', 'organization', 'recruitment', 'violations',
+    'training', 'organization', 'recruitment', 'violations', 'my_violations',
     'shifts', 'tracking', 'qr', 'approvals', 'letters', 'reports', 'onboarding', 'escalation', 'automation', 'salary'
   ],
-  finance_manager: ['payroll'],
-  fleet_manager: ['attendance', 'attendance-monitoring'],
-  legal_manager: [],
-  projects_manager: ['attendance', 'attendance-monitoring'],
-  store_manager: ['attendance', 'attendance-monitoring'],
+  finance_manager: ['payroll', 'my_violations'],
+  fleet_manager: ['attendance', 'attendance-monitoring', 'my_violations'],
+  legal_manager: ['my_violations'],
+  projects_manager: ['attendance', 'attendance-monitoring', 'my_violations'],
+  store_manager: ['attendance', 'attendance-monitoring', 'my_violations'],
   supervisor: ['attendance', 'attendance-monitoring', 'leaves', 'my_violations'],
   employee: ['attendance', 'attendance-monitoring', 'leaves', 'my_violations'],
-  department_manager: ['attendance', 'attendance-monitoring', 'leaves', 'leaves-list', 'violations', 'employees-list'],
+  department_manager: ['attendance', 'attendance-monitoring', 'leaves', 'leaves-list', 'violations', 'employees-list', 'my_violations'],
   agent: ['attendance', 'attendance-monitoring', 'my_violations'],
 };
 

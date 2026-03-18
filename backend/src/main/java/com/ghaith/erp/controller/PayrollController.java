@@ -67,4 +67,16 @@ public class PayrollController {
         payrollService.deleteDeduction(deductionId);
         return ResponseEntity.noContent().build();
     }
+
+    /** POST /api/v1/hr/payroll/run-monthly — runs the 12-item algorithm for all active employees */
+    @PostMapping("/run-monthly")
+    public ResponseEntity<Map<String, Object>> runMonthlyPayroll(@RequestBody Map<String, Object> payload) {
+        int month = payload.containsKey("month") ? ((Number) payload.get("month")).intValue()
+                : java.time.LocalDate.now().getMonthValue();
+        int year = payload.containsKey("year") ? ((Number) payload.get("year")).intValue()
+                : java.time.LocalDate.now().getYear();
+        Long branchId = payload.containsKey("branchId") && payload.get("branchId") != null
+                ? ((Number) payload.get("branchId")).longValue() : null;
+        return ResponseEntity.ok(payrollService.runMonthlyPayroll(month, year, branchId));
+    }
 }

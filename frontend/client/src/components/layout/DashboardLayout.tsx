@@ -633,7 +633,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       icon: CreditCard,
       module: 'finance',
       children: [
-        { label: 'الفواتير', path: '/finance', icon: Receipt },
+        { label: 'الفواتير', path: '/finance/invoices', icon: Receipt },
         { label: 'المصروفات', path: '/finance/expenses', icon: Wallet },
         { label: 'الميزانية', path: '/finance/budget', icon: PieChart },
         { label: 'التقارير المالية', path: '/finance/reports', icon: FileBarChart },
@@ -646,7 +646,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         { label: 'الضرائب والزكاة', path: '/finance/tax', icon: Receipt },
         { label: 'السندات', path: '/finance/vouchers', icon: FileText },
         { label: 'القيود', path: '/finance/journal-entries', icon: ScrollText },
-        { label: 'الفواتير', path: '/finance/invoices', icon: FileText },
         { label: 'شجرة الحسابات', path: '/finance/accounts', icon: GitBranch },
         { label: 'الالتزامات المالية', path: '/finance/commitments', icon: Lock },
         { label: 'الطلبات المالية', path: '/finance/requests', icon: ClipboardList },
@@ -934,9 +933,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (!sectionMap[deptDirectPath]) sectionMap[deptDirectPath] = { label: 'الأقسام المركزية', path: '/departments' };
 
     for (const item of dept.items) {
-      // /hr/employees → label + parent /hr
+      // /hr/employees → label + parent /departments/hr
       map[item.path] = item.label;
-      sectionMap[item.path] = { label: dept.label, path: deptDirectPath };
+      sectionMap[item.path] = { label: dept.label, path: deptHubPath };
 
       // /departments/hr/employees → label + parent /departments/hr
       // Skip if hubItemPath === deptHubPath (e.g. dept id 'requests', item path '/requests')

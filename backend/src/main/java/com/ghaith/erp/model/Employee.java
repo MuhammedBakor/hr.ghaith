@@ -90,6 +90,11 @@ public class Employee extends BaseEntity {
     private String bankAccount;
     private String iban;
 
+    // Employment dates
+    private String hireDate;
+    private String probationEndDate;
+    private String workType; // full_time, part_time, contract, remote, internship
+
     public String getUserRole() {
         if (user != null && user.getRole() != null) {
             return user.getRole().name();

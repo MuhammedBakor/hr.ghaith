@@ -99,11 +99,13 @@ export default function Leaves() {
   const [remarksText, setRemarksText] = useState('');
   const [newLeave, setNewLeave] = useState({
     employeeId: '',
-    leaveType: 'annual' as const,
+    leaveType: 'annual' as any,
     startDate: '',
     endDate: '',
     reason: '',
+    documentUrl: '',
   });
+  const [deptCapWarning, setDeptCapWarning] = useState(false);
 
   const { selectedRole, currentEmployeeId, currentUserId, selectedBranchId } = useAppContext();
 
@@ -219,15 +221,33 @@ export default function Leaves() {
       startDate: newLeave.startDate,
       endDate: newLeave.endDate,
       reason: newLeave.reason,
+      documentUrl: newLeave.documentUrl || undefined,
     }, {
-      onSuccess: () => {
+      onSuccess: (result: any) => {
         toast.success('تم إنشاء طلب الإجازة بنجاح');
+        if (result?.deptCapWarning) {
+          setDeptCapWarning(true);
+          toast.warning('تنبيه: نسبة الغياب في القسم تجاوزت 30% — قد يحتاج المدير لمراجعة الطلب', { duration: 8000 });
+        }
         setViewMode("list");
-        setNewLeave({ employeeId: '', leaveType: 'annual', startDate: '', endDate: '', reason: '' });
+        setNewLeave({ employeeId: '', leaveType: 'annual', startDate: '', endDate: '', reason: '', documentUrl: '' });
       },
       onError: (e: any) => {
+        const errorCode = e?.response?.data?.code;
         const msg = e?.response?.data?.message || e.message || "حدث خطأ";
-        toast.error(msg);
+        if (errorCode === 'OVERLAP') {
+          toast.error('تعارض في الإجازة: يوجد طلب إجازة آخر في نفس الفترة');
+        } else if (errorCode === 'HAJJ_DUPLICATE') {
+          toast.error('لا يمكن طلب إجازة الحج مرتين');
+        } else if (errorCode === 'DOCUMENT_REQUIRED') {
+          toast.error('مطلوب إرفاق وثيقة طبية للإجازة المرضية أو إجازة الأمومة التي تتجاوز 3 أيام');
+        } else if (errorCode === 'GENDER_MISMATCH') {
+          toast.error('إجازة الأمومة متاحة للموظفات فقط');
+        } else if (errorCode === 'INSUFFICIENT_BALANCE') {
+          toast.error('رصيد الإجازة غير كافٍ');
+        } else {
+          toast.error(msg);
+        }
       }
     });
   };
@@ -492,6 +512,19 @@ export default function Leaves() {
     );
   };
 
+  // Helper: selected employee gender for maternity filter
+  const selectedEmpForLeave = isEmployee
+    ? currentEmployee
+    : (employeesData || []).find((e: any) => String(e.id) === newLeave.employeeId);
+  const selectedEmpGender = selectedEmpForLeave?.gender;
+  const isMale = selectedEmpGender === 'male' || selectedEmpGender === 'ذكر';
+
+  // Helper: days count to decide doc requirement
+  const leaveDaysCount = newLeave.startDate && newLeave.endDate
+    ? Math.ceil((new Date(newLeave.endDate).getTime() - new Date(newLeave.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1
+    : 0;
+  const requiresDocument = (newLeave.leaveType === 'sick' || newLeave.leaveType === 'maternity') && leaveDaysCount > 3;
+
   // New Leave Form
   const renderNewLeaveForm = () => (
     <div className="space-y-6" dir="rtl">
@@ -547,7 +580,8 @@ export default function Leaves() {
                   <SelectItem value="sick">مرضية</SelectItem>
                   <SelectItem value="emergency">طارئة</SelectItem>
                   <SelectItem value="unpaid">بدون راتب</SelectItem>
-                  <SelectItem value="maternity">أمومة</SelectItem>
+                  <SelectItem value="hajj">حج</SelectItem>
+                  {!isMale && <SelectItem value="maternity">أمومة</SelectItem>}
                 </SelectContent>
               </Select>
             </div>
@@ -582,6 +616,19 @@ export default function Leaves() {
                 onChange={(e) => setNewLeave({ ...newLeave, reason: e.target.value })}
               />
             </div>
+            {requiresDocument && (
+              <div className="space-y-2 p-4 border border-amber-200 rounded-lg bg-amber-50">
+                <Label className="text-amber-900 font-medium">
+                  الوثيقة الطبية مطلوبة <span className="text-red-500">*</span>
+                </Label>
+                <p className="text-xs text-amber-700">الإجازة المرضية وإجازة الأمومة التي تتجاوز 3 أيام تستلزم إرفاق وثيقة طبية</p>
+                <Input
+                  placeholder="أدخل رابط الوثيقة أو مسارها"
+                  value={newLeave.documentUrl}
+                  onChange={(e) => setNewLeave({ ...newLeave, documentUrl: e.target.value })}
+                />
+              </div>
+            )}
             <div className="flex gap-3 pt-4">
               <Button variant="outline" onClick={() => setViewMode("list")}>إلغاء</Button>
               <Button onClick={handleCreateLeave} disabled={createLeaveMutation.isPending}>

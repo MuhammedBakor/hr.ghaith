@@ -42,6 +42,10 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Long
     @Query("SELECT lr FROM LeaveRequest lr WHERE lr.employee.branch.id = :branchId")
     List<LeaveRequest> findByEmployeeBranchId(@Param("branchId") Long branchId);
 
+    // Check if employee is currently on approved leave
+    @Query("SELECT COUNT(lr) FROM LeaveRequest lr WHERE lr.employee.id = :employeeId AND lr.status = 'approved' AND :today BETWEEN lr.startDate AND lr.endDate")
+    long countActiveLeaveForEmployee(@Param("employeeId") Long employeeId, @Param("today") java.time.LocalDate today);
+
     // Find leave requests by branch and approval stage
     @Query("SELECT lr FROM LeaveRequest lr WHERE lr.employee.branch.id = :branchId AND lr.approvalStage = :stage")
     List<LeaveRequest> findByEmployeeBranchIdAndApprovalStage(
@@ -55,4 +59,20 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Long
         @Param("departmentId") Long departmentId,
         @Param("branchId") Long branchId
     );
+
+    // Check for overlapping leave requests (pending or approved)
+    @Query("SELECT COUNT(lr) FROM LeaveRequest lr WHERE lr.employee.id = :employeeId AND lr.status IN ('pending', 'approved') AND lr.startDate <= :endDate AND lr.endDate >= :startDate")
+    long countOverlappingLeaves(@Param("employeeId") Long employeeId, @Param("startDate") java.time.LocalDate startDate, @Param("endDate") java.time.LocalDate endDate);
+
+    // Count hajj leaves ever taken by employee
+    @Query("SELECT COUNT(lr) FROM LeaveRequest lr WHERE lr.employee.id = :employeeId AND lr.leaveType = 'hajj' AND lr.status IN ('pending', 'approved')")
+    long countHajjLeaves(@Param("employeeId") Long employeeId);
+
+    // Count active (pending/approved) leaves in a department during a date range
+    @Query("SELECT COUNT(lr) FROM LeaveRequest lr WHERE lr.employee.department.id = :deptId AND lr.status IN ('pending', 'approved') AND lr.startDate <= :endDate AND lr.endDate >= :startDate")
+    long countActiveLeavesInDepartment(@Param("deptId") Long deptId, @Param("startDate") java.time.LocalDate startDate, @Param("endDate") java.time.LocalDate endDate);
+
+    // Find pending leaves whose escalation deadline has passed
+    @Query("SELECT lr FROM LeaveRequest lr WHERE lr.status = 'pending' AND lr.escalationDeadline IS NOT NULL AND lr.escalationDeadline < :now")
+    List<LeaveRequest> findEscalationDue(@Param("now") java.time.LocalDateTime now);
 }

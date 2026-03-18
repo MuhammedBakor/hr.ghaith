@@ -188,7 +188,7 @@ export default function FinanceReports() {
           </Card>
 
           {/* حالة التوازن */}
-          {trialBalance && (
+          {trialBalance && !Array.isArray(trialBalance) && trialBalance.accounts && (
             <Card className={trialBalance.isBalanced ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}>
               <CardContent className="py-4">
                 <div className="flex items-center justify-between">
@@ -230,7 +230,7 @@ export default function FinanceReports() {
               {loadingTB ? (
                 <div className="space-y-3">
                   {[...Array(5)].map((_, i) => (
-                    <Skeleton key={_.id ?? `Skeleton-${i}`} className="h-12 w-full" />
+                    <Skeleton key={`Skeleton-${i}`} className="h-12 w-full" />
                   ))}
                 </div>
               ) : (
@@ -248,7 +248,7 @@ export default function FinanceReports() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {trialBalance?.accounts.map((account) => (
+                      {trialBalance?.accounts?.map((account: any) => (
                         <TableRow key={account.accountId} className="hover:bg-gray-50">
                           <TableCell className="font-mono">{account.accountCode}</TableCell>
                           <TableCell className="font-medium">{account.accountName}</TableCell>
@@ -272,7 +272,7 @@ export default function FinanceReports() {
                         </TableRow>
                       ))}
                     </TableBody>
-                    {trialBalance && (
+                    {trialBalance?.totals && (
                       <TableFooter>
                         <TableRow className="bg-gray-100 font-bold">
                           <TableCell colSpan={3}>الإجمالي</TableCell>
@@ -295,7 +295,7 @@ export default function FinanceReports() {
                 </div>
               )}
               
-              {trialBalance?.accounts.length === 0 && (
+              {trialBalance?.accounts?.length === 0 && (
                 <div className="text-center py-12 text-gray-500">
                   <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>لا توجد حسابات بأرصدة في الفترة المحددة</p>
@@ -328,8 +328,8 @@ export default function FinanceReports() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">جميع الحسابات</SelectItem>
-                      {accounts?.map((account: any) => (
-                        <SelectItem key={account.id} value={account.id.toString()}>
+                      {accounts?.filter(Boolean).map((account: any) => (
+                        <SelectItem key={account.id} value={String(account.id)}>
                           {account.accountCode} - {account.name}
                         </SelectItem>
                       ))}
@@ -347,7 +347,7 @@ export default function FinanceReports() {
           </Card>
 
           {/* ملخص */}
-          {generalLedger && (
+          {generalLedger && !Array.isArray(generalLedger) && (
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <Card>
                 <CardContent className="pt-6">
@@ -410,7 +410,7 @@ export default function FinanceReports() {
               {loadingGL ? (
                 <div className="space-y-3">
                   {[...Array(5)].map((_, i) => (
-                    <Skeleton key={_.id ?? `Skeleton-${i}`} className="h-12 w-full" />
+                    <Skeleton key={`Skeleton-${i}`} className="h-12 w-full" />
                   ))}
                 </div>
               ) : (
@@ -428,7 +428,7 @@ export default function FinanceReports() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {generalLedger?.entries.map((entry, index) => (
+                      {generalLedger?.entries?.map((entry: any, index: number) => (
                         <TableRow key={`${entry.entryId}-${index}`} className="hover:bg-gray-50">
                           <TableCell>
                             {format(new Date(entry.entryDate), "dd/MM/yyyy", { locale: ar })}
@@ -456,7 +456,7 @@ export default function FinanceReports() {
                 </div>
               )}
               
-              {generalLedger?.entries.length === 0 && (
+              {generalLedger?.entries?.length === 0 && (
                 <div className="text-center py-12 text-gray-500">
                   <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>لا توجد حركات مرحّلة</p>
@@ -488,8 +488,8 @@ export default function FinanceReports() {
                       <SelectValue placeholder="اختر حساباً لعرض كشفه" />
                     </SelectTrigger>
                     <SelectContent>
-                      {accounts?.map((account: any) => (
-                        <SelectItem key={account.id} value={account.id.toString()}>
+                      {accounts?.filter(Boolean).map((account: any) => (
+                        <SelectItem key={account.id} value={String(account.id)}>
                           {account.accountCode} - {account.name}
                         </SelectItem>
                       ))}
@@ -517,7 +517,7 @@ export default function FinanceReports() {
             </Card>
           )}
 
-          {selectedAccountId && accountStatement && (
+          {selectedAccountId && accountStatement && !Array.isArray(accountStatement) && (
             <>
               {/* معلومات الحساب */}
               <Card>
@@ -534,8 +534,8 @@ export default function FinanceReports() {
                     </div>
                     <div className="text-start">
                       <p className="text-sm text-gray-500">الرصيد الختامي</p>
-                      <p className={`text-2xl font-bold ${accountStatement.closingBalance >= 0 ? "text-blue-600" : "text-red-600"}`}>
-                        {formatAmount(accountStatement.closingBalance)}
+                      <p className={`text-2xl font-bold ${(accountStatement?.closingBalance ?? 0) >= 0 ? "text-blue-600" : "text-red-600"}`}>
+                        {formatAmount(accountStatement?.closingBalance)}
                       </p>
                     </div>
                   </div>
@@ -547,7 +547,7 @@ export default function FinanceReports() {
                 <Card>
                   <CardContent className="pt-6">
                     <p className="text-sm text-gray-500">الرصيد الافتتاحي</p>
-                    <p className="text-xl font-bold">{formatAmount(accountStatement.openingBalance)}</p>
+                    <p className="text-xl font-bold">{formatAmount(accountStatement?.openingBalance)}</p>
                   </CardContent>
                 </Card>
                 <Card>
@@ -584,7 +584,7 @@ export default function FinanceReports() {
                   {loadingAS ? (
                     <div className="space-y-3">
                       {[...Array(5)].map((_, i) => (
-                        <Skeleton key={_.id ?? `Skeleton-${i}`} className="h-12 w-full" />
+                        <Skeleton key={`Skeleton-${i}`} className="h-12 w-full" />
                       ))}
                     </div>
                   ) : (
@@ -608,7 +608,7 @@ export default function FinanceReports() {
                             <TableCell></TableCell>
                             <TableCell></TableCell>
                             <TableCell className="text-start font-mono font-semibold">
-                              {formatAmount(accountStatement.openingBalance)}
+                              {formatAmount(accountStatement?.openingBalance)}
                             </TableCell>
                           </TableRow>
                           {accountStatement?.transactions?.map((tx, index) => (
@@ -641,7 +641,7 @@ export default function FinanceReports() {
                               {formatAmount(accountStatement?.summary?.totalCredit)}
                             </TableCell>
                             <TableCell className="text-start font-mono">
-                              {formatAmount(accountStatement.closingBalance)}
+                              {formatAmount(accountStatement?.closingBalance)}
                             </TableCell>
                           </TableRow>
                         </TableFooter>

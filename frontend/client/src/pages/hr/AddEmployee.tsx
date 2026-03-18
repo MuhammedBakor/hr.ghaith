@@ -22,6 +22,7 @@ import {
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useAppContext } from '@/contexts/AppContext';
+import { useUser } from '@/services/authService';
 
 export default function AddEmployee() {
   const confirmDelete = (fn: () => void) => { if (window.confirm("هل أنت متأكد من الحذف؟")) fn(); };
@@ -29,6 +30,7 @@ export default function AddEmployee() {
   const [showInlineForm, setShowInlineForm] = useState(false);
 
   const { selectedRole: userRole, selectedBranchId } = useAppContext();
+  const { data: currentUser } = useUser();
   const isLoadingAuth = false; // Assume auth is handled or get from context
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -104,6 +106,43 @@ export default function AddEmployee() {
   const handleSubmit = async () => {
     if (!formData.firstName || !formData.lastName || !formData.email) { toast.error('يرجى ملء الاسم والبريد الإلكتروني'); setActiveTab('personal'); return; }
     if (!formData.departmentId) { toast.error('يرجى تحديد القسم'); setActiveTab('work'); return; }
+
+    // Age >= 18 validation
+    if (formData.dateOfBirth) {
+      const dob = new Date(formData.dateOfBirth);
+      const today = new Date();
+      const age = today.getFullYear() - dob.getFullYear() - (today < new Date(today.getFullYear(), dob.getMonth(), dob.getDate()) ? 1 : 0);
+      if (age < 18) { toast.error('يجب أن يكون عمر الموظف 18 سنة أو أكثر'); setActiveTab('extra'); return; }
+    }
+
+    // IBAN format validation
+    if (formData.iban && !/^SA\d{22}$/.test(formData.iban)) {
+      toast.error('صيغة الآيبان غير صحيحة — يجب أن يبدأ بـ SA ويتكون من 24 حرفاً (SA + 22 رقم)');
+      setActiveTab('extra');
+      return;
+    }
+
+    // Self-as-manager check
+    const currentEmployeeId = (currentUser as any)?.employeeId;
+    if (formData.managerId && formData.managerId !== 'none' && currentEmployeeId && parseInt(formData.managerId) === currentEmployeeId) {
+      toast.error('لا يمكن تعيين الموظف كمديره المباشر');
+      setActiveTab('work');
+      return;
+    }
+
+    // Duplicate national ID check
+    if (formData.nationalId) {
+      try {
+        const existing = (employeesData || []).find((e: any) => e.nationalId === formData.nationalId);
+        if (existing) { toast.error('رقم الهوية الوطنية مستخدم بالفعل لموظف آخر'); setActiveTab('personal'); return; }
+      } catch {}
+    }
+
+    // Salary warning for Saudi nationals below minimum
+    if (formData.nationality === 'سعودي' && formData.basicSalary && parseFloat(formData.basicSalary) < 4000) {
+      toast.warning('تنبيه: الراتب الأساسي أقل من 4000 ر.س للموظفين السعوديين — تأكد من الامتثال لنظام العمل', { duration: 6000 });
+    }
+
     setIsSubmitting(true);
     try {
       // Append selected modules to roleCode if any
@@ -457,6 +496,20 @@ export default function AddEmployee() {
                     </Select>
                   </div>
                   <div className="space-y-2"><Label>رقم الجوال</Label><Input placeholder="+966 5X XXX XXXX" value={formData.emergencyPhone} onChange={(e) => updateField('emergencyPhone', e.target.value)} /></div>
+                </div>
+              </div>
+              <div className="border-t pt-6">
+                <h4 className="font-medium mb-4 flex items-center gap-2"><CreditCard className="h-4 w-4" />البيانات البنكية</h4>
+                <div className="grid md:grid-cols-3 gap-6">
+                  <div className="space-y-2"><Label>اسم البنك</Label><Input placeholder="مثال: الراجحي" value={formData.bankName} onChange={(e) => updateField('bankName', e.target.value)} /></div>
+                  <div className="space-y-2"><Label>رقم الحساب</Label><Input placeholder="رقم الحساب البنكي" value={formData.bankAccount} onChange={(e) => updateField('bankAccount', e.target.value)} /></div>
+                  <div className="space-y-2">
+                    <Label>رقم الآيبان (IBAN)</Label>
+                    <Input placeholder="SA + 22 رقم" value={formData.iban} onChange={(e) => updateField('iban', e.target.value.toUpperCase())} maxLength={24} />
+                    {formData.iban && !/^SA\d{22}$/.test(formData.iban) && (
+                      <p className="text-xs text-red-500">صيغة خاطئة — يجب SA متبوعاً بـ 22 رقم</p>
+                    )}
+                  </div>
                 </div>
               </div>
               <div className="flex justify-between">

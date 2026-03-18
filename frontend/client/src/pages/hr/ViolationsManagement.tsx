@@ -38,7 +38,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Plus, AlertTriangle, Eye, Trash2, Edit, Loader2, Inbox, Mail, Calendar, User } from 'lucide-react';
+import { Plus, AlertTriangle, Eye, Trash2, Edit, Loader2, Inbox, Mail, Calendar, User, Bot, UserCheck, MessageSquareWarning } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { toast } from 'sonner';
@@ -147,6 +147,29 @@ export default function ViolationsManagement() {
     },
     onError: (err: any) => toast.error(err.response?.data?.message || 'حدث خطأ'),
   });
+
+  const [appealId, setAppealId] = useState<number | null>(null);
+  const [appealReason, setAppealReason] = useState('');
+
+  const appealMutation = useMutation({
+    mutationFn: ({ id, reason }: { id: number; reason: string }) =>
+      api.post(`/hr/violations/${id}/appeal`, { reason }).then(r => r.data),
+    onSuccess: () => {
+      toast.success('تم تقديم الاستئناف بنجاح');
+      queryClient.invalidateQueries({ queryKey: ['violations'] });
+      setAppealId(null);
+      setAppealReason('');
+    },
+    onError: (err: any) => toast.error(err.response?.data?.message || 'حدث خطأ في تقديم الاستئناف'),
+  });
+
+  // Check if a violation is within the 15-day appeal window
+  const isWithinAppealWindow = (v: any) => {
+    if (!v.createdAt && !v.violationDate) return false;
+    const refDate = new Date(v.createdAt || v.violationDate);
+    const diffDays = (Date.now() - refDate.getTime()) / (1000 * 60 * 60 * 24);
+    return diffDays <= 15;
+  };
 
   const handleCreate = () => {
     if (!form.employeeId || !form.violationType || !form.violationDate) {
@@ -275,6 +298,7 @@ export default function ViolationsManagement() {
                 <TableRow>
                   <TableHead>الموظف</TableHead>
                   <TableHead>نوع المخالفة</TableHead>
+                  <TableHead>المصدر</TableHead>
                   <TableHead>تاريخ المخالفة</TableHead>
                   <TableHead>تاريخ الإرسال</TableHead>
                   <TableHead>أُرسلت بواسطة</TableHead>
@@ -289,6 +313,12 @@ export default function ViolationsManagement() {
                       {v.employee ? `${v.employee.firstName} ${v.employee.lastName}` : '-'}
                     </TableCell>
                     <TableCell>{v.violationType || '-'}</TableCell>
+                    <TableCell>
+                      {v.source === 'auto'
+                        ? <Badge className="bg-purple-100 text-purple-800 gap-1"><Bot className="h-3 w-3" />تلقائي</Badge>
+                        : <Badge className="bg-gray-100 text-gray-700 gap-1"><UserCheck className="h-3 w-3" />يدوي</Badge>
+                      }
+                    </TableCell>
                     <TableCell>{v.violationDate ? formatDate(v.violationDate) : '-'}</TableCell>
                     <TableCell>{v.createdAt ? formatDate(v.createdAt) : '-'}</TableCell>
                     <TableCell>
@@ -310,6 +340,17 @@ export default function ViolationsManagement() {
                         <Button variant="ghost" size="icon" onClick={() => handleEdit(v)} title="تعديل">
                           <Edit className="h-4 w-4" />
                         </Button>
+                        {isWithinAppealWindow(v) && v.status !== 'appealed' && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-amber-600 hover:text-amber-800 hover:bg-amber-50"
+                            onClick={() => { setAppealId(v.id); setAppealReason(''); }}
+                            title="استئناف (متاح لمدة 15 يوم)"
+                          >
+                            <MessageSquareWarning className="h-4 w-4" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"
@@ -550,6 +591,41 @@ export default function ViolationsManagement() {
             <Button onClick={handleUpdate} disabled={updateMutation.isPending}>
               {updateMutation.isPending && <Loader2 className="h-4 w-4 ms-2 animate-spin" />}
               حفظ التغييرات
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Appeal Dialog */}
+      <Dialog open={appealId !== null} onOpenChange={(o) => { if (!o) { setAppealId(null); setAppealReason(''); } }}>
+        <DialogContent className="max-w-md" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageSquareWarning className="h-5 w-5 text-amber-500" />
+              تقديم استئناف على المخالفة
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <p className="text-sm text-muted-foreground">يمكنك تقديم استئناف على هذه المخالفة خلال 15 يوماً من تاريخ إصدارها.</p>
+            <div className="space-y-2">
+              <Label>سبب الاستئناف <span className="text-red-500">*</span></Label>
+              <Textarea
+                placeholder="اكتب سبب الاستئناف بالتفصيل..."
+                value={appealReason}
+                onChange={(e) => setAppealReason(e.target.value)}
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter className="flex-row-reverse gap-2">
+            <Button variant="outline" onClick={() => { setAppealId(null); setAppealReason(''); }}>إلغاء</Button>
+            <Button
+              onClick={() => appealId && appealReason.trim() && appealMutation.mutate({ id: appealId, reason: appealReason })}
+              disabled={!appealReason.trim() || appealMutation.isPending}
+              className="bg-amber-600 hover:bg-amber-700"
+            >
+              {appealMutation.isPending && <Loader2 className="h-4 w-4 ms-2 animate-spin" />}
+              تقديم الاستئناف
             </Button>
           </DialogFooter>
         </DialogContent>

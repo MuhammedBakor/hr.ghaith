@@ -40,4 +40,10 @@ public class AttendanceRecord extends BaseEntity {
     private String approvalStatus; // pending, approved, rejected
 
     private String notes;
+
+    @Column(name = "late_minutes")
+    private Integer lateMinutes;
+
+    @Column(name = "outside_geofence")
+    private Boolean outsideGeofence;
 }

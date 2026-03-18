@@ -37,7 +37,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { useAppContext } from '@/contexts/AppContext';
-import { useEmployees, usePayroll, useCreatePayroll, useDeletePayroll, useBranches, useDepartments, usePayrollDeductions, useAddPayrollDeduction, useDeletePayrollDeduction } from '@/services/hrService';
+import { useEmployees, usePayroll, useCreatePayroll, useDeletePayroll, useBranches, useDepartments, usePayrollDeductions, useAddPayrollDeduction, useDeletePayrollDeduction, useRunMonthlyPayroll } from '@/services/hrService';
 import { useQueryClient } from '@tanstack/react-query';
 
 
@@ -130,6 +130,7 @@ export default function Payroll() {
 
   const createPayrollMutation = useCreatePayroll();
   const deletePayrollMutation = useDeletePayroll();
+  const runMonthlyPayrollMutation = useRunMonthlyPayroll();
   const { data: deductionsData, refetch: refetchDeductions } = usePayrollDeductions(detailsRecord?.id ?? null);
   const addDeductionMutation = useAddPayrollDeduction();
   const deleteDeductionMutation = useDeletePayrollDeduction();
@@ -192,42 +193,33 @@ export default function Payroll() {
     });
   };
 
-  const handleCalculateSalaries = async () => {
-    const activeEmployees = employees.filter((e: any) => e.status === 'active' || e.status === 'Active');
-    const alreadyCreated = new Set(
-      records
-        .filter((r) => r.month === calcMonth && r.year === calcYear)
-        .map((r) => r.employeeId)
-    );
-    const toCreate = activeEmployees.filter((e: any) => !alreadyCreated.has(e.id) && (e.salary || e.housingAllowance || e.transportAllowance));
-    if (toCreate.length === 0) {
-      toast.info('جميع الموظفين لديهم كشف راتب لهذا الشهر بالفعل');
-      setShowCalculateDialog(false);
-      return;
-    }
+  const handleCalculateSalaries = () => {
     setIsCalculating(true);
-    let created = 0;
-    for (const emp of toCreate) {
-      try {
-        await new Promise<void>((resolve, reject) => {
-          createPayrollMutation.mutate({
-            employeeId: emp.id,
-            basicSalary: Number(emp.salary) || 0,
-            housingAllowance: Number(emp.housingAllowance) || 0,
-            transportAllowance: Number(emp.transportAllowance) || 0,
-            otherAllowances: 0,
-            deductions: 0,
-            month: calcMonth,
-            year: calcYear,
-            status: 'draft',
-          }, { onSuccess: () => { created++; resolve(); }, onError: () => resolve() });
-        });
-      } catch { /* continue */ }
-    }
-    setIsCalculating(false);
-    setShowCalculateDialog(false);
-    queryClient.invalidateQueries({ queryKey: ['payroll'] });
-    toast.success(`تم إنشاء ${created} كشف راتب بنجاح`);
+    runMonthlyPayrollMutation.mutate(
+      {
+        month: parseInt(calcMonth),
+        year: calcYear,
+        branchId: selectedBranchId ?? undefined,
+      },
+      {
+        onSuccess: (result: any) => {
+          setIsCalculating(false);
+          setShowCalculateDialog(false);
+          const created = result?.created ?? 0;
+          const skipped = result?.skipped ?? 0;
+          if (created === 0) {
+            toast.info('جميع الموظفين لديهم كشف راتب لهذا الشهر بالفعل');
+          } else {
+            toast.success(`تم إنشاء ${created} كشف راتب بنجاح (تجاوز: ${skipped})`);
+          }
+          queryClient.invalidateQueries({ queryKey: ['payroll'] });
+        },
+        onError: (error: any) => {
+          setIsCalculating(false);
+          toast.error('فشل في تشغيل الرواتب: ' + (error.response?.data?.message || error.message));
+        },
+      }
+    );
   };
 
   const handleExport = () => {

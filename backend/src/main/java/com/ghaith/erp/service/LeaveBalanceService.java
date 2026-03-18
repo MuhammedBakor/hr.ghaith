@@ -112,6 +112,29 @@ public class LeaveBalanceService {
         return balance.get().getRemainingBalance() >= days;
     }
 
+    public LeaveBalance createBalance(Long employeeId, String leaveType, int entitlement) {
+        Employee employee = employeeRepository.findById(employeeId)
+            .orElseThrow(() -> new RuntimeException("Employee not found with id " + employeeId));
+
+        Optional<LeaveBalance> existing = leaveBalanceRepository
+            .findByEmployeeIdAndLeaveType(employeeId, leaveType);
+
+        if (existing.isPresent()) {
+            // Already exists, update entitlement
+            LeaveBalance balance = existing.get();
+            balance.setTotalBalance(entitlement);
+            return leaveBalanceRepository.save(balance);
+        } else {
+            LeaveBalance balance = LeaveBalance.builder()
+                .employee(employee)
+                .leaveType(leaveType)
+                .totalBalance(entitlement)
+                .usedBalance(0)
+                .build();
+            return leaveBalanceRepository.save(balance);
+        }
+    }
+
     public void deleteBalance(Long id) {
         leaveBalanceRepository.deleteById(id);
     }

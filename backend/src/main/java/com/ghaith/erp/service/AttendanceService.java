@@ -1,25 +1,33 @@
 package com.ghaith.erp.service;
 
-import com.ghaith.erp.model.AttendanceRecord;
-import com.ghaith.erp.model.Employee;
-import com.ghaith.erp.repository.AttendanceRepository;
-import com.ghaith.erp.repository.EmployeeRepository;
+import com.ghaith.erp.model.*;
+import com.ghaith.erp.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 @Transactional
 public class AttendanceService {
 
     private final AttendanceRepository attendanceRepository;
     private final EmployeeRepository employeeRepository;
+    private final LeaveRequestRepository leaveRequestRepository;
+    private final ViolationRepository violationRepository;
+    private final PenaltyService penaltyService;
+    private final NotificationService notificationService;
 
     public List<AttendanceRecord> getAllAttendance(Long branchId) {
         if (branchId != null) {
@@ -64,7 +72,12 @@ public class AttendanceService {
         return attendanceRepository.findByEmployeeDepartmentIdAndDateBetween(departmentId, startOfDay, endOfDay);
     }
 
+    /**
+     * Full 17-step check-in chain per HR requirements.
+     */
+    @Transactional
     public AttendanceRecord checkIn(Map<String, Object> payload) {
+        // Step 1 — Resolve employee
         Object empIdObj = payload.get("employeeId");
         if (empIdObj == null) {
             throw new RuntimeException("لم يتم تحديد الموظف. تأكد من وجود سجل موظف مرتبط بحسابك.");
@@ -73,38 +86,223 @@ public class AttendanceService {
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new RuntimeException("الموظف غير موجود"));
 
+        // Step 2 — Use server time
         LocalDateTime now = LocalDateTime.now();
+        LocalDate today = now.toLocalDate();
+
+        // Step 3 — Duplicate check (prevent double check-in same day)
+        LocalDateTime startOfDay = today.atStartOfDay();
+        LocalDateTime endOfDay = today.atTime(23, 59, 59, 999999999);
+        Optional<AttendanceRecord> existing = attendanceRepository.findTodayCheckIn(employeeId, startOfDay, endOfDay);
+        if (existing.isPresent()) {
+            throw new RuntimeException("تم تسجيل الحضور مسبقاً اليوم");
+        }
+
+        // Step 4 — Fetch employee shift
+        Shift shift = employee.getShift();
+
+        // Step 5 — Check workday (if shift defined and workDays configured)
+        if (shift != null && shift.getWorkDays() != null && !shift.getWorkDays().isEmpty()) {
+            String todayName = today.getDayOfWeek().name().toLowerCase();
+            // workDays may use Arabic day names or English; do a case-insensitive contains check on English
+            boolean isWorkday = shift.getWorkDays().stream()
+                    .anyMatch(d -> d.equalsIgnoreCase(todayName) || d.equalsIgnoreCase(today.getDayOfWeek().toString()));
+            if (!isWorkday) {
+                throw new RuntimeException("اليوم ليس يوم عمل وفق جدول المناوبة");
+            }
+        }
+
+        // Step 6 — Check active leave
+        long activeLeaves = leaveRequestRepository.countActiveLeaveForEmployee(employeeId, today);
+        if (activeLeaves > 0) {
+            throw new RuntimeException("الموظف في إجازة مؤكدة، لا يمكن تسجيل الحضور");
+        }
+
+        // Step 7 — Calculate lateMinutes
+        int lateMinutes = 0;
+        if (shift != null && shift.getStartTime() != null && !shift.getStartTime().isBlank()) {
+            try {
+                LocalTime shiftStart = LocalTime.parse(shift.getStartTime());
+                int graceMinutes = shift.getGraceMinutesBefore() != null ? shift.getGraceMinutesBefore() : 0;
+                LocalTime allowedStart = shiftStart.plusMinutes(graceMinutes);
+                LocalTime actualCheckIn = now.toLocalTime();
+                if (actualCheckIn.isAfter(allowedStart)) {
+                    lateMinutes = (int) java.time.Duration.between(shiftStart, actualCheckIn).toMinutes();
+                    lateMinutes = Math.max(0, lateMinutes - graceMinutes);
+                }
+            } catch (Exception e) {
+                log.warn("Could not parse shift start time '{}' for employee {}", shift.getStartTime(), employeeId);
+            }
+        }
+
+        // Step 8 — Haversine geofence check
+        boolean outsideGeofence = false;
+        Double checkInLat = null;
+        Double checkInLon = null;
+        if (payload.containsKey("latitude") && payload.get("latitude") != null) {
+            checkInLat = ((Number) payload.get("latitude")).doubleValue();
+        }
+        if (payload.containsKey("longitude") && payload.get("longitude") != null) {
+            checkInLon = ((Number) payload.get("longitude")).doubleValue();
+        }
+        if (checkInLat != null && checkInLon != null && employee.getBranch() != null) {
+            HrBranch branch = employee.getBranch();
+            if (branch.getLatitude() != null && branch.getLongitude() != null
+                    && Boolean.TRUE.equals(branch.getGeoFenceEnabled())) {
+                double distanceMeters = haversineMeters(checkInLat, checkInLon,
+                        branch.getLatitude().doubleValue(), branch.getLongitude().doubleValue());
+                // Prefer policy radius, fall back to branch.geoRadius (default 100m)
+                int allowedRadius = branch.getGeoRadius() != null ? branch.getGeoRadius() : 100;
+                if (shift != null && shift.getPolicy() != null && shift.getPolicy().getAllowedLocationRadius() != null) {
+                    allowedRadius = shift.getPolicy().getAllowedLocationRadius();
+                }
+                outsideGeofence = distanceMeters > allowedRadius;
+            }
+        }
+
+        // Step 9 — Build and save attendance record
         AttendanceRecord record = new AttendanceRecord();
         record.setEmployee(employee);
         record.setDate(now);
         record.setCheckIn(now);
-        record.setStatus("checked_in");
+        record.setLateMinutes(lateMinutes > 0 ? lateMinutes : null);
+        record.setOutsideGeofence(outsideGeofence ? true : null);
+
+        if (checkInLat != null) record.setCheckInLatitude(checkInLat);
+        if (checkInLon != null) record.setCheckInLongitude(checkInLon);
+
+        // Determine status
+        if (lateMinutes > 0) {
+            record.setStatus("late");
+        } else {
+            record.setStatus("checked_in");
+        }
         record.setWorkHours(0.0);
 
-        if (payload.containsKey("latitude") && payload.get("latitude") != null)
-            record.setCheckInLatitude(((Number) payload.get("latitude")).doubleValue());
-        if (payload.containsKey("longitude") && payload.get("longitude") != null)
-            record.setCheckInLongitude(((Number) payload.get("longitude")).doubleValue());
+        AttendanceRecord saved = attendanceRepository.save(record);
 
-        return attendanceRepository.save(record);
+        // Step 10 — Auto-violation if geofence violated and policy requires it
+        if (outsideGeofence) {
+            log.info("Employee {} checked in outside geofence ({} meters from branch)", employeeId, "unknown");
+            // Notify manager of geofence breach
+            notifyManagerOfGeofence(employee, saved);
+        }
+
+        // Steps 11-15 — Lateness violation chain
+        if (lateMinutes > 0) {
+            int lateThreshold = 0;
+            if (shift != null && shift.getPolicy() != null && shift.getPolicy().getLateThresholdMinutes() != null) {
+                lateThreshold = shift.getPolicy().getLateThresholdMinutes();
+            }
+
+            if (lateMinutes > lateThreshold) {
+                triggerLatenessViolationChain(employee, lateMinutes, saved, today);
+            }
+        }
+
+        // Step 16 — Notify employee (confirmation)
+        if (employee.getUser() != null) {
+            notificationService.createNotification(
+                    employee.getUser().getId(),
+                    "تم تسجيل حضورك",
+                    "تم تسجيل حضورك بنجاح في " + now.toLocalTime().toString().substring(0, 5)
+                            + (lateMinutes > 0 ? " (متأخر " + lateMinutes + " دقيقة)" : ""),
+                    "attendance",
+                    saved.getId(),
+                    "AttendanceRecord");
+        }
+
+        // Step 17 — Notify manager if late
+        if (lateMinutes > 0) {
+            notifyManagerOfLateness(employee, lateMinutes, saved);
+        }
+
+        return saved;
+    }
+
+    /**
+     * Triggers the full lateness violation → penalty ladder → deduction chain.
+     */
+    private void triggerLatenessViolationChain(Employee employee, int lateMinutes, AttendanceRecord record, LocalDate today) {
+        try {
+            // Create auto violation
+            Violation violation = Violation.builder()
+                    .employee(employee)
+                    .violationType("تأخر")
+                    .description("تأخر تلقائي - " + lateMinutes + " دقيقة في " + today)
+                    .violationDate(today)
+                    .status("sent")
+                    .sentByName("النظام")
+                    .sentByRole("SYSTEM")
+                    .build();
+            violation = violationRepository.save(violation);
+
+            // Apply penalty ladder
+            penaltyService.applyLatenessViolation(employee, lateMinutes, violation);
+
+            log.info("Lateness violation chain triggered for employee {} — {} minutes late", employee.getId(), lateMinutes);
+        } catch (Exception e) {
+            log.error("Failed to trigger lateness violation chain for employee {}: {}", employee.getId(), e.getMessage());
+        }
+    }
+
+    private void notifyManagerOfLateness(Employee employee, int lateMinutes, AttendanceRecord record) {
+        Employee manager = employee.getManager();
+        if (manager != null && manager.getUser() != null) {
+            String empName = employee.getFirstName() + " " + employee.getLastName();
+            notificationService.createNotification(
+                    manager.getUser().getId(),
+                    "تأخر موظف",
+                    "الموظف " + empName + " تأخر " + lateMinutes + " دقيقة اليوم",
+                    "attendance_late",
+                    record.getId(),
+                    "AttendanceRecord");
+        }
+    }
+
+    private void notifyManagerOfGeofence(Employee employee, AttendanceRecord record) {
+        Employee manager = employee.getManager();
+        if (manager != null && manager.getUser() != null) {
+            String empName = employee.getFirstName() + " " + employee.getLastName();
+            notificationService.createNotification(
+                    manager.getUser().getId(),
+                    "تسجيل حضور خارج النطاق الجغرافي",
+                    "الموظف " + empName + " سجل حضوره خارج نطاق الفرع المحدد",
+                    "attendance_geofence",
+                    record.getId(),
+                    "AttendanceRecord");
+        }
+    }
+
+    /**
+     * Haversine formula to calculate distance in meters between two GPS coordinates.
+     */
+    private double haversineMeters(double lat1, double lon1, double lat2, double lon2) {
+        final double R = 6371000; // Earth radius in meters
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLon = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
     }
 
     public AttendanceRecord checkOut(Long id, Map<String, Object> payload) {
         AttendanceRecord record = attendanceRepository.findById(id).orElseThrow();
         LocalDateTime now = LocalDateTime.now();
         record.setCheckOut(now);
-        record.setStatus("present"); // checked out normally
+        record.setStatus("present");
 
         if (payload.containsKey("latitude") && payload.get("latitude") != null)
             record.setCheckOutLatitude(((Number) payload.get("latitude")).doubleValue());
         if (payload.containsKey("longitude") && payload.get("longitude") != null)
             record.setCheckOutLongitude(((Number) payload.get("longitude")).doubleValue());
 
-        // Calculate work hours
         if (record.getCheckIn() != null) {
             long durationMinutes = java.time.Duration.between(record.getCheckIn(), now).toMinutes();
             double hours = durationMinutes / 60.0;
-            record.setWorkHours(Math.round(hours * 10.0) / 10.0); // round to 1 decimal
+            record.setWorkHours(Math.round(hours * 10.0) / 10.0);
         } else {
             record.setWorkHours(0.0);
         }
@@ -136,7 +334,6 @@ public class AttendanceService {
         record.setStatus("pending_approval");
         record.setApprovalStatus("pending");
 
-        // Calculate work hours for manual entry
         if (record.getCheckIn() != null && record.getCheckOut() != null) {
             long durationMinutes = java.time.Duration.between(record.getCheckIn(), record.getCheckOut()).toMinutes();
             record.setWorkHours(Math.round(durationMinutes / 60.0 * 10.0) / 10.0);
@@ -149,16 +346,13 @@ public class AttendanceService {
         if (dateTimeStr == null || dateTimeStr.isEmpty())
             return null;
         try {
-            // Try ISO format with offset/Z (e.g., 2023-10-27T08:00:00.000Z)
             return OffsetDateTime.parse(dateTimeStr).toLocalDateTime();
         } catch (DateTimeParseException e1) {
             try {
-                // Try standard ISO LocalDateTime (e.g., 2023-10-27T08:00:00)
                 return LocalDateTime.parse(dateTimeStr);
             } catch (DateTimeParseException e2) {
                 try {
-                    // Try LocalDate only (e.g., 2023-10-27)
-                    return java.time.LocalDate.parse(dateTimeStr).atStartOfDay();
+                    return LocalDate.parse(dateTimeStr).atStartOfDay();
                 } catch (DateTimeParseException e3) {
                     throw new RuntimeException("Invalid date format: " + dateTimeStr);
                 }
@@ -168,7 +362,7 @@ public class AttendanceService {
 
     public AttendanceRecord requestEarlyLeave(Map<String, Object> payload) {
         String reason = (String) payload.getOrDefault("reason", "");
-        java.time.LocalDate today = java.time.LocalDate.now();
+        LocalDate today = LocalDate.now();
         List<AttendanceRecord> todayRecords = getAttendanceByDate(today, null);
 
         Object empIdObj = payload.get("employeeId");
@@ -180,7 +374,6 @@ public class AttendanceService {
                     .orElse(null);
 
             if (found != null) {
-                // Mark as pending early leave approval
                 found.setStatus("pending_early_leave");
                 found.setApprovalStatus("pending");
                 found.setNotes(reason);
@@ -205,7 +398,7 @@ public class AttendanceService {
 
     public AttendanceRecord rejectEarlyLeave(Long recordId) {
         AttendanceRecord record = attendanceRepository.findById(recordId).orElseThrow();
-        record.setStatus("checked_in"); // revert to checked_in
+        record.setStatus("checked_in");
         record.setApprovalStatus("rejected");
         return attendanceRepository.save(record);
     }
@@ -238,23 +431,12 @@ public class AttendanceService {
     }
 
     public AttendanceRecord checkInWithQR(Map<String, Object> payload, Long userId) {
-        // Simple implementation: find employee by userId and check in
         Employee employee = employeeRepository.findAllByUserId(userId).stream()
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("Employee not found for user ID: " + userId));
 
-        AttendanceRecord record = new AttendanceRecord();
-        record.setEmployee(employee);
-        record.setDate(LocalDateTime.now());
-        record.setCheckIn(LocalDateTime.now());
-        record.setStatus("present");
-        record.setNotes("Checked in via QR: " + payload.get("qrCode"));
-
-        if (payload.containsKey("latitude"))
-            record.setCheckInLatitude(((Number) payload.get("latitude")).doubleValue());
-        if (payload.containsKey("longitude"))
-            record.setCheckInLongitude(((Number) payload.get("longitude")).doubleValue());
-
-        return attendanceRepository.save(record);
+        // Reuse the main checkIn logic by building a payload map
+        payload.put("employeeId", employee.getId());
+        return checkIn(payload);
     }
 }

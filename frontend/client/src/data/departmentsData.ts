@@ -42,7 +42,7 @@ export const departmentsData: DeptData[] = [
     id: 'finance',
     label: 'المالية',
     items: [
-      { label: 'الفواتير', path: '/finance' },
+      { label: 'الفواتير', path: '/finance/invoices' },
       { label: 'المصروفات', path: '/finance/expenses' },
       { label: 'الميزانية', path: '/finance/budget' },
       { label: 'التقارير المالية', path: '/finance/reports' },

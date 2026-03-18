@@ -89,6 +89,18 @@ public class LeaveRequest extends BaseEntity {
     @Column(name = "days_count")
     private Integer daysCount;
 
+    // Document URL (for sick leave, maternity, etc.)
+    @Column(name = "document_url")
+    private String documentUrl;
+
+    // Auto-generated request number
+    @Column(name = "request_number", unique = true)
+    private String requestNumber;
+
+    // Escalation deadline for manager approval
+    @Column(name = "escalation_deadline")
+    private LocalDateTime escalationDeadline;
+
     public enum LeaveStatus {
         pending, approved, rejected, cancelled
     }

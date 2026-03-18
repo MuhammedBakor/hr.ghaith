@@ -398,61 +398,83 @@ function Router() {
         </DashboardLayout>
       </Route>
       <Route path="/departments/hr/violations">
-        <DashboardLayout>
-          <ViolationsManagement />
-        </DashboardLayout>
+        <RoleProtectedRoute module="hr" hrSubPage="violations">
+          <DashboardLayout>
+            <ViolationsManagement />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/departments/hr/my-violations">
-        <DashboardLayout>
-          <MyViolations />
-        </DashboardLayout>
+        <RoleProtectedRoute module="hr" hrSubPage="my_violations">
+          <DashboardLayout>
+            <MyViolations />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/departments/hr/shifts">
-        <DashboardLayout>
-          <ShiftsManagement />
-        </DashboardLayout>
+        <RoleProtectedRoute module="hr" hrSubPage="shifts">
+          <DashboardLayout>
+            <ShiftsManagement />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/departments/hr/official-letters">
-        <DashboardLayout>
-          <OfficialLetters />
-        </DashboardLayout>
+        <RoleProtectedRoute module="hr" hrSubPage="letters">
+          <DashboardLayout>
+            <OfficialLetters />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/departments/hr/attendance-reports">
-        <DashboardLayout>
-          <AttendanceReports />
-        </DashboardLayout>
+        <RoleProtectedRoute module="hr" hrSubPage="reports">
+          <DashboardLayout>
+            <AttendanceReports />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/departments/hr/penalty-escalation">
-        <DashboardLayout>
-          <PenaltyEscalation />
-        </DashboardLayout>
+        <RoleProtectedRoute module="hr" hrSubPage="escalation">
+          <DashboardLayout>
+            <PenaltyEscalation />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/departments/hr/salary-components">
-        <DashboardLayout>
-          <SalaryComponents />
-        </DashboardLayout>
+        <RoleProtectedRoute module="hr" hrSubPage="salary">
+          <DashboardLayout>
+            <SalaryComponents />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/departments/hr/leave-balances">
-        <DashboardLayout>
-          <LeaveManagement />
-        </DashboardLayout>
+        <RoleProtectedRoute module="hr" hrSubPage="leave-balances">
+          <DashboardLayout>
+            <LeaveManagement />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/departments/hr/employees/add">
-        <DashboardLayout>
-          <AddEmployeeSimple />
-        </DashboardLayout>
+        <RoleProtectedRoute module="hr" hrSubPage="employees">
+          <DashboardLayout>
+            <AddEmployeeSimple />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       {/* Requests department sub-pages */}
       <Route path="/departments/requests-workflow/workflows">
-        <DashboardLayout>
-          <Workflows />
-        </DashboardLayout>
+        <RoleProtectedRoute module="workflow">
+          <DashboardLayout>
+            <Workflows />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/departments/support/tickets">
-        <DashboardLayout>
-          <Tickets />
-        </DashboardLayout>
+        <RoleProtectedRoute module="support">
+          <DashboardLayout>
+            <Tickets />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       {/* HR Module Routes */}
@@ -505,7 +527,7 @@ function Router() {
       </Route>
 
       <Route path="/hr/official-letters">
-        <RoleProtectedRoute module="hr" hrSubPage="official-letters">
+        <RoleProtectedRoute module="hr" hrSubPage="letters">
           <DashboardLayout>
             <OfficialLetters />
           </DashboardLayout>
@@ -639,37 +661,49 @@ function Router() {
         </RoleProtectedRoute>
       </Route>
       <Route path="/fleet/automation">
-        <DashboardLayout>
-          <FleetAutomation />
-        </DashboardLayout>
+        <RoleProtectedRoute module="fleet">
+          <DashboardLayout>
+            <FleetAutomation />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/finance/automation">
-        <DashboardLayout>
-          <FinanceAutomation />
-        </DashboardLayout>
+        <RoleProtectedRoute module="finance">
+          <DashboardLayout>
+            <FinanceAutomation />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/property/automation">
-        <DashboardLayout>
-          <PropertyAutomation />
-        </DashboardLayout>
+        <RoleProtectedRoute module="property">
+          <DashboardLayout>
+            <PropertyAutomation />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/projects/automation">
-        <DashboardLayout>
-          <ProjectsAutomation />
-        </DashboardLayout>
+        <RoleProtectedRoute module="operations">
+          <DashboardLayout>
+            <ProjectsAutomation />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/support/automation">
-        <DashboardLayout>
-          <SupportAutomation />
-        </DashboardLayout>
+        <RoleProtectedRoute module="support">
+          <DashboardLayout>
+            <SupportAutomation />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/legal/automation">
-        <DashboardLayout>
-          <LegalAutomation />
-        </DashboardLayout>
+        <RoleProtectedRoute module="legal">
+          <DashboardLayout>
+            <LegalAutomation />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/hr/recruitment-advanced">
@@ -721,7 +755,7 @@ function Router() {
       </Route>
 
       {/* Finance Module Routes */}
-      <Route path="/finance">
+      <Route path="/finance/invoices">
         <RoleProtectedRoute module="finance">
           <DashboardLayout>
             <InvoiceList />
@@ -729,94 +763,145 @@ function Router() {
         </RoleProtectedRoute>
       </Route>
 
-      <Route path="/finance/invoices">
-        <DashboardLayout>
-          <InvoiceList />
-        </DashboardLayout>
-      </Route>
-
       <Route path="/finance/invoice/:id">
-        <DashboardLayout>
-          <InvoiceDetails />
-        </DashboardLayout>
+        <RoleProtectedRoute module="finance">
+          <DashboardLayout>
+            <InvoiceDetails />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/finance/expenses">
-        <DashboardLayout>
-          <Expenses />
-        </DashboardLayout>
+        <RoleProtectedRoute module="finance">
+          <DashboardLayout>
+            <Expenses />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/finance/budget" /* MERGED: redirects to /finance/budgets */>
-        <DashboardLayout>
-          <Budget />
-        </DashboardLayout>
+        <RoleProtectedRoute module="finance">
+          <DashboardLayout>
+            <Budget />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/finance/accounts">
-        <DashboardLayout>
-          <Accounts />
-        </DashboardLayout>
+        <RoleProtectedRoute module="finance">
+          <DashboardLayout>
+            <Accounts />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/finance/journal-entries">
-        <DashboardLayout>
-          <JournalEntries />
-        </DashboardLayout>
+        <RoleProtectedRoute module="finance">
+          <DashboardLayout>
+            <JournalEntries />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/finance/requests">
-        <DashboardLayout>
-          <FinancialRequests />
-        </DashboardLayout>
+        <RoleProtectedRoute module="finance">
+          <DashboardLayout>
+            <FinancialRequests />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/finance/vouchers">
-        <DashboardLayout>
-          <Vouchers />
-        </DashboardLayout>
+        <RoleProtectedRoute module="finance">
+          <DashboardLayout>
+            <Vouchers />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/finance/reports">
-        <DashboardLayout>
-          <FinanceReports />
-        </DashboardLayout>
+        <RoleProtectedRoute module="finance">
+          <DashboardLayout>
+            <FinanceReports />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/finance/vendors">
-        <DashboardLayout>
-          <Vendors />
-        </DashboardLayout>
+        <RoleProtectedRoute module="finance">
+          <DashboardLayout>
+            <Vendors />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/finance/purchase-orders">
-        <DashboardLayout>
-          <PurchaseOrders />
-        </DashboardLayout>
+        <RoleProtectedRoute module="finance">
+          <DashboardLayout>
+            <PurchaseOrders />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/operations/warehouses">
-        <DashboardLayout>
-          <Warehouses />
-        </DashboardLayout>
+        <RoleProtectedRoute module="operations">
+          <DashboardLayout>
+            <Warehouses />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/finance/tax">
-        <DashboardLayout>
-          <TaxSystem />
-        </DashboardLayout>
+        <RoleProtectedRoute module="finance">
+          <DashboardLayout>
+            <TaxSystem />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/finance/p2p">
-        <DashboardLayout>
-          <P2PWorkflow />
-        </DashboardLayout>
+        <RoleProtectedRoute module="finance">
+          <DashboardLayout>
+            <P2PWorkflow />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/finance/commitments">
-        <DashboardLayout>
-          <FinancialCommitments />
-        </DashboardLayout>
+        <RoleProtectedRoute module="finance">
+          <DashboardLayout>
+            <FinancialCommitments />
+          </DashboardLayout>
+        </RoleProtectedRoute>
+      </Route>
+
+      <Route path="/finance/custodies">
+        <RoleProtectedRoute module="finance">
+          <DashboardLayout><Suspense fallback={<div>...</div>}><CustodiesPage /></Suspense></DashboardLayout>
+        </RoleProtectedRoute>
+      </Route>
+
+      <Route path="/finance/salary-advances">
+        <RoleProtectedRoute module="finance">
+          <DashboardLayout><Suspense fallback={<div>...</div>}><SalaryAdvancesPage /></Suspense></DashboardLayout>
+        </RoleProtectedRoute>
+      </Route>
+
+      <Route path="/finance/warehouses">
+        <RoleProtectedRoute module="finance">
+          <DashboardLayout>
+            <Warehouses />
+          </DashboardLayout>
+        </RoleProtectedRoute>
+      </Route>
+
+      {/* Base /finance route - must come AFTER specific /finance/* routes */}
+      <Route path="/finance">
+        <RoleProtectedRoute module="finance">
+          <DashboardLayout>
+            <InvoiceList />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       {/* Fleet Module Routes */}
@@ -845,88 +930,116 @@ function Router() {
       </Route>
 
       <Route path="/fleet/fuel">
-        <DashboardLayout>
-          <FuelConsumption />
-        </DashboardLayout>
+        <RoleProtectedRoute module="fleet">
+          <DashboardLayout>
+            <FuelConsumption />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/fleet/drivers">
-        <DashboardLayout>
-          <Drivers />
-        </DashboardLayout>
+        <RoleProtectedRoute module="fleet">
+          <DashboardLayout>
+            <Drivers />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/fleet/map">
-        <DashboardLayout>
-          <FleetMap />
-        </DashboardLayout>
+        <RoleProtectedRoute module="fleet">
+          <DashboardLayout>
+            <FleetMap />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/fleet/alerts">
-        <DashboardLayout>
-          <FleetAlerts />
-        </DashboardLayout>
+        <RoleProtectedRoute module="fleet">
+          <DashboardLayout>
+            <FleetAlerts />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/fleet/reports">
-        <DashboardLayout>
-          <FleetReports />
-        </DashboardLayout>
+        <RoleProtectedRoute module="fleet">
+          <DashboardLayout>
+            <FleetReports />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/fleet/trips">
-        <DashboardLayout>
-          <FleetTrips />
-        </DashboardLayout>
+        <RoleProtectedRoute module="fleet">
+          <DashboardLayout>
+            <FleetTrips />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/fleet/geofences">
-        <DashboardLayout>
-          <FleetGeofences />
-        </DashboardLayout>
+        <RoleProtectedRoute module="fleet">
+          <DashboardLayout>
+            <FleetGeofences />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/fleet/insights">
-        <DashboardLayout>
-          <FleetInsights />
-        </DashboardLayout>
+        <RoleProtectedRoute module="fleet">
+          <DashboardLayout>
+            <FleetInsights />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       {/* Property Module Routes */}
       <Route path="/property">
-        <DashboardLayout>
-          <PropertyHome />
-        </DashboardLayout>
+        <RoleProtectedRoute module="property">
+          <DashboardLayout>
+            <PropertyHome />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/property/list">
-        <DashboardLayout>
-          <Properties />
-        </DashboardLayout>
+        <RoleProtectedRoute module="property">
+          <DashboardLayout>
+            <Properties />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/property/contracts">
-        <DashboardLayout>
-          <Contracts />
-        </DashboardLayout>
+        <RoleProtectedRoute module="property">
+          <DashboardLayout>
+            <Contracts />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/property/tenants">
-        <DashboardLayout>
-          <Tenants />
-        </DashboardLayout>
+        <RoleProtectedRoute module="property">
+          <DashboardLayout>
+            <Tenants />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/property/maintenance">
-        <DashboardLayout>
-          <PropertyMaintenance />
-        </DashboardLayout>
+        <RoleProtectedRoute module="property">
+          <DashboardLayout>
+            <PropertyMaintenance />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/property/leases">
-        <DashboardLayout>
-          <PropertyDetails />
-        </DashboardLayout>
+        <RoleProtectedRoute module="property">
+          <DashboardLayout>
+            <PropertyDetails />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       {/* Governance Module Routes */}
@@ -939,63 +1052,83 @@ function Router() {
       </Route>
 
       <Route path="/governance/policies">
-        <DashboardLayout>
-          <Policies />
-        </DashboardLayout>
+        <RoleProtectedRoute module="governance">
+          <DashboardLayout>
+            <Policies />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/governance/risks">
-        <DashboardLayout>
-          <Risks />
-        </DashboardLayout>
+        <RoleProtectedRoute module="governance">
+          <DashboardLayout>
+            <Risks />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/governance/audits">
-        <DashboardLayout>
-          <Audits />
-        </DashboardLayout>
+        <RoleProtectedRoute module="governance">
+          <DashboardLayout>
+            <Audits />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/governance/iam">
-        <DashboardLayout>
-          <IAM />
-        </DashboardLayout>
+        <RoleProtectedRoute module="governance">
+          <DashboardLayout>
+            <IAM />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/governance/compliance">
-        <DashboardLayout>
-          <Compliance />
-        </DashboardLayout>
+        <RoleProtectedRoute module="governance">
+          <DashboardLayout>
+            <Compliance />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/governance/iam-advanced">
-        <DashboardLayout>
-          <IamAdvanced />
-        </DashboardLayout>
+        <RoleProtectedRoute module="governance">
+          <DashboardLayout>
+            <IamAdvanced />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/governance/role-packs">
-        <DashboardLayout>
-          <RolePacks />
-        </DashboardLayout>
+        <RoleProtectedRoute module="governance">
+          <DashboardLayout>
+            <RolePacks />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/governance/dual-control">
-        <DashboardLayout>
-          <DualControl />
-        </DashboardLayout>
+        <RoleProtectedRoute module="governance">
+          <DashboardLayout>
+            <DualControl />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/governance/anomaly-rules">
-        <DashboardLayout>
-          <AnomalyRules />
-        </DashboardLayout>
+        <RoleProtectedRoute module="governance">
+          <DashboardLayout>
+            <AnomalyRules />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/governance/anomaly-detections">
-        <DashboardLayout>
-          <AnomalyDetections />
-        </DashboardLayout>
+        <RoleProtectedRoute module="governance">
+          <DashboardLayout>
+            <AnomalyDetections />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       {/* BI Module Routes */}
@@ -1008,58 +1141,76 @@ function Router() {
       </Route>
 
       <Route path="/bi/dashboards">
-        <DashboardLayout>
-          <Dashboards />
-        </DashboardLayout>
+        <RoleProtectedRoute module="bi">
+          <DashboardLayout>
+            <Dashboards />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/bi/kpis">
-        <DashboardLayout>
-          <KPIs />
-        </DashboardLayout>
+        <RoleProtectedRoute module="bi">
+          <DashboardLayout>
+            <KPIs />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/bi/reports">
-        <DashboardLayout>
-          <AnalyticsReports />
-        </DashboardLayout>
+        <RoleProtectedRoute module="bi">
+          <DashboardLayout>
+            <AnalyticsReports />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/bi/decision-engine">
-        <DashboardLayout>
-          <DecisionEngine />
-        </DashboardLayout>
+        <RoleProtectedRoute module="bi">
+          <DashboardLayout>
+            <DecisionEngine />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/bi/audit">
-        <DashboardLayout>
-          <BIAudit />
-        </DashboardLayout>
+        <RoleProtectedRoute module="bi">
+          <DashboardLayout>
+            <BIAudit />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/bi/data-sources">
-        <DashboardLayout>
-          <BIDataSources />
-        </DashboardLayout>
+        <RoleProtectedRoute module="bi">
+          <DashboardLayout>
+            <BIDataSources />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       {/* Requests Module Routes */}
       <Route path="/requests">
-        <DashboardLayout>
-          <RequestList />
-        </DashboardLayout>
+        <RoleProtectedRoute module="requests">
+          <DashboardLayout>
+            <RequestList />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/requests/types">
-        <DashboardLayout>
-          <RequestTypes />
-        </DashboardLayout>
+        <RoleProtectedRoute module="requests">
+          <DashboardLayout>
+            <RequestTypes />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/requests/workflows">
-        <DashboardLayout>
-          <Workflows />
-        </DashboardLayout>
+        <RoleProtectedRoute module="requests">
+          <DashboardLayout>
+            <Workflows />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/support/tickets">
@@ -1071,9 +1222,11 @@ function Router() {
       </Route>
 
       <Route path="/support/tickets/:id/comments">
-        <DashboardLayout>
-          <TicketComments />
-        </DashboardLayout>
+        <RoleProtectedRoute module="support">
+          <DashboardLayout>
+            <TicketComments />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       {/* Documents Module Routes */}
@@ -1086,21 +1239,27 @@ function Router() {
       </Route>
 
       <Route path="/documents/folders">
-        <DashboardLayout>
-          <Folders />
-        </DashboardLayout>
+        <RoleProtectedRoute module="documents">
+          <DashboardLayout>
+            <Folders />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/documents/templates">
-        <DashboardLayout>
-          <Templates />
-        </DashboardLayout>
+        <RoleProtectedRoute module="documents">
+          <DashboardLayout>
+            <Templates />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/documents/archive">
-        <DashboardLayout>
-          <Archive />
-        </DashboardLayout>
+        <RoleProtectedRoute module="documents">
+          <DashboardLayout>
+            <Archive />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       {/* Reports Module Routes */}
@@ -1113,15 +1272,19 @@ function Router() {
       </Route>
 
       <Route path="/reports/custom">
-        <DashboardLayout>
-          <CustomReports />
-        </DashboardLayout>
+        <RoleProtectedRoute module="reports">
+          <DashboardLayout>
+            <CustomReports />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/reports/scheduled">
-        <DashboardLayout>
-          <ScheduledReports />
-        </DashboardLayout>
+        <RoleProtectedRoute module="reports">
+          <DashboardLayout>
+            <ScheduledReports />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/operations">
@@ -1133,39 +1296,51 @@ function Router() {
       </Route>
 
       <Route path="/operations/projects">
-        <DashboardLayout>
-          <Projects />
-        </DashboardLayout>
+        <RoleProtectedRoute module="operations">
+          <DashboardLayout>
+            <Projects />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/projects/tasks">
-        <DashboardLayout>
-          <ProjectTasks />
-        </DashboardLayout>
+        <RoleProtectedRoute module="operations">
+          <DashboardLayout>
+            <ProjectTasks />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/projects/members">
-        <DashboardLayout>
-          <ProjectMembers />
-        </DashboardLayout>
+        <RoleProtectedRoute module="operations">
+          <DashboardLayout>
+            <ProjectMembers />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/projects/audit">
-        <DashboardLayout>
-          <ProjectsAudit />
-        </DashboardLayout>
+        <RoleProtectedRoute module="operations">
+          <DashboardLayout>
+            <ProjectsAudit />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/integrations">
-        <DashboardLayout>
-          <Integrations />
-        </DashboardLayout>
+        <RoleProtectedRoute module="integrations">
+          <DashboardLayout>
+            <Integrations />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/integrations/integrations-hub">
-        <DashboardLayout>
-          <Integrations />
-        </DashboardLayout>
+        <RoleProtectedRoute module="integrations">
+          <DashboardLayout>
+            <Integrations />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       {/* Admin Module Routes */}
@@ -1178,204 +1353,276 @@ function Router() {
       </Route>
 
       <Route path="/admin/users">
-        <DashboardLayout>
-          <Users />
-        </DashboardLayout>
+        <RoleProtectedRoute module="admin">
+          <DashboardLayout>
+            <Users />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/admin/roles">
-        <DashboardLayout>
-          <Roles />
-        </DashboardLayout>
+        <RoleProtectedRoute module="admin">
+          <DashboardLayout>
+            <Roles />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/workflow/delegations">
-        <DashboardLayout>
-          <Delegations />
-        </DashboardLayout>
+        <RoleProtectedRoute module="workflow">
+          <DashboardLayout>
+            <Delegations />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/workflow/settings">
-        <DashboardLayout>
-          <ApprovalSettingsPage />
-        </DashboardLayout>
+        <RoleProtectedRoute module="workflow">
+          <DashboardLayout>
+            <ApprovalSettingsPage />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/admin/inbox">
-        <DashboardLayout><Suspense fallback={<div>...</div>}><UnifiedInboxPage /></Suspense></DashboardLayout>
+        <RoleProtectedRoute module="admin">
+          <DashboardLayout><Suspense fallback={<div>...</div>}><UnifiedInboxPage /></Suspense></DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/hr/salary-advances">
-        <DashboardLayout><Suspense fallback={<div>...</div>}><SalaryAdvancesPage /></Suspense></DashboardLayout>
+        <RoleProtectedRoute module="hr" hrSubPage="payroll">
+          <DashboardLayout><Suspense fallback={<div>...</div>}><SalaryAdvancesPage /></Suspense></DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/hr/custodies">
-        <DashboardLayout><Suspense fallback={<div>...</div>}><CustodiesPage /></Suspense></DashboardLayout>
+        <RoleProtectedRoute module="hr" hrSubPage="employees">
+          <DashboardLayout><Suspense fallback={<div>...</div>}><CustodiesPage /></Suspense></DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/admin/pending-reserves">
-        <DashboardLayout><Suspense fallback={<div>...</div>}><PendingReservesPage /></Suspense></DashboardLayout>
+        <RoleProtectedRoute module="admin">
+          <DashboardLayout><Suspense fallback={<div>...</div>}><PendingReservesPage /></Suspense></DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/governance/state-history">
-        <DashboardLayout><Suspense fallback={<div>...</div>}><StateHistoryPage /></Suspense></DashboardLayout>
+        <RoleProtectedRoute module="governance">
+          <DashboardLayout><Suspense fallback={<div>...</div>}><StateHistoryPage /></Suspense></DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/admin/pending-balances">
-        <DashboardLayout>
-          <PendingBalancesPage />
-        </DashboardLayout>
+        <RoleProtectedRoute module="admin">
+          <DashboardLayout>
+            <PendingBalancesPage />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/admin/logs">
-        <DashboardLayout>
-          <AuditLogs />
-        </DashboardLayout>
+        <RoleProtectedRoute module="admin">
+          <DashboardLayout>
+            <AuditLogs />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/admin/event-log">
-        <DashboardLayout>
-          <EventLog />
-        </DashboardLayout>
+        <RoleProtectedRoute module="admin">
+          <DashboardLayout>
+            <EventLog />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/admin/workflow-audit">
-        <DashboardLayout>
-          <WorkflowAudit />
-        </DashboardLayout>
+        <RoleProtectedRoute module="admin">
+          <DashboardLayout>
+            <WorkflowAudit />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/admin/system">
-        <DashboardLayout>
-          <SystemAdmin />
-        </DashboardLayout>
+        <RoleProtectedRoute module="admin">
+          <DashboardLayout>
+            <SystemAdmin />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/platform/jobs">
-        <DashboardLayout>
-          <JobsDashboard />
-        </DashboardLayout>
+        <RoleProtectedRoute module="platform">
+          <DashboardLayout>
+            <JobsDashboard />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/platform/scheduler">
-        <DashboardLayout>
-          <SchedulerDashboard />
-        </DashboardLayout>
+        <RoleProtectedRoute module="platform">
+          <DashboardLayout>
+            <SchedulerDashboard />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/admin/automation">
-        <DashboardLayout>
-          <AutomationCenter />
-        </DashboardLayout>
+        <RoleProtectedRoute module="admin">
+          <DashboardLayout>
+            <AutomationCenter />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/admin/governance" /* MOVED: use /governance instead */>
-        <DashboardLayout>
-          <GovernanceDashboard />
-        </DashboardLayout>
+        <RoleProtectedRoute module="governance">
+          <DashboardLayout>
+            <GovernanceDashboard />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/admin/sla">
-        <DashboardLayout>
-          <SLADashboard />
-        </DashboardLayout>
+        <RoleProtectedRoute module="admin">
+          <DashboardLayout>
+            <SLADashboard />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/governance/audit-log">
-        <DashboardLayout>
-          <GovernanceAuditLog />
-        </DashboardLayout>
+        <RoleProtectedRoute module="governance">
+          <DashboardLayout>
+            <GovernanceAuditLog />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/workflow/flows">
-        <DashboardLayout>
-          <WorkflowsDashboard />
-        </DashboardLayout>
+        <RoleProtectedRoute module="workflow">
+          <DashboardLayout>
+            <WorkflowsDashboard />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/governance/exceptions">
-        <DashboardLayout>
-          <ExceptionsDashboard />
-        </DashboardLayout>
+        <RoleProtectedRoute module="governance">
+          <DashboardLayout>
+            <ExceptionsDashboard />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/admin/subscriptions">
-        <DashboardLayout>
-          <Subscriptions />
-        </DashboardLayout>
+        <RoleProtectedRoute module="admin">
+          <DashboardLayout>
+            <Subscriptions />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/admin/comparison">
-        <DashboardLayout>
-          <BranchComparison />
-        </DashboardLayout>
+        <RoleProtectedRoute module="admin">
+          <DashboardLayout>
+            <BranchComparison />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/admin/companies-overview">
-        <DashboardLayout>
-          <CompaniesOverview />
-        </DashboardLayout>
+        <RoleProtectedRoute module="admin">
+          <DashboardLayout>
+            <CompaniesOverview />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/governance/decisions">
-        <DashboardLayout>
-          <DecisionsDashboard />
-        </DashboardLayout>
+        <RoleProtectedRoute module="governance">
+          <DashboardLayout>
+            <DecisionsDashboard />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/admin/decisions">
-        <DashboardLayout>
-          <DecisionsDashboard />
-        </DashboardLayout>
+        <RoleProtectedRoute module="admin">
+          <DashboardLayout>
+            <DecisionsDashboard />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/admin/delegations">
-        <DashboardLayout>
-          <Delegations />
-        </DashboardLayout>
+        <RoleProtectedRoute module="admin">
+          <DashboardLayout>
+            <Delegations />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/admin/approval-settings">
-        <DashboardLayout>
-          <ApprovalSettingsPage />
-        </DashboardLayout>
+        <RoleProtectedRoute module="admin">
+          <DashboardLayout>
+            <ApprovalSettingsPage />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/admin/exceptions">
-        <DashboardLayout>
-          <ExceptionsDashboard />
-        </DashboardLayout>
+        <RoleProtectedRoute module="admin">
+          <DashboardLayout>
+            <ExceptionsDashboard />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/admin/state-history">
-        <DashboardLayout>
-          <StateHistoryPage />
-        </DashboardLayout>
+        <RoleProtectedRoute module="admin">
+          <DashboardLayout>
+            <StateHistoryPage />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/admin/workflows">
-        <DashboardLayout>
-          <WorkflowsDashboard />
-        </DashboardLayout>
+        <RoleProtectedRoute module="admin">
+          <DashboardLayout>
+            <WorkflowsDashboard />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/admin/scheduler">
-        <DashboardLayout>
-          <SchedulerDashboard />
-        </DashboardLayout>
+        <RoleProtectedRoute module="admin">
+          <DashboardLayout>
+            <SchedulerDashboard />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/admin/jobs">
-        <DashboardLayout>
-          <JobsDashboard />
-        </DashboardLayout>
+        <RoleProtectedRoute module="admin">
+          <DashboardLayout>
+            <JobsDashboard />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/admin/letterhead">
-        <DashboardLayout>
-          <LetterheadSettings />
-        </DashboardLayout>
+        <RoleProtectedRoute module="admin">
+          <DashboardLayout>
+            <LetterheadSettings />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/admin/governance-audit">
-        <DashboardLayout>
-          <GovernanceAuditLog />
-        </DashboardLayout>
+        <RoleProtectedRoute module="admin">
+          <DashboardLayout>
+            <GovernanceAuditLog />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/settings/branding">
@@ -1404,9 +1651,11 @@ function Router() {
 
       {/* Security & Performance Dashboard */}
       <Route path="/admin/security">
-        <DashboardLayout>
-          <SecurityDashboard />
-        </DashboardLayout>
+        <RoleProtectedRoute module="admin">
+          <DashboardLayout>
+            <SecurityDashboard />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/settings/system">
@@ -1498,45 +1747,59 @@ function Router() {
       </Route>
 
       <Route path="/logs/messages">
-        <DashboardLayout>
-          <MessageLogs />
-        </DashboardLayout>
+        <RoleProtectedRoute module="admin">
+          <DashboardLayout>
+            <MessageLogs />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/platform/dms">
-        <DashboardLayout>
-          <DmsAdvanced />
-        </DashboardLayout>
+        <RoleProtectedRoute module="platform">
+          <DashboardLayout>
+            <DmsAdvanced />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/platform/ai-policy">
-        <DashboardLayout>
-          <AiPolicy />
-        </DashboardLayout>
+        <RoleProtectedRoute module="platform">
+          <DashboardLayout>
+            <AiPolicy />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/platform/monitoring">
-        <DashboardLayout>
-          <PlatformMonitoring />
-        </DashboardLayout>
+        <RoleProtectedRoute module="platform">
+          <DashboardLayout>
+            <PlatformMonitoring />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/platform/evidence">
-        <DashboardLayout>
-          <EvidencePacks />
-        </DashboardLayout>
+        <RoleProtectedRoute module="platform">
+          <DashboardLayout>
+            <EvidencePacks />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/platform/upgrades">
-        <DashboardLayout>
-          <UpgradeManager />
-        </DashboardLayout>
+        <RoleProtectedRoute module="platform">
+          <DashboardLayout>
+            <UpgradeManager />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/platform/alerts">
-        <DashboardLayout>
-          <Alerts />
-        </DashboardLayout>
+        <RoleProtectedRoute module="platform">
+          <DashboardLayout>
+            <Alerts />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/platform/calendar">
@@ -1552,9 +1815,11 @@ function Router() {
       </Route>
 
       <Route path="/platform/notify-rules">
-        <DashboardLayout>
-          <NotifyRules />
-        </DashboardLayout>
+        <RoleProtectedRoute module="platform">
+          <DashboardLayout>
+            <NotifyRules />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/platform/notify-prefs">
@@ -1577,40 +1842,52 @@ function Router() {
 
       {/* Communications Module Routes */}
       <Route path="/comms">
-        <DashboardLayout>
-          <Communications />
-        </DashboardLayout>
+        <RoleProtectedRoute module="comms">
+          <DashboardLayout>
+            <Communications />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/comms/letters">
-        <DashboardLayout>
-          <Letters />
-        </DashboardLayout>
+        <RoleProtectedRoute module="comms">
+          <DashboardLayout>
+            <Letters />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/comms/official-letters">
-        <DashboardLayout>
-          <OfficialLetters />
-        </DashboardLayout>
+        <RoleProtectedRoute module="comms">
+          <DashboardLayout>
+            <OfficialLetters />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       {/* Correspondence Module Routes - نظام الصادر والوارد */}
       <Route path="/correspondence/outgoing">
-        <DashboardLayout>
-          <OutgoingMail />
-        </DashboardLayout>
+        <RoleProtectedRoute module="comms">
+          <DashboardLayout>
+            <OutgoingMail />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/correspondence/incoming">
-        <DashboardLayout>
-          <IncomingMail />
-        </DashboardLayout>
+        <RoleProtectedRoute module="comms">
+          <DashboardLayout>
+            <IncomingMail />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/correspondence/transactions">
-        <DashboardLayout>
-          <Transactions />
-        </DashboardLayout>
+        <RoleProtectedRoute module="comms">
+          <DashboardLayout>
+            <Transactions />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       {/* Legal Module Routes */}
@@ -1623,89 +1900,117 @@ function Router() {
       </Route>
 
       <Route path="/legal/contracts">
-        <DashboardLayout>
-          <LegalContracts />
-        </DashboardLayout>
+        <RoleProtectedRoute module="legal">
+          <DashboardLayout>
+            <LegalContracts />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/legal/documents">
-        <DashboardLayout>
-          <LegalDocuments />
-        </DashboardLayout>
+        <RoleProtectedRoute module="legal">
+          <DashboardLayout>
+            <LegalDocuments />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/legal/audit">
-        <DashboardLayout>
-          <LegalAudit />
-        </DashboardLayout>
+        <RoleProtectedRoute module="legal">
+          <DashboardLayout>
+            <LegalAudit />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       {/* Marketing Module Routes */}
       <Route path="/marketing">
-        <DashboardLayout>
-          <Marketing />
-        </DashboardLayout>
+        <RoleProtectedRoute module="marketing">
+          <DashboardLayout>
+            <Marketing />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       {/* Store Module Routes */}
       <Route path="/store">
-        <DashboardLayout>
-          <Store />
-        </DashboardLayout>
+        <RoleProtectedRoute module="store">
+          <DashboardLayout>
+            <Store />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/store/orders">
-        <DashboardLayout>
-          <Orders />
-        </DashboardLayout>
+        <RoleProtectedRoute module="store">
+          <DashboardLayout>
+            <Orders />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       {/* Workflow Module Routes */}
       <Route path="/workflow">
-        <DashboardLayout>
-          <Workflow />
-        </DashboardLayout>
+        <RoleProtectedRoute module="workflow">
+          <DashboardLayout>
+            <Workflow />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/workflow/approvals">
-        <DashboardLayout>
-          <Approvals />
-        </DashboardLayout>
+        <RoleProtectedRoute module="workflow">
+          <DashboardLayout>
+            <Approvals />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       {/* Public Site Module Routes */}
       <Route path="/public-site">
-        <DashboardLayout>
-          <PublicSite />
-        </DashboardLayout>
+        <RoleProtectedRoute module="public_site">
+          <DashboardLayout>
+            <PublicSite />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       <Route path="/public-site/blog">
-        <DashboardLayout>
-          <Blog />
-        </DashboardLayout>
+        <RoleProtectedRoute module="public_site">
+          <DashboardLayout>
+            <Blog />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
       {/* ═══ Auto-wired orphan pages ═══ */}
       <Route path="/admin/beneficiary-rules">
-        <DashboardLayout>
-          <BeneficiaryRules />
-        </DashboardLayout>
+        <RoleProtectedRoute module="admin">
+          <DashboardLayout>
+            <BeneficiaryRules />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/finance/budgets">
-        <DashboardLayout>
-          <Budgets />
-        </DashboardLayout>
+        <RoleProtectedRoute module="finance">
+          <DashboardLayout>
+            <Budgets />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/legal/cases">
-        <DashboardLayout>
-          <Cases />
-        </DashboardLayout>
+        <RoleProtectedRoute module="legal">
+          <DashboardLayout>
+            <Cases />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/operations/dispatch-dashboard">
-        <DashboardLayout>
-          <DispatchDashboard />
-        </DashboardLayout>
+        <RoleProtectedRoute module="operations">
+          <DashboardLayout>
+            <DispatchDashboard />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/settings/finance/fiscal-periods">
         <RoleProtectedRoute module="settings">
@@ -1715,94 +2020,130 @@ function Router() {
         </RoleProtectedRoute>
       </Route>
       <Route path="/fleet/fleet-daily-reports">
-        <DashboardLayout>
-          <FleetDailyReports />
-        </DashboardLayout>
+        <RoleProtectedRoute module="fleet">
+          <DashboardLayout>
+            <FleetDailyReports />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/fleet/fleet-daily-routes">
-        <DashboardLayout>
-          <FleetDailyRoutes />
-        </DashboardLayout>
+        <RoleProtectedRoute module="fleet">
+          <DashboardLayout>
+            <FleetDailyRoutes />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/fleet/fleet-dispatch-recs">
-        <DashboardLayout>
-          <FleetDispatchRecs />
-        </DashboardLayout>
+        <RoleProtectedRoute module="fleet">
+          <DashboardLayout>
+            <FleetDispatchRecs />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/fleet/fleet-driver-scores">
-        <DashboardLayout>
-          <FleetDriverScores />
-        </DashboardLayout>
+        <RoleProtectedRoute module="fleet">
+          <DashboardLayout>
+            <FleetDriverScores />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/fleet/fleet-e-t-a">
-        <DashboardLayout>
-          <FleetETA />
-        </DashboardLayout>
+        <RoleProtectedRoute module="fleet">
+          <DashboardLayout>
+            <FleetETA />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/fleet/fleet-exports">
-        <DashboardLayout>
-          <FleetExports />
-        </DashboardLayout>
+        <RoleProtectedRoute module="fleet">
+          <DashboardLayout>
+            <FleetExports />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/fleet/fleet-geo-events">
-        <DashboardLayout>
-          <FleetGeoEvents />
-        </DashboardLayout>
+        <RoleProtectedRoute module="fleet">
+          <DashboardLayout>
+            <FleetGeoEvents />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/fleet/fleet-heatmap">
-        <DashboardLayout>
-          <FleetHeatmap />
-        </DashboardLayout>
+        <RoleProtectedRoute module="fleet">
+          <DashboardLayout>
+            <FleetHeatmap />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/fleet/fleet-incident-assist">
-        <DashboardLayout>
-          <FleetIncidentAssist />
-        </DashboardLayout>
+        <RoleProtectedRoute module="fleet">
+          <DashboardLayout>
+            <FleetIncidentAssist />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/fleet/fleet-replay">
-        <DashboardLayout>
-          <FleetReplay />
-        </DashboardLayout>
+        <RoleProtectedRoute module="fleet">
+          <DashboardLayout>
+            <FleetReplay />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/fleet/fleet-route-targets">
-        <DashboardLayout>
-          <FleetRouteTargets />
-        </DashboardLayout>
+        <RoleProtectedRoute module="fleet">
+          <DashboardLayout>
+            <FleetRouteTargets />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/fleet/fleet-stops">
-        <DashboardLayout>
-          <FleetStops />
-        </DashboardLayout>
+        <RoleProtectedRoute module="fleet">
+          <DashboardLayout>
+            <FleetStops />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/fleet/fleet-trip-risk">
-        <DashboardLayout>
-          <FleetTripRisk />
-        </DashboardLayout>
+        <RoleProtectedRoute module="fleet">
+          <DashboardLayout>
+            <FleetTripRisk />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/fleet/fleet-trip-segments">
-        <DashboardLayout>
-          <FleetTripSegments />
-        </DashboardLayout>
+        <RoleProtectedRoute module="fleet">
+          <DashboardLayout>
+            <FleetTripSegments />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/fleet/fuel-logs">
-        <DashboardLayout>
-          <FuelLogs />
-        </DashboardLayout>
+        <RoleProtectedRoute module="fleet">
+          <DashboardLayout>
+            <FuelLogs />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/fleet/insurance">
-        <DashboardLayout>
-          <Insurance />
-        </DashboardLayout>
+        <RoleProtectedRoute module="fleet">
+          <DashboardLayout>
+            <Insurance />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/integrations/:rest*">
-        <DashboardLayout>
-          <IntegrationsHub />
-        </DashboardLayout>
+        <RoleProtectedRoute module="integrations">
+          <DashboardLayout>
+            <IntegrationsHub />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/property/:id">
-        <DashboardLayout>
-          <Leases />
-        </DashboardLayout>
+        <RoleProtectedRoute module="property">
+          <DashboardLayout>
+            <Leases />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/settings/hr/leave-types">
         <RoleProtectedRoute module="settings">
@@ -1812,9 +2153,11 @@ function Router() {
         </RoleProtectedRoute>
       </Route>
       <Route path="/comms/official-communications">
-        <DashboardLayout>
-          <OfficialCommunications />
-        </DashboardLayout>
+        <RoleProtectedRoute module="comms">
+          <DashboardLayout>
+            <OfficialCommunications />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/settings/templates">
         <RoleProtectedRoute module="settings">
@@ -1824,14 +2167,18 @@ function Router() {
         </RoleProtectedRoute>
       </Route>
       <Route path="/finance/receivables">
-        <DashboardLayout>
-          <Receivables />
-        </DashboardLayout>
+        <RoleProtectedRoute module="finance">
+          <DashboardLayout>
+            <Receivables />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/fleet/reservations">
-        <DashboardLayout>
-          <Reservations />
-        </DashboardLayout>
+        <RoleProtectedRoute module="fleet">
+          <DashboardLayout>
+            <Reservations />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/settings/hr/work-schedules">
         <RoleProtectedRoute module="settings">
@@ -1841,29 +2188,39 @@ function Router() {
         </RoleProtectedRoute>
       </Route>
       <Route path="/marketing/campaigns">
-        <DashboardLayout>
-          <Campaigns />
-        </DashboardLayout>
+        <RoleProtectedRoute module="marketing">
+          <DashboardLayout>
+            <Campaigns />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/hr/enrollments">
-        <DashboardLayout>
-          <Enrollments />
-        </DashboardLayout>
+        <RoleProtectedRoute module="hr" hrSubPage="training">
+          <DashboardLayout>
+            <Enrollments />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/hr/interviews">
-        <DashboardLayout>
-          <Interviews />
-        </DashboardLayout>
+        <RoleProtectedRoute module="hr" hrSubPage="recruitment">
+          <DashboardLayout>
+            <Interviews />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/marketing/leads">
-        <DashboardLayout>
-          <Leads />
-        </DashboardLayout>
+        <RoleProtectedRoute module="marketing">
+          <DashboardLayout>
+            <Leads />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/finance/payments">
-        <DashboardLayout>
-          <Payments />
-        </DashboardLayout>
+        <RoleProtectedRoute module="finance">
+          <DashboardLayout>
+            <Payments />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
       <Route path="/settings/hr/positions">
         <RoleProtectedRoute module="settings">
@@ -1873,33 +2230,35 @@ function Router() {
         </RoleProtectedRoute>
       </Route>
       <Route path="/hr/programs">
-        <DashboardLayout>
-          <Programs />
-        </DashboardLayout>
+        <RoleProtectedRoute module="hr" hrSubPage="training">
+          <DashboardLayout>
+            <Programs />
+          </DashboardLayout>
+        </RoleProtectedRoute>
       </Route>
 
 
       {/* v52: Governance Control Routes */}
       <Route path="/governance/permissions">
-        <DashboardLayout><PermissionMatrix /></DashboardLayout>
+        <RoleProtectedRoute module="governance"><DashboardLayout><PermissionMatrix /></DashboardLayout></RoleProtectedRoute>
       </Route>
       <Route path="/governance/operation-limits">
-        <DashboardLayout><OperationLimits /></DashboardLayout>
+        <RoleProtectedRoute module="governance"><DashboardLayout><OperationLimits /></DashboardLayout></RoleProtectedRoute>
       </Route>
       <Route path="/governance/business-rules">
-        <DashboardLayout><BusinessRulesPage /></DashboardLayout>
+        <RoleProtectedRoute module="governance"><DashboardLayout><BusinessRulesPage /></DashboardLayout></RoleProtectedRoute>
       </Route>
       <Route path="/governance/business-rules-builder">
-        <DashboardLayout><BusinessRulesBuilder /></DashboardLayout>
+        <RoleProtectedRoute module="governance"><DashboardLayout><BusinessRulesBuilder /></DashboardLayout></RoleProtectedRoute>
       </Route>
       <Route path="/governance/session-monitor">
-        <DashboardLayout><SessionMonitor /></DashboardLayout>
+        <RoleProtectedRoute module="governance"><DashboardLayout><SessionMonitor /></DashboardLayout></RoleProtectedRoute>
       </Route>
       <Route path="/governance/access-restrictions">
-        <DashboardLayout><AccessRestrictions /></DashboardLayout>
+        <RoleProtectedRoute module="governance"><DashboardLayout><AccessRestrictions /></DashboardLayout></RoleProtectedRoute>
       </Route>
       <Route path="/governance/permission-log">
-        <DashboardLayout><PermissionChangeLog /></DashboardLayout>
+        <RoleProtectedRoute module="governance"><DashboardLayout><PermissionChangeLog /></DashboardLayout></RoleProtectedRoute>
       </Route>
       <Route path="/settings/security-config">
         <RoleProtectedRoute module="settings"><DashboardLayout><SecuritySettingsPage /></DashboardLayout></RoleProtectedRoute>

@@ -542,6 +542,15 @@ export const useDeletePayroll = () => {
     });
 };
 
+export const useRunMonthlyPayroll = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (data: { month: number; year: number; branchId?: number }) =>
+            api.post('/hr/payroll/run-monthly', data).then(res => res.data),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['payroll'] }),
+    });
+};
+
 // Payroll Deductions
 export const usePayrollDeductions = (payrollRecordId: number | null) => useQuery({
     queryKey: ['payroll-deductions', payrollRecordId],
