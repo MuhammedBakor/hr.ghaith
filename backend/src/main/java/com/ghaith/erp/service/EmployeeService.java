@@ -285,7 +285,7 @@ public class EmployeeService {
     }
 
     public java.util.Map<String, String> createSimpleEmployee(String firstName, String lastName, String email,
-            String phone, Long branchId, Long departmentId, Long positionId, String roleStr, Long managerId,
+            String phone, String jobTitle, Long branchId, Long departmentId, Long positionId, String roleStr, Long managerId,
             java.math.BigDecimal salary, java.math.BigDecimal housingAllowance, java.math.BigDecimal transportAllowance,
             Long shiftId) {
 
@@ -307,6 +307,7 @@ public class EmployeeService {
         employee.setLastName(lastName);
         employee.setEmail(email);
         employee.setPhone(phone);
+        if (jobTitle != null) employee.setJobTitle(jobTitle);
         employee.setEmployeeNumber(generateEmployeeNumber());
         employee.setStatus(Employee.EmployeeStatus.inactive);
         employee.setHireDate(LocalDate.now().toString());
@@ -412,6 +413,7 @@ public class EmployeeService {
         if (employeeDetails.getLastName() != null) employee.setLastName(employeeDetails.getLastName());
         if (employeeDetails.getEmail() != null) employee.setEmail(employeeDetails.getEmail());
         if (employeeDetails.getPhone() != null) employee.setPhone(employeeDetails.getPhone());
+        if (employeeDetails.getJobTitle() != null) employee.setJobTitle(employeeDetails.getJobTitle());
         if (employeeDetails.getSalary() != null) employee.setSalary(employeeDetails.getSalary());
         if (employeeDetails.getHousingAllowance() != null) employee.setHousingAllowance(employeeDetails.getHousingAllowance());
         if (employeeDetails.getTransportAllowance() != null) employee.setTransportAllowance(employeeDetails.getTransportAllowance());

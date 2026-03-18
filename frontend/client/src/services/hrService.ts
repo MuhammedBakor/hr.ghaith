@@ -32,6 +32,7 @@ export interface Employee {
     phone?: string;
     department?: string;
     position?: string;
+    jobTitle?: string;
     status: EmployeeStatus;
     salary?: number;
 }

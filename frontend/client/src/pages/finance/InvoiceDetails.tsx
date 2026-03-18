@@ -69,7 +69,6 @@ const allowedTransitions: Record<string, string[]> = {
 };
 
 export default function InvoiceDetails() {
-  const { id } = useParams<{ id: string }>();
   const { data: currentUser, isError, error} = useQuery({
     queryKey: ['auth', 'me'],
     queryFn: () => api.get('/auth/me').then(r => r.data),
@@ -111,35 +110,23 @@ export default function InvoiceDetails() {
     notes: "",
   });
 
-  // جلب بيانات الفاتورة
+  // جلب بيانات الفاتورة (items و payments مضمّنة في الاستجابة)
   const { data: invoice, isLoading, refetch } = useQuery({
     queryKey: ['invoices', invoiceId],
-    queryFn: () => api.get(`/invoices/${invoiceId}`).then(r => r.data),
+    queryFn: () => api.get(`/finance/invoices/${invoiceId}`).then(r => r.data),
     enabled: invoiceId > 0,
   });
 
-  // جلب بنود الفاتورة
-  const { data: items = [], refetch: refetchItems } = useQuery({
-    queryKey: ['invoices', invoiceId, 'items'],
-    queryFn: () => api.get(`/invoices/${invoiceId}/items`).then(r => r.data),
-    enabled: invoiceId > 0,
-  });
-
-  // جلب المدفوعات
-  const { data: payments = [], refetch: refetchPayments } = useQuery({
-    queryKey: ['invoices', invoiceId, 'payments'],
-    queryFn: () => api.get(`/invoices/${invoiceId}/payments`).then(r => r.data),
-    enabled: invoiceId > 0,
-  });
+  const items: any[] = invoice?.items ?? [];
+  const payments: any[] = invoice?.payments ?? [];
 
   // Mutations
   const addItemMutation = useMutation({
-    mutationFn: (data: any) => api.post(`/invoices/${invoiceId}/items`, data).then(r => r.data),
+    mutationFn: (data: any) => api.post(`/finance/invoices/${invoiceId}/items`, data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم إضافة البند بنجاح");
       setShowAddItem(false);
       setNewItem({ description: "", quantity: 1, unitPrice: "", taxRate: "15", discount: "0" });
-      refetchItems();
       refetch();
     },
     onError: (error: any) => {
@@ -148,10 +135,9 @@ export default function InvoiceDetails() {
   });
 
   const deleteItemMutation = useMutation({
-    mutationFn: (data: any) => api.delete(`/invoices/items/${data.id}`, { data: { reason: data.reason } }).then(r => r.data),
+    mutationFn: (data: any) => api.delete(`/finance/invoices/items/${data.id}`, { data: { reason: data.reason } }).then(r => r.data),
     onSuccess: () => {
       toast.success("تم حذف البند بنجاح");
-      refetchItems();
       refetch();
     },
     onError: (error: any) => {
@@ -160,12 +146,11 @@ export default function InvoiceDetails() {
   });
 
   const addPaymentMutation = useMutation({
-    mutationFn: (data: any) => api.post(`/invoices/${invoiceId}/payments`, data).then(r => r.data),
+    mutationFn: (data: any) => api.post(`/finance/invoices/${invoiceId}/payments`, data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم تسجيل الدفعة بنجاح");
       setShowAddPayment(false);
       setNewPayment({ amount: "", paymentMethod: "bank_transfer", reference: "", notes: "" });
-      refetchPayments();
       refetch();
     },
     onError: (error: any) => {
@@ -174,7 +159,7 @@ export default function InvoiceDetails() {
   });
 
   const updateStatusMutation = useMutation({
-    mutationFn: (data: any) => api.put(`/invoices/${data.id}/status`, data).then(r => r.data),
+    mutationFn: (data: any) => api.put(`/finance/invoices/${data.id}/status`, data).then(r => r.data),
     onSuccess: () => {
       toast.success("تم تحديث حالة الفاتورة بنجاح");
       setShowStatusChange(false);

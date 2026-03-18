@@ -31,17 +31,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Plus, Search, Filter, FileText, Clock, CheckCircle2, AlertCircle, MoreVertical, Eye, Edit, Trash2, Send, CreditCard, Download, Printer, History, XCircle, ArrowUpRight, ArrowRight, Loader2 } from "lucide-react";
+import { Plus, Search, Filter, FileText, Clock, CheckCircle2, AlertCircle, Eye, Edit, Trash2, Send, CreditCard, History, XCircle, ArrowUpRight, ArrowRight, Loader2 } from "lucide-react";
 import { useAppContext } from '@/contexts/AppContext';
 import { PrintButton } from "@/components/PrintButton";
 
@@ -281,7 +274,15 @@ export default function Invoices() {
 
   const formatDate = (date: string | Date | null) => {
     if (!date) return "-";
-    return formatDate(date);
+    try {
+      return new Intl.DateTimeFormat("ar-SA", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(new Date(date as string));
+    } catch {
+      return String(date);
+    }
   };
 
   // عرض نموذج إنشاء فاتورة جديدة
@@ -334,13 +335,31 @@ export default function Invoices() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>المبلغ (ر.س.) *</Label>
+                <Label>المبلغ قبل الضريبة (ر.س.) *</Label>
                 <Input
                   type="number"
-                  value={newInvoice.amount?.toLocaleString()}
+                  min="0"
+                  step="0.01"
+                  value={newInvoice.amount}
                   onChange={(e) => setNewInvoice({ ...newInvoice, amount: e.target.value })}
                   placeholder="0.00"
                 />
+                {newInvoice.amount && Number(newInvoice.amount) > 0 && (
+                  <div className="text-xs text-muted-foreground space-y-0.5 bg-muted/50 rounded p-2">
+                    <div className="flex justify-between">
+                      <span>المبلغ قبل الضريبة:</span>
+                      <span>{formatCurrency(Number(newInvoice.amount))}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>ضريبة القيمة المضافة (15%):</span>
+                      <span>{formatCurrency(Number(newInvoice.amount) * 0.15)}</span>
+                    </div>
+                    <div className="flex justify-between font-semibold border-t pt-0.5 mt-0.5">
+                      <span>الإجمالي شامل الضريبة:</span>
+                      <span>{formatCurrency(Number(newInvoice.amount) * 1.15)}</span>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>تاريخ الاستحقاق</Label>
@@ -812,8 +831,8 @@ export default function Invoices() {
       </Card>
 
       {/* Invoices Table */}
-      <Card>
-        <CardContent className="p-0">
+      <Card className="overflow-visible">
+        <CardContent className="p-0 overflow-visible">
           <Table>
             <TableHeader>
               <TableRow>
@@ -860,64 +879,61 @@ export default function Invoices() {
                         </Badge>
                       </TableCell>
                       <TableCell>{formatDate(invoice.createdAt)}</TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" aria-label="تعديل">
-                              <MoreVertical className="h-4 w-4" />
+                      <TableCell className="text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            title="عرض التفاصيل"
+                            onClick={() => {
+                              setSelectedInvoice(invoice);
+                              setView('details');
+                            }}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            title="تغيير الحالة"
+                            onClick={() => {
+                              setSelectedInvoice(invoice);
+                              setStatusChange({ status: "", reason: "" });
+                              setView('status');
+                            }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          {invoice.status !== "paid" && invoice.status !== "cancelled" && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              title="تسجيل دفعة"
+                              onClick={() => {
+                                setSelectedInvoice(invoice);
+                                resetPaymentForm();
+                                setView('payment');
+                              }}
+                            >
+                              <CreditCard className="h-4 w-4" />
                             </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setSelectedInvoice(invoice);
-                                setView('details');
-                              }}
-                            >
-                              <Eye className="ms-2 h-4 w-4" />
-                              عرض التفاصيل
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setSelectedInvoice(invoice);
-                                setStatusChange({ status: "", reason: "" });
-                                setView('status');
-                              }}
-                            >
-                              <Edit className="ms-2 h-4 w-4" />
-                              تغيير الحالة
-                            </DropdownMenuItem>
-                            {invoice.status !== "paid" && invoice.status !== "cancelled" && (
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setSelectedInvoice(invoice);
-                                  resetPaymentForm();
-                                  setView('payment');
-                                }}
-                              >
-                                <CreditCard className="ms-2 h-4 w-4" />
-                                تسجيل دفعة
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => { window.print(); }}>
-                              <Printer className="ms-2 h-4 w-4" />
-                              طباعة
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => { toast.success('جاري تصدير PDF...'); window.print(); }}>
-                              <Download className="ms-2 h-4 w-4" />
-                              تصدير PDF
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-red-600"
-                              onClick={() => { if (window.confirm('هل أنت متأكد من الحذف؟')) handleDelete(invoice) }}
-                            >
-                              <Trash2 className="ms-2 h-4 w-4" />
-                              حذف
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            title="حذف"
+                            onClick={() => {
+                              setInvoiceToDelete(invoice);
+                              setDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );

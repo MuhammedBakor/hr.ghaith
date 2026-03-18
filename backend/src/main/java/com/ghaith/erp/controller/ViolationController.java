@@ -8,6 +8,7 @@ import com.ghaith.erp.repository.ViolationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,11 +26,10 @@ public class ViolationController {
     private final EmployeeRepository employeeRepository;
 
     /** GET /api/v1/hr/violations
-     *  - ?employeeId=X  → violations received by that employee (for my-violations page)
-     *  - ?sentByUserId=X → violations sent by that user (for dept manager own-sent list)
-     *  - no params → all violations (for admin/GM)
+     *  All roles can view their own violations; managers see all.
      */
     @GetMapping
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<Violation>> getViolations(
             @RequestParam(required = false) Long employeeId,
             @RequestParam(required = false) Long sentByUserId) {
@@ -43,8 +43,9 @@ public class ViolationController {
         return ResponseEntity.ok(violationRepository.findAll());
     }
 
-    /** POST /api/v1/hr/violations — create a new violation */
+    /** POST /api/v1/hr/violations — supervisors and managers can issue violations */
     @PostMapping
+    @PreAuthorize("hasAnyRole('OWNER','GENERAL_MANAGER','DEPARTEMENT_MANAGER','SUPERVISOR')")
     public ResponseEntity<?> createViolation(
             @RequestBody Map<String, Object> body,
             Authentication authentication) {
@@ -123,6 +124,38 @@ public class ViolationController {
         if (body.get("description") != null) violation.setDescription(body.get("description").toString());
         if (body.get("violationDate") != null) violation.setViolationDate(LocalDate.parse(body.get("violationDate").toString()));
         if (body.get("status") != null) violation.setStatus(body.get("status").toString());
+
+        return ResponseEntity.ok(violationRepository.save(violation));
+    }
+
+    /** POST /api/v1/hr/violations/{id}/appeal — employee submits appeal within 15 days */
+    @PostMapping("/{id}/appeal")
+    public ResponseEntity<?> appealViolation(
+            @PathVariable Long id,
+            @RequestBody(required = false) Map<String, Object> body) {
+
+        Optional<Violation> opt = violationRepository.findById(id);
+        if (opt.isEmpty()) return ResponseEntity.notFound().build();
+
+        Violation violation = opt.get();
+
+        // Check 15-day window
+        if (violation.getViolationDate() != null) {
+            long daysSince = java.time.temporal.ChronoUnit.DAYS.between(violation.getViolationDate(), LocalDate.now());
+            if (daysSince > 15) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("message", "انتهت مدة الاستئناف (15 يوماً)"));
+            }
+        }
+
+        if ("submitted".equals(violation.getAppealStatus())) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", "تم تقديم استئناف بالفعل على هذه المخالفة"));
+        }
+
+        String reason = body != null && body.get("reason") != null ? body.get("reason").toString() : "";
+        violation.setAppealStatus("submitted");
+        violation.setAppealReason(reason);
 
         return ResponseEntity.ok(violationRepository.save(violation));
     }

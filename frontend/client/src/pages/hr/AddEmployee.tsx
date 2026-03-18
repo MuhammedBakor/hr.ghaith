@@ -49,7 +49,7 @@ export default function AddEmployee() {
   const preDeptId = urlParams.get('departmentId') || '';
 
   const [formData, setFormData] = useState({
-    firstName: '', lastName: '', email: '', phone: '',
+    firstName: '', lastName: '', email: '', phone: '', jobTitle: '',
     departmentId: preDeptId, branchId: String(selectedBranchId || ''), positionId: '', roleCode: preRole,
     managerId: '', shiftId: '', joinDate: new Date().toISOString().split('T')[0], workType: 'full_time',
     nationalId: '', nationality: '', dateOfBirth: '', gender: '', maritalStatus: '', address: '',
@@ -155,6 +155,7 @@ export default function AddEmployee() {
         lastName: formData.lastName,
         email: formData.email,
         phone: formData.phone,
+        jobTitle: formData.jobTitle || undefined,
         department: formData.departmentId ? { id: parseInt(formData.departmentId) } : undefined,
         position: formData.positionId ? { id: parseInt(formData.positionId) } : undefined,
         branch: formData.branchId ? { id: Number(formData.branchId) } : undefined,
@@ -282,9 +283,15 @@ export default function AddEmployee() {
                   <Input placeholder="+966 5X XXX XXXX" value={formData.phone} onChange={(e) => updateField('phone', e.target.value)} />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label>رقم الهوية الوطنية</Label>
-                <Input placeholder="اختياري — الموظف يُكمله عند التفعيل" value={formData.nationalId} onChange={(e) => updateField('nationalId', e.target.value)} />
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2"><Briefcase className="h-4 w-4" />المسمى الوظيفي</Label>
+                  <Input placeholder="مثال: محاسب أول، مدير مبيعات..." value={formData.jobTitle} onChange={(e) => updateField('jobTitle', e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>رقم الهوية الوطنية</Label>
+                  <Input placeholder="اختياري — الموظف يُكمله عند التفعيل" value={formData.nationalId} onChange={(e) => updateField('nationalId', e.target.value)} />
+                </div>
               </div>
               <div className="flex justify-end"><Button onClick={() => setActiveTab('work')}>التالي: بيانات العمل</Button></div>
             </CardContent>
@@ -322,6 +329,10 @@ export default function AddEmployee() {
               </div>
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-2">
+                  <Label className="flex items-center gap-2"><Briefcase className="h-4 w-4" />المسمى الوظيفي</Label>
+                  <Input placeholder="مثال: محاسب أول، مدير مبيعات..." value={formData.jobTitle} onChange={(e) => updateField('jobTitle', e.target.value)} />
+                </div>
+                <div className="space-y-2">
                   <Label>المنصب</Label>
                   <Select value={formData.positionId} onValueChange={(v) => updateField('positionId', v)}>
                     <SelectTrigger><SelectValue placeholder="اختر المنصب" /></SelectTrigger>
@@ -331,6 +342,8 @@ export default function AddEmployee() {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+              <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2"><Shield className="h-4 w-4" />الدور في النظام</Label>
                   <Select value={formData.roleCode} onValueChange={(v) => updateField('roleCode', v)}>

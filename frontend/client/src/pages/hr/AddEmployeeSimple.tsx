@@ -43,6 +43,7 @@ export default function AddEmployeeSimple() {
     lastName: '',
     email: '',
     phone: '',
+    jobTitle: '',
     branchId: selectedBranchId?.toString() || '',
     departmentId: preDeptId,
     positionId: '',
@@ -105,6 +106,7 @@ export default function AddEmployeeSimple() {
       lastName: formData.lastName,
       email: formData.email,
       phone: formData.phone,
+      jobTitle: formData.jobTitle || undefined,
       branchId: formData.branchId ? parseInt(formData.branchId) : undefined,
       departmentId: formData.departmentId ? parseInt(formData.departmentId) : undefined,
       positionId: formData.positionId ? parseInt(formData.positionId) : undefined,
@@ -187,6 +189,7 @@ export default function AddEmployeeSimple() {
                   lastName: '',
                   email: '',
                   phone: '',
+                  jobTitle: '',
                   branchId: selectedBranchId?.toString() || '',
                   departmentId: '',
                   positionId: '',
@@ -289,6 +292,19 @@ export default function AddEmployeeSimple() {
               onChange={(e) => updateField('phone', e.target.value)}
             />
             <p className="text-xs text-gray-500">سيتم إرسال رسالة نصية بكود التفعيل</p>
+          </div>
+
+          {/* المسمى الوظيفي */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Briefcase className="h-4 w-4 text-gray-500" />
+              المسمى الوظيفي
+            </Label>
+            <Input
+              placeholder="مثال: محاسب أول، مدير مبيعات..."
+              value={formData.jobTitle}
+              onChange={(e) => updateField('jobTitle', e.target.value)}
+            />
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">

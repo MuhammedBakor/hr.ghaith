@@ -39,4 +39,15 @@ public class Violation extends BaseEntity {
 
     @Column(name = "sent_by_role")
     private String sentByRole;
+
+    /** "auto" = created by the system, "manual" = created by a user */
+    @Builder.Default
+    @Column(nullable = false)
+    private String source = "manual";
+
+    @Column(name = "appeal_reason", columnDefinition = "TEXT")
+    private String appealReason;
+
+    @Column(name = "appeal_status")
+    private String appealStatus; // pending, accepted, rejected
 }

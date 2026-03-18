@@ -27,8 +27,18 @@ import { Badge } from '@/components/ui/badge';
 import { financeService, Invoice } from '@/services/financeService';
 import { toast } from 'sonner';
 import { PrintButton } from "@/components/PrintButton";
-import { Dialog } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Edit, Trash2, Eye } from "lucide-react";
 
 // دالة توليد رقم الفاتورة التلقائي
 const generateInvoiceNumber = () => {
@@ -55,14 +65,29 @@ export default function InvoiceList() {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Form state
   const [invoiceNumber, setInvoiceNumber] = useState(generateInvoiceNumber());
   const [clientName, setClientName] = useState('');
   const [totalAmount, setTotalAmount] = useState('');
   const [status, setStatus] = useState('draft');
 
-  const [dialogOpen, setDialogOpen] = React.useState(false);
-  const [editItem, setEditItem] = React.useState<any>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editItem, setEditItem] = useState<any>(null);
+  const [, setLocation] = useLocation();
+
+  const handleEditOpen = (invoice: Invoice) => {
+    setEditItem(invoice);
+    setInvoiceNumber(invoice.invoiceNumber);
+    setClientName(invoice.clientName || '');
+    setTotalAmount(invoice.amount.toString());
+    setStatus(invoice.status);
+    setDialogOpen(true);
+  };
+
+  const handleDelete = (id: number) => {
+    if (window.confirm("هل أنت متأكد من حذف هذه الفاتورة؟")) {
+      deleteInvoiceMutation.mutate(id);
+    }
+  };
 
   const queryClient = useQueryClient();
 
@@ -86,6 +111,32 @@ export default function InvoiceList() {
     },
   });
 
+  // حذف فاتورة
+  const deleteInvoiceMutation = useMutation({
+    mutationFn: (id: number) => financeService.deleteInvoice(id),
+    onSuccess: () => {
+      toast.success('تم حذف الفاتورة بنجاح');
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+    },
+    onError: (error: any) => {
+      toast.error('فشل في حذف الفاتورة: ' + error.message);
+    },
+  });
+
+  // تحديث فاتورة
+  const updateInvoiceMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number, data: Invoice }) => financeService.updateInvoice(id, data),
+    onSuccess: () => {
+      toast.success('تم تحديث الفاتورة بنجاح');
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      setDialogOpen(false);
+      setEditItem(null);
+    },
+    onError: (error: any) => {
+      toast.error('فشل في تحديث الفاتورة: ' + error.message);
+    },
+  });
+
   const resetForm = () => {
     setInvoiceNumber(generateInvoiceNumber());
     setClientName('');
@@ -99,13 +150,25 @@ export default function InvoiceList() {
       return;
     }
 
-    createInvoiceMutation.mutate({
-      invoiceNumber: invoiceNumber,
-      clientName: clientName || undefined,
-      amount: parseFloat(totalAmount),
-      status: status,
-      issueDate: new Date().toISOString(),
-    });
+    if (editItem) {
+      updateInvoiceMutation.mutate({
+        id: editItem.id,
+        data: {
+          ...editItem,
+          clientName: clientName || undefined,
+          amount: parseFloat(totalAmount),
+          status: status,
+        }
+      });
+    } else {
+      createInvoiceMutation.mutate({
+        invoiceNumber: invoiceNumber,
+        clientName: clientName || undefined,
+        amount: parseFloat(totalAmount),
+        status: status,
+        issueDate: new Date().toISOString(),
+      });
+    }
   };
 
   // فلترة الفواتير
@@ -363,9 +426,36 @@ export default function InvoiceList() {
                     <TableCell className="font-mono">{formatCurrency(invoice.amount)}</TableCell>
                     <TableCell>{getStatusBadge(invoice.status)}</TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="icon" aria-label="المزيد">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="center">
+                          <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => setLocation(`/finance/invoice/${invoice.id}`)}>
+                            <Eye className="ml-2 h-4 w-4" />
+                            عرض التفاصيل
+                          </DropdownMenuItem>
+                          {canEdit && (
+                            <DropdownMenuItem onClick={() => handleEditOpen(invoice)}>
+                              <Edit className="ml-2 h-4 w-4" />
+                              تعديل
+                            </DropdownMenuItem>
+                          )}
+                          {canDelete && (
+                            <DropdownMenuItem
+                              className="text-red-600 focus:text-red-600"
+                              onClick={() => invoice.id && handleDelete(invoice.id)}
+                            >
+                              <Trash2 className="ml-2 h-4 w-4" />
+                              حذف
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -375,26 +465,58 @@ export default function InvoiceList() {
         </CardContent>
       </Card>
 
-      {/* Dialog for Create/Edit */}
       {dialogOpen && (
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <div className="mt-4 p-6 bg-white border rounded-xl shadow-sm">
-            <div>
-              <div className="mb-4 border-b pb-3">
-                <h3 className="text-lg font-bold">{editItem ? "تعديل" : "إضافة جديد"}</h3>
+          <DialogContent className="sm:max-w-[425px]" dir="rtl">
+            <DialogHeader>
+              <DialogTitle>{editItem ? "تعديل فاتورة" : "إضافة فاتورة"}</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="clientName">اسم العميل</Label>
+                <Input
+                  id="clientName"
+                  value={clientName}
+                  onChange={(e) => setClientName(e.target.value)}
+                  placeholder="اسم العميل..."
+                />
               </div>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">الاسم / الوصف</label>
-                  <input className="w-full border rounded-md px-3 py-2" placeholder="أدخل البيانات..." />
-                </div>
+              <div className="grid gap-2">
+                <Label htmlFor="totalAmount">المبلغ الإجمالي</Label>
+                <Input
+                  id="totalAmount"
+                  type="number"
+                  value={totalAmount}
+                  onChange={(e) => setTotalAmount(e.target.value)}
+                  placeholder="0.00"
+                />
               </div>
-              <div className="flex gap-2 mt-4 pt-3 border-t justify-end">
-                <Button variant="outline" onClick={() => setDialogOpen(false)}>إلغاء</Button>
-                <Button onClick={() => { setDialogOpen(false); }}>حفظ</Button>
+              <div className="grid gap-2">
+                <Label htmlFor="status">الحالة</Label>
+                <Select value={status} onValueChange={setStatus}>
+                  <SelectTrigger id="status">
+                    <SelectValue placeholder="اختر الحالة" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="draft">مسودة</SelectItem>
+                    <SelectItem value="sent">مرسلة</SelectItem>
+                    <SelectItem value="paid">مدفوعة</SelectItem>
+                    <SelectItem value="overdue">متأخرة</SelectItem>
+                    <SelectItem value="cancelled">ملغاة</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-          </div>
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={() => setDialogOpen(false)}>إلغاء</Button>
+              <Button
+                onClick={handleSubmit}
+                disabled={updateInvoiceMutation.isPending || createInvoiceMutation.isPending}
+              >
+                {updateInvoiceMutation.isPending || createInvoiceMutation.isPending ? "جاري الحفظ..." : "حفظ التعديلات"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
         </Dialog>
       )}
     </div>

@@ -234,6 +234,7 @@ public class AttendanceService {
                     .status("sent")
                     .sentByName("النظام")
                     .sentByRole("SYSTEM")
+                    .source("auto")
                     .build();
             violation = violationRepository.save(violation);
 

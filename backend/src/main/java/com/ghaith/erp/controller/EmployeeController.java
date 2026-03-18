@@ -64,6 +64,7 @@ public class EmployeeController {
             String lastName = payload.get("lastName") != null ? payload.get("lastName").toString() : null;
             String email = payload.get("email") != null ? payload.get("email").toString() : null;
             String phone = payload.get("phone") != null ? payload.get("phone").toString() : null;
+            String jobTitle = payload.get("jobTitle") != null ? payload.get("jobTitle").toString() : null;
             String role = payload.get("role") != null ? payload.get("role").toString() : null;
 
             Long branchId = null;
@@ -120,7 +121,7 @@ public class EmployeeController {
             }
 
             return ResponseEntity
-                    .ok(employeeService.createSimpleEmployee(firstName, lastName, email, phone, branchId, departmentId,
+                    .ok(employeeService.createSimpleEmployee(firstName, lastName, email, phone, jobTitle, branchId, departmentId,
                             positionId, role, managerId, salary, housingAllowance, transportAllowance, shiftId));
         } catch (DuplicateEmailException e) {
             return ResponseEntity.status(409)

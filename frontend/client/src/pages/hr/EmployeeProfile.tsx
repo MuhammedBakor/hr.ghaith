@@ -198,6 +198,7 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
           lastName: employeeData.lastName || '',
           email: employeeData.email || '',
           phone: employeeData.phone || '',
+          jobTitle: employeeData.jobTitle || '',
           departmentId: (typeof employeeData.department === 'object' ? String(employeeData.department?.id || '') : ''),
           positionId: (typeof employeeData.position === 'object' ? String(employeeData.position?.id || '') : ''),
           branchId: (typeof employeeData.branch === 'object' ? String(employeeData.branch?.id || '') : ''),
@@ -231,6 +232,7 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
     lastName: '',
     email: '',
     phone: '',
+    jobTitle: '',
     departmentId: '',
     positionId: '',
     branchId: '',
@@ -262,6 +264,7 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
       lastName: editForm.lastName,
       email: editForm.email,
       phone: editForm.phone,
+      jobTitle: editForm.jobTitle || null,
       nationalId: editForm.nationalId || null,
       nationality: editForm.nationality || null,
       dateOfBirth: editForm.dateOfBirth || null,
@@ -577,6 +580,14 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
               </div>
               <div className="space-y-2">
                 <Label>المسمى الوظيفي</Label>
+                <Input
+                  placeholder="مثال: محاسب أول، مدير مبيعات..."
+                  value={editForm.jobTitle}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, jobTitle: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>المنصب</Label>
                 <Select
                   value={editForm.positionId}
                   onValueChange={(value) => setEditForm(prev => ({ ...prev, positionId: value }))}
@@ -1058,6 +1069,7 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-2 text-sm">
                 <p className="flex items-center gap-1 flex-wrap"><span className="text-gray-500"><Shield className="h-4 w-4 inline-block me-1 align-middle text-gray-400" />الدور: </span><Badge className="bg-primary/10 text-primary">{getRoleArabic(employee.userRole)}</Badge></p>
+                <p className="truncate"><span className="text-gray-500"><Briefcase className="h-4 w-4 inline-block me-1 align-middle text-gray-400" />المسمى الوظيفي: </span><span className="font-medium">{employee.jobTitle || '-'}</span></p>
                 <p className="truncate"><span className="text-gray-500"><Briefcase className="h-4 w-4 inline-block me-1 align-middle text-gray-400" />المنصب: </span><span className="font-medium">{employee.position || '-'}</span></p>
                 <p className="truncate"><span className="text-gray-500"><Building2 className="h-4 w-4 inline-block me-1 align-middle text-gray-400" />القسم: </span><span className="font-medium">{employee.department || '-'}</span></p>
                 <p className="truncate"><span className="text-gray-500"><MapPin className="h-4 w-4 inline-block me-1 align-middle text-gray-400" />الفرع: </span><span className="font-medium">{employee.branch || '-'}</span></p>
@@ -1137,6 +1149,11 @@ export default function EmployeeProfile({ id: propId }: EmployeeProfileProps) {
                 <div className="flex justify-between">
                   <span className="text-gray-500">القسم</span>
                   <span className="font-medium">{employee.department || '-'}</span>
+                </div>
+                <Separator />
+                <div className="flex justify-between">
+                  <span className="text-gray-500">المسمى الوظيفي</span>
+                  <span className="font-medium">{employee.jobTitle || '-'}</span>
                 </div>
                 <Separator />
                 <div className="flex justify-between">

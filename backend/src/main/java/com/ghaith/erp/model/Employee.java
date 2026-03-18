@@ -14,6 +14,7 @@ import java.math.BigDecimal;
 @ToString(exclude = {"manager"})
 @Entity
 @Table(name = "employees")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Employee extends BaseEntity {
 
     @Transient // Not persisted in employees table, but used to pass role for User creation
@@ -35,6 +36,7 @@ public class Employee extends BaseEntity {
 
     private String email;
     private String phone;
+    private String jobTitle;
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "department_id")
     private Department department;

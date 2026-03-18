@@ -773,183 +773,183 @@ export default function AttendanceMonitoring() {
             </div>
           ) : (
             <>
-            {/* Filter popup - fixed position so it's never clipped */}
-            {openFilter && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setOpenFilter(null)} />
-                <div className="fixed z-50 bg-white border rounded-lg shadow-xl p-2.5 min-w-[200px] max-h-[250px] overflow-y-auto" dir="rtl"
-                  style={{
-                    left: filterPos.left,
-                    ...(filterPos.openUp ? { bottom: window.innerHeight - filterPos.top + 4 } : { top: filterPos.top }),
-                  }}>
-                  {(openFilter === 'dept') ? (
-                    <div className="space-y-0.5">
-                      <button onClick={() => { setSelectedDepartment('all'); setOpenFilter(null); }}
-                        className={`block w-full text-start px-3 py-1.5 rounded text-xs ${selectedDepartment === 'all' ? 'bg-amber-50 text-amber-700 font-medium' : 'hover:bg-gray-50'}`}>الكل</button>
-                      {(departmentsData || []).map((dept: any) => (
-                        <button key={dept.id} onClick={() => { setSelectedDepartment(String(dept.id)); setOpenFilter(null); }}
-                          className={`block w-full text-start px-3 py-1.5 rounded text-xs ${selectedDepartment === String(dept.id) ? 'bg-amber-50 text-amber-700 font-medium' : 'hover:bg-gray-50'}`}>{dept.nameAr || dept.name}</button>
-                      ))}
-                    </div>
-                  ) : (openFilter === 'branch') ? (
-                    <div className="space-y-0.5">
-                      <button onClick={() => { setBranchFilter('all'); setOpenFilter(null); }}
-                        className={`block w-full text-start px-3 py-1.5 rounded text-xs ${branchFilter === 'all' ? 'bg-amber-50 text-amber-700 font-medium' : 'hover:bg-gray-50'}`}>الكل</button>
-                      {(branches || []).map((b: any) => (
-                        <button key={b.id} onClick={() => { setBranchFilter(b.nameAr || b.name); setOpenFilter(null); }}
-                          className={`block w-full text-start px-3 py-1.5 rounded text-xs ${branchFilter === (b.nameAr || b.name) ? 'bg-amber-50 text-amber-700 font-medium' : 'hover:bg-gray-50'}`}>{b.nameAr || b.name}</button>
-                      ))}
-                    </div>
-                  ) : (openFilter === 'status') ? (
-                    <div className="space-y-0.5">
-                      {[
-                        { v: 'all', l: 'الكل' }, { v: 'checked_in', l: 'مسجل دخول' }, { v: 'checked_out', l: 'انصرف' },
-                        { v: 'absent', l: 'غائب' }, { v: 'late', l: 'متأخر' }, { v: 'early_leave', l: 'خروج مبكر' },
-                        { v: 'on_leave', l: 'في إجازة' }, { v: 'pending', l: 'بانتظار الموافقة' },
-                      ].map(s => (
-                        <button key={s.v} onClick={() => { setStatusFilter(s.v); setOpenFilter(null); }}
-                          className={`block w-full text-start px-3 py-1.5 rounded text-xs ${statusFilter === s.v ? 'bg-amber-50 text-amber-700 font-medium' : 'hover:bg-gray-50'}`}>{s.l}</button>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-1.5">
-                      <div className="relative flex-1">
-                        <Search className="absolute top-1/2 -translate-y-1/2 start-2 h-3 w-3 text-gray-400" />
-                        <input
-                          autoFocus
-                          placeholder="بحث..."
-                          className="w-full h-8 ps-7 pe-2 text-xs border rounded-md outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-100"
-                          value={openFilter === 'name' ? searchTerm : openFilter === 'role' ? roleFilter : openFilter === 'checkIn' ? checkInFilter : openFilter === 'checkOut' ? checkOutFilter : openFilter === 'hours' ? hoursFilter : notesFilter}
-                          onChange={e => {
-                            const v = e.target.value;
-                            if (openFilter === 'name') setSearchTerm(v);
-                            else if (openFilter === 'role') setRoleFilter(v);
-                            else if (openFilter === 'checkIn') setCheckInFilter(v);
-                            else if (openFilter === 'checkOut') setCheckOutFilter(v);
-                            else if (openFilter === 'hours') setHoursFilter(v);
-                            else setNotesFilter(v);
-                          }}
-                          onKeyDown={e => { if (e.key === 'Enter') setOpenFilter(null); }}
-                        />
+              {/* Filter popup - fixed position so it's never clipped */}
+              {openFilter && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setOpenFilter(null)} />
+                  <div className="fixed z-50 bg-white border rounded-lg shadow-xl p-2.5 min-w-[200px] max-h-[250px] overflow-y-auto" dir="rtl"
+                    style={{
+                      left: filterPos.left,
+                      ...(filterPos.openUp ? { bottom: window.innerHeight - filterPos.top + 4 } : { top: filterPos.top }),
+                    }}>
+                    {(openFilter === 'dept') ? (
+                      <div className="space-y-0.5">
+                        <button onClick={() => { setSelectedDepartment('all'); setOpenFilter(null); }}
+                          className={`block w-full text-start px-3 py-1.5 rounded text-xs ${selectedDepartment === 'all' ? 'bg-amber-50 text-amber-700 font-medium' : 'hover:bg-gray-50'}`}>الكل</button>
+                        {(departmentsData || []).map((dept: any) => (
+                          <button key={dept.id} onClick={() => { setSelectedDepartment(String(dept.id)); setOpenFilter(null); }}
+                            className={`block w-full text-start px-3 py-1.5 rounded text-xs ${selectedDepartment === String(dept.id) ? 'bg-amber-50 text-amber-700 font-medium' : 'hover:bg-gray-50'}`}>{dept.nameAr || dept.name}</button>
+                        ))}
                       </div>
-                      <button onClick={() => {
-                        if (openFilter === 'name') setSearchTerm('');
-                        else if (openFilter === 'role') setRoleFilter('');
-                        else if (openFilter === 'checkIn') setCheckInFilter('');
-                        else if (openFilter === 'checkOut') setCheckOutFilter('');
-                        else if (openFilter === 'hours') setHoursFilter('');
-                        else setNotesFilter('');
-                        setOpenFilter(null);
-                      }} className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600">
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-            <div className="overflow-x-auto w-full rounded-xl border">
-              <table className="w-full min-w-[900px] text-sm">
-                <thead className="bg-gray-50 border-b">
-                  <tr>
-                    {[
-                      { key: 'name', label: 'اسم الموظف', active: !!searchTerm },
-                      { key: 'role', label: 'الوظيفة', active: !!roleFilter },
-                      { key: 'dept', label: 'القسم', active: selectedDepartment !== 'all' },
-                      { key: 'branch', label: 'الفرع', active: branchFilter !== 'all' },
-                      { key: 'checkIn', label: 'تسجيل الدخول', active: !!checkInFilter },
-                      { key: 'checkOut', label: 'تسجيل الخروج', active: !!checkOutFilter },
-                      { key: 'hours', label: 'ساعات العمل', active: !!hoursFilter },
-                      { key: 'status', label: 'الحالة', active: statusFilter !== 'all' },
-                      { key: 'notes', label: 'ملاحظات', active: !!notesFilter },
-                    ].map(col => (
-                      <th key={col.key} className="px-3 py-2.5 text-end text-xs font-medium text-gray-500">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <span>{col.label}</span>
-                          <button
-                            onClick={(e) => handleFilterClick(col.key, e)}
-                            className={`p-0.5 rounded transition-colors ${col.active ? 'text-amber-600 bg-amber-50' : openFilter === col.key ? 'text-blue-600 bg-blue-50' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}
-                          >
-                            <Filter className="h-3.5 w-3.5" />
-                          </button>
+                    ) : (openFilter === 'branch') ? (
+                      <div className="space-y-0.5">
+                        <button onClick={() => { setBranchFilter('all'); setOpenFilter(null); }}
+                          className={`block w-full text-start px-3 py-1.5 rounded text-xs ${branchFilter === 'all' ? 'bg-amber-50 text-amber-700 font-medium' : 'hover:bg-gray-50'}`}>الكل</button>
+                        {(branches || []).map((b: any) => (
+                          <button key={b.id} onClick={() => { setBranchFilter(b.nameAr || b.name); setOpenFilter(null); }}
+                            className={`block w-full text-start px-3 py-1.5 rounded text-xs ${branchFilter === (b.nameAr || b.name) ? 'bg-amber-50 text-amber-700 font-medium' : 'hover:bg-gray-50'}`}>{b.nameAr || b.name}</button>
+                        ))}
+                      </div>
+                    ) : (openFilter === 'status') ? (
+                      <div className="space-y-0.5">
+                        {[
+                          { v: 'all', l: 'الكل' }, { v: 'checked_in', l: 'مسجل دخول' }, { v: 'checked_out', l: 'انصرف' },
+                          { v: 'absent', l: 'غائب' }, { v: 'late', l: 'متأخر' }, { v: 'early_leave', l: 'خروج مبكر' },
+                          { v: 'on_leave', l: 'في إجازة' }, { v: 'pending', l: 'بانتظار الموافقة' },
+                        ].map(s => (
+                          <button key={s.v} onClick={() => { setStatusFilter(s.v); setOpenFilter(null); }}
+                            className={`block w-full text-start px-3 py-1.5 rounded text-xs ${statusFilter === s.v ? 'bg-amber-50 text-amber-700 font-medium' : 'hover:bg-gray-50'}`}>{s.l}</button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5">
+                        <div className="relative flex-1">
+                          <Search className="absolute top-1/2 -translate-y-1/2 start-2 h-3 w-3 text-gray-400" />
+                          <input
+                            autoFocus
+                            placeholder="بحث..."
+                            className="w-full h-8 ps-7 pe-2 text-xs border rounded-md outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-100"
+                            value={openFilter === 'name' ? searchTerm : openFilter === 'role' ? roleFilter : openFilter === 'checkIn' ? checkInFilter : openFilter === 'checkOut' ? checkOutFilter : openFilter === 'hours' ? hoursFilter : notesFilter}
+                            onChange={e => {
+                              const v = e.target.value;
+                              if (openFilter === 'name') setSearchTerm(v);
+                              else if (openFilter === 'role') setRoleFilter(v);
+                              else if (openFilter === 'checkIn') setCheckInFilter(v);
+                              else if (openFilter === 'checkOut') setCheckOutFilter(v);
+                              else if (openFilter === 'hours') setHoursFilter(v);
+                              else setNotesFilter(v);
+                            }}
+                            onKeyDown={e => { if (e.key === 'Enter') setOpenFilter(null); }}
+                          />
                         </div>
-                      </th>
-                    ))}
-                    {isManager && <th className="px-3 py-2.5 text-end text-xs font-medium text-gray-500">إجراءات</th>}
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {filteredRecords.map((record) => (
-                    <tr key={record.id} className={`hover:bg-gray-50 transition-colors ${needsAction(record) ? 'bg-amber-50/40' : ''}`}>
-                      <td className="px-3 py-3 font-medium text-gray-900">{record.employeeName}</td>
-                      <td className="px-3 py-3 text-gray-600">{record.role || '-'}</td>
-                      <td className="px-3 py-3 text-gray-600">{record.departmentName || '-'}</td>
-                      <td className="px-3 py-3 text-gray-600">{record.branchName || '-'}</td>
-                      <td className="px-3 py-3">
-                        {record.checkIn ? (
-                          <span className="flex items-center gap-1 text-green-700" dir="ltr">
-                            <LogIn className="h-3.5 w-3.5" />
-                            {formatTime(record.checkIn)}
-                            {record.checkInLatitude && <MapPin className="h-3 w-3 text-green-600" />}
-                          </span>
-                        ) : '-'}
-                      </td>
-                      <td className="px-3 py-3">
-                        {record.checkOut ? (
-                          <span className="flex items-center gap-1 text-red-600" dir="ltr">
-                            <LogOut className="h-3.5 w-3.5" />
-                            {formatTime(record.checkOut)}
-                            {record.checkOutLatitude && <MapPin className="h-3 w-3 text-red-600" />}
-                          </span>
-                        ) : '-'}
-                      </td>
-                      <td className="px-3 py-3 text-gray-700">
-                        {record.workHours > 0 ? `${record.workHours.toFixed(1)} ساعة` : record.checkIn && !record.checkOut ? 'جاري العمل...' : '-'}
-                      </td>
-                      <td className="px-3 py-3">{getStatusBadge(record)}</td>
-                      <td className="px-3 py-3 text-gray-500 text-xs max-w-[150px] truncate" title={record.notes}>
-                        {record.notes || '-'}
-                      </td>
-                      {isManager && (
-                        <td className="px-3 py-3">
-                          {record.status === 'pending_early_leave' && canApproveEarlyLeave && (
-                            <div className="flex items-center gap-1">
-                              <Button size="sm" variant="ghost" className="h-7 px-2 text-green-600 hover:bg-green-50"
-                                onClick={() => approveEarlyLeaveMut.mutate(record.id)} disabled={approveEarlyLeaveMut.isPending} title="موافقة">
-                                <CheckCircle className="h-4 w-4" />
-                              </Button>
-                              <Button size="sm" variant="ghost" className="h-7 px-2 text-red-600 hover:bg-red-50"
-                                onClick={() => rejectEarlyLeaveMut.mutate(record.id)} disabled={rejectEarlyLeaveMut.isPending} title="رفض">
-                                <XCircle className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          )}
-                          {record.status === 'pending_approval' && canApproveEarlyLeave && (
-                            <div className="flex items-center gap-1">
-                              <Button size="sm" variant="ghost" className="h-7 px-2 text-green-600 hover:bg-green-50"
-                                onClick={() => approveAttendanceMut.mutate(record.id)} disabled={approveAttendanceMut.isPending} title="موافقة">
-                                <CheckCircle className="h-4 w-4" />
-                              </Button>
-                              <Button size="sm" variant="ghost" className="h-7 px-2 text-red-600 hover:bg-red-50"
-                                onClick={() => rejectAttendanceMut.mutate(record.id)} disabled={rejectAttendanceMut.isPending} title="رفض">
-                                <XCircle className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          )}
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                  {filteredRecords.length === 0 && (
+                        <button onClick={() => {
+                          if (openFilter === 'name') setSearchTerm('');
+                          else if (openFilter === 'role') setRoleFilter('');
+                          else if (openFilter === 'checkIn') setCheckInFilter('');
+                          else if (openFilter === 'checkOut') setCheckOutFilter('');
+                          else if (openFilter === 'hours') setHoursFilter('');
+                          else setNotesFilter('');
+                          setOpenFilter(null);
+                        }} className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600">
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+              <div className="overflow-x-auto w-full rounded-xl border">
+                <table className="w-full min-w-[900px] text-sm">
+                  <thead className="bg-gray-50 border-b">
                     <tr>
-                      <td colSpan={isManager ? 10 : 9} className="px-3 py-12 text-center text-gray-400">
-                        لا توجد سجلات حضور لهذا التاريخ
-                      </td>
+                      {[
+                        { key: 'name', label: 'اسم الموظف', active: !!searchTerm },
+                        { key: 'role', label: 'الوظيفة', active: !!roleFilter },
+                        { key: 'dept', label: 'القسم', active: selectedDepartment !== 'all' },
+                        { key: 'branch', label: 'الفرع', active: branchFilter !== 'all' },
+                        { key: 'checkIn', label: 'تسجيل الدخول', active: !!checkInFilter },
+                        { key: 'checkOut', label: 'تسجيل الخروج', active: !!checkOutFilter },
+                        { key: 'hours', label: 'ساعات العمل', active: !!hoursFilter },
+                        { key: 'status', label: 'الحالة', active: statusFilter !== 'all' },
+                        { key: 'notes', label: 'ملاحظات', active: !!notesFilter },
+                      ].map(col => (
+                        <th key={col.key} className="px-3 py-2.5 text-end text-xs font-medium text-gray-500">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <span>{col.label}</span>
+                            <button
+                              onClick={(e) => handleFilterClick(col.key, e)}
+                              className={`p-0.5 rounded transition-colors ${col.active ? 'text-amber-600 bg-amber-50' : openFilter === col.key ? 'text-blue-600 bg-blue-50' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}
+                            >
+                              <Filter className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </th>
+                      ))}
+                      {isManager && <th className="px-3 py-2.5 text-end text-xs font-medium text-gray-500">إجراءات</th>}
                     </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y">
+                    {filteredRecords.map((record) => (
+                      <tr key={record.id} className={`hover:bg-gray-50 transition-colors ${needsAction(record) ? 'bg-amber-50/40' : ''}`}>
+                        <td className="px-3 py-3 font-medium text-gray-900">{record.employeeName}</td>
+                        <td className="px-3 py-3 text-gray-600">{record.role || '-'}</td>
+                        <td className="px-3 py-3 text-gray-600">{record.departmentName || '-'}</td>
+                        <td className="px-3 py-3 text-gray-600">{record.branchName || '-'}</td>
+                        <td className="px-3 py-3">
+                          {record.checkIn ? (
+                            <span className="flex items-center gap-1 text-green-700" dir="ltr">
+                              <LogIn className="h-3.5 w-3.5" />
+                              {formatTime(record.checkIn)}
+                              {record.checkInLatitude && <MapPin className="h-3 w-3 text-green-600" />}
+                            </span>
+                          ) : '-'}
+                        </td>
+                        <td className="px-3 py-3">
+                          {record.checkOut ? (
+                            <span className="flex items-center gap-1 text-red-600" dir="ltr">
+                              <LogOut className="h-3.5 w-3.5" />
+                              {formatTime(record.checkOut)}
+                              {record.checkOutLatitude && <MapPin className="h-3 w-3 text-red-600" />}
+                            </span>
+                          ) : '-'}
+                        </td>
+                        <td className="px-3 py-3 text-gray-700">
+                          {record.workHours > 0 ? `${record.workHours.toFixed(1)} ساعة` : record.checkIn && !record.checkOut ? 'جاري العمل...' : '-'}
+                        </td>
+                        <td className="px-3 py-3">{getStatusBadge(record)}</td>
+                        <td className="px-3 py-3 text-gray-500 text-xs max-w-[150px] truncate" title={record.notes}>
+                          {record.notes || '-'}
+                        </td>
+                        {isManager && (
+                          <td className="px-3 py-3">
+                            {record.status === 'pending_early_leave' && canApproveEarlyLeave && (
+                              <div className="flex items-center gap-1">
+                                <Button size="sm" variant="ghost" className="h-7 px-2 text-green-600 hover:bg-green-50"
+                                  onClick={() => approveEarlyLeaveMut.mutate(record.id)} disabled={approveEarlyLeaveMut.isPending} title="موافقة">
+                                  <CheckCircle className="h-4 w-4" />
+                                </Button>
+                                <Button size="sm" variant="ghost" className="h-7 px-2 text-red-600 hover:bg-red-50"
+                                  onClick={() => rejectEarlyLeaveMut.mutate(record.id)} disabled={rejectEarlyLeaveMut.isPending} title="رفض">
+                                  <XCircle className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            )}
+                            {record.status === 'pending_approval' && canApproveEarlyLeave && (
+                              <div className="flex items-center gap-1">
+                                <Button size="sm" variant="ghost" className="h-7 px-2 text-green-600 hover:bg-green-50"
+                                  onClick={() => approveAttendanceMut.mutate(record.id)} disabled={approveAttendanceMut.isPending} title="موافقة">
+                                  <CheckCircle className="h-4 w-4" />
+                                </Button>
+                                <Button size="sm" variant="ghost" className="h-7 px-2 text-red-600 hover:bg-red-50"
+                                  onClick={() => rejectAttendanceMut.mutate(record.id)} disabled={rejectAttendanceMut.isPending} title="رفض">
+                                  <XCircle className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            )}
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                    {filteredRecords.length === 0 && (
+                      <tr>
+                        <td colSpan={isManager ? 10 : 9} className="px-3 py-12 text-center text-gray-400">
+                          لا توجد سجلات حضور لهذا التاريخ
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </>
           )}
         </CardContent>
