@@ -251,13 +251,185 @@ export default function InvoiceDetails() {
   const currentStatus = statusConfig[invoice.status] || statusConfig.draft;
   const availableTransitions = allowedTransitions[invoice.status] || [];
   
-  // حساب المجاميع
-  const subtotal = items.reduce((sum, item) => sum + ((parseFloat(item.quantity) || 0) * parseFloat(item.unitPrice)), 0);
-  const totalTax = items.reduce((sum, item) => sum + parseFloat(item.taxAmount || "0"), 0);
+  // حساب المجاميع — إذا لا توجد بنود نستخدم بيانات الفاتورة مباشرة
+  const hasItems = items.length > 0;
+  const subtotal = hasItems
+    ? items.reduce((sum, item) => {
+        const qty = parseFloat(item.quantity) || 0;
+        const price = parseFloat(item.unitPrice) || 0;
+        return sum + qty * price;
+      }, 0)
+    : parseFloat(invoice.subtotal || invoice.amount || "0");
+  const totalTax = hasItems
+    ? items.reduce((sum, item) => {
+        if (item.taxAmount != null && parseFloat(item.taxAmount) !== 0) return sum + parseFloat(item.taxAmount);
+        const qty = parseFloat(item.quantity) || 0;
+        const price = parseFloat(item.unitPrice) || 0;
+        const rate = parseFloat(item.taxRate) || 0;
+        return sum + (qty * price * rate / 100);
+      }, 0)
+    : parseFloat(invoice.vatAmount || "0");
   const totalDiscount = items.reduce((sum, item) => sum + parseFloat(item.discount || "0"), 0);
-  const grandTotal = items.reduce((sum, item) => sum + parseFloat(item.totalAfterTax || "0"), 0);
+  const grandTotal = hasItems
+    ? items.reduce((sum, item) => {
+        if (item.totalAfterTax != null && parseFloat(item.totalAfterTax) !== 0) return sum + parseFloat(item.totalAfterTax);
+        const qty = parseFloat(item.quantity) || 0;
+        const price = parseFloat(item.unitPrice) || 0;
+        const rate = parseFloat(item.taxRate) || 0;
+        const disc = parseFloat(item.discount || "0");
+        return sum + (qty * price) + (qty * price * rate / 100) - disc;
+      }, 0)
+    : subtotal + totalTax;
   const totalPaid = payments.reduce((sum, p) => sum + parseFloat(p.amount || "0"), 0);
   const remaining = grandTotal - totalPaid;
+
+  const buildInvoiceHTML = () => {
+    const logo = import.meta.env.VITE_APP_LOGO || "/logo.svg";
+    const appTitle = import.meta.env.VITE_APP_TITLE || "منصة غيث";
+    const paymentMethodLabel = (m: string) => {
+      if (m === "cash") return "نقدي";
+      if (m === "bank_transfer") return "تحويل بنكي";
+      if (m === "credit_card") return "بطاقة ائتمان";
+      if (m === "check") return "شيك";
+      return m || "-";
+    };
+
+    const itemsRows = items.map((item) => {
+      const qty = parseFloat(item.quantity) || 0;
+      const price = parseFloat(item.unitPrice) || 0;
+      const tax = (item.taxAmount != null && parseFloat(item.taxAmount) !== 0) ? parseFloat(item.taxAmount) : qty * price * (parseFloat(item.taxRate) || 0) / 100;
+      const disc = parseFloat(item.discount || "0");
+      const total = (item.totalAfterTax != null && parseFloat(item.totalAfterTax) !== 0) ? parseFloat(item.totalAfterTax) : qty * price + tax - disc;
+      return `<tr>
+        <td>${item.description}</td>
+        <td style="text-align:center">${qty}</td>
+        <td style="text-align:center">${price.toLocaleString()} ر.س.</td>
+        <td style="text-align:center">${tax.toLocaleString()} ر.س.</td>
+        <td style="text-align:center; color:red">-${disc.toLocaleString()} ر.س.</td>
+        <td style="text-align:center; font-weight:bold">${total.toLocaleString()} ر.س.</td>
+      </tr>`;
+    }).join("");
+
+    const paymentsRows = payments.map((p: any) => `<tr>
+      <td>${p.paymentDate ? new Date(p.paymentDate).toLocaleDateString("ar-SA") : "-"}</td>
+      <td style="color:green; font-weight:bold">${parseFloat(p.amount).toLocaleString()} ر.س.</td>
+      <td>${paymentMethodLabel(p.paymentMethod)}</td>
+      <td>${p.reference || "-"}</td>
+      <td>${p.notes || "-"}</td>
+    </tr>`).join("");
+
+    return `<!DOCTYPE html>
+    <html dir="rtl" lang="ar">
+    <head>
+      <meta charset="UTF-8">
+      <title>فاتورة ${invoice.invoiceNumber} - ${appTitle}</title>
+      <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; direction:rtl; padding:20px; background:white; }
+        .header { display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #10b981; padding-bottom:15px; margin-bottom:20px; }
+        .logo-section { display:flex; align-items:center; gap:15px; }
+        .logo-section img { width:60px; height:60px; object-fit:contain; }
+        .logo-section h1 { font-size:24px; color:#10b981; }
+        .print-info { text-align:left; font-size:12px; color:#666; }
+        .invoice-info { display:flex; justify-content:space-between; margin-bottom:20px; padding:15px; background:#f9f9f9; border-radius:8px; }
+        .info-block { }
+        .info-block h3 { margin-bottom:8px; color:#333; }
+        .info-block p { margin:4px 0; color:#555; }
+        .summary-box { background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:15px; margin-bottom:20px; }
+        .summary-row { display:flex; justify-content:space-between; padding:4px 0; }
+        .summary-row.total { font-weight:bold; border-top:2px solid #10b981; padding-top:8px; margin-top:8px; font-size:1.1em; }
+        table { width:100%; border-collapse:collapse; margin-bottom:20px; }
+        th, td { border:1px solid #ddd; padding:10px; text-align:right; }
+        th { background-color:#10b981; color:white; font-weight:bold; }
+        tr:nth-child(even) { background-color:#f9f9f9; }
+        h2.section-title { margin:20px 0 10px; color:#333; font-size:18px; }
+        .footer { margin-top:30px; padding-top:15px; border-top:1px solid #ddd; display:flex; justify-content:space-between; font-size:12px; color:#666; }
+        @media print { body { padding:0; } }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <div class="logo-section">
+          <img src="${logo}" alt="Logo" onerror="this.style.display='none'" />
+          <h1>${appTitle}</h1>
+        </div>
+        <div class="print-info">
+          <div>تاريخ الطباعة: ${new Date().toLocaleDateString("ar-SA")}</div>
+          <div>الوقت: ${new Date().toLocaleTimeString("ar-SA")}</div>
+        </div>
+      </div>
+
+      <div class="invoice-info">
+        <div class="info-block">
+          <h3>معلومات الفاتورة</h3>
+          <p>رقم الفاتورة: <strong>${invoice.invoiceNumber}</strong></p>
+          <p>تاريخ الإصدار: ${invoice.createdAt ? new Date(invoice.createdAt).toLocaleDateString("ar-SA") : "-"}</p>
+          <p>تاريخ الاستحقاق: ${invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString("ar-SA") : "-"}</p>
+        </div>
+        <div class="info-block">
+          <h3>معلومات العميل</h3>
+          <p>${invoice.clientName || "غير محدد"}</p>
+          ${invoice.notes ? `<p>${invoice.notes}</p>` : ""}
+        </div>
+        <div class="info-block">
+          <h3>الحالة</h3>
+          <p>${currentStatus.label}</p>
+        </div>
+      </div>
+
+      <div class="summary-box">
+        <div class="summary-row"><span>المجموع الفرعي:</span><span>${subtotal.toLocaleString()} ر.س.</span></div>
+        <div class="summary-row"><span>الضريبة:</span><span>${totalTax.toLocaleString()} ر.س.</span></div>
+        <div class="summary-row"><span>الخصم:</span><span style="color:red">-${totalDiscount.toLocaleString()} ر.س.</span></div>
+        <div class="summary-row total"><span>الإجمالي:</span><span>${grandTotal.toLocaleString()} ر.س.</span></div>
+        <div class="summary-row"><span>المدفوع:</span><span style="color:green">${totalPaid.toLocaleString()} ر.س.</span></div>
+        <div class="summary-row" style="font-weight:bold;color:red"><span>المتبقي:</span><span>${remaining.toLocaleString()} ر.س.</span></div>
+      </div>
+
+      <h2 class="section-title">بنود الفاتورة</h2>
+      <table>
+        <thead><tr><th>الوصف</th><th>الكمية</th><th>سعر الوحدة</th><th>الضريبة</th><th>الخصم</th><th>الإجمالي</th></tr></thead>
+        <tbody>${itemsRows || '<tr><td colspan="6" style="text-align:center">لا توجد بنود</td></tr>'}</tbody>
+      </table>
+
+      ${payments.length > 0 ? `
+      <h2 class="section-title">المدفوعات</h2>
+      <table>
+        <thead><tr><th>التاريخ</th><th>المبلغ</th><th>طريقة الدفع</th><th>رقم المرجع</th><th>ملاحظات</th></tr></thead>
+        <tbody>${paymentsRows}</tbody>
+      </table>` : ""}
+
+      <div class="footer">
+        <div>تم إنشاء هذا التقرير بواسطة ${appTitle}</div>
+        <div>جميع الحقوق محفوظة &copy; ${new Date().getFullYear()}</div>
+      </div>
+    </body>
+    </html>`;
+  };
+
+  const handlePrintInvoice = () => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      toast.error("يرجى السماح بالنوافذ المنبثقة للطباعة");
+      return;
+    }
+    const html = buildInvoiceHTML();
+    const printHTML = html.replace("</body>", `<script>window.onload=function(){window.print();window.onafterprint=function(){window.close();};};</script></body>`);
+    printWindow.document.write(printHTML);
+    printWindow.document.close();
+  };
+
+  const handleExportPDF = () => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      toast.error("يرجى السماح بالنوافذ المنبثقة لتصدير PDF");
+      return;
+    }
+    const html = buildInvoiceHTML();
+    const pdfHTML = html.replace("</body>", `<script>window.onload=function(){window.print();};</script></body>`);
+    printWindow.document.write(pdfHTML);
+    printWindow.document.close();
+  };
 
   return (
     <div className="space-y-6 p-6" dir="rtl">
@@ -326,11 +498,11 @@ export default function InvoiceDetails() {
               </DialogContent>
             </Dialog>
           )}
-          <Button variant="outline">
+          <Button variant="outline" onClick={() => handlePrintInvoice()}>
             <Printer className="ms-2 h-4 w-4" />
             طباعة
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={() => handleExportPDF()}>
             <Download className="ms-2 h-4 w-4" />
             تصدير PDF
           </Button>
@@ -511,9 +683,9 @@ export default function InvoiceDetails() {
                     <TableCell className="font-medium">{item.description}</TableCell>
                     <TableCell className="text-center">{item.quantity}</TableCell>
                     <TableCell className="text-center">{parseFloat(item.unitPrice).toLocaleString()} ر.س.</TableCell>
-                    <TableCell className="text-center">{parseFloat(item.taxAmount || "0").toLocaleString()} ر.س.</TableCell>
+                    <TableCell className="text-center">{((item.taxAmount != null && parseFloat(item.taxAmount) !== 0) ? parseFloat(item.taxAmount) : (parseFloat(item.quantity) || 0) * (parseFloat(item.unitPrice) || 0) * (parseFloat(item.taxRate) || 0) / 100).toLocaleString()} ر.س.</TableCell>
                     <TableCell className="text-center text-red-600">-{parseFloat(item.discount || "0").toLocaleString()} ر.س.</TableCell>
-                    <TableCell className="text-center font-bold">{parseFloat(item.totalAfterTax || "0").toLocaleString()} ر.س.</TableCell>
+                    <TableCell className="text-center font-bold">{((item.totalAfterTax != null && parseFloat(item.totalAfterTax) !== 0) ? parseFloat(item.totalAfterTax) : (() => { const q = parseFloat(item.quantity) || 0; const p = parseFloat(item.unitPrice) || 0; const r = parseFloat(item.taxRate) || 0; const d = parseFloat(item.discount || "0"); return q * p + q * p * r / 100 - d; })()).toLocaleString()} ر.س.</TableCell>
                     <TableCell className="text-center">
                       <Button
                         variant="ghost"

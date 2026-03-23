@@ -35,6 +35,23 @@ public class FinanceExtendedService {
         return vendorRepository.save(vendor);
     }
 
+    public Vendor updateVendor(Long id, Vendor details) {
+        Vendor vendor = vendorRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Vendor not found: " + id));
+        if (details.getName() != null) vendor.setName(details.getName());
+        if (details.getContactInfo() != null) vendor.setContactInfo(details.getContactInfo());
+        if (details.getTaxNumber() != null) vendor.setTaxNumber(details.getTaxNumber());
+        if (details.getCategory() != null) vendor.setCategory(details.getCategory());
+        if (details.getTotalDue() != null) vendor.setTotalDue(details.getTotalDue());
+        if (details.getTotalPaid() != null) vendor.setTotalPaid(details.getTotalPaid());
+        if (details.getBalance() != null) vendor.setBalance(details.getBalance());
+        return vendorRepository.save(vendor);
+    }
+
+    public void deleteVendor(Long id) {
+        vendorRepository.deleteById(id);
+    }
+
     // Warehouses
     public List<Warehouse> getAllWarehouses() {
         return warehouseRepository.findAll();

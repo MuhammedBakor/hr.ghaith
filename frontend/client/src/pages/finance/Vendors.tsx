@@ -24,11 +24,21 @@ import {
   Users,
   ArrowRight,
   Loader2,
+  Trash2,
+  MoreHorizontal,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 import { PrintButton } from "@/components/PrintButton";
 import { Dialog } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 
 // دالة توليد رقم المورد التلقائي
@@ -70,6 +80,9 @@ export default function Vendors() {
   // Form state
   const [vendorCode, setVendorCode] = useState(generateVendorCode());
   const [vendorName, setVendorName] = useState("");
+  const [totalDue, setTotalDue] = useState("");
+  const [totalPaid, setTotalPaid] = useState("");
+  const [vendorBalance, setVendorBalance] = useState("");
 
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [editItem, setEditItem] = React.useState<any>(null);
@@ -94,9 +107,30 @@ export default function Vendors() {
     },
   });
 
+  // حذف مورد
+  const deleteVendorMutation = useMutation({
+    mutationFn: (id: number) => api.delete(`/finance/vendors/${id}`).then(r => r.data),
+    onSuccess: () => {
+      toast.success("تم حذف المورد بنجاح");
+      refetch();
+    },
+    onError: (error: any) => {
+      toast.error(`فشل في حذف المورد: ${error?.response?.data?.message || error.message}`);
+    },
+  });
+
+  const handleDelete = (id: number) => {
+    if (window.confirm("هل أنت متأكد من حذف هذا المورد؟")) {
+      deleteVendorMutation.mutate(id);
+    }
+  };
+
   // تحديث مورد
   const updateVendorMutation = useMutation({
-    mutationFn: (data: any) => api.put(`/finance/vendors/${data.id}`, data).then(r => r.data),
+    mutationFn: (data: any) => {
+      const { id, ...body } = data;
+      return api.put(`/finance/vendors/${id}`, body).then(r => r.data);
+    },
     onSuccess: () => {
       toast.success("تم تحديث بيانات المورد بنجاح");
       setViewMode('list');
@@ -110,13 +144,19 @@ export default function Vendors() {
 
   const handleEditVendor = (vendor: any) => {
     setSelectedVendor(vendor);
-    setVendorName(vendor.vendorName || '');
+    setVendorName(vendor.name || '');
+    setTotalDue(vendor.totalDue?.toString() || '0');
+    setTotalPaid(vendor.totalPaid?.toString() || '0');
+    setVendorBalance(vendor.balance?.toString() || '0');
     setViewMode('edit' as ViewMode);
   };
 
   const resetForm = () => {
     setVendorCode(generateVendorCode());
     setVendorName("");
+    setTotalDue("");
+    setTotalPaid("");
+    setVendorBalance("");
   };
 
   // حساب الإحصائيات
@@ -130,7 +170,7 @@ export default function Vendors() {
   // تصفية الموردين
   const filteredVendors = vendors?.filter((vendor: any) => {
     if (!searchTerm) return true;
-    return vendor.vendorName?.toLowerCase().includes(searchTerm.toLowerCase());
+    return vendor.name?.toLowerCase()?.includes(searchTerm.toLowerCase());
   }) || [];
 
   const handleCreateVendor = () => {
@@ -138,7 +178,12 @@ export default function Vendors() {
       toast.error("يرجى إدخال اسم المورد");
       return;
     }
-    createVendorMutation.mutate({ vendorName });
+    createVendorMutation.mutate({
+      name: vendorName,
+      totalDue: totalDue ? parseFloat(totalDue) : 0,
+      totalPaid: totalPaid ? parseFloat(totalPaid) : 0,
+      balance: vendorBalance ? parseFloat(vendorBalance) : 0,
+    });
   };
 
   // نموذج إضافة مورد جديد
@@ -187,6 +232,35 @@ export default function Vendors() {
                   />
                 </div>
               </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>إجمالي المستحق</Label>
+                  <Input
+                    type="number"
+                    value={totalDue}
+                    onChange={(e) => setTotalDue(e.target.value)}
+                    placeholder="0.00"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>إجمالي المدفوع</Label>
+                  <Input
+                    type="number"
+                    value={totalPaid}
+                    onChange={(e) => setTotalPaid(e.target.value)}
+                    placeholder="0.00"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>الرصيد</Label>
+                  <Input
+                    type="number"
+                    value={vendorBalance}
+                    onChange={(e) => setVendorBalance(e.target.value)}
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
             </div>
 
             <div className="flex justify-end gap-2 mt-6 pt-6 border-t">
@@ -224,7 +298,7 @@ export default function Vendors() {
           </Button>
           <div>
             <h1 className="text-2xl font-bold">تعديل بيانات المورد</h1>
-            <p className="text-muted-foreground">{selectedVendor.vendorName}</p>
+            <p className="text-muted-foreground">{selectedVendor.name}</p>
           </div>
         </div>
 
@@ -256,6 +330,35 @@ export default function Vendors() {
                   />
                 </div>
               </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>إجمالي المستحق</Label>
+                  <Input
+                    type="number"
+                    value={totalDue}
+                    onChange={(e) => setTotalDue(e.target.value)}
+                    placeholder="0.00"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>إجمالي المدفوع</Label>
+                  <Input
+                    type="number"
+                    value={totalPaid}
+                    onChange={(e) => setTotalPaid(e.target.value)}
+                    placeholder="0.00"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>الرصيد</Label>
+                  <Input
+                    type="number"
+                    value={vendorBalance}
+                    onChange={(e) => setVendorBalance(e.target.value)}
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
             </div>
 
             <div className="flex justify-end gap-2 mt-6 pt-6 border-t">
@@ -268,7 +371,13 @@ export default function Vendors() {
                     toast.error("يرجى إدخال اسم المورد");
                     return;
                   }
-                  updateVendorMutation.mutate({ id: selectedVendor.id, vendorName });
+                  updateVendorMutation.mutate({
+                    id: selectedVendor.id,
+                    name: vendorName,
+                    totalDue: totalDue ? parseFloat(totalDue) : 0,
+                    totalPaid: totalPaid ? parseFloat(totalPaid) : 0,
+                    balance: vendorBalance ? parseFloat(vendorBalance) : 0,
+                  });
                 }}
                 disabled={updateVendorMutation.isPending}
               >
@@ -302,7 +411,7 @@ export default function Vendors() {
           </Button>
           <div>
             <h1 className="text-2xl font-bold">تفاصيل المورد</h1>
-            <p className="text-muted-foreground">{selectedVendor.vendorName}</p>
+            <p className="text-muted-foreground">{selectedVendor.name}</p>
           </div>
         </div>
 
@@ -318,11 +427,27 @@ export default function Vendors() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">اسم المورد</p>
-                    <p className="font-medium">{selectedVendor.vendorName}</p>
+                    <p className="font-medium">{selectedVendor.name}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">رقم المورد</p>
                     <p className="font-mono">#{selectedVendor.id}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">التصنيف</p>
+                    <p className="font-medium">{selectedVendor.category || "-"}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">الرقم الضريبي</p>
+                    <p className="font-mono">{selectedVendor.taxNumber || "-"}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">معلومات الاتصال</p>
+                    <p>{selectedVendor.contactInfo || "-"}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">تاريخ الإنشاء</p>
+                    <p>{selectedVendor.createdAt ? format(new Date(selectedVendor.createdAt), "dd/MM/yyyy", { locale: ar }) : "-"}</p>
                   </div>
                 </div>
               </div>
@@ -354,6 +479,10 @@ export default function Vendors() {
               <div className="flex justify-end gap-2 pt-4 border-t">
                 <Button variant="outline" onClick={() => { setViewMode('list'); setSelectedVendor(null); }}>
                   إغلاق
+                </Button>
+                <Button onClick={() => handleEditVendor(selectedVendor)}>
+                  <Edit className="h-4 w-4 ms-2" />
+                  تعديل
                 </Button>
               </div>
             </div>
@@ -506,7 +635,7 @@ export default function Vendors() {
                           <Building2 className="h-5 w-5 text-blue-600" />
                         </div>
                         <div>
-                          <p className="font-medium">{vendor.vendorName}</p>
+                          <p className="font-medium">{vendor.name}</p>
                           <p className="text-xs text-muted-foreground">#{vendor.id}</p>
                         </div>
                       </div>
@@ -526,26 +655,33 @@ export default function Vendors() {
                       {vendor.createdAt ? format(new Date(vendor.createdAt), "dd/MM/yyyy", { locale: ar }) : "-"}
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center justify-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedVendor(vendor);
-                            setViewMode('details');
-                          }}
-                          title="عرض التفاصيل"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEditVendor(vendor)}
-                          title="تعديل"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
+                      <div className="flex items-center justify-center">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="center">
+                            <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => { setSelectedVendor(vendor); setViewMode('details'); }}>
+                              <Eye className="ml-2 h-4 w-4" />
+                              عرض التفاصيل
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleEditVendor(vendor)}>
+                              <Edit className="ml-2 h-4 w-4" />
+                              تعديل
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-red-600 focus:text-red-600"
+                              onClick={() => vendor.id && handleDelete(vendor.id)}
+                            >
+                              <Trash2 className="ml-2 h-4 w-4" />
+                              حذف
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -556,24 +692,6 @@ export default function Vendors() {
         </CardContent>
       </Card>
 
-      {/* Dialog for Create/Edit */}
-      {dialogOpen && (<div className="mt-4 p-6 bg-white border rounded-xl shadow-sm">
-        <div>
-          <div className="mb-4 border-b pb-3">
-            <h3 className="text-lg font-bold">{editItem ? "تعديل" : "إضافة جديد"}</h3>
-          </div>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">الاسم / الوصف</label>
-              <input className="w-full border rounded-md px-3 py-2" placeholder="أدخل البيانات..." />
-            </div>
-          </div>
-          <div className="flex gap-2 mt-4 pt-3 border-t justify-end">
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>إلغاء</Button>
-            <Button onClick={() => { setDialogOpen(false); }}>حفظ</Button>
-          </div>
-        </div>
-      </div>)}
     </div>
   );
 }

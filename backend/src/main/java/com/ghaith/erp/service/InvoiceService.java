@@ -23,6 +23,7 @@ public class InvoiceService {
     private final FinanceJournalService journalService;
     private final NotificationService notificationService;
 
+    @Transactional(readOnly = true)
     public List<Invoice> getAllInvoices(Long branchId) {
         if (branchId != null) {
             return invoiceRepository.findAll().stream()
@@ -32,6 +33,7 @@ public class InvoiceService {
         return invoiceRepository.findAll();
     }
 
+    @Transactional(readOnly = true)
     public Invoice getInvoiceById(Long id) {
         return invoiceRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Invoice not found with id: " + id));
@@ -164,10 +166,12 @@ public class InvoiceService {
         Invoice invoice = getInvoiceById(invoiceId);
         item.setInvoice(invoice);
         if (item.getTaxRate() == null) item.setTaxRate(15.0);
+        if (item.getDiscount() == null) item.setDiscount(0.0);
         double lineTotal = (item.getQuantity() != null ? item.getQuantity() : 1.0)
                 * (item.getUnitPrice() != null ? item.getUnitPrice() : 0.0);
         double tax = lineTotal * (item.getTaxRate() / 100.0);
-        item.setTotalAfterTax(lineTotal + tax);
+        item.setTaxAmount(tax);
+        item.setTotalAfterTax(lineTotal + tax - item.getDiscount());
         itemRepository.save(item);
         calculateVat(invoice);
         return invoiceRepository.save(invoice);

@@ -25,6 +25,8 @@ public class FinanceExtendedController {
     private final AccountRepository accountRepository;
     private final JournalEntryRepository journalEntryRepository;
     private final JournalEntryLineRepository journalEntryLineRepository;
+    private final com.ghaith.erp.repository.TaxRateRepository taxRateRepository;
+    private final com.ghaith.erp.repository.VoucherRepository voucherRepository;
 
     // ===== Chart of Accounts =====
 
@@ -157,6 +159,17 @@ public class FinanceExtendedController {
         return ResponseEntity.ok(financeService.createVendor(vendor));
     }
 
+    @PutMapping("/vendors/{id}")
+    public ResponseEntity<Vendor> updateVendor(@PathVariable Long id, @RequestBody Vendor vendor) {
+        return ResponseEntity.ok(financeService.updateVendor(id, vendor));
+    }
+
+    @DeleteMapping("/vendors/{id}")
+    public ResponseEntity<?> deleteVendor(@PathVariable Long id) {
+        financeService.deleteVendor(id);
+        return ResponseEntity.ok(Map.of("success", true));
+    }
+
     // ===== Warehouses =====
 
     @GetMapping("/warehouses")
@@ -220,11 +233,20 @@ public class FinanceExtendedController {
 
     @PostMapping("/purchase-orders")
     public ResponseEntity<?> createPurchaseOrder(@RequestBody Map<String, Object> body) {
-        Long prId = Long.valueOf(body.get("purchaseRequestId").toString());
         Long vendorId = Long.valueOf(body.get("vendorId").toString());
         LocalDateTime delivery = body.get("expectedDelivery") != null
                 ? LocalDateTime.parse(body.get("expectedDelivery").toString()) : null;
-        return ResponseEntity.ok(purchaseService.createPurchaseOrder(prId, vendorId, delivery));
+
+        if (body.get("purchaseRequestId") != null) {
+            Long prId = Long.valueOf(body.get("purchaseRequestId").toString());
+            return ResponseEntity.ok(purchaseService.createPurchaseOrder(prId, vendorId, delivery));
+        }
+
+        // Direct PO creation without a purchase request
+        String notes = body.get("notes") != null ? body.get("notes").toString() : null;
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> items = body.get("items") != null ? (List<Map<String, Object>>) body.get("items") : null;
+        return ResponseEntity.ok(purchaseService.createDirectPurchaseOrder(vendorId, notes, delivery, items));
     }
 
     @GetMapping("/purchase-orders/{id}")
@@ -235,6 +257,17 @@ public class FinanceExtendedController {
     @PostMapping("/purchase-orders/{id}/send")
     public ResponseEntity<?> sendPurchaseOrder(@PathVariable Long id) {
         return ResponseEntity.ok(purchaseService.sendPurchaseOrder(id));
+    }
+
+    @PutMapping("/purchase-orders/{id}")
+    public ResponseEntity<?> updatePurchaseOrder(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        return ResponseEntity.ok(purchaseService.updatePurchaseOrder(id, body));
+    }
+
+    @DeleteMapping("/purchase-orders/{id}")
+    public ResponseEntity<?> deletePurchaseOrder(@PathVariable Long id) {
+        purchaseService.deletePurchaseOrder(id);
+        return ResponseEntity.ok(Map.of("success", true));
     }
 
     @PostMapping("/purchase-orders/{id}/receive")
@@ -395,10 +428,36 @@ public class FinanceExtendedController {
 
     @GetMapping("/tax/rates")
     public ResponseEntity<?> getTaxRates() {
-        return ResponseEntity.ok(List.of(
-                Map.of("name", "ضريبة القيمة المضافة (ZATCA)", "rate", 0.15, "type", "vat"),
-                Map.of("name", "الزكاة", "rate", 0.025, "type", "zakat")
-        ));
+        List<com.ghaith.erp.model.TaxRate> rates = taxRateRepository.findAll();
+        if (rates.isEmpty()) {
+            // Return defaults if no custom rates exist
+            return ResponseEntity.ok(List.of(
+                    Map.of("name", "ضريبة القيمة المضافة (ZATCA)", "rate", 0.15, "type", "vat"),
+                    Map.of("name", "الزكاة", "rate", 0.025, "type", "zakat")
+            ));
+        }
+        return ResponseEntity.ok(rates);
+    }
+
+    @PostMapping("/tax/rates")
+    public ResponseEntity<?> createTaxRate(@RequestBody com.ghaith.erp.model.TaxRate taxRate) {
+        return ResponseEntity.ok(taxRateRepository.save(taxRate));
+    }
+
+    @PutMapping("/tax/rates/{id}")
+    public ResponseEntity<?> updateTaxRate(@PathVariable Long id, @RequestBody com.ghaith.erp.model.TaxRate details) {
+        com.ghaith.erp.model.TaxRate taxRate = taxRateRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Tax rate not found: " + id));
+        if (details.getName() != null) taxRate.setName(details.getName());
+        if (details.getRate() != null) taxRate.setRate(details.getRate());
+        if (details.getType() != null) taxRate.setType(details.getType());
+        return ResponseEntity.ok(taxRateRepository.save(taxRate));
+    }
+
+    @DeleteMapping("/tax/rates/{id}")
+    public ResponseEntity<?> deleteTaxRate(@PathVariable Long id) {
+        taxRateRepository.deleteById(id);
+        return ResponseEntity.ok(Map.of("success", true));
     }
 
     @PostMapping("/tax/calculate")
@@ -440,7 +499,50 @@ public class FinanceExtendedController {
 
     @GetMapping("/vouchers")
     public ResponseEntity<?> getVouchers() {
-        return ResponseEntity.ok(Collections.emptyList());
+        return ResponseEntity.ok(voucherRepository.findAll());
+    }
+
+    @PostMapping("/vouchers")
+    public ResponseEntity<?> createVoucher(@RequestBody com.ghaith.erp.model.Voucher voucher) {
+        if (voucher.getStatus() == null) voucher.setStatus("draft");
+        return ResponseEntity.ok(voucherRepository.save(voucher));
+    }
+
+    @PutMapping("/vouchers/{id}")
+    public ResponseEntity<?> updateVoucher(@PathVariable Long id, @RequestBody com.ghaith.erp.model.Voucher details) {
+        com.ghaith.erp.model.Voucher voucher = voucherRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Voucher not found: " + id));
+        if (details.getVoucherType() != null) voucher.setVoucherType(details.getVoucherType());
+        if (details.getAmount() != null) voucher.setAmount(details.getAmount());
+        if (details.getDescription() != null) voucher.setDescription(details.getDescription());
+        if (details.getPaymentMethod() != null) voucher.setPaymentMethod(details.getPaymentMethod());
+        if (details.getBeneficiaryName() != null) voucher.setBeneficiaryName(details.getBeneficiaryName());
+        if (details.getBeneficiaryAccount() != null) voucher.setBeneficiaryAccount(details.getBeneficiaryAccount());
+        if (details.getNotes() != null) voucher.setNotes(details.getNotes());
+        if (details.getStatus() != null) voucher.setStatus(details.getStatus());
+        return ResponseEntity.ok(voucherRepository.save(voucher));
+    }
+
+    @PutMapping("/vouchers/{id}/approve")
+    public ResponseEntity<?> approveVoucher(@PathVariable Long id) {
+        com.ghaith.erp.model.Voucher voucher = voucherRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Voucher not found: " + id));
+        voucher.setStatus("approved");
+        return ResponseEntity.ok(voucherRepository.save(voucher));
+    }
+
+    @PutMapping("/vouchers/{id}/execute")
+    public ResponseEntity<?> executeVoucher(@PathVariable Long id) {
+        com.ghaith.erp.model.Voucher voucher = voucherRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Voucher not found: " + id));
+        voucher.setStatus("executed");
+        return ResponseEntity.ok(voucherRepository.save(voucher));
+    }
+
+    @DeleteMapping("/vouchers/{id}")
+    public ResponseEntity<?> deleteVoucher(@PathVariable Long id) {
+        voucherRepository.deleteById(id);
+        return ResponseEntity.ok(Map.of("success", true));
     }
 
     // ===== Custodies (stored via FinancialRequest type=custody) =====

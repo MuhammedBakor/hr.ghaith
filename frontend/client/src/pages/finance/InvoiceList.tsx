@@ -73,6 +73,8 @@ export default function InvoiceList() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editItem, setEditItem] = useState<any>(null);
   const [, setLocation] = useLocation();
+  const [showFilter, setShowFilter] = useState(false);
+  const [filterStatus, setFilterStatus] = useState<string>("all");
 
   const handleEditOpen = (invoice: Invoice) => {
     setEditItem(invoice);
@@ -172,10 +174,42 @@ export default function InvoiceList() {
   };
 
   // فلترة الفواتير
-  const filteredInvoices = invoices.filter(inv =>
-    inv.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (inv.clientName && inv.clientName.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredInvoices = invoices.filter(inv => {
+    const matchesSearch = inv.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (inv.clientName && inv.clientName.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesStatus = filterStatus === "all" || inv.status === filterStatus;
+    return matchesSearch && matchesStatus;
+  });
+
+  const handleExport = () => {
+    if (filteredInvoices.length === 0) {
+      toast.error("لا توجد فواتير للتصدير");
+      return;
+    }
+    const statusLabels: Record<string, string> = {
+      paid: "مدفوعة", pending: "معلقة", overdue: "متأخرة", draft: "مسودة",
+      sent: "مرسلة", pending_approval: "بانتظار الموافقة", approved: "معتمدة", cancelled: "ملغاة",
+    };
+    const BOM = "\uFEFF";
+    const header = ["رقم الفاتورة", "العميل", "تاريخ الإصدار", "تاريخ الاستحقاق", "المبلغ", "الحالة"];
+    const rows = filteredInvoices.map(inv => [
+      inv.invoiceNumber,
+      inv.clientName || "-",
+      inv.issueDate ? new Date(inv.issueDate).toLocaleDateString("ar-SA") : "-",
+      inv.dueDate ? new Date(inv.dueDate).toLocaleDateString("ar-SA") : "-",
+      parseFloat(inv.amount?.toString() || "0").toFixed(2),
+      statusLabels[inv.status] || inv.status,
+    ]);
+    const csv = BOM + [header, ...rows].map(r => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `فواتير_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("تم تصدير الفواتير بنجاح");
+  };
 
   // حساب الإحصائيات
   const stats = {
@@ -374,15 +408,40 @@ export default function InvoiceList() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <Button variant="outline" className="gap-2">
+            <Button variant={showFilter ? "default" : "outline"} className="gap-2" onClick={() => setShowFilter(!showFilter)}>
               <Filter className="h-4 w-4" />
               تصفية
             </Button>
-            <Button variant="outline" className="gap-2">
+            <Button variant="outline" className="gap-2" onClick={handleExport}>
               <Download className="h-4 w-4" />
               تصدير
             </Button>
           </div>
+          {showFilter && (
+            <div className="flex items-center gap-4 mt-4 pt-4 border-t">
+              <Label className="whitespace-nowrap">الحالة:</Label>
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">الكل</SelectItem>
+                  <SelectItem value="draft">مسودة</SelectItem>
+                  <SelectItem value="pending_approval">بانتظار الموافقة</SelectItem>
+                  <SelectItem value="approved">معتمدة</SelectItem>
+                  <SelectItem value="sent">مرسلة</SelectItem>
+                  <SelectItem value="paid">مدفوعة</SelectItem>
+                  <SelectItem value="overdue">متأخرة</SelectItem>
+                  <SelectItem value="cancelled">ملغاة</SelectItem>
+                </SelectContent>
+              </Select>
+              {filterStatus !== "all" && (
+                <Button variant="ghost" size="sm" onClick={() => setFilterStatus("all")}>
+                  إزالة التصفية
+                </Button>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 

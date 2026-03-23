@@ -68,7 +68,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Link } from 'wouter';
 import { toast } from 'sonner';
-import { PrintButton } from "@/components/PrintButton";
+
 
 interface DepartmentFormData {
   name: string;
@@ -340,27 +340,131 @@ export default function OrganizationStructure() {
     });
   };
 
-  // دوال الطباعة والتصدير
-  const handlePrint = () => {
-    window.print();
+  // Helper to build department tree rows for printing
+  const buildDeptTreeRows = (dept: any, level: number = 0): string => {
+    const indent = '&nbsp;'.repeat(level * 4);
+    const parentName = dept.parentId ? (flatDepartments.find((d: any) => d.id === dept.parentId)?.nameAr || flatDepartments.find((d: any) => d.id === dept.parentId)?.name || '-') : '-';
+    let rows = `<tr><td>${indent}${dept.nameAr || dept.name}</td><td>${dept.code || '-'}</td><td>${getEmployeeCount(dept.id)}</td><td>${parentName}</td></tr>`;
+    if (dept.children) {
+      dept.children.forEach((child: any) => {
+        rows += buildDeptTreeRows(child, level + 1);
+      });
+    }
+    return rows;
   };
 
-  const handleExportExcel = () => {
-    const data = activeTab === 'departments' ? flatDepartments : positions;
-    if (data.length === 0) {
-      toast.error('لا توجد بيانات للتصدير');
+  // دوال الطباعة والتصدير
+  const handlePrint = () => {
+    const logo = import.meta.env.VITE_APP_LOGO || "/logo.svg";
+    const appTitle = import.meta.env.VITE_APP_TITLE || "منصة غيث";
+
+    let tableHTML = '';
+    let printTitle = '';
+
+    if (activeTab === 'chart' || activeTab === 'departments') {
+      if (activeTab === 'chart') {
+        printTitle = 'شجرة الهيكل التنظيمي';
+        const treeRows = departmentsTree.map((dept: any) => buildDeptTreeRows(dept)).join('');
+        tableHTML = `<table><thead><tr><th>القسم</th><th>الرمز</th><th>عدد الموظفين</th><th>القسم الأب</th></tr></thead><tbody>${treeRows}</tbody></table>`;
+      } else {
+        printTitle = 'قائمة الأقسام';
+        const rows = flatDepartments.map((d: any) => {
+          const parentName = d.parentId ? (flatDepartments.find((p: any) => p.id === d.parentId)?.nameAr || flatDepartments.find((p: any) => p.id === d.parentId)?.name || '-') : '-';
+          return `<tr><td>${d.nameAr || d.name}</td><td>${d.code || '-'}</td><td>${getEmployeeCount(d.id)}</td><td>${parentName}</td></tr>`;
+        }).join('');
+        tableHTML = `<table><thead><tr><th>القسم</th><th>الرمز</th><th>عدد الموظفين</th><th>القسم الأب</th></tr></thead><tbody>${rows}</tbody></table>`;
+      }
+    } else {
+      printTitle = 'المسميات الوظيفية';
+      const rows = positions.map((p: any) => {
+        const deptName = flatDepartments.find((d: any) => d.id === p.departmentId)?.nameAr || flatDepartments.find((d: any) => d.id === p.departmentId)?.name || '-';
+        return `<tr><td>${p.title || p.titleAr}</td><td>${deptName}</td><td>${p.level || 'C1'}</td><td>${p.isActive !== false ? 'نشط' : 'غير نشط'}</td></tr>`;
+      }).join('');
+      tableHTML = `<table><thead><tr><th>المسمى الوظيفي</th><th>القسم</th><th>المستوى</th><th>الحالة</th></tr></thead><tbody>${rows}</tbody></table>`;
+    }
+
+    if ((activeTab === 'chart' && departmentsTree.length === 0) || (activeTab === 'departments' && flatDepartments.length === 0) || (activeTab === 'positions' && positions.length === 0)) {
+      toast.error('لا توجد بيانات للطباعة');
       return;
     }
 
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      alert("يرجى السماح بالنوافذ المنبثقة للطباعة");
+      return;
+    }
+
+    const printContent = `<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <title>${printTitle} - ${appTitle}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; direction: rtl; padding: 20px; background: white; }
+    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #10b981; padding-bottom: 15px; margin-bottom: 20px; }
+    .logo-section { display: flex; align-items: center; gap: 15px; }
+    .logo-section img { width: 60px; height: 60px; object-fit: contain; }
+    .logo-section h1 { font-size: 24px; color: #10b981; }
+    .print-info { text-align: left; font-size: 12px; color: #666; }
+    .title { text-align: center; font-size: 20px; font-weight: bold; margin-bottom: 20px; color: #333; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    th, td { border: 1px solid #ddd; padding: 10px; text-align: right; }
+    th { background-color: #10b981; color: white; font-weight: bold; }
+    tr:nth-child(even) { background-color: #f9f9f9; }
+    .footer { margin-top: 30px; padding-top: 15px; border-top: 1px solid #ddd; display: flex; justify-content: space-between; font-size: 12px; color: #666; }
+    @media print { body { padding: 0; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo-section">
+      <img src="${logo}" alt="Logo" onerror="this.style.display='none'" />
+      <h1>${appTitle}</h1>
+    </div>
+    <div class="print-info">
+      <div>تاريخ الطباعة: ${new Date().toLocaleDateString("ar-SA")}</div>
+      <div>الوقت: ${new Date().toLocaleTimeString("ar-SA")}</div>
+    </div>
+  </div>
+  <h2 class="title">${printTitle}</h2>
+  ${tableHTML}
+  <div class="footer">
+    <div>تم إنشاء هذا التقرير بواسطة ${appTitle}</div>
+    <div>جميع الحقوق محفوظة © ${new Date().getFullYear()}</div>
+  </div>
+  <script>window.onload = function() { window.print(); window.onafterprint = function() { window.close(); }; };</script>
+</body>
+</html>`;
+
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+  };
+
+  const handleExportExcel = () => {
     let headers: string[];
     let csvData: any[][];
 
-    if (activeTab === 'departments') {
-      headers = ['الرقم', 'الاسم', 'الرمز', 'القسم الأب'];
-      csvData = flatDepartments.map((d: any) => [d.id, d.nameAr || d.name, d.code, d.parentId || '-']);
+    if (activeTab === 'chart' || activeTab === 'departments') {
+      if (flatDepartments.length === 0) {
+        toast.error('لا توجد بيانات للتصدير');
+        return;
+      }
+      headers = ['الرقم', 'الاسم', 'الرمز', 'عدد الموظفين', 'القسم الأب'];
+      csvData = flatDepartments.map((d: any) => {
+        const parentName = d.parentId ? (flatDepartments.find((p: any) => p.id === d.parentId)?.nameAr || flatDepartments.find((p: any) => p.id === d.parentId)?.name || '-') : '-';
+        return [d.id, d.nameAr || d.name, d.code, getEmployeeCount(d.id), parentName];
+      });
     } else {
+      if (positions.length === 0) {
+        toast.error('لا توجد بيانات للتصدير');
+        return;
+      }
       headers = ['الرقم', 'المسمى', 'القسم', 'المستوى'];
-      csvData = positions.map((p: any) => [p.id, p.title || p.titleAr, p.departmentId, p.level]);
+      csvData = positions.map((p: any) => {
+        const deptName = flatDepartments.find((d: any) => d.id === p.departmentId)?.nameAr || flatDepartments.find((d: any) => d.id === p.departmentId)?.name || '-';
+        return [p.id, p.title || p.titleAr, deptName, p.level || 'C1'];
+      });
     }
 
     const csvContent = [headers.join(','), ...csvData.map(row => row.join(','))].join('\n');
@@ -368,7 +472,7 @@ export default function OrganizationStructure() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${activeTab}_${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `${activeTab === 'chart' ? 'departments' : activeTab}_${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     toast.success('تم تصدير البيانات بنجاح');
   };
@@ -641,7 +745,6 @@ export default function OrganizationStructure() {
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle>شجرة الهيكل التنظيمي</CardTitle>
-                <PrintButton title="شجرة الهيكل التنظيمي" />
                 <CardDescription>عرض هرمي للأقسام والإدارات</CardDescription>
               </div>
               <Button variant="outline" size="sm" onClick={() => { refetchDepts(); refetchPositions(); }}>

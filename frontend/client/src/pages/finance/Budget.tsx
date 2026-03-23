@@ -17,20 +17,32 @@ import {
   DollarSign,
   Target,
   ArrowRight,
+  MoreHorizontal,
+  Eye,
+  Edit,
+  Trash2,
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { toast } from 'sonner';
-import { Dialog } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 
 interface BudgetItem {
   id: number;
   name: string;
-  department?: string | null;
-  fiscalYear: number;
-  plannedAmount: string;
-  actualAmount?: string | null;
+  category?: string | null;
+  year: number;
+  amount: string;
+  actual?: string | null;
   status: string;
 }
 
@@ -95,6 +107,68 @@ export default function Budget() {
     },
   });
 
+  const updateBudgetMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: any }) => api.put(`/finance/budgets/${id}`, data).then(r => r.data),
+    onSuccess: () => {
+      toast.success('تم تحديث الميزانية بنجاح');
+      queryClient.invalidateQueries({ queryKey: ['budgets'] });
+      setDialogOpen(false);
+      setEditItem(null);
+      resetForm();
+    },
+    onError: (error: any) => {
+      toast.error('فشل في تحديث الميزانية: ' + error.message);
+    },
+  });
+
+  const deleteBudgetMutation = useMutation({
+    mutationFn: (id: number) => api.delete(`/finance/budgets/${id}`).then(r => r.data),
+    onSuccess: () => {
+      toast.success('تم حذف الميزانية بنجاح');
+      queryClient.invalidateQueries({ queryKey: ['budgets'] });
+    },
+    onError: (error: any) => {
+      toast.error('فشل في حذف الميزانية: ' + error.message);
+    },
+  });
+
+  const [detailItem, setDetailItem] = useState<BudgetItem | null>(null);
+
+  const handleEditOpen = (budget: BudgetItem) => {
+    setEditItem(budget);
+    setName(budget.name || '');
+    setDepartment(budget.category || '');
+    setFiscalYear(budget.year?.toString() || new Date().getFullYear().toString());
+    setTotalAmount(budget.amount?.toString() || '');
+    setDialogOpen(true);
+  };
+
+  const handleEditSubmit = () => {
+    if (!name || !totalAmount) {
+      toast.error('يرجى إدخال اسم الميزانية والمبلغ');
+      return;
+    }
+    if (editItem?.id) {
+      updateBudgetMutation.mutate({
+        id: editItem.id,
+        data: {
+          name,
+          category: department || undefined,
+          year: parseInt(fiscalYear),
+          amount: parseFloat(totalAmount),
+          actual: editItem.actual ? parseFloat(editItem.actual) : 0,
+          status: editItem.status,
+        },
+      });
+    }
+  };
+
+  const handleDelete = (id: number) => {
+    if (window.confirm("هل أنت متأكد من حذف هذه الميزانية؟")) {
+      deleteBudgetMutation.mutate(id);
+    }
+  };
+
   const resetForm = () => {
     setName('');
     setDepartment('');
@@ -110,24 +184,24 @@ export default function Budget() {
 
     createBudgetMutation.mutate({
       name: name,
-      department: department || undefined,
-      fiscalYear: parseInt(fiscalYear),
-      plannedAmount: totalAmount,
+      category: department || undefined,
+      year: parseInt(fiscalYear),
+      amount: parseFloat(totalAmount),
     });
   };
 
   // حساب الإحصائيات
   const totals = {
-    totalAllocated: budgets.reduce((sum, b) => sum + parseFloat(b.plannedAmount || '0'), 0),
-    totalSpent: budgets.reduce((sum, b) => sum + parseFloat(b.actualAmount || '0'), 0),
+    totalAllocated: budgets.reduce((sum, b) => sum + parseFloat(b.amount || '0'), 0),
+    totalSpent: budgets.reduce((sum, b) => sum + parseFloat(b.actual || '0'), 0),
     totalRemaining: budgets.reduce((sum, b) => {
-      const total = parseFloat(b.plannedAmount || '0');
-      const spent = parseFloat(b.actualAmount || '0');
+      const total = parseFloat(b.amount || '0');
+      const spent = parseFloat(b.actual || '0');
       return sum + (total - spent);
     }, 0),
     overallPercentage: budgets.length > 0
-      ? Math.round((budgets.reduce((sum, b) => sum + parseFloat(b.actualAmount || '0'), 0) /
-        budgets.reduce((sum, b) => sum + parseFloat(b.plannedAmount || '0'), 0)) * 100) || 0
+      ? Math.round((budgets.reduce((sum, b) => sum + parseFloat(b.actual || '0'), 0) /
+        budgets.reduce((sum, b) => sum + parseFloat(b.amount || '0'), 0)) * 100) || 0
       : 0,
   };
 
@@ -137,30 +211,31 @@ export default function Budget() {
       header: 'اسم الميزانية',
     },
     {
-      accessorKey: 'department',
+      accessorKey: 'category',
       header: 'القسم',
-      cell: ({ row }) => row.original.department || '-',
+      cell: ({ row }) => row.original.category || '-',
     },
     {
-      accessorKey: 'fiscalYear',
+      accessorKey: 'year',
       header: 'السنة المالية',
+      cell: ({ row }) => row.original.year || '-',
     },
     {
       accessorKey: 'totalAmount',
       header: 'المبلغ الإجمالي',
-      cell: ({ row }) => formatCurrency(row.original.plannedAmount),
+      cell: ({ row }) => formatCurrency(row.original.amount),
     },
     {
       accessorKey: 'spentAmount',
       header: 'المصروف',
-      cell: ({ row }) => formatCurrency(row.original.actualAmount),
+      cell: ({ row }) => formatCurrency(row.original.actual),
     },
     {
       accessorKey: 'remaining',
       header: 'المتبقي',
       cell: ({ row }) => {
-        const total = parseFloat(row.original.plannedAmount || '0');
-        const spent = parseFloat(row.original.actualAmount || '0');
+        const total = parseFloat(row.original.amount || '0');
+        const spent = parseFloat(row.original.actual || '0');
         const remaining = total - spent;
         return (
           <span className={remaining < 0 ? 'text-red-600' : 'text-green-600'}>
@@ -173,8 +248,8 @@ export default function Budget() {
       accessorKey: 'percentage',
       header: 'نسبة الاستهلاك',
       cell: ({ row }) => {
-        const total = parseFloat(row.original.plannedAmount || '0');
-        const spent = parseFloat(row.original.actualAmount || '0');
+        const total = parseFloat(row.original.amount || '0');
+        const spent = parseFloat(row.original.actual || '0');
         const percentage = total > 0 ? Math.round((spent / (total || 1)) * 100) : 0;
         return (
           <div className="flex items-center gap-2">
@@ -191,6 +266,43 @@ export default function Budget() {
       accessorKey: 'status',
       header: 'الحالة',
       cell: ({ row }) => getStatusBadge(row.original.status),
+    },
+    {
+      id: 'actions',
+      header: 'الإجراءات',
+      enableSorting: false,
+      cell: ({ row }) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="center">
+            <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setDetailItem(row.original)}>
+              <Eye className="ml-2 h-4 w-4" />
+              عرض التفاصيل
+            </DropdownMenuItem>
+            {canEdit && (
+              <DropdownMenuItem onClick={() => handleEditOpen(row.original)}>
+                <Edit className="ml-2 h-4 w-4" />
+                تعديل
+              </DropdownMenuItem>
+            )}
+            {canDelete && (
+              <DropdownMenuItem
+                className="text-red-600 focus:text-red-600"
+                onClick={() => row.original.id && handleDelete(row.original.id)}
+              >
+                <Trash2 className="ml-2 h-4 w-4" />
+                حذف
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
     },
   ];
 
@@ -359,24 +471,107 @@ export default function Budget() {
         </CardContent>
       </Card>
 
-      {/* Dialog for Create/Edit */}
-      {dialogOpen && (<div className="mt-4 p-6 bg-white border rounded-xl shadow-sm">
-        <div>
-          <div className="mb-4 border-b pb-3">
-            <h3 className="text-lg font-bold">{editItem ? "تعديل" : "إضافة جديد"}</h3>
-          </div>
-          <div className="space-y-4 py-4">
+      {/* Dialog for Edit */}
+      <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) { setEditItem(null); resetForm(); } }}>
+        <DialogContent className="sm:max-w-[425px]" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>تعديل الميزانية</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">الاسم / الوصف</label>
-              <input className="w-full border rounded-md px-3 py-2" placeholder="أدخل البيانات..." />
+              <Label>اسم الميزانية *</Label>
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="مثال: ميزانية التشغيل" />
+            </div>
+            <div className="space-y-2">
+              <Label>القسم / التصنيف</Label>
+              <Select value={department} onValueChange={setDepartment}>
+                <SelectTrigger><SelectValue placeholder="اختر القسم" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="operations">التشغيل</SelectItem>
+                  <SelectItem value="marketing">التسويق</SelectItem>
+                  <SelectItem value="hr">الموارد البشرية</SelectItem>
+                  <SelectItem value="it">تقنية المعلومات</SelectItem>
+                  <SelectItem value="other">أخرى</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>السنة المالية</Label>
+              <Input type="number" value={fiscalYear} onChange={(e) => setFiscalYear(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>المبلغ الإجمالي *</Label>
+              <Input type="number" value={totalAmount} onChange={(e) => setTotalAmount(e.target.value)} placeholder="0.00" />
             </div>
           </div>
-          <div className="flex gap-2 mt-4 pt-3 border-t justify-end">
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>إلغاء</Button>
-            <Button onClick={() => { setDialogOpen(false); }}>حفظ</Button>
-          </div>
-        </div>
-      </div>)}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => { setDialogOpen(false); setEditItem(null); resetForm(); }}>إلغاء</Button>
+            <Button onClick={handleEditSubmit} disabled={updateBudgetMutation.isPending}>
+              {updateBudgetMutation.isPending ? "جاري الحفظ..." : "حفظ التعديلات"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog for Details */}
+      <Dialog open={!!detailItem} onOpenChange={(open) => { if (!open) setDetailItem(null); }}>
+        <DialogContent className="sm:max-w-[500px]" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>تفاصيل الميزانية</DialogTitle>
+          </DialogHeader>
+          {detailItem && (() => {
+            const planned = parseFloat(detailItem.amount || '0');
+            const spent = parseFloat(detailItem.actual || '0');
+            const remaining = planned - spent;
+            const percentage = planned > 0 ? Math.round((spent / planned) * 100) : 0;
+            return (
+              <div className="space-y-4 py-4">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">اسم الميزانية:</span>
+                  <span className="font-medium">{detailItem.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">القسم:</span>
+                  <span>{detailItem.category || '-'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">السنة المالية:</span>
+                  <span>{detailItem.year || '-'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">الحالة:</span>
+                  {getStatusBadge(detailItem.status)}
+                </div>
+                <div className="border-t pt-4 space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">المبلغ المخطط:</span>
+                    <span className="font-bold text-primary">{formatCurrency(planned)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">المصروف الفعلي:</span>
+                    <span className="font-bold text-red-600">{formatCurrency(spent)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">المتبقي:</span>
+                    <span className={`font-bold ${remaining < 0 ? 'text-red-600' : 'text-green-600'}`}>{formatCurrency(remaining)}</span>
+                  </div>
+                  <div className="flex items-center gap-3 pt-2">
+                    <span className="text-gray-500">نسبة الاستهلاك:</span>
+                    <Progress
+                      value={Math.min(percentage, 100)}
+                      className={`w-24 h-2 ${percentage > 100 ? '[&>div]:bg-red-500' : percentage > 80 ? '[&>div]:bg-yellow-500' : ''}`}
+                    />
+                    <span className="font-bold">{percentage}%</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDetailItem(null)}>إغلاق</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

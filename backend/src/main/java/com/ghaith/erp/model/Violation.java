@@ -42,7 +42,7 @@ public class Violation extends BaseEntity {
 
     /** "auto" = created by the system, "manual" = created by a user */
     @Builder.Default
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "varchar(255) not null default 'manual'")
     private String source = "manual";
 
     @Column(name = "appeal_reason", columnDefinition = "TEXT")

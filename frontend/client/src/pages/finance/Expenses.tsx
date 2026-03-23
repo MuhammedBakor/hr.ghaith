@@ -19,11 +19,23 @@ import {
   FileText,
   CheckCircle,
   XCircle,
-  ArrowRight
+  ArrowRight,
+  Eye,
+  Edit,
+  Trash2,
+  MoreHorizontal,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAppContext } from '@/contexts/AppContext';
-import { Dialog } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { financeService, Expense } from '@/services/financeService';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -117,6 +129,82 @@ export default function Expenses() {
     },
   });
 
+  const deleteExpenseMutation = useMutation({
+    mutationFn: (id: number) => financeService.deleteExpense(id),
+    onSuccess: () => {
+      toast.success('تم حذف المصروف بنجاح');
+      queryClient.invalidateQueries({ queryKey: ["expenses"] });
+    },
+    onError: (error: any) => {
+      toast.error('فشل في حذف المصروف: ' + error.message);
+    },
+  });
+
+  const [detailItem, setDetailItem] = useState<Expense | null>(null);
+
+  const handleDelete = (id: number) => {
+    if (window.confirm("هل أنت متأكد من حذف هذا المصروف؟")) {
+      deleteExpenseMutation.mutate(id);
+    }
+  };
+
+  const handleEditOpen = (expense: Expense) => {
+    setEditItem(expense);
+    setDescription(expense.description || '');
+    setCategory(expense.category || 'other');
+    setAmount(expense.amount?.toString() || '');
+    setDialogOpen(true);
+  };
+
+  const handleEditSubmit = () => {
+    if (!amount) {
+      toast.error('يرجى إدخال المبلغ');
+      return;
+    }
+    if (editItem?.id) {
+      updateExpenseMutation.mutate({
+        id: editItem.id,
+        data: { ...editItem, description, category, amount: parseFloat(amount) },
+      });
+      setDialogOpen(false);
+      setEditItem(null);
+      resetForm();
+    }
+  };
+
+  const handleExport = () => {
+    if (expenses.length === 0) {
+      toast.error("لا توجد مصروفات للتصدير");
+      return;
+    }
+    const statusLabels: Record<string, string> = {
+      draft: "مسودة", pending: "قيد المراجعة", submitted: "قيد المراجعة",
+      approved: "معتمد", rejected: "مرفوض", paid: "مدفوع",
+    };
+    const categoryLabels: Record<string, string> = {
+      travel: "سفر", office: "مكتبية", equipment: "معدات",
+      marketing: "تسويق", utilities: "خدمات", other: "أخرى",
+    };
+    const BOM = "\uFEFF";
+    const header = ["الوصف", "التصنيف", "المبلغ", "التاريخ", "الحالة"];
+    const rows = expenses.map(e => [
+      e.description || "-",
+      categoryLabels[e.category || "other"] || e.category || "-",
+      parseFloat(e.amount?.toString() || "0").toFixed(2),
+      e.expenseDate ? String(e.expenseDate).split("T")[0] : "-",
+      statusLabels[e.status] || e.status,
+    ]);
+    const csv = BOM + [header, ...rows].map(r => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `مصروفات_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("تم تصدير المصروفات بنجاح");
+  };
+
   const resetForm = () => {
     setDescription('');
     setCategory('other');
@@ -205,6 +293,7 @@ export default function Expenses() {
                 variant="outline"
                 className="text-green-600"
                 onClick={() => handleApprove(row.original.id!)}
+                title="اعتماد"
               >
                 <CheckCircle className="h-4 w-4" />
               </Button>
@@ -213,14 +302,42 @@ export default function Expenses() {
                 variant="outline"
                 className="text-red-600"
                 onClick={() => handleReject(row.original.id!)}
+                title="رفض"
               >
                 <XCircle className="h-4 w-4" />
               </Button>
             </>
           )}
-          <Button size="sm" variant="outline">
-            <FileText className="h-4 w-4" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" variant="outline">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="center">
+              <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setDetailItem(row.original)}>
+                <Eye className="ml-2 h-4 w-4" />
+                عرض التفاصيل
+              </DropdownMenuItem>
+              {canEdit && (
+                <DropdownMenuItem onClick={() => handleEditOpen(row.original)}>
+                  <Edit className="ml-2 h-4 w-4" />
+                  تعديل
+                </DropdownMenuItem>
+              )}
+              {canDelete && (
+                <DropdownMenuItem
+                  className="text-red-600 focus:text-red-600"
+                  onClick={() => row.original.id && handleDelete(row.original.id)}
+                >
+                  <Trash2 className="ml-2 h-4 w-4" />
+                  حذف
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       ),
     },
@@ -315,7 +432,7 @@ export default function Expenses() {
           <p className="text-gray-500">تتبع وإدارة مصروفات المنظمة</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="gap-2">
+          <Button variant="outline" className="gap-2" onClick={handleExport}>
             <Download className="h-4 w-4" />
             تصدير
           </Button>
@@ -397,28 +514,97 @@ export default function Expenses() {
         </CardContent>
       </Card>
 
-      {/* Dialog for Create/Edit */}
-      {dialogOpen && (
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <div className="mt-4 p-6 bg-white border rounded-xl shadow-sm">
-            <div>
-              <div className="mb-4 border-b pb-3">
-                <h3 className="text-lg font-bold">{editItem ? "تعديل" : "إضافة جديد"}</h3>
-              </div>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">الاسم / الوصف</label>
-                  <input className="w-full border rounded-md px-3 py-2" placeholder="أدخل البيانات..." />
-                </div>
-              </div>
-              <div className="flex gap-2 mt-4 pt-3 border-t justify-end">
-                <Button variant="outline" onClick={() => setDialogOpen(false)}>إلغاء</Button>
-                <Button onClick={() => { setDialogOpen(false); }}>حفظ</Button>
-              </div>
+      {/* Dialog for Edit */}
+      <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) { setEditItem(null); resetForm(); } }}>
+        <DialogContent className="sm:max-w-[425px]" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>تعديل المصروف</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label>الوصف</Label>
+              <Textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="وصف المصروف..."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>التصنيف</Label>
+              <Select value={category} onValueChange={setCategory}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="travel">سفر</SelectItem>
+                  <SelectItem value="office">مكتبية</SelectItem>
+                  <SelectItem value="equipment">معدات</SelectItem>
+                  <SelectItem value="marketing">تسويق</SelectItem>
+                  <SelectItem value="utilities">خدمات</SelectItem>
+                  <SelectItem value="other">أخرى</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>المبلغ *</Label>
+              <Input
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="0.00"
+              />
             </div>
           </div>
-        </Dialog>
-      )}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => { setDialogOpen(false); setEditItem(null); resetForm(); }}>إلغاء</Button>
+            <Button onClick={handleEditSubmit} disabled={updateExpenseMutation.isPending}>
+              {updateExpenseMutation.isPending ? "جاري الحفظ..." : "حفظ التعديلات"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog for Details */}
+      <Dialog open={!!detailItem} onOpenChange={(open) => { if (!open) setDetailItem(null); }}>
+        <DialogContent className="sm:max-w-[500px]" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>تفاصيل المصروف</DialogTitle>
+          </DialogHeader>
+          {detailItem && (
+            <div className="space-y-4 py-4">
+              <div className="flex justify-between">
+                <span className="text-gray-500">الوصف:</span>
+                <span className="font-medium">{detailItem.description || "-"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">التصنيف:</span>
+                {getCategoryBadge(detailItem.category)}
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">المبلغ:</span>
+                <span className="font-bold text-primary">{formatCurrency(detailItem.amount)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">التاريخ:</span>
+                <span>{detailItem.expenseDate ? String(detailItem.expenseDate).split("T")[0] : "-"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">الحالة:</span>
+                {getStatusBadge(detailItem.status)}
+              </div>
+              {(detailItem as any).notes && (
+                <div className="flex justify-between">
+                  <span className="text-gray-500">ملاحظات:</span>
+                  <span>{(detailItem as any).notes}</span>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDetailItem(null)}>إغلاق</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

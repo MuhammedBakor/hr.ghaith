@@ -46,7 +46,16 @@ import { toast } from "sonner";
 import { Link } from "wouter";
 import { useAppContext } from '@/contexts/AppContext';
 import { PrintButton } from "@/components/PrintButton";
-import { Dialog } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { MoreHorizontal, Edit, Trash2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 
 // دالة توليد رقم السند التلقائي
@@ -176,6 +185,76 @@ export default function Vouchers() {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: (data: any) => {
+      const { id, ...body } = data;
+      return api.put(`/finance/vouchers/${id}`, body).then(r => r.data);
+    },
+    onSuccess: () => {
+      toast.success("تم تحديث السند بنجاح");
+      setEditDialogOpen(false);
+      setEditingVoucher(null);
+      refetch();
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || error.message || "حدث خطأ أثناء تحديث السند");
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => api.delete(`/finance/vouchers/${id}`).then(r => r.data),
+    onSuccess: () => {
+      toast.success("تم حذف السند بنجاح");
+      refetch();
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || error.message || "حدث خطأ أثناء حذف السند");
+    },
+  });
+
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingVoucher, setEditingVoucher] = useState<any>(null);
+  const [editAmount, setEditAmount] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editBeneficiary, setEditBeneficiary] = useState("");
+  const [editPaymentMethod, setEditPaymentMethod] = useState("");
+  const [editStatus, setEditStatus] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+
+  const handleEditOpen = (voucher: any) => {
+    setEditingVoucher(voucher);
+    setEditAmount(voucher.amount?.toString() || "");
+    setEditDescription(voucher.description || "");
+    setEditBeneficiary(voucher.beneficiaryName || "");
+    setEditPaymentMethod(voucher.paymentMethod || "cash");
+    setEditStatus(voucher.status || "draft");
+    setEditNotes(voucher.notes || "");
+    setEditDialogOpen(true);
+  };
+
+  const handleEditSubmit = () => {
+    if (!editingVoucher?.id) return;
+    const body: any = {
+      id: editingVoucher.id,
+      amount: editAmount ? parseFloat(editAmount) : undefined,
+      description: editDescription || undefined,
+      beneficiaryName: editBeneficiary || undefined,
+      paymentMethod: editPaymentMethod || undefined,
+      notes: editNotes || undefined,
+    };
+    // Status change handled separately if changed
+    if (editStatus !== editingVoucher.status) {
+      body.status = editStatus;
+    }
+    updateMutation.mutate(body);
+  };
+
+  const handleDelete = (id: number) => {
+    if (window.confirm("هل أنت متأكد من حذف هذا السند؟")) {
+      deleteMutation.mutate(id);
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       voucherNumber: generateVoucherNumber('payment'),
@@ -236,7 +315,7 @@ export default function Vouchers() {
 
   const formatDate = (date: Date | string | null) => {
     if (!date) return "-";
-    return formatDate(date);
+    return new Date(date).toLocaleDateString("ar-SA");
   };
 
   const getVoucherTypeConfig = (type: string) => {
@@ -850,20 +929,6 @@ export default function Vouchers() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            title="عرض التفاصيل"
-                            onClick={() => {
-                              setSelectedVoucher(voucher);
-                              setViewMode('details');
-                            }}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" title="طباعة" aria-label="طباعة">
-                            <Printer className="h-4 w-4" />
-                          </Button>
                           {voucher.status === "draft" && (
                             <Button
                               variant="ghost"
@@ -892,6 +957,32 @@ export default function Vouchers() {
                               )}
                             </Button>
                           )}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="center">
+                              <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => { setSelectedVoucher(voucher); setViewMode('details'); }}>
+                                <Eye className="ml-2 h-4 w-4" />
+                                عرض التفاصيل
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleEditOpen(voucher)}>
+                                <Edit className="ml-2 h-4 w-4" />
+                                تعديل
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="text-red-600 focus:text-red-600"
+                                onClick={() => voucher.id && handleDelete(voucher.id)}
+                              >
+                                <Trash2 className="ml-2 h-4 w-4" />
+                                حذف
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -903,24 +994,67 @@ export default function Vouchers() {
         </CardContent>
       </Card>
 
-      {/* Dialog for Create/Edit */}
-      {dialogOpen && (<div className="mt-4 p-6 bg-white border rounded-xl shadow-sm">
-        <div>
-          <div className="mb-4 border-b pb-3">
-            <h3 className="text-lg font-bold">{editItem ? "تعديل" : "إضافة جديد"}</h3>
-          </div>
-          <div className="space-y-4 py-4">
+      {/* Edit Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={(open) => { if (!open) { setEditDialogOpen(false); setEditingVoucher(null); } }}>
+        <DialogContent className="sm:max-w-[500px]" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>تعديل السند</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">الاسم / الوصف</label>
-              <input className="w-full border rounded-md px-3 py-2" placeholder="أدخل البيانات..." />
+              <Label>المبلغ</Label>
+              <Input type="number" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} placeholder="0.00" />
+            </div>
+            <div className="space-y-2">
+              <Label>الوصف</Label>
+              <Input value={editDescription} onChange={(e) => setEditDescription(e.target.value)} placeholder="وصف السند" />
+            </div>
+            <div className="space-y-2">
+              <Label>المستفيد</Label>
+              <Input value={editBeneficiary} onChange={(e) => setEditBeneficiary(e.target.value)} placeholder="اسم المستفيد" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>طريقة الدفع</Label>
+                <Select value={editPaymentMethod} onValueChange={setEditPaymentMethod}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cash">نقدي</SelectItem>
+                    <SelectItem value="bank_transfer">تحويل بنكي</SelectItem>
+                    <SelectItem value="check">شيك</SelectItem>
+                    <SelectItem value="credit_card">بطاقة ائتمان</SelectItem>
+                    <SelectItem value="other">أخرى</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>الحالة</Label>
+                <Select value={editStatus} onValueChange={setEditStatus}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="draft">مسودة</SelectItem>
+                    <SelectItem value="pending_approval">بانتظار الاعتماد</SelectItem>
+                    <SelectItem value="approved">معتمد</SelectItem>
+                    <SelectItem value="executed">منفذ</SelectItem>
+                    <SelectItem value="posted">مرحّل</SelectItem>
+                    <SelectItem value="cancelled">ملغي</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>ملاحظات</Label>
+              <Textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} placeholder="ملاحظات..." />
             </div>
           </div>
-          <div className="flex gap-2 mt-4 pt-3 border-t justify-end">
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>إلغاء</Button>
-            <Button onClick={() => { setDialogOpen(false); }}>حفظ</Button>
-          </div>
-        </div>
-      </div>)}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => { setEditDialogOpen(false); setEditingVoucher(null); }}>إلغاء</Button>
+            <Button onClick={handleEditSubmit} disabled={updateMutation.isPending}>
+              {updateMutation.isPending ? "جاري الحفظ..." : "حفظ التعديلات"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

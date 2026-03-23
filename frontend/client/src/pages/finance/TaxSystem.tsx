@@ -38,7 +38,20 @@ import {
   DollarSign,
   ArrowRight,
   Loader2,
+  MoreHorizontal,
+  Eye,
+  Edit,
+  Trash2,
 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { PrintButton } from "@/components/PrintButton";
 
 // دالة توليد رمز الضريبة التلقائي
@@ -61,11 +74,6 @@ type ViewMode = 'list' | 'add';
 
 export default function TaxSystem() {
   const [editingItem, setEditingItem] = useState<any>(null);
-
-  const deleteMutation = useMutation({
-    mutationFn: (data: any) => api.delete(`/finance/tax/rates/${data.id}`).then(r => r.data),
-    onSuccess: () => { refetch(); },
-  });
 
   const { data: currentUser, isError, error} = useQuery({
     queryKey: ['auth', 'me'],
@@ -122,6 +130,71 @@ export default function TaxSystem() {
     },
   });
   
+  const updateMutation = useMutation({
+    mutationFn: (data: any) => {
+      const { id, ...body } = data;
+      return api.put(`/finance/tax/rates/${id}`, body).then(r => r.data);
+    },
+    onSuccess: () => {
+      toast.success("تم تحديث معدل الضريبة بنجاح");
+      setEditDialogOpen(false);
+      setEditingTax(null);
+      refetch();
+    },
+    onError: (error: any) => {
+      toast.error(`فشل في تحديث معدل الضريبة: ${error?.response?.data?.message || error.message}`);
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => api.delete(`/finance/tax/rates/${id}`).then(r => r.data),
+    onSuccess: () => {
+      toast.success("تم حذف معدل الضريبة بنجاح");
+      refetch();
+    },
+    onError: (error: any) => {
+      toast.error(`فشل في حذف معدل الضريبة: ${error?.response?.data?.message || error.message}`);
+    },
+  });
+
+  const [detailItem, setDetailItem] = useState<any>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingTax, setEditingTax] = useState<any>(null);
+  const [editName, setEditName] = useState("");
+  const [editRate, setEditRate] = useState("");
+  const [editType, setEditType] = useState("");
+
+  const handleEditOpen = (tax: any) => {
+    setEditingTax(tax);
+    setEditName(tax.name || "");
+    setEditRate(tax.rate != null ? (parseFloat(tax.rate) <= 1 ? (parseFloat(tax.rate) * 100).toString() : tax.rate.toString()) : "");
+    setEditType(tax.type || tax.taxType || "vat");
+    setEditDialogOpen(true);
+  };
+
+  const handleEditSubmit = () => {
+    if (!editingTax?.id) {
+      toast.error("لا يمكن تعديل هذا المعدل (لا يوجد معرف)");
+      return;
+    }
+    updateMutation.mutate({
+      id: editingTax.id,
+      name: editName,
+      rate: parseFloat(editRate) / 100,
+      type: editType,
+    });
+  };
+
+  const handleDelete = (tax: any) => {
+    if (!tax.id) {
+      toast.error("لا يمكن حذف هذا المعدل (معدل افتراضي)");
+      return;
+    }
+    if (window.confirm("هل أنت متأكد من حذف معدل الضريبة؟")) {
+      deleteMutation.mutate(tax.id);
+    }
+  };
+
   const resetForm = () => {
     setCode(generateTaxCode('vat'));
     setName("");
@@ -143,12 +216,9 @@ export default function TaxSystem() {
     }
     
     createMutation.mutate({
-      code,
       name,
-      taxType,
-      rate,
-      appliesTo,
-      description,
+      rate: rate / 100,
+      type: taxType,
     });
   };
 
@@ -341,18 +411,16 @@ export default function TaxSystem() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-end">الرمز</TableHead>
                       <TableHead className="text-end">الاسم</TableHead>
                       <TableHead className="text-end">النوع</TableHead>
                       <TableHead className="text-end">النسبة</TableHead>
-                      <TableHead className="text-end">تطبق على</TableHead>
-                      <TableHead className="text-end">الحالة</TableHead>
+                      <TableHead className="text-center">الإجراءات</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {taxRates?.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8">
+                        <TableCell colSpan={4} className="text-center py-8">
                           <Percent className="h-12 w-12 mx-auto mb-4 opacity-50" />
                           <p className="text-muted-foreground">لا توجد معدلات ضرائب</p>
                           <Button variant="link" onClick={() => setViewMode('add')}>
@@ -361,24 +429,46 @@ export default function TaxSystem() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      taxRates?.filter((item: any) => !searchTerm || JSON.stringify(item).toLowerCase().includes(searchTerm.toLowerCase()))?.map((taxRate: any) => {
-                        const type = taxTypeConfig[taxRate.taxType] || taxTypeConfig.other;
+                      taxRates?.filter((item: any) => !searchTerm || JSON.stringify(item).toLowerCase().includes(searchTerm.toLowerCase()))?.map((taxRate: any, index: number) => {
+                        const typeKey = taxRate.type || taxRate.taxType || "other";
+                        const type = taxTypeConfig[typeKey] || taxTypeConfig.other;
+                        const displayRate = parseFloat(taxRate.rate) <= 1 ? (parseFloat(taxRate.rate) * 100).toFixed(1) : parseFloat(taxRate.rate).toFixed(1);
                         return (
-                          <TableRow key={taxRate.id}>
-                            <TableCell className="font-mono">{taxRate.code}</TableCell>
+                          <TableRow key={taxRate.id || index}>
                             <TableCell className="font-medium">{taxRate.name}</TableCell>
                             <TableCell>
                               <Badge className={type.color}>{type.label}</Badge>
                             </TableCell>
-                            <TableCell className="font-medium">{parseFloat(taxRate.rate)}%</TableCell>
+                            <TableCell className="font-medium">{displayRate}%</TableCell>
                             <TableCell>
-                              {taxRate.appliesTo === "sales" ? "المبيعات" : 
-                               taxRate.appliesTo === "purchases" ? "المشتريات" : "الكل"}
-                            </TableCell>
-                            <TableCell>
-                              <Badge className={taxRate.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"}>
-                                {taxRate.isActive ? "نشط" : "غير نشط"}
-                              </Badge>
+                              <div className="flex items-center justify-center">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon">
+                                      <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="center">
+                                    <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onClick={() => setDetailItem(taxRate)}>
+                                      <Eye className="ml-2 h-4 w-4" />
+                                      عرض التفاصيل
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleEditOpen(taxRate)}>
+                                      <Edit className="ml-2 h-4 w-4" />
+                                      تعديل
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      className="text-red-600 focus:text-red-600"
+                                      onClick={() => handleDelete(taxRate)}
+                                    >
+                                      <Trash2 className="ml-2 h-4 w-4" />
+                                      حذف
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </div>
                             </TableCell>
                           </TableRow>
                         );
@@ -425,9 +515,9 @@ export default function TaxSystem() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="default">المعدل الافتراضي (15%)</SelectItem>
-                      {taxRates?.map((tr: any) => (
-                        <SelectItem key={tr.id} value={tr.id.toString()}>
-                          {tr.name} ({parseFloat(tr.rate)}%)
+                      {taxRates?.map((tr: any, index: number) => (
+                        <SelectItem key={tr.type || index} value={(tr.id || tr.type || index).toString()}>
+                          {tr.name} ({(parseFloat(tr.rate) * 100).toFixed(0)}%)
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -629,6 +719,83 @@ export default function TaxSystem() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Detail Dialog */}
+      <Dialog open={!!detailItem} onOpenChange={(open) => { if (!open) setDetailItem(null); }}>
+        <DialogContent className="sm:max-w-[425px]" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>تفاصيل معدل الضريبة</DialogTitle>
+          </DialogHeader>
+          {detailItem && (() => {
+            const typeKey = detailItem.type || detailItem.taxType || "other";
+            const type = taxTypeConfig[typeKey] || taxTypeConfig.other;
+            const displayRate = parseFloat(detailItem.rate) <= 1 ? (parseFloat(detailItem.rate) * 100).toFixed(1) : parseFloat(detailItem.rate).toFixed(1);
+            return (
+              <div className="space-y-4 py-4">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">الاسم:</span>
+                  <span className="font-medium">{detailItem.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">النوع:</span>
+                  <Badge className={type.color}>{type.label}</Badge>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">النسبة:</span>
+                  <span className="font-bold text-primary">{displayRate}%</span>
+                </div>
+                {detailItem.id && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">المعرف:</span>
+                    <span className="font-mono">#{detailItem.id}</span>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDetailItem(null)}>إغلاق</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={(open) => { if (!open) { setEditDialogOpen(false); setEditingTax(null); } }}>
+        <DialogContent className="sm:max-w-[425px]" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>تعديل معدل الضريبة</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label>الاسم *</Label>
+              <Input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="اسم الضريبة" />
+            </div>
+            <div className="space-y-2">
+              <Label>النوع</Label>
+              <Select value={editType} onValueChange={setEditType}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="vat">ضريبة القيمة المضافة</SelectItem>
+                  <SelectItem value="withholding">ضريبة الاستقطاع</SelectItem>
+                  <SelectItem value="zakat">الزكاة</SelectItem>
+                  <SelectItem value="customs">جمارك</SelectItem>
+                  <SelectItem value="other">أخرى</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>النسبة (%)</Label>
+              <Input type="number" value={editRate} onChange={(e) => setEditRate(e.target.value)} placeholder="15" />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => { setEditDialogOpen(false); setEditingTax(null); }}>إلغاء</Button>
+            <Button onClick={handleEditSubmit} disabled={updateMutation.isPending}>
+              {updateMutation.isPending ? "جاري الحفظ..." : "حفظ التعديلات"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 package com.ghaith.erp.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
@@ -26,8 +27,9 @@ public class PurchaseOrder extends BaseEntity {
     @JoinColumn(name = "purchase_request_id")
     private PurchaseRequest purchaseRequest;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "vendor_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Vendor vendor;
 
     @Builder.Default

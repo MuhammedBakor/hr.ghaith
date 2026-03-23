@@ -143,6 +143,10 @@ public class RecruitmentService {
 
     @Transactional
     public void deleteApplication(Long id) {
+        List<Interview> interviews = interviewRepository.findByApplicationId(id);
+        if (!interviews.isEmpty()) {
+            interviewRepository.deleteAll(interviews);
+        }
         applicationRepository.deleteById(id);
     }
 

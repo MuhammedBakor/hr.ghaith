@@ -40,9 +40,20 @@ import {
   Truck,
   ArrowRight,
   Loader2,
+  MoreHorizontal,
+  Eye,
+  Edit,
 } from "lucide-react";
 import { PrintButton } from "@/components/PrintButton";
-import { Dialog } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 
 // دالة توليد رقم طلب الشراء التلقائي
@@ -131,6 +142,69 @@ export default function PurchaseOrders() {
     },
   });
   
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => api.delete(`/finance/purchase-orders/${id}`).then(r => r.data),
+    onSuccess: () => {
+      toast.success("تم حذف طلب الشراء بنجاح");
+      refetch();
+    },
+    onError: (error: any) => {
+      toast.error(`فشل في حذف طلب الشراء: ${error?.response?.data?.message || error.message}`);
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (data: any) => {
+      const { id, ...body } = data;
+      return api.put(`/finance/purchase-orders/${id}`, body).then(r => r.data);
+    },
+    onSuccess: () => {
+      toast.success("تم تحديث طلب الشراء بنجاح");
+      setEditDialogOpen(false);
+      setEditingPO(null);
+      refetch();
+    },
+    onError: (error: any) => {
+      toast.error(`فشل في تحديث طلب الشراء: ${error?.response?.data?.message || error.message}`);
+    },
+  });
+
+  const [detailItem, setDetailItem] = useState<any>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingPO, setEditingPO] = useState<any>(null);
+  const [editVendorId, setEditVendorId] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+  const [editTotalAmount, setEditTotalAmount] = useState("");
+
+  const handleEditOpen = (po: any) => {
+    setEditingPO(po);
+    setEditVendorId(po.vendor?.id?.toString() || "");
+    setEditNotes(po.notes || "");
+    setEditTotalAmount(po.totalAmount?.toString() || "0");
+    setEditDialogOpen(true);
+  };
+
+  const handleEditSubmit = () => {
+    if (!editingPO) return;
+    updateMutation.mutate({
+      id: editingPO.id,
+      vendorId: editVendorId ? parseInt(editVendorId) : undefined,
+      notes: editNotes,
+      totalAmount: editTotalAmount ? parseFloat(editTotalAmount) : undefined,
+    });
+  };
+
+  const handleDelete = (id: number) => {
+    if (window.confirm("هل أنت متأكد من حذف طلب الشراء؟")) {
+      deleteMutation.mutate(id);
+    }
+  };
+
+  const formatAmount = (amount: any) => {
+    const num = parseFloat(amount) || 0;
+    return num.toLocaleString('ar-SA') + ' ر.س';
+  };
+
   const resetForm = () => {
     setPONumber(generatePONumber());
     setVendorId(null);
@@ -185,8 +259,8 @@ export default function PurchaseOrders() {
   };
   
   const filteredOrders = purchaseOrders?.filter(po => {
-    const matchesSearch = po.poNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      po.vendorName?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (po.poNumber || po.orderNumber || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (po.vendor?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
     return matchesSearch;
   }) || [];
   
@@ -250,7 +324,7 @@ export default function PurchaseOrders() {
                     <SelectContent>
                       {vendors?.map((vendor) => (
                         <SelectItem key={vendor.id} value={vendor.id.toString()}>
-                          {vendor.vendorName}
+                          {vendor.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -509,13 +583,13 @@ export default function PurchaseOrders() {
                     const StatusIcon = status.icon;
                     return (
                       <TableRow key={po.id}>
-                        <TableCell className="font-mono">{po.poNumber}</TableCell>
-                        <TableCell>{po.vendorName || "-"}</TableCell>
+                        <TableCell className="font-mono">{po.orderNumber || po.poNumber || "-"}</TableCell>
+                        <TableCell>{po.vendor?.name || "-"}</TableCell>
                         <TableCell>
-                          {formatDate(po.orderDate)}
+                          {po.createdAt ? formatDate(po.createdAt) : "-"}
                         </TableCell>
                         <TableCell className="font-mono">
-                          {parseFloat(po.totalAmount).toLocaleString('ar-SA')} ر.س
+                          {formatAmount(po.totalAmount)}
                         </TableCell>
                         <TableCell>
                           <Badge className={`${status.color} gap-1`}>
@@ -524,7 +598,7 @@ export default function PurchaseOrders() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <div className="flex gap-2">
+                          <div className="flex gap-1 items-center">
                             {po.status === "draft" && (
                               <Button
                                 size="sm"
@@ -546,6 +620,32 @@ export default function PurchaseOrders() {
                                 اعتماد
                               </Button>
                             )}
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="center">
+                                <DropdownMenuLabel>الإجراءات</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => setDetailItem(po)}>
+                                  <Eye className="ml-2 h-4 w-4" />
+                                  عرض التفاصيل
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleEditOpen(po)}>
+                                  <Edit className="ml-2 h-4 w-4" />
+                                  تعديل
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="text-red-600 focus:text-red-600"
+                                  onClick={() => po.id && handleDelete(po.id)}
+                                >
+                                  <Trash2 className="ml-2 h-4 w-4" />
+                                  حذف
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -558,24 +658,113 @@ export default function PurchaseOrders() {
         </CardContent>
       </Card>
     
-      {/* Dialog for Create/Edit */}
-      {dialogOpen && (<div className="mt-4 p-6 bg-white border rounded-xl shadow-sm">
-        <div>
-          <div className="mb-4 border-b pb-3">
-            <h3 className="text-lg font-bold">{editItem ? "تعديل" : "إضافة جديد"}</h3>
-          </div>
-          <div className="space-y-4 py-4">
+      {/* Detail Dialog */}
+      <Dialog open={!!detailItem} onOpenChange={(open) => { if (!open) setDetailItem(null); }}>
+        <DialogContent className="sm:max-w-[500px]" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>تفاصيل طلب الشراء</DialogTitle>
+          </DialogHeader>
+          {detailItem && (() => {
+            const st = statusConfig[detailItem.status] || statusConfig.draft;
+            return (
+              <div className="space-y-4 py-4">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">رقم الطلب:</span>
+                  <span className="font-mono font-medium">{detailItem.orderNumber || detailItem.poNumber || "-"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">المورد:</span>
+                  <span className="font-medium">{detailItem.vendor?.name || "-"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">التاريخ:</span>
+                  <span>{detailItem.createdAt ? formatDate(detailItem.createdAt) : "-"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">الحالة:</span>
+                  <Badge className={st.color}>{st.label}</Badge>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">الإجمالي:</span>
+                  <span className="font-bold text-primary">{formatAmount(detailItem.totalAmount)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">الكمية المطلوبة:</span>
+                  <span>{detailItem.orderedQuantity || 0}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">الكمية المستلمة:</span>
+                  <span>{detailItem.receivedQuantity || 0}</span>
+                </div>
+                {detailItem.notes && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">ملاحظات:</span>
+                    <span>{detailItem.notes}</span>
+                  </div>
+                )}
+                {detailItem.expectedDelivery && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">التسليم المتوقع:</span>
+                    <span>{formatDate(detailItem.expectedDelivery)}</span>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDetailItem(null)}>إغلاق</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={(open) => { if (!open) { setEditDialogOpen(false); setEditingPO(null); } }}>
+        <DialogContent className="sm:max-w-[425px]" dir="rtl">
+          <DialogHeader>
+            <DialogTitle>تعديل طلب الشراء</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">الاسم / الوصف</label>
-              <input className="w-full border rounded-md px-3 py-2" placeholder="أدخل البيانات..." />
+              <Label>المورد</Label>
+              <Select value={editVendorId} onValueChange={setEditVendorId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="اختر المورد" />
+                </SelectTrigger>
+                <SelectContent>
+                  {vendors?.map((vendor: any) => (
+                    <SelectItem key={vendor.id} value={vendor.id.toString()}>
+                      {vendor.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>الإجمالي</Label>
+              <Input
+                type="number"
+                value={editTotalAmount}
+                onChange={(e) => setEditTotalAmount(e.target.value)}
+                placeholder="0.00"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>ملاحظات</Label>
+              <Textarea
+                value={editNotes}
+                onChange={(e) => setEditNotes(e.target.value)}
+                placeholder="ملاحظات..."
+              />
             </div>
           </div>
-          <div className="flex gap-2 mt-4 pt-3 border-t justify-end">
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>إلغاء</Button>
-            <Button onClick={() => { setDialogOpen(false); }}>حفظ</Button>
-          </div>
-        </div>
-      </div>)}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => { setEditDialogOpen(false); setEditingPO(null); }}>إلغاء</Button>
+            <Button onClick={handleEditSubmit} disabled={updateMutation.isPending}>
+              {updateMutation.isPending ? "جاري الحفظ..." : "حفظ التعديلات"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

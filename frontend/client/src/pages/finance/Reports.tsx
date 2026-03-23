@@ -428,7 +428,7 @@ export default function FinanceReports() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {generalLedger?.entries?.map((entry: any, index: number) => (
+                      {(Array.isArray(generalLedger) ? generalLedger : generalLedger?.entries ?? []).map((entry: any, index: number) => (
                         <TableRow key={`${entry.entryId}-${index}`} className="hover:bg-gray-50">
                           <TableCell>
                             {format(new Date(entry.entryDate), "dd/MM/yyyy", { locale: ar })}
@@ -456,7 +456,7 @@ export default function FinanceReports() {
                 </div>
               )}
               
-              {generalLedger?.entries?.length === 0 && (
+              {(Array.isArray(generalLedger) ? generalLedger : generalLedger?.entries ?? []).length === 0 && (
                 <div className="text-center py-12 text-gray-500">
                   <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>لا توجد حركات مرحّلة</p>

@@ -29,5 +29,10 @@ public class InvoiceItem extends BaseEntity {
 
     private Double taxRate;
 
+    private Double taxAmount;
+
+    @Builder.Default
+    private Double discount = 0.0;
+
     private Double totalAfterTax;
 }

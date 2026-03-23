@@ -10,6 +10,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 /**
  * P2P (Procure-to-Pay) full 8-step chain:
@@ -245,6 +246,57 @@ public class PurchaseService {
         String year = String.valueOf(LocalDate.now().getYear());
         long count = prRepository.count() + 1;
         return String.format("PR-%s-%04d", year, count);
+    }
+
+    @Transactional
+    public PurchaseOrder createDirectPurchaseOrder(Long vendorId, String notes, LocalDateTime expectedDelivery, List<Map<String, Object>> items) {
+        Vendor vendor = vendorRepository.findById(vendorId)
+                .orElseThrow(() -> new RuntimeException("Vendor not found: " + vendorId));
+
+        BigDecimal totalAmount = BigDecimal.ZERO;
+        int totalQty = 0;
+        if (items != null) {
+            for (Map<String, Object> item : items) {
+                double qty = item.get("quantity") != null ? Double.parseDouble(item.get("quantity").toString()) : 0;
+                double price = item.get("unitPrice") != null ? Double.parseDouble(item.get("unitPrice").toString()) : 0;
+                totalAmount = totalAmount.add(BigDecimal.valueOf(qty * price * 1.15)); // including 15% VAT
+                totalQty += (int) qty;
+            }
+        }
+
+        PurchaseOrder po = PurchaseOrder.builder()
+                .orderNumber(generatePoNumber())
+                .vendor(vendor)
+                .status("draft")
+                .totalAmount(totalAmount)
+                .orderedQuantity(totalQty)
+                .receivedQuantity(0)
+                .expectedDelivery(expectedDelivery)
+                .notes(notes)
+                .build();
+
+        return poRepository.save(po);
+    }
+
+    @Transactional
+    public PurchaseOrder updatePurchaseOrder(Long id, Map<String, Object> body) {
+        PurchaseOrder po = poRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Purchase order not found: " + id));
+        if (body.get("notes") != null) po.setNotes(body.get("notes").toString());
+        if (body.get("vendorId") != null) {
+            Vendor vendor = vendorRepository.findById(Long.valueOf(body.get("vendorId").toString()))
+                    .orElseThrow(() -> new RuntimeException("Vendor not found"));
+            po.setVendor(vendor);
+        }
+        if (body.get("totalAmount") != null) {
+            po.setTotalAmount(new BigDecimal(body.get("totalAmount").toString()));
+        }
+        return poRepository.save(po);
+    }
+
+    @Transactional
+    public void deletePurchaseOrder(Long id) {
+        poRepository.deleteById(id);
     }
 
     private String generatePoNumber() {
